@@ -168,7 +168,7 @@ class TaskDatabase(HasTraits):
         #Decompose the path in database keys
         keys = path.split('/')
         #Remove first key (ie 'root')
-        keys.remove(0)
+        del keys[0]
         node = self._database
 
         for key in keys:
