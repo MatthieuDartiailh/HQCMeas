@@ -21,7 +21,7 @@ class PrintTask(SimpleTask):
         self.trait_view('task_view', task_view)
 
     def process(self, *args, **kwargs):
-        self.task_database.set_value(self.task_path, self.task_name + '_message', self.message)
+        self.task_database.set_value(self.task_path, 'message', self.message)
         print self.message
 
 class TaskBuilder(object):
@@ -55,6 +55,7 @@ class Test(HasTraits):
         pprint(self.root.task_database._database)
 
 root = RootTask(measurement_editor = FalseEditor())
+print root.task_class
 comptask = ComplexTask(task_name = 'comp')
 comptask2 = ComplexTask(task_name = 'comp2')
 #looptask = LoopTask(task_name = 'loop', task = PrintTask)

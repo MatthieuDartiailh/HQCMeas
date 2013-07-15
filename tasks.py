@@ -5,7 +5,7 @@ from traits.api\
     import (HasTraits, Str, Int, Instance, List, Float, Bool, on_trait_change)
 from traits.api import self as trait_self
 from traitsui.api\
-     import (View, ListInstanceEditor, VGroup, HGroup, Spring, UItem,
+     import (View, ListInstanceEditor, VGroup, HGroup, UItem,
              InstanceEditor)
 
 from configobj import Section, ConfigObj
@@ -15,19 +15,21 @@ from numpy import linspace
 
 from task_database import TaskDatabase
 
-#TODO add preference gestion
 class AbstractTask(HasTraits):
     """Abstract  class defining common traits of all Task
 
     This class basically defines the minimal skeleton of a Task in term of
     traits and methods.
     """
-    task_name = Str
+    task_class = Str(preference = True)
+    task_name = Str(preference = True)
     task_depth = Int
     task_preferences = Instance(Section)
     task_database = Instance(TaskDatabase)
     task_database_entries = List(Str)
     task_path = Str
+    task_view = View
+
     #root_task = Instance(RootTask)
 
     def process(self, *args, **kwargs):
@@ -64,45 +66,54 @@ class AbstractTask(HasTraits):
         to delete its entry from the database'
         raise NotImplementedError(err_str)
 
-    @on_trait_change('task_preferences')
-    def _register_preferences(self):
+    def register_preferences(self):
+        """Method used to create entries in the preferences object
         """
-        """
-        for name in self.traits(preference = True):
-            self.task_preferences[name] = str(self.get(name).values()[0])
+        err_str = 'This method should be implemented by subclasses of\
+        AbstractTask. This method is called when the program requires the task\
+        to create its entries in the preferences object'
+        raise NotImplementedError(err_str)
+
+    def _task_class_default(self):
+        return self.__class__.__name__
+
 
 class SimpleTask(AbstractTask):
     """Convenience class for simple task ie task with no child task.
     """
-    task_view = View
     loopable = Bool(False)
+    loop_view = AbstractTask.task_view
 
     def write_in_database(self, name, value):
         """
         """
-        full_name = self.task_name + '_' + name
-        self.task_database.set_value(self.task_path, full_name, value)
+        self.task_database.set_value(self.task_path, name, value)
 
     def register_in_database(self):
         """
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
-                self.task_database.set_value(self.task_path,
-                                             self.task_name + '_' + entry,
-                                             None)
+                self.task_database.set_value(self.task_path, entry, None)
+
     def unregister_from_database(self):
         """
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
-                self.task_database.delete_value(self.task_path,
-                                               self.task_name + '_' + entry)
+                self.task_database.delete_value(self.task_path, entry)
+
+    def register_preferences(self):
+        """
+        """
+        for name in self.traits(preference = True):
+                self.task_preferences[name] = str(self.get(name).values()[0])
 
 class InstrumentTask(SimpleTask):
     """Class for simple task involving the use of an instrument.
     """
     instr = Instance(Instrument)
+    instr_tye = Str('')
 
 class ComplexTask(AbstractTask):
     """
@@ -112,9 +123,9 @@ class ComplexTask(AbstractTask):
     def __init__(self, *args, **kwargs):
         super(ComplexTask, self).__init__(*args, **kwargs)
 
-        self._define_view()
+        self._define_task_view()
 
-        self.on_trait_change(self.update_paths,
+        self.on_trait_change(self._update_paths,
                              name = 'task_name, task_path, task_depth')
 
     def process(self):
@@ -142,9 +153,7 @@ class ComplexTask(AbstractTask):
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
-                self.task_database.set_value(self.task_path,
-                                             self.task_name + '_' + entry,
-                                             None)
+                self.task_database.set_value(self.task_path, entry, None)
 
         self.task_database.create_node(self.task_path, self.task_name)
 
@@ -165,9 +174,19 @@ class ComplexTask(AbstractTask):
             for child in self.children_task:
                 child.unregister_from_database()
 
+    def register_preferences(self):
+        """
+        """
+        for name in self.traits(preference = True):
+                self.task_preferences[name] = str(self.get(name).values()[0])
+
+        for child in self.children_task:
+            self.task_preferences[child.task_name] = {}
+            child.task_preferences = self.task_preferences[child.task_name]
+            child.register_preferences()
 
     #@on_trait_change('task_name, task_path, task_depth')
-    def update_paths(self, obj, name, old, new):
+    def _update_paths(self, obj, name, old, new):
         """Method taking care that the path of children, the database and the
         task name remains coherent
         """
@@ -215,6 +234,7 @@ class ComplexTask(AbstractTask):
 
         self.task_preferences[child.task_name] = {}
         child.task_preferences = self.task_preferences[child.task_name]
+        child.register_preferences()
 
         child.task_path = self.task_path + '/' + self.task_name
         child.register_in_database()
@@ -226,14 +246,13 @@ class ComplexTask(AbstractTask):
         del self.task_preferences[child.task_name]
         child.unregister_from_database()
 
-    def _define_view(self):
+    def _define_task_view(self):
         """
         """
         task_view = View(
                     VGroup(
                         UItem('task_name', style = 'readonly'),
                         HGroup(
-#                            Spring(width = 40, springy = False),
                             UItem('children_task@',
                                   editor = ListInstanceEditor(
                                       style = 'custom',
@@ -258,7 +277,13 @@ class LoopTask(ComplexTask):
 
     def __init__(self, task_class, *args, **kwargs):
         super(LoopTask, self).__init__(*args, **kwargs)
-        self._init_task(task_class)
+        task_args = ()
+        task_kwargs = {}
+        if 'task_args' in kwargs:
+            task_args = kwargs['task_args']
+        if 'task_kwargs' in kwargs:
+            task_kwargs = kwargs['task_kwargs']
+        self._init_task(task_class, *task_args, **task_kwargs)
 
     def process(self):
         """
@@ -269,10 +294,9 @@ class LoopTask(ComplexTask):
             for child in self.children_task:
                 child.process()
 
-    #TODO must find something nice
-    def _init_task(self, task_class):
-        self.task = task_class(task_database = self.task_database,
-                               root_task = self.root_task)
+    def _init_task(self, task_class, *args, **kwargs):
+        self.task = task_class(*args, task_database = self.task_database,
+                               root_task = self.root_task, **kwargs)
 
     def _define_view(self):
         task_view = View(
@@ -282,7 +306,8 @@ class LoopTask(ComplexTask):
                             UItem('task_start'),
                             UItem('task_stop'),
                             UItem('task_step'),
-                            UItem('task'),
+                            UItem('task',
+                                  editor = InstanceEditor(view = 'loop_view')),
                             ),
                         UItem('children_task@',
                           editor = ListInstanceEditor(
@@ -307,6 +332,8 @@ class RootTask(ComplexTask):
     task_path = 'root'
 
     def request_child(self, parent):
+        #the parent attribute is for now useless as all parent related are set
+        #at adding time
         child = self.measurement_editor.task_builder.build(parent = parent)
         return child
 
