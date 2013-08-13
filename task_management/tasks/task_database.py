@@ -5,6 +5,8 @@ from traits.api import HasTraits, Dict, Instance
 from threading import Lock
 
 class TaskDatabase(HasTraits):
+    """
+    """
 
     _database = Dict()
     _lock = Instance(Lock, ())
@@ -99,6 +101,36 @@ class TaskDatabase(HasTraits):
         else:
             err_str = 'No entry {} in node {}'.format(value_name, node_path)
             raise ValueError(err_str)
+
+    def list_accessible_entries(self, node_path):
+        """Method used to get a list of all entries accessible from a node
+
+        Parameters:
+        ----------
+        node_path : str
+            Path to the node parent of the new one
+
+        Returns
+        -------
+        entries_list : list
+            List of entries accessible from the specified node
+        """
+        entries = []
+        while node_path is not 'root':
+            node = self._go_to_path(node_path)
+            keys = node.keys()
+            for key in keys:
+                if not isinstance(node[key], dict):
+                    entries.append(key)
+            node_path = node_path.rpartition('/')[0]
+
+        node = self._go_to_path(node_path)
+        keys = node.keys()
+        for key in keys:
+            if not isinstance(node[key], dict):
+                entries.append(key)
+
+        return entries
 
     def create_node(self, parent_path, node_name):
         """Method used to create a new node in the database

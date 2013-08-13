@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 """
+
 from traits.api\
-    import (HasTraits, Str, Int, Instance, List, Float, Bool, on_trait_change)
+    import (HasTraits, Str, Int, Instance, List, Float, Bool, Dict, Type,
+            on_trait_change)
 from traits.api import self as trait_self
 from traitsui.api\
      import (View, ListInstanceEditor, VGroup, HGroup, UItem,
              InstanceEditor)
 
 from configobj import Section, ConfigObj
-#from visa import Instrument
-from dummy import Instrument, Measurement
+from visa import Instrument
+#from dummy import Instrument
 from numpy import linspace
 
 from task_database import TaskDatabase
@@ -81,8 +83,11 @@ class AbstractTask(HasTraits):
 class SimpleTask(AbstractTask):
     """Convenience class for simple task ie task with no child task.
     """
-    loopable = Bool(False)
-    loop_view = AbstractTask.task_view
+    #Class attribute specifying if instances of that class can be used in loop
+    # Not a Trait because otherwise would not be a class attribute
+    loopable = False
+
+    loop_view = View
 
     def write_in_database(self, name, value):
         """
@@ -109,16 +114,24 @@ class SimpleTask(AbstractTask):
         for name in self.traits(preference = True):
                 self.task_preferences[name] = str(self.get(name).values()[0])
 
+    def make_parallel(self):
+        pass
+
+    def make_wait(self):
+        pass
+
 class InstrumentTask(SimpleTask):
     """Class for simple task involving the use of an instrument.
     """
     instr = Instance(Instrument)
-    instr_tye = Str('')
+    instrs = Dict(Str)
+    instrs_name = List(Str)
 
 class ComplexTask(AbstractTask):
     """
     """
     children_task = List(Instance(AbstractTask))
+    has_root = Bool(True)
 
     def __init__(self, *args, **kwargs):
         super(ComplexTask, self).__init__(*args, **kwargs)
@@ -134,10 +147,10 @@ class ComplexTask(AbstractTask):
         for child in self.children_task:
                 child.process()
 
-    def create_child(self):
+    def _create_child(self, ui):
         """Method to handle the adding of a child through the list editor
         """
-        child = self.root_task.request_child(parent = self)
+        child = self.root_task.request_child(parent = self, ui = ui)
         return child
 
     def check(self):
@@ -185,44 +198,47 @@ class ComplexTask(AbstractTask):
             child.task_preferences = self.task_preferences[child.task_name]
             child.register_preferences()
 
+    @on_trait_change('children_task[]')
+    def on_children_modified(self, obj, name, old, new):
+        """Handle children being added or removed from the task, no matter the
+        source"""
+        if self.has_root:
+            if new and old:
+                inter = set(new).symmetric_difference(old)
+                if inter:
+                    for child in inter:
+                        if child in new:
+                            self._child_added(child)
+                        else:
+                            self._child_removed(child)
+            elif new:
+                for child in new:
+                    self._child_added(child)
+
+            elif old:
+                for child in old:
+                    self._child_removed(child)
+
+
     #@on_trait_change('task_name, task_path, task_depth')
     def _update_paths(self, obj, name, old, new):
         """Method taking care that the path of children, the database and the
         task name remains coherent
         """
-        if name == 'task_name':
-            self.task_database.rename_node(self.task_path, new, old)
-            if self.children_task:
-                for child in self.children_task:
-                    child.task_path = self.task_path + new
-        if name == 'task_path':
-            if self.children_task:
-                for child in self.children_task:
-                    child.task_path = new + self.task_name
-        if name == 'task_depth':
-            if self.children_task:
-                for child in self.children_task:
-                    child.task_depth = new + 1
-
-    @on_trait_change('children_task[]')
-    def on_children_modified(self, obj, name, old, new):
-        """Handle children being added or removed from the task, no matter the
-        source"""
-        if new and old:
-            inter = set(new).symmetric_difference(old)
-            if inter:
-                for child in inter:
-                    if child in new:
-                        self._child_added(child)
-                    else:
-                        self._child_removed(child)
-        elif new:
-            for child in new:
-                self._child_added(child)
-
-        elif old:
-            for child in old:
-                self._child_removed(child)
+        if self.has_root:
+            if name == 'task_name':
+                self.task_database.rename_node(self.task_path, new, old)
+                if self.children_task:
+                    for child in self.children_task:
+                        child.task_path = self.task_path + new
+            if name == 'task_path':
+                if self.children_task:
+                    for child in self.children_task:
+                        child.task_path = new + self.task_name
+            if name == 'task_depth':
+                if self.children_task:
+                    for child in self.children_task:
+                        child.task_depth = new + 1
 
     def _child_added(self, child):
         """Method updating the database, depth and preference tree when a child
@@ -246,6 +262,12 @@ class ComplexTask(AbstractTask):
         del self.task_preferences[child.task_name]
         child.unregister_from_database()
 
+    @on_trait_change('has_root')
+    def _update_dependencies(self):
+        self._update_paths()
+        self.register_in_database()
+        self.register_preferences()
+
     def _define_task_view(self):
         """
         """
@@ -258,7 +280,7 @@ class ComplexTask(AbstractTask):
                                       style = 'custom',
                                       editor = InstanceEditor(view =
                                                               'task_view'),
-                                      item_factory = self.create_child)),
+                                      item_factory = self._create_child)),
                             show_border = True,
                             ),
                         ),
@@ -319,11 +341,12 @@ class LoopTask(ComplexTask):
                     )
         self.trait_view('task_view', task_view)
 
+
 class RootTask(ComplexTask):
     """Special task which is always the root of a measurement and is the only
     task directly referencing the measurement editor.
     """
-    measurement_editor = Instance(Measurement)
+    task_builder = Type()
     root_task = trait_self
     task_database = TaskDatabase()
     task_name = 'Root'
@@ -331,10 +354,11 @@ class RootTask(ComplexTask):
     task_depth = 0
     task_path = 'root'
 
-    def request_child(self, parent):
-        #the parent attribute is for now useless as all parent related are set
-        #at adding time
-        child = self.measurement_editor.task_builder.build(parent = parent)
+    def request_child(self, parent, ui):
+        #the parent attribute is for now useless as all parent related traits
+        #are set at adding time
+        child = self.task_builder().build(parent = parent,
+                                                           ui = ui)
         return child
 
     def _child_added(self, child):
@@ -363,3 +387,5 @@ class RootTask(ComplexTask):
             self.task_database.delete_value(path, entry)
 
 AbstractTask.add_class_trait('root_task', Instance(RootTask))
+
+known_py_tasks = [SimpleTask, InstrumentTask, ComplexTask, LoopTask,]

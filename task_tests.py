@@ -2,9 +2,11 @@
 
 from traits.api import (Str, HasTraits, Instance, Button)
 from traitsui.api import View, UItem, InstanceEditor, Group
-from tasks import SimpleTask, ComplexTask, RootTask, LoopTask
-from dummy import Measurement
+from tasks.tasks import SimpleTask, ComplexTask, RootTask, LoopTask
+from tasks.dummy import Measurement
 from pprint import pprint
+
+print __package__
 
 class PrintTask(SimpleTask):
 
@@ -26,7 +28,8 @@ class PrintTask(SimpleTask):
 
 class TaskBuilder(object):
 
-    def build(self, parent):
+    def build(self, parent, ui):
+        print ui
         return PrintTask(message = 'Hello World',
                          task_database = parent.task_database,
                          root_task = parent.root_task)
@@ -54,8 +57,8 @@ class Test(HasTraits):
     def _button2_changed(self):
         pprint(self.root.task_database._database)
 
-root = RootTask(measurement_editor = FalseEditor())
-print root.task_class
+root = RootTask(task_builder = TaskBuilder)
+print SimpleTask.loopable
 comptask = ComplexTask(task_name = 'comp')
 comptask2 = ComplexTask(task_name = 'comp2')
 #looptask = LoopTask(task_name = 'loop', task = PrintTask)
