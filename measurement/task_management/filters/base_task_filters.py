@@ -5,7 +5,7 @@
 from traits.api import (HasTraits, List, Type, File)
 import re
 
-from tasks import AbstractTask, LoopTask, ComplexTask
+from ..tasks import AbstractTask, LoopTask, ComplexTask
 
 class AbstractTaskFilter(HasTraits):
     """

@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import (HasTraits, List, Dict, Type, Str, File, Directory, Instance,
-                        on_trait_change)
-from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor)
-
-from tasks import AbstractTask, ComplexTask, known_py_tasks
-from filters import task_filters, AbstractTaskFilter
+from traits.api import (HasTraits, List, Dict, Type, Str, File, Directory,
+                        Instance, Bool, on_trait_change)
+from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor,
+                          EnumEditor)
 
 import os
-from inspect import getdoc
+from inspect import getdoc, isclass
 from configobj import ConfigObj
 
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent,\
                             FileDeletedEvent, FileMovedEvent
+
+from .tasks import AbstractTask, ComplexTask, known_py_tasks
+from .filters import task_filters, AbstractTaskFilter
+
+module_path = os.path.dirname(__file__)
+task_filters_name = sorted(task_filters.keys())
 
 class FileListUpdater(FileSystemEventHandler):
     """
@@ -44,30 +48,34 @@ class TaskManager(HasTraits):
 
     py_tasks = List(Type(AbstractTask), known_py_tasks)
 
-    template_folder = Directory('tasks/template')
+    template_folder = Directory(os.path.join(module_path,'tasks/templates'))
     template_tasks = List(File)
     observer = Instance(Observer,())
     event_handler = Instance(FileListUpdater)
     watch = Instance(ObservedWatch)
 
-    task_filters = Dict(Str,Type(AbstractTaskFilter))
-    task_filters_name = List(Str)
-    selected_task_filter_name = Str
+    task_filters = Dict(Str,Type(AbstractTaskFilter),task_filters)
+    task_filters_name = List(Str,task_filters_name)
+    selected_task_filter_name = Str('All')
 
     tasks = Dict(Str)
     tasks_name = List(Str)
     selected_task_name = Str
     selected_task_docstring = Str
 
+    filter_visible = Bool(True)
+
     traits_view = View(
                     VGroup(
                         HGroup(
                             UItem('task_filters_name',
                                   editor = ListStrEditor(
+                                      editable = False,
                                       selected = 'selected_task_filter_name'),
                                   ),
                             UItem('tasks_name',editor = ListStrEditor(
-                                      selected = 'selected_task_name'),
+                                      selected = 'selected_task_name',
+                                      editable = False),
                                   ),
                             ),
                         HGroup(
@@ -82,6 +90,20 @@ class TaskManager(HasTraits):
                         ),
                     )
 
+    builder_view = View(
+                    VGroup(
+                        UItem('selected_task_filter_name',
+                              editor = EnumEditor(name = 'task_filters_name'),
+                              defined_when = 'filter_visible'),
+                        UItem('tasks_name',editor = ListStrEditor(
+                                             selected = 'selected_task_name',
+                                             editable = False),
+                             ),
+                        show_border = True,
+                        label = 'Task selection',
+                        ),
+                    )
+
     def __init__(self, *args, **kwargs):
         super(TaskManager, self).__init__(*args, **kwargs)
         self.event_handler = FileListUpdater(self._update_list_file)
@@ -89,9 +111,6 @@ class TaskManager(HasTraits):
                                             self.template_folder)
         self.observer.start()
 
-        self.task_filters = task_filters
-        self.task_filters_name = sorted(task_filters.keys())
-        self.selected_task_filter_name = 'All'
         self._update_list_file()
 
     def get_task(self):
@@ -100,11 +119,12 @@ class TaskManager(HasTraits):
         # return a dictionnary containing at least the class and potentially the
         # template for a complex task
         selected_task = self.tasks[self.selected_task_name]
-        if issubclass(selected_task, AbstractTask):
+        if isclass(selected_task):
             return {'class' : selected_task}
         else:
-            return {'class' : ComplexTask,
-                    'preference' : selected_task}
+            template_path = os.path.join(self.template_folder, selected_task)
+            return {'class' : ConfigObj(template_path)['task_class'],
+                    'template_path' : template_path}
 
     @on_trait_change('selected_task_filter_name')
     def _new_task_filter(self, new):
@@ -124,12 +144,12 @@ class TaskManager(HasTraits):
         if task in self.py_tasks:
             self.selected_task_docstring = getdoc(task)
         else:
-            path = os.path.abspath(task)
-            config = ConfigObj(path)
-            if config.has_key('docstring'):
-                self.selected_task_docstring = config['docstring']
-            else:
-                self.selected_task_docstring = ''
+            path = os.path.join(self.template_folder, task)
+            doc_list = ConfigObj(path).initial_comment
+            doc = ''
+            for line in doc_list:
+                doc += line.replace('#','')
+            self.selected_task_docstring = doc
 
     def _update_list_file(self):
         """
@@ -141,7 +161,3 @@ class TaskManager(HasTraits):
                            and f.endswith('.ini')))
         self.template_tasks = tasks
         self._new_task_filter(self.selected_task_filter_name)
-
-if __name__ == "__main__":
-    __package__ = 'task_management.task_manager'
-    TaskManager().configure_traits()

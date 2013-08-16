@@ -6,7 +6,7 @@ from traits.api import (HasTraits, List, Dict, Str, File, Directory,
 from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor, VGrid,
                           Label, OKCancelButtons, Handler, EnumEditor, error)
 
-import os, re
+import os, re, inspect
 from configobj import ConfigObj
 
 from watchdog.observers import Observer
@@ -18,6 +18,7 @@ import instrument_drivers
 
 drivers = instrument_drivers.drivers.keys()
 connection_types = ['GPIB', 'USB', 'LAN']
+module_path = os.path.dirname(__file__)
 
 class FileListUpdater(FileSystemEventHandler):
     """
@@ -54,11 +55,19 @@ class InstrumentFormHandler(Handler):
                                    additionnal_mode = model.additionnal_mode):
                     return True
                 else:
-                    error(message = """The software failed to establish the connection with the instrument please check all parameters and instrument state and try again""",
+                    message = inspect.cleandoc("""The software failed to
+                                establish the connection with the instrument
+                                please check all parameters and instrument state
+                                and try again""")
+
+                    error(message = message.replace('\n', ' '),
                           title = 'Connection failure', buttons = ['OK'],
                           parent = info.ui.control)
             else:
-                error(message = """You must fill the fields : name, driver, connection and address before validating""",
+                message = inspect.cleandoc("""You must fill the fields : name,
+                                           driver, connection and address before
+                                           validating""")
+                error(message = message.replace('\n', ' '),
                           title = 'Missing information', buttons = ['OK'],
                           parent = info.ui.control)
         else:
@@ -171,7 +180,7 @@ class InstrumentManager(HasTraits):
     """
     """
 
-    instr_folder = Directory('profiles')
+    instr_folder = Directory(os.path.join(module_path,'profiles'))
     instrs = Dict(Str, File)
     instrs_name = List(Str)
     selected_instr_name = Str
@@ -221,7 +230,7 @@ class InstrumentManager(HasTraits):
     def _new_selected_instr(self, new):
         """
         """
-        path = os.path.abspath('instruments')
+        path = self.instr_folder
         instr_file = self.instrs[new]
         fullpath = os.path.join(path, instr_file)
         instr_dict = ConfigObj(fullpath).dict()
