@@ -73,14 +73,14 @@ class TaskBuilder(HasTraits):
 
     def __init__(self, *args, **kwargs):
         super(TaskBuilder, self).__init__(*args, **kwargs)
-        #synchronise tasks and filters
 
     def build(self, parent, ui):
         """
         """
         self.parent = parent
+
         build_ui = self.edit_traits(view = 'building_view',
-                                    parent = ui.control)
+                                        parent = ui.control)
         if build_ui.result:
             task = self.task_config.build_task()
             if 'edit_view' in task.trait_views(View):
@@ -107,12 +107,15 @@ class TaskBuilder(HasTraits):
         config = self.configurable_tasks
         if new.has_key('template_path'):
             if self.creating_root:
-                task_class = RootTask
-            else:
-                task_class = new['class']
-            self.task_config = IniConfigTask(task_parent = self.parent,
+                self.task_config = IniConfigTask(task_parent = self.parent,
                                         template_path = new['template_path'],
-                                        task_class = task_class)
+                                        task_class = RootTask,
+                                        task_name = 'Root')
+                self.ok_ready = True
+            else:
+                self.task_config = IniConfigTask(task_parent = self.parent,
+                                        template_path = new['template_path'],
+                                        task_class = new['class'])
         else:
             #Look up the hierarchy of the selected task to get the appropriate
             #TaskConfig

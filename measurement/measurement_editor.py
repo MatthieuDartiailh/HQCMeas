@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from traits.api import (HasTraits, Instance, Button, Any)
+from traits.api import (HasTraits, Instance, Button, Any, Bool)
 from traitsui.api import (View, HGroup, UItem, Handler,TreeEditor, Menu,
                           TreeNode, Action, Separator, Spring, error)
 from traits.etsconfig.etsconfig import ETSConfig
@@ -14,6 +14,7 @@ else:
                 RenameAction)
 
 from inspect import cleandoc
+import textwrap
 
 from .task_management.tasks import (ComplexTask, SimpleTask, AbstractTask,
                                     RootTask)
@@ -84,7 +85,7 @@ class MeasurementEditorHandler(Handler):
                             or Cancel to go back to editing and get a chance to
                             save it.""")
 
-        result = error(message = message.replace('\n', ' '),
+        result = error(message = textwrap.fill(message.replace('\n', ' '),80),
                   title = 'Old measurement suppression',
                   parent = info.ui.control)
 
@@ -101,7 +102,7 @@ class MeasurementEditorHandler(Handler):
                             are editing as a template. If you want to save only
                             a part of it, use the contextual menu.""")
 
-        result = error(message = message.replace('\n', ' '),
+        result = error(message = textwrap.fill(message.replace('\n', ' '),80),
                   title = 'Old measurement suppression',
                   parent = info.ui.control)
 
@@ -116,7 +117,8 @@ class MeasurementEditorHandler(Handler):
         builder.task_manager.filter_visible = False
         builder.task_manager.selected_task_filter_name = 'Template'
         root_task = builder.build(parent = None, ui = info.ui)
-        info.object.root_task = root_task
+        if root_task is not None:
+            info.object.root_task = root_task
 
 append_action = Action(name = 'Append task',
                     action = 'append_task')
@@ -139,6 +141,7 @@ class MeasurementEditor(HasTraits):
     save_button = Button('Save measure')
     load_button = Button('Load template')
     enqueue_button = Button('Enqueue measure')
+    is_new_meas = Bool(True)
 
     editor = TreeEditor(
                         nodes = [
@@ -195,7 +198,8 @@ class MeasurementEditor(HasTraits):
                         UItem('save_button'),
                         UItem('load_button'),
                         Spring(),
-                        UItem('enqueue_button'),
+                        UItem('enqueue_button',
+                              enabled_when = 'is_new_meas'),
                         ),
                     resizable = True,
                     handler = MeasurementEditorHandler(model = self),

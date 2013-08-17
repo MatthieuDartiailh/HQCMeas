@@ -199,7 +199,7 @@ class InstrumentTask(SimpleTask):
 class ComplexTask(AbstractTask):
     """Task composed of several subtasks.
     """
-    children_task = List(Instance(AbstractTask))
+    children_task = List(Instance(AbstractTask), child = True)
     has_root = Bool(False)
 
     def __init__(self, *args, **kwargs):
@@ -212,7 +212,7 @@ class ComplexTask(AbstractTask):
         """
         """
         for child in self.children_task:
-                child.process()
+            child.process()
 
     def create_child(self, ui):
         """Method to handle the adding of a child through the list editor
@@ -238,9 +238,15 @@ class ComplexTask(AbstractTask):
 
         self.task_database.create_node(self.task_path, self.task_name)
 
-        if self.children_task:
-            for child in self.children_task:
-                child.register_in_database()
+        #ComplexTask defines children_task so we always get something
+        for name in self.traits(child = True):
+            child = self.get(name).values()[0]
+            if child:
+                if isinstance(child, list):
+                    for aux in child:
+                        aux.register_in_database()
+                else:
+                    child.register_in_database()
 
     def unregister_from_database(self):
         """
@@ -250,9 +256,14 @@ class ComplexTask(AbstractTask):
                 self.task_database.delete_value(self.task_path,
                                                 self.task_name + '_' + entry)
 
-        if self.children_task:
-            for child in self.children_task:
-                child.unregister_from_database()
+        for name in self.traits(child = True):
+            child = self.get(name).values()[0]
+            if child:
+                if isinstance(child, list):
+                    for aux in child:
+                        aux.unregister_from_database()
+                else:
+                    child.unregister_from_database()
 
         self.task_database.delete_node(self.task_path, self.task_name)
 
@@ -262,10 +273,19 @@ class ComplexTask(AbstractTask):
         for name in self.traits(preference = True):
                 self.task_preferences[name] = str(self.get(name).values()[0])
 
-        for i, child in enumerate(self.children_task):
-            self.task_preferences['child_{}'.format(i)] = {}
-            child.task_preferences = self.task_preferences['child_{}'.format(i)]
-            child.register_preferences()
+        for name in self.traits(child = True):
+            child = self.get(name).values()[0]
+            if child:
+                if isinstance(child, list):
+                    for i, aux in enumerate(child):
+                        child_id = name + '_{}'.format(i)
+                        self.task_preferences[child_id] = {}
+                        aux.task_preferences = self.task_preferences[child_id]
+                        aux.register_preferences()
+                else:
+                    self.task_preferences[name] = {}
+                    child.task_preferences = self.task_preferences[name]
+                    child.register_preferences()
 
     def update_preferences_from_traits(self):
         """
@@ -273,8 +293,14 @@ class ComplexTask(AbstractTask):
         for name in self.traits(preference = True):
                 self.task_preferences[name] = str(self.get(name).values()[0])
 
-        for child in self.children_task:
-            child.update_preferences_from_traits()
+        for name in self.traits(child = True):
+            child = self.get(name).values()[0]
+            if child:
+                if isinstance(child, list):
+                    for aux in child:
+                        aux.update_preferences_from_traits()
+                else:
+                    child.update_preferences_from_traits()
 
     def update_traits_from_preferences(self, **parameters):
         """
@@ -282,61 +308,68 @@ class ComplexTask(AbstractTask):
         NB : This method is fairly powerful and can handle a lot of cases so
         don't override it without checking that it works.
         """
+        #First we set the preference traits
         for name, trait in self.traits(preference = True).iteritems():
-
             if not parameters.has_key(name):
                 continue
 
             value = parameters[name]
             handler = trait.handler
 
-            #If we get a list we must determine if it is a list of child or of
-            #str
+            #if we get a container must check each member
             if isinstance(value, list):
-                if not isinstance(value[0], basestring):
-                    #We have a list of children already initialised.
-                    #NB : THIS CAN BE ANYTHING INCLUDING THE TASK FOR A LOOP TASK
-                    #First we check if we should pass a list or a single element
-                    if isinstance(handler, List):
-                        validated = value
-                    else:
-                        validated = value[0]
-                else:
-                    #We assume that we don't save anything fancier than list
-                    #of string
-                    if handler.validate is not None:
-                        # Any traits have a validator of None.
-                        validated = handler.validate(self, name, value)
-                    else:
-                        validated = value
+                item_handler = handler.item_trait
+                validated = []
+                for string in value:
+                    validated.append(self._from_str_to_basetrait(string,
+                                                                 item_handler))
+            if isinstance(value, dict):
+                key_handler = handler.key_trait
+                value_handler = handler.value_trait
+                validated = {}
+                for key, val in value.iteritems:
+                    validated[self._from_str_to_basetrait(key, key_handler)] =\
+                            self._from_str_to_basetrait(val, value_handler)
 
             #We have a standard value store as a string, we use the standard
             #procedure
             else:
-                # If the trait type is 'Str' then we just take the raw value.
-                if isinstance(handler, Str) or trait.is_str:
-                    pass
-
-                # If the trait type is 'Unicode' then we convert the raw value.
-                elif isinstance(handler, Unicode):
-                    value = unicode(value)
-
-                # Otherwise, we eval it!
-                else:
-                    try:
-                        value = eval(value)
-                    # If the eval fails then there is probably a syntax error, but
-                    # we will let the handler validation throw the exception.
-                    except:
-                        pass
-
-                if handler.validate is not None:
-                    # Any traits have a validator of None.
-                    validated = handler.validate(self, name, value)
-                else:
-                    validated = value
+                validated = self._from_str_to_basetrait(value, handler)
 
             self.trait_set(**{name : validated})
+
+        #Then we set the child
+        for name, trait in self.traits(child = True).iteritems():
+            if not parameters.has_key(name):
+                continue
+
+            value = parameters[name]
+            handler = trait.handler
+
+            if isinstance(handler, List):
+                validated = value
+            else:
+                validated = value[0]
+
+            self.trait_set(**{name : validated})
+
+    def _from_str_to_basetrait(self, value, trait):
+        """
+        """
+        handler = trait.handler
+         # If the trait type is 'Str' then we just take the raw value.
+        if isinstance(handler, Str):
+            pass
+
+        # If the trait type is 'Unicode' then we convert the raw value.
+        elif isinstance(handler, Unicode):
+            value = unicode(value)
+
+        # Otherwise, we eval it!
+        else:
+            value = eval(value)
+
+        return value
 
     @on_trait_change('children_task[]')
     def on_children_modified(self, obj, name, old, new):
@@ -368,17 +401,33 @@ class ComplexTask(AbstractTask):
         if self.has_root:
             if name == 'task_name':
                 self.task_database.rename_node(self.task_path, new, old)
-                if self.children_task:
-                    for child in self.children_task:
-                        child.task_path = self.task_path + new
+                for name in self.traits(child = True):
+                    child = self.get(name).values()[0]
+                    if child:
+                        if isinstance(child, list):
+                            for aux in child:
+                                aux.task_path = self.task_path + new
+                        else:
+                            child.task_path = self.task_path + new
             elif name == 'task_path':
-                if self.children_task:
-                    for child in self.children_task:
-                        child.task_path = new + self.task_name
+                for name in self.traits(child = True):
+                    child = self.get(name).values()[0]
+                    if child:
+                        if isinstance(child, list):
+                            for aux in child:
+                                aux.task_path = new + self.task_name
+                        else:
+                            child.task_path = new + self.task_name
             elif name == 'task_depth':
-                if self.children_task:
-                    for child in self.children_task:
-                        child.task_depth = new + 1
+                for name in self.traits(child = True):
+                    child = self.get(name).values()[0]
+                    if child:
+                        if isinstance(child, list):
+                            for aux in child:
+                                aux.task_depth = new + 1
+                        else:
+                            child.task_depth = new + 1
+
 
     def _child_added(self, child):
         """Method updating the database, depth and preference tree when a child
@@ -386,16 +435,16 @@ class ComplexTask(AbstractTask):
         """
         child.task_depth = self.task_depth + 1
         child.task_database = self.task_database
-        self.task_preferences[child.task_name] = {}
-        child.task_preferences = self.task_preferences[child.task_name]
         child.task_path = self.task_path + '/' + self.task_name
 
         #Give him its root so that it can proceed to any child
         #registration it needs to.
         child.root_task = self.root_task
 
-        child.register_preferences()
+        #Ask the child to register in database
         child.register_in_database()
+        #Register anew preferences to keep the right ordering for the childs
+        self.register_preferences()
 
     def _child_removed(self, child):
         """Method updating the database and preference tree when a child is
@@ -405,23 +454,36 @@ class ComplexTask(AbstractTask):
         child.unregister_from_database()
 
     @on_trait_change('root_task')
-    def _when_root(self):
+    def _when_root(self, new):
         """Method making sure that all children get all the info they need to
         behave correctly when the task get its root parent (ie the task is now
         in a 'correct' environnement).
         """
-        self.has_root = True
-        if self.children_task:
-            for child in self.children_task:
-                child.task_depth = self.task_depth + 1
-                child.task_database = self.task_database
-                self.task_preferences[child.task_name] = {}
-                child.task_preferences = self.task_preferences[child.task_name]
-                child.task_path = self.task_path + '/' + self.task_name
+        if new == None:
+            return
 
-                #Give him its root so that it can proceed to any child
-                #registration it needs to.
-                child.root_task = self.root_task
+        self.has_root = True
+        for name in self.traits(child = True):
+            child = self.get(name).values()[0]
+            if child:
+                if isinstance(child, list):
+                    for aux in child:
+                        aux.task_depth = self.task_depth + 1
+                        aux.task_database = self.task_database
+                        aux.task_path = self.task_path + '/' + self.task_name
+
+                        #Give him its root so that it can proceed to any child
+                        #registration it needs to.
+                        aux.root_task = self.root_task
+                else:
+                    child.task_depth = self.task_depth + 1
+                    child.task_database = self.task_database
+                    child.task_path = self.task_path + '/' + self.task_name
+
+                    #Give him its root so that it can proceed to any child
+                    #registration it needs to.
+                    child.root_task = self.root_task
+
 
     def _define_task_view(self):
         """
@@ -449,7 +511,7 @@ class LoopTask(ComplexTask):
     """Complex task which, at each iteration, performs a task with a different
     value and all then call all its child tasks.
     """
-    task = Instance(SimpleTask)
+    task = Instance(SimpleTask, child = True)
     task_start = Float(0.0, preference = True)
     task_stop = Float(1.0, preference = True)
     task_step = Float(0.1, preference = True)
@@ -462,112 +524,6 @@ class LoopTask(ComplexTask):
             self.task.process(value)
             for child in self.children_task:
                 child.process()
-
-    def register_in_database(self):
-        """
-        """
-        if self.task_database_entries:
-            for entry in self.task_database_entries:
-                self.task_database.set_value(self.task_path,
-                                             self.task_name + '_' + entry, None)
-
-        self.task_database.create_node(self.task_path, self.task_name)
-
-        self.task.register_in_database()
-        if self.children_task:
-            for child in self.children_task:
-                child.register_in_database()
-
-    def unregister_from_database(self):
-        """
-        """
-        if self.task_database_entries:
-            for entry in self.task_database_entries:
-                self.task_database.delete_value(self.task_path,
-                                                self.task_name + '_' + entry)
-
-        self.task.unregister_from_database()
-        if self.children_task:
-            for child in self.children_task:
-                child.unregister_from_database()
-
-        self.task_database.delete_node(self.task_path, self.task_name)
-
-    def register_preferences(self):
-        """
-        """
-        for name in self.traits(preference = True):
-                self.task_preferences[name] = str(self.get(name).values()[0])
-
-        self.task_preferences['task'] = {}
-        self.task.task_preferences = self.task_preferences['task']
-        self.task.register_preferences()
-        for i, child in enumerate(self.children_task):
-            self.task_preferences['child_{}'.format(i)] = {}
-            child.task_preferences = self.task_preferences['child_{}'.format(i)]
-            child.register_preferences()
-
-    def update_preferences_from_traits(self):
-        """
-        """
-        for name in self.traits(preference = True):
-                self.task_preferences[name] = str(self.get(name).values()[0])
-
-        self.task.update_preferences_from_traits()
-        for child in self.children_task:
-            child.update_preferences_from_traits()
-
-    def _update_paths(self, obj, name, old, new):
-        """Method taking care that the path of children, the database and the
-        task name remains coherent. Here we must also care about the task.
-        """
-        if self.has_root:
-            if name == 'task_name':
-                self.task_database.rename_node(self.task_path, new, old)
-                self.task.task_path = self.task_path + new
-                if self.children_task:
-                    for child in self.children_task:
-                        child.task_path = self.task_path + new
-            if name == 'task_path':
-                self.task.task_path = new + self.task_name
-                if self.children_task:
-                    for child in self.children_task:
-                        child.task_path = new + self.task_name
-            if name == 'task_depth':
-                self.task.task_depth = new + 1
-                if self.children_task:
-                    for child in self.children_task:
-                        child.task_depth = new + 1
-
-    @on_trait_change('root_task')
-    def _when_root(self, new):
-        """Method making sure that all children get all the info they need to
-        behave correctly when the task get its root parent (ie the task is now
-        in a 'correct' environnement). Here we must also take the task into
-        account.
-        """
-        if new != None:
-            self.has_root = True
-            self.task.task_depth = self.task_depth + 1
-            self.task.task_database = self.task_database
-            self.task_preferences[self.task.task_name] = {}
-            self.task.task_preferences =\
-                                    self.task_preferences[self.task.task_name]
-            self.task.task_path = self.task_path + '/' + self.task_name
-
-            #Give him its root so that it can proceed to any child
-            #registration it needs to.
-            self.task.root_task = self.root_task
-            for child in self.children_task:
-                child.task_depth = self.task_depth + 1
-                child.task_database = self.task_database
-                self.task_preferences[child.task_name] = {}
-                child.task_preferences = self.task_preferences[child.task_name]
-                child.task_path = self.task_path + '/' + self.task_name
-
-                #Give him its root so that it can proceed to any child
-                #registration it needs to.
-                child.root_task = self.root_task
 
     def _define_task_view(self):
         task_view = View(
@@ -602,6 +558,7 @@ class RootTask(ComplexTask):
     """
     task_builder = Type()
     root_task = trait_self
+    has_root = True
     task_database = TaskDatabase()
     task_name = 'Root'
     task_preferences = ConfigObj()
@@ -623,17 +580,16 @@ class RootTask(ComplexTask):
         #Give the child all the info it needs to register
         child.task_depth = self.task_depth + 1
         child.task_database = self.task_database
-        self.task_preferences[child.task_name] = {}
-        child.task_preferences = self.task_preferences[child.task_name]
         child.task_path = self.task_path
 
         #Give him its root so that it can proceed to any child
         #registration it needs to.
         child.root_task = self.root_task
 
-        #Ask the child to register
+        #Ask the child to register in database
         child.register_in_database()
-        child.register_preferences()
+        #Register anew preferences to keep the right ordering for the childs
+        self.register_preferences()
 
     def _child_removed(self, child):
         """Method updating the database and preference tree when a child is

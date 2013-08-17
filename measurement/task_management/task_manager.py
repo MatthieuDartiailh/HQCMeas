@@ -15,7 +15,8 @@ from watchdog.observers.api import ObservedWatch
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent,\
                             FileDeletedEvent, FileMovedEvent
 
-from .tasks import AbstractTask, ComplexTask, known_py_tasks
+from .tasks import AbstractTask, known_py_tasks
+from ..task_management import tasks
 from .filters import task_filters, AbstractTaskFilter
 
 module_path = os.path.dirname(__file__)
@@ -123,7 +124,8 @@ class TaskManager(HasTraits):
             return {'class' : selected_task}
         else:
             template_path = os.path.join(self.template_folder, selected_task)
-            return {'class' : ConfigObj(template_path)['task_class'],
+            task_class_name = ConfigObj(template_path)['task_class']
+            return {'class' : getattr(tasks, task_class_name),
                     'template_path' : template_path}
 
     @on_trait_change('selected_task_filter_name')

@@ -3,9 +3,10 @@
 from traits.api import (HasTraits, List, Str, File, Directory, Button, Bool,
                         on_trait_change)
 from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor, Label,
-                          CodeEditor, Handler, Spring)
+                          CodeEditor, Handler, Spring, error)
 
-import os
+import os, textwrap
+from inspect import cleandoc
 from configobj import ConfigObj
 
 module_path = os.path.dirname(__file__)
@@ -16,7 +17,33 @@ class TemplateTaskSaverHandler(Handler):
     def object_ok_button_changed(self, info):
         """
         """
-        info.ui.result = True
+        model = info.object
+        if '.ini' not in model.template_filename:
+            filename = model.template_filename + '.ini'
+        else:
+            filename = filename.template_filename
+
+        result = True
+        if filename in model.template_tasks:
+            message = cleandoc("""You entered a template name which already
+                            exists, do you want to erase the existing file
+                            """)
+            result = error(message = textwrap.fill(message.replace('\n', ' '),
+                                               80),
+                       title = 'Overwrite confirm :',
+                       parent = info.ui.control)
+            if result:
+                if '.ini' not in model.template_filename:
+                    full_path = os.path.join(model.template_folder,
+                                             model.template_filename + '.ini')
+                else:
+                    full_path = os.path.join(model.template_folder,
+                                             model.template_filename)
+                f = open(full_path, 'w')
+                f.close()
+
+
+        info.ui.result = result
         info.ui.dispose()
 
     def object_cancel_button_changed(self, info):
@@ -87,9 +114,10 @@ class TemplateTaskSaver(HasTraits):
                 full_path = os.path.join(self.template_folder,
                                          self.template_filename)
             config = ConfigObj(full_path, indent_type = '    ')
-            task.update_preferences()
+            task.update_preferences_from_traits()
             preferences = task.task_preferences
             config.merge(preferences)
+            config.initial_comment = textwrap.wrap(self.template_doc, 80)
             config.write()
             if self.show_result:
                 with open(full_path) as f:

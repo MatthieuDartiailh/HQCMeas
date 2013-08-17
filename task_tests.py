@@ -22,7 +22,7 @@ class Test(HasTraits):
                 )
 
     def _button_changed(self):
-        self.root.process()
+        self.editor.root_task.process()
 
     def _button2_changed(self):
         pprint(self.root.task_database._database)

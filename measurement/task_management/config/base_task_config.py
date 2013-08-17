@@ -8,6 +8,7 @@ from traitsui.api import (View, UItem, TextEditor, Handler, CodeEditor,
 
 from configobj import ConfigObj
 from inspect import getdoc
+import textwrap
 
 from ...task_management import tasks
 from ..tasks import AbstractTask, ComplexTask, RootTask
@@ -66,7 +67,12 @@ class IniConfigTaskHandler(Handler):
         if ui.result:
             with open(model.template_path, 'w') as template_file:
                 template_file.write(model.template_content)
-        model.template_doc = ConfigObj(model.template_path).initial_comment
+
+        doc_list = ConfigObj(model.template_path).initial_comment
+        doc = ''
+        for line in doc_list:
+            doc += line.replace('#','')
+        model.template_doc = doc
 
 
 class IniConfigTask(AbstractConfigTask):
@@ -104,6 +110,16 @@ class IniConfigTask(AbstractConfigTask):
         for line in doc_list:
             doc += line.replace('#','')
         self.template_doc = doc
+        if self.task_name == 'Root':
+            root_view = View(
+                            Label('Task description'),
+                            UItem('template_doc', style = 'readonly',
+                                  editor = TextEditor(multi_line = True)),
+                            UItem('template_edit_button'),
+                            handler = IniConfigTaskHandler(),
+                            )
+            self.trait_view('config_view', root_view)
+
 
     def check_parameters(self):
         if self.task_name is not '':
@@ -124,57 +140,57 @@ class IniConfigTask(AbstractConfigTask):
                                                             config['task_name'])
             built_task.children.append(task)
         else:
-            built_task = self.task_class(task_name = self.task_name)
-            task = built_task
+            task = self.task_class(task_name = self.task_name)
+            built_task = task
 
-        parameters = self._prepare_parametrs(config)
+        parameters = self._prepare_parameters(config)
 
         task.update_traits_from_preferences(**parameters)
-
         return built_task
 
-        def _build_child(self, section):
-            """
-            """
-            task = getattr(tasks, section['task_class'])(task_name =
-                                                        section['task_name'])
-            parameters = self._prepare_parametrs(section)
-            task.update_traits_from_preferences(**parameters)
+    def _build_child(self, section):
+        """
+        """
+        task = getattr(tasks, section['task_class'])(task_name =
+                                                    section['task_name'])
+        parameters = self._prepare_parameters(section)
+        task.update_traits_from_preferences(**parameters)
 
-            return task
+        return task
 
-        def _prepare_parameters(self, section):
-            """
+    def _prepare_parameters(self, section):
+        """
 
-            Parameters:
-                section : instance of Section
-                    Section describing the parameters which must be sent to the
-                    task
+        Parameters:
+            section : instance of Section
+                Section describing the parameters which must be sent to the
+                task
 
-            Return:
-                parameters : dict
-                    Dictionnary holding the parameters to be passed to a task
-            """
-            #First getting the non-task traits as string
-            parameters = {}
-            if config.scalars:
-                for entry in config.scalars:
-                    if entry != 'task_class' and entry != 'task_name':
-                        parameters[entry] = config[entry]
+        Return:
+            parameters : dict
+                Dictionnary holding the parameters to be passed to a task
+        """
+        #First getting the non-task traits as string
+        parameters = {}
+        if section.scalars:
+            for entry in section.scalars:
+                if entry != 'task_class' and entry != 'task_name':
+                    parameters[entry] = section[entry]
 
-            #Second creating all the neccessary children
-            if config.sections:
-                for entry in config.sections:
-                    if any(i in entry for i in '0123456789'):
-                        key = ''.join(c for c in entry if not c.isdigit())
-                        if key.endswith('_'):
-                            key = key[:-1]
+        #Second creating all the neccessary children
+        if section.sections:
+            for entry in section.sections:
+                key = entry
+                if any(i in entry for i in '0123456789'):
+                    key = ''.join(c for c in entry if not c.isdigit())
+                    if key.endswith('_'):
+                        key = key[:-1]
                 if parameters.has_key(key):
-                    parameters[key].append(self._build_child(config[entry]))
+                    parameters[key].append(self._build_child(section[entry]))
                 else:
-                    parameters[key] = [self._build_child(config[entry])]
+                    parameters[key] = [self._build_child(section[entry])]
 
-            return parameters
+        return parameters
 
 
 class PyConfigTask(AbstractConfigTask):
@@ -195,7 +211,8 @@ class PyConfigTask(AbstractConfigTask):
 
     def __init__(self, *args, **kwargs):
         super(PyConfigTask, self).__init__(*args, **kwargs)
-        self.task_doc = getdoc(self.task_class).replace('\n',' ')
+        doc = getdoc(self.task_class).replace('\n',' ')
+        self.task_doc = doc
 
     def check_parameters(self):
         if self.task_name != '':
