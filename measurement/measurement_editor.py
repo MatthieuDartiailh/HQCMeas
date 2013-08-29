@@ -90,7 +90,7 @@ class MeasurementEditorHandler(Handler):
                   parent = info.ui.control)
 
         if result:
-            info.object.root_task = RootTask(task_builder = TaskBuilder)
+            info.object.new_root_task()
             editor = info.tree
             nid = editor._get_object_nid(info.object.root_task)
             editor._tree.setCurrentItem(nid.child(0))
@@ -120,6 +120,11 @@ class MeasurementEditorHandler(Handler):
         if root_task is not None:
             info.object.root_task = root_task
 
+    def object_ok_button_changed(self, info):
+        """
+        """
+        info.ui.dispose()
+
 append_action = Action(name = 'Append task',
                     action = 'append_task')
 
@@ -141,6 +146,9 @@ class MeasurementEditor(HasTraits):
     save_button = Button('Save measure')
     load_button = Button('Load template')
     enqueue_button = Button('Enqueue measure')
+    ok_button = Button('OK')
+    cancel_button = Button('Cancel')
+
     is_new_meas = Bool(True)
 
     editor = TreeEditor(
@@ -186,22 +194,29 @@ class MeasurementEditor(HasTraits):
                         selected = 'selected_task',
                         )
 
+    def new_root_task(self):
+        """
+        """
+        self.root_task = RootTask(task_builder = TaskBuilder)
+
     def default_traits_view(self):
         return View(
                     UItem('root_task',
                           editor = self.editor,
                           id = 'tree',
-                          resizable = True,
+                          resizable = False,
                           ),
                     HGroup(
-                        UItem('new_button'),
+                        UItem('new_button', defined_when = 'is_new_meas'),
                         UItem('save_button'),
-                        UItem('load_button'),
+                        UItem('load_button', defined_when = 'is_new_meas'),
                         Spring(),
-                        UItem('enqueue_button',
-                              enabled_when = 'is_new_meas'),
+                        UItem('enqueue_button', defined_when = 'is_new_meas'),
+                        UItem('ok_button',
+                              defined_when = 'not is_new_meas'),
                         ),
                     resizable = True,
                     handler = MeasurementEditorHandler(model = self),
+                    title = 'Live edition of the measure',
                     )
 

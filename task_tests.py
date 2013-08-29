@@ -1,33 +1,63 @@
 # -*- coding: utf-8 -*-
+from traits.etsconfig.etsconfig import ETSConfig
+if ETSConfig.toolkit is '':
+    ETSConfig.toolkit = "qt4"
 
-from traits.api import (Str, HasTraits, Instance, Button)
-from traitsui.api import View, UItem, InstanceEditor, Group
-from measurement.task_management.tasks import RootTask
-from measurement.task_management.task_builder import TaskBuilder
+import os
+
+from traits.api import (Str, HasTraits, Instance, Button, Any,
+                        on_trait_change)
+from traitsui.api import View, UItem, HGroup, VGroup
 from measurement.measurement_editor import MeasurementEditor
+from measurement.measurement_execution import TaskExecutionControl
 from pprint import pprint
+import sys
+
+class StdoutRedirection(HasTraits):
+
+    string = Str('')
+    out = Any
+
+    def write(self, mess):
+        mess.rstrip()
+        self.string += mess
+
+        if self.out:
+            self.out.write(mess + '\n')
 
 class Test(HasTraits):
-    root = Instance(RootTask)
     editor = Instance(MeasurementEditor)
-    button = Button('Start')
+    exe_control = Instance(TaskExecutionControl)
+    out = Instance(StdoutRedirection)
     button2 = Button('Print database')
 
-    view = View(UItem('editor',
-                      style = 'custom',
-                      ),
-                UItem('button'),
-                UItem('button2'),
+    view = View(
+                VGroup(
+                    HGroup(
+                        UItem('editor@'),
+                        UItem('exe_control@', width = -300),
+                        ),
+                    UItem('button2'),
+                ),
                 resizable = True,
                 )
 
-    def _button_changed(self):
-        self.editor.root_task.process()
+    def __init__(self, *args, **kwargs):
+        super(Test, self).__init__(*args, **kwargs)
+#        self.out = StdoutRedirection(out = sys.stdout)
+#        sys.stdout = self.out
+
+    @on_trait_change('editor:enqueue_button')
+    def enqueue_measurement(self):
+        if self.editor.root_task.check():
+            self.exe_control.append_task(self.editor.root_task)
+            self.editor.new_root_task()
 
     def _button2_changed(self):
-        pprint(self.root.task_database._database)
+        pprint(self.editor.root_task.task_database._database)
 
-root = RootTask(task_builder = TaskBuilder)
-editor = MeasurementEditor(root_task = root)
+if __name__ == '__main__':
+    editor = MeasurementEditor()
+    editor.new_root_task()
 
-Test(root = root, editor = editor).configure_traits()
+    Test(editor = editor, exe_control = TaskExecutionControl()).configure_traits()

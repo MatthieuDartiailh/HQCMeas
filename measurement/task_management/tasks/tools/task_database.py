@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import HasTraits, Dict, Instance
+from traits.api import HasTraits, Dict, Bool, Any
 from threading import Lock
 
 class TaskDatabase(HasTraits):
     """
     """
-
+    _running = Bool(False)
     _database = Dict()
-    _lock = Instance(Lock, ())
+    _lock = Any
 
     def set_value(self, node_path, value_name, value):
         """Method used to set the value of the entry at the specified path
@@ -38,9 +38,12 @@ class TaskDatabase(HasTraits):
         if not node.has_key(safe_value_name):
             new_val = True
 
-        self._lock.acquire()
-        node[safe_value_name] = value
-        self._lock.release()
+        if self._running:
+            self._lock.acquire()
+            node[safe_value_name] = value
+            self._lock.release()
+        else:
+            node[safe_value_name] = value
 
         return new_val
 
@@ -67,9 +70,12 @@ class TaskDatabase(HasTraits):
         safe_value_name = '_' + value_name
 
         if assumed_node.has_key(safe_value_name):
-            self._lock.acquire()
-            value = assumed_node[safe_value_name]
-            self._lock.release()
+            if self._running:
+                self._lock.acquire()
+                value = assumed_node[safe_value_name]
+                self._lock.release()
+            else:
+                value = assumed_node[safe_value_name]
             return value
 
         else:
@@ -95,9 +101,12 @@ class TaskDatabase(HasTraits):
         safe_value_name = '_' + value_name
 
         if node.has_key(safe_value_name):
-            self._lock.acquire()
-            del node[safe_value_name]
-            self._lock.release()
+            if self._running:
+                self._lock.acquire()
+                del node[safe_value_name]
+                self._lock.release()
+            else:
+                del node[safe_value_name]
         else:
             err_str = 'No entry {} in node {}'.format(value_name, node_path)
             raise ValueError(err_str)
@@ -194,14 +203,23 @@ class TaskDatabase(HasTraits):
             err_str = 'No node {} at the path {}'.format(node_name, parent_path)
             raise ValueError(err_str)
 
+    def prepare_for_running(self):
+        """
+        """
+        self._lock = Lock()
+        self._running = True
+
     def _go_to_path(self, path):
         """Method used to reach a node specified by a path
         """
+        node = self._database
+        if path == 'root':
+            return node
+
         #Decompose the path in database keys
         keys = path.split('/')
-        #Remove first key (ie 'root')
+        #Remove first key (ie 'root' as we are not trying to access it)
         del keys[0]
-        node = self._database
 
         for key in keys:
             if key in node:

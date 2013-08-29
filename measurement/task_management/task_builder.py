@@ -84,9 +84,15 @@ class TaskBuilder(HasTraits):
         if build_ui.result:
             task = self.task_config.build_task()
             if 'edit_view' in task.trait_views(View):
-                task.edit_traits(view = 'edit_view', kind = 'live')
+                task.edit_traits(view = 'edit_view', kind = 'live',
+                                 parent = ui.control)
             else:
-                task.edit_traits(view = 'task_view', kind = 'live')
+                task.edit_traits(view = 'task_view', kind = 'live',
+                                 parent = ui.control)
+
+            if self.creating_root:
+                task.task_builder = TaskBuilder
+
             return task
         else:
             return None

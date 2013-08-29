@@ -8,7 +8,6 @@ from traitsui.api import (View, UItem, TextEditor, Handler, CodeEditor,
 
 from configobj import ConfigObj
 from inspect import getdoc
-import textwrap
 
 from ...task_management import tasks
 from ..tasks import AbstractTask, ComplexTask, RootTask
@@ -146,6 +145,14 @@ class IniConfigTask(AbstractConfigTask):
         parameters = self._prepare_parameters(config)
 
         task.update_traits_from_preferences(**parameters)
+        return built_task
+
+    def build_task_from_config(self, config):
+        """
+        """
+        built_task = RootTask(task_name = 'Root')
+        parameters = self._prepare_parameters(config)
+        built_task.update_traits_from_preferences(**parameters)
         return built_task
 
     def _build_child(self, section):

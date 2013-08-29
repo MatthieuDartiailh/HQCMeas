@@ -3,7 +3,7 @@
 """
 
 from traits.api\
-    import (HasTraits, Str, Int, Instance, List, Float, Bool, Dict, Type,
+    import (HasTraits, Str, Int, Instance, List, Float, Bool, Type,
             on_trait_change, Unicode)
 from traits.api import self as trait_self
 from traitsui.api\
@@ -11,10 +11,10 @@ from traitsui.api\
              InstanceEditor, Group, Label)
 
 from configobj import Section, ConfigObj
-from visa import Instrument
 from numpy import linspace
 
-from .task_database import TaskDatabase
+from .tools.task_database import TaskDatabase
+from .tools.task_decorator import make_stoppable
 
 class AbstractTask(HasTraits):
     """Abstract  class defining common traits of all Task
@@ -32,16 +32,17 @@ class AbstractTask(HasTraits):
 
     #root_task = Instance(RootTask)
 
-    def process(self, *args, **kwargs):
+    def process(self):
         """The main method of any task as it is this one which is called when
-        the measurement is performed
+        the measurement is performed. This method should always be decorated
+        with make_stoppable.
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
         to be performed'
         raise NotImplementedError(err_str)
 
-    def check(self):
+    def check(self, *args, **kwargs):
         """Method used to check that everything is alright before starting a
         measurement
         """
@@ -122,6 +123,13 @@ class SimpleTask(AbstractTask):
         """
         return self.task_database.get_value(self.task_path, full_name)
 
+    def remove_from_database(self, full_name):
+        """This method deletes the database entry specified by
+        the full name (ie task_name + '_' + entry, where task_name is the name
+        of the task that wrote the value in the database).
+        """
+        return self.task_database.delete_value(self.task_path, full_name)
+
     def register_in_database(self):
         """
         """
@@ -183,19 +191,6 @@ class SimpleTask(AbstractTask):
 
             self.trait_set(**{name : validated})
 
-    def make_parallel(self):
-        pass
-
-    def make_wait(self):
-        pass
-
-class InstrumentTask(SimpleTask):
-    """Simple task involving the use of an instrument.
-    """
-    instr = Instance(Instrument)
-    instrs = Dict(Str)
-    instrs_name = List(Str)
-
 class ComplexTask(AbstractTask):
     """Task composed of several subtasks.
     """
@@ -208,11 +203,20 @@ class ComplexTask(AbstractTask):
         self.on_trait_change(self._update_paths,
                              name = 'task_name, task_path, task_depth')
 
+    @make_stoppable
     def process(self):
         """
         """
         for child in self.children_task:
             child.process()
+
+    def check(self, *args, **kwargs):
+        """Implementation of the test method of AbstractTask
+        """
+        test = True
+        for child in self.children_task:
+            test = test and child.check(*args, **kwargs)
+        return test
 
     def create_child(self, ui):
         """Method to handle the adding of a child through the list editor
@@ -220,13 +224,19 @@ class ComplexTask(AbstractTask):
         child = self.root_task.request_child(parent = self, ui = ui)
         return child
 
-    def check(self):
-        """Implementation of the test method of AbstractTask
+    def write_in_database(self, name, value):
+        """This method build a task specific database entry from the task_name
+        and the name arg and set the database entry to the value specified.
         """
-        test = True
-        for child in self.children_task:
-            test = test and child.check()
-        return test
+        value_name = self.task_name + '_' + name
+        return self.task_database.set_value(self.task_path, value_name, value)
+
+    def get_from_database(self, full_name):
+        """This method return the value under the database entry specified by
+        the full name (ie task_name + '_' + entry, where task_name is the name
+        of the task that wrote the value in the database).
+        """
+        return self.task_database.get_value(self.task_path, full_name)
 
     def register_in_database(self):
         """
@@ -509,21 +519,36 @@ class ComplexTask(AbstractTask):
 
 class LoopTask(ComplexTask):
     """Complex task which, at each iteration, performs a task with a different
-    value and all then call all its child tasks.
+    value and then call all its child tasks.
     """
     task = Instance(SimpleTask, child = True)
     task_start = Float(0.0, preference = True)
     task_stop = Float(1.0, preference = True)
     task_step = Float(0.1, preference = True)
+    database_entries = ['point_number']
 
+    @make_stoppable
     def process(self):
         """
         """
         num = int((self.task_stop - self.task_start)/self.task_step) + 1
+        self.write_in_database('point_number', num)
         for value in linspace(self.task_start, self.task_stop, num):
             self.task.process(value)
             for child in self.children_task:
                 child.process()
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        try:
+            num = int(abs((self.task_stop - self.task_start)/self.task_step)) + 1
+            self.write_in_database('point_number', num)
+        except:
+            print 'Loop task {} did not succeed in computing the number of\
+                    point'.format(self.task_name)
+            return False
+        return super(LoopTask, self).check( *args, **kwargs)
 
     def _define_task_view(self):
         task_view = View(
@@ -551,6 +576,7 @@ class LoopTask(ComplexTask):
                     )
         self.trait_view('task_view', task_view)
 
+from multiprocessing.synchronize import Event
 
 class RootTask(ComplexTask):
     """Special task which is always the root of a measurement and is the only
@@ -565,6 +591,14 @@ class RootTask(ComplexTask):
     task_depth = 0
     task_path = 'root'
     task_database_entries = ['thread']
+    should_stop = Instance(Event)
+
+    def __init__(self, *args, **kwargs):
+        super(RootTask, self).__init__(*args, **kwargs)
+        if self.task_database_entries:
+            for entry in self.task_database_entries:
+                self.task_database.set_value(self.task_path,
+                                             entry, None)
 
     def request_child(self, parent, ui):
         #the parent attribute is for now useless as all parent related traits
