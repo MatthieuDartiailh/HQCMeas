@@ -107,6 +107,7 @@ class TaskDatabase(HasTraits):
                 self._lock.release()
             else:
                 del node[safe_value_name]
+            self.entries_modified = True
         else:
             err_str = 'No entry {} in node {}'.format(value_name, node_path)
             raise ValueError(err_str)
@@ -125,20 +126,21 @@ class TaskDatabase(HasTraits):
             List of entries accessible from the specified node
         """
         entries = []
-        while node_path is not 'root':
+        while node_path != 'root':
             node = self._go_to_path(node_path)
             keys = node.keys()
             for key in keys:
                 if not isinstance(node[key], dict):
-                    entries.append(key)
+                    entries.append(key[1:])
             node_path = node_path.rpartition('/')[0]
 
         node = self._go_to_path(node_path)
         keys = node.keys()
         for key in keys:
             if not isinstance(node[key], dict):
-                entries.append(key)
+                entries.append(key[1:])
 
+        entries.remove('threads')
         return entries
 
     def create_node(self, parent_path, node_name):
@@ -227,11 +229,11 @@ class TaskDatabase(HasTraits):
             else:
                 ind = keys.index(key)
                 if ind == 0:
-                    err_str = 'Path {} is invalid, no key {} in root'.format(
+                    err_str = 'Path {} is invalid, no node {} in root'.format(
                                 path, key)
                 else:
-                    err_str = 'Path {} is invalid, no key {} in node {}'.format(
-                                path, key, keys[ind-1])
+                    err_str = 'Path {} is invalid, no node {} in node\
+                        {}'.format(path, key, keys[ind-1])
                 raise ValueError(err_str)
 
         return node

@@ -42,7 +42,7 @@ class Pipe2TextThread(Thread):
                 string = self.pipe_outlet.recv()
                 string.rstrip()
                 if string != '':
-                    print string.rstrip()
+                    print 'Subprocess :' + string
 
 class TaskProcess(Process):
     """
@@ -70,7 +70,6 @@ class TaskProcess(Process):
             if config != 'STOP':
                 task = IniConfigTask().build_task_from_config(config)
                 print 'Task built'
-                print task.children_task
                 self.task_stop.clear()
                 task.should_stop = self.task_stop
                 task.task_database.prepare_for_running()

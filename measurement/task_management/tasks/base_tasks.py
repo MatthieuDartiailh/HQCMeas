@@ -214,8 +214,14 @@ class ComplexTask(AbstractTask):
         """Implementation of the test method of AbstractTask
         """
         test = True
-        for child in self.children_task:
-            test = test and child.check(*args, **kwargs)
+        for name in self.traits(child = True):
+            child = self.get(name).values()[0]
+            if child:
+                if isinstance(child, list):
+                    for aux in child:
+                        test = test and aux.check(*args, **kwargs)
+                else:
+                    test = test and child.check(*args, **kwargs)
         return test
 
     def create_child(self, ui):
@@ -512,6 +518,7 @@ class ComplexTask(AbstractTask):
                             ),
                         ),
                         title = 'Edit task',
+                        resizable = True,
                     )
 
         self.trait_view('task_view', task_view)
@@ -525,7 +532,7 @@ class LoopTask(ComplexTask):
     task_start = Float(0.0, preference = True)
     task_stop = Float(1.0, preference = True)
     task_step = Float(0.1, preference = True)
-    database_entries = ['point_number']
+    task_database_entries = ['point_number']
 
     @make_stoppable
     def process(self):
@@ -573,6 +580,7 @@ class LoopTask(ComplexTask):
                         show_border = True,
                         ),
                     title = 'Edit task',
+                    resizable = True,
                     )
         self.trait_view('task_view', task_view)
 
@@ -590,15 +598,22 @@ class RootTask(ComplexTask):
     task_preferences = ConfigObj()
     task_depth = 0
     task_path = 'root'
-    task_database_entries = ['thread']
+    task_database_entries = ['threads', 'instrs']
     should_stop = Instance(Event)
 
     def __init__(self, *args, **kwargs):
         super(RootTask, self).__init__(*args, **kwargs)
-        if self.task_database_entries:
-            for entry in self.task_database_entries:
-                self.task_database.set_value(self.task_path,
-                                             entry, None)
+        self.task_database.set_value('root','threads', [])
+        self.task_database.set_value('root','instrs', [])
+
+    @make_stoppable
+    def process(self):
+        """
+        """
+        for child in self.children_task:
+            child.process()
+        for instr in self.task_database.get_value('root','instrs'):
+            instr.close()
 
     def request_child(self, parent, ui):
         #the parent attribute is for now useless as all parent related traits

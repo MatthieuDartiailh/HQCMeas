@@ -37,7 +37,7 @@ class PrintTask(SimpleTask):
     def _update_database_entries(self):
         """
         """
-        return self.task_database.list_accessible_entries(self.path)
+        return self.task_database.list_accessible_entries(self.task_path)
 
     def _define_task_view(self):
         """

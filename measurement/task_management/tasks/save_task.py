@@ -28,8 +28,14 @@ class SaveTaskHandler(Handler):
         dlg = QtGui.QFileDialog(info.ui.control)
         dlg.setFileMode(QtGui.QFileDialog.Directory)
         if dlg.exec_() == QtGui.QDialog.Accepted:
-            dir = dlg.selectedFiles()
-            self.folder = dir
+            directory = dlg.selectedFiles()[0]
+            info.object.folder = directory
+
+    def object_edit_header_changed(self, info):
+        """
+        """
+        info.object.edit_traits(view = 'header_view', parent = info.ui.control,
+                                kind = 'modal')
 
 class SaveTask(SimpleTask):
     """
@@ -37,14 +43,17 @@ class SaveTask(SimpleTask):
     folder = Str('', preference = True)
     filename = Str('', preference = True)
     file_object = Any
-    csv_writer = Instance(csv.writer)
+    csv_writer = Any #Instance(csv.writer)
+    header = Str('', preference = True)
+    edit_header = Button('Edit')
 
-    array_size = Str
-    array_length = Int
     array = Array
-    line_index = Int(0)
 
     saving_target = Enum('File', 'Array', 'File and array', preference = True)
+
+    array_size = Str(preference = True)
+    array_length = Int
+    line_index = Int(0)
 
     saved_labels = List(Str, preference = True)
     saved_values = List(Str, preference = True)
@@ -52,46 +61,66 @@ class SaveTask(SimpleTask):
 
     initialized = Bool(False)
     database_entries = ['array', 'file']
+    accessible_entries = List(Str)
     explore_button = Button('Browse')
 
     #task_view = View()
+    header_view = View(UItem('header@'), buttons = ['OK', 'Cancel'])
 
     def __init__(self, *args, **kwargs):
         super(SaveTask, self).__init__(*args, **kwargs)
         self._define_task_view()
+        self.on_trait_change(name = 'saved_objects:[label, value]',
+                             handler = self._saved_objects_modified)
 
     @make_stoppable
     @make_wait
     def process(self):
         """
         """
+        #Init
         if not self.initialized:
-            full_folder_path = get_formatted_string(self.folder,
-                                                     self.task_path,
-                                                     self.task_database)
-            full_path = os.path.join(full_folder_path, self.filename)
-            try:
-                self.file_object = open(full_path, 'wb')
-            except IOError:
-                print 'In {}, to open the specified file'.format(
-                                                            self.task_name)
-                self.root_task.should_stop.set()
-            self.csv_writer = csv.writer(self.file_object, delimiter = '\t')
-            self.write_in_database('file', self.file_object)
-            self.array_length = eval(get_formatted_string(self.array_size,
+            if self.saving_target != 'Array':
+                full_folder_path = get_formatted_string(self.folder,
+                                                         self.task_path,
+                                                         self.task_database)
+                full_path = os.path.join(full_folder_path, self.filename)
+                try:
+                    self.file_object = open(full_path, 'wb')
+                except IOError:
+                    print 'In {}, to open the specified file'.format(
+                                                                self.task_name)
+                    self.root_task.should_stop.set()
+                    return
+                self.csv_writer = csv.writer(self.file_object, delimiter = '\t')
+                self.write_in_database('file', self.file_object)
+                self.csv_writer.writerow(self.saved_labels)
+
+            if self.saving_target != 'File':
+                self.array_length = eval(get_formatted_string(self.array_size,
                                                            self.task_path,
                                                            self.task_database))
-            array_type = numpy.dtype([(name, 'f8')
-                                        for name in self.saved_labels])
-            self.array = numpy.empty((self.array_length,
-                                      len(self.saved_labels)),
-                                     dtype = array_type)
-            self.write_in_database('array', self.array)
+                array_type = numpy.dtype([(name, 'f8')
+                                            for name in self.saved_labels])
+                self.array = numpy.empty((self.array_length,
+                                          len(self.saved_labels)),
+                                         dtype = array_type)
+                self.write_in_database('array', self.array)
             self.initialized = True
 
-        #do stuff
+        #writing
+        values = [get_formatted_string(value,
+                                       self.task_path,
+                                       self.task_database)
+                    for value in self.saved_values]
+        if self.saving_target != 'Array':
+            self.csv_writer.writerow(values)
+        if self.saving_target != 'File':
+            self.array[self.line_index] = tuple(values)
 
         self.line_index += 1
+
+        #Closing
         if self.line_index == self.array_length:
             self.file_object.close()
             self.initialized = False
@@ -114,7 +143,7 @@ class SaveTask(SimpleTask):
             f = open(full_path, 'wb')
             f.close()
         except:
-            print 'In {}, to open the specified file'.format(
+            print 'In {}, failed to open the specified file'.format(
                                                             self.task_name)
             return False
 
@@ -129,18 +158,25 @@ class SaveTask(SimpleTask):
 
         return True
 
-    def update_trais_from_preferences(self, **parameters):
+    def update_preferences_from_traits(self):
+        """
+        """
+        self._saved_objects_modified()
+        for name in self.traits(preference = True):
+            self.task_preferences[name] = str(self.get(name).values()[0])
+
+    def update_traits_from_preferences(self, **parameters):
         """
         """
         super(SaveTask, self).update_traits_from_preferences(**parameters)
-        self.on_trait_change(name = 'saved_objects',
+        self.on_trait_change(name = 'saved_objects:[label, value]',
                              handler = self._saved_objects_modified,
                              remove = True)
         for i, label in enumerate(self.saved_labels):
-            self.saved_object.append(
+            self.saved_objects.append(
                     SavedValueObject(label = label,
                                      value = self.saved_values[i]))
-        self.on_trait_change(name = 'saved_objects',
+        self.on_trait_change(name = 'saved_objects:[label, value]',
                              handler = self._saved_objects_modified)
 
     def _saved_objects_modified(self):
@@ -152,7 +188,9 @@ class SaveTask(SimpleTask):
     def _update_database_entries(self):
         """
         """
-        return self.task_database.list_accessible_entries(self.path)
+        self.accessible_entries =\
+                    self.task_database.list_accessible_entries(self.task_path)
+        return self.accessible_entries
 
     def _define_task_view(self):
         """
@@ -162,11 +200,13 @@ class SaveTask(SimpleTask):
         label_col = ObjectColumn(name = 'label',
                          label = 'Label',
                          horizontal_alignment = 'center',
+                         width = 0.4,
                          )
         value_col = ObjectColumn(name = 'value',
                          label = 'Value',
                          horizontal_alignment = 'center',
-                         editor = line_completer
+                         editor = line_completer,
+                         width = 0.6,
                          )
         table_editor = TableEditor(
                 editable  = True,
@@ -174,7 +214,6 @@ class SaveTask(SimpleTask):
                 auto_size = False,
                 reorderable = True,
                 deletable = True,
-                show_toolbar = True,
                 row_factory = SavedValueObject,
                 columns = [label_col,
                             value_col],
@@ -203,8 +242,13 @@ class SaveTask(SimpleTask):
                             show_border = True,
                             ),
                         HGroup(
-                            UItem('filename'),
+                            UItem('filename', springy = True),
                             label = 'Filename',
+                            show_border = True,
+                            ),
+                        HGroup(
+                            UItem('edit_header'),
+                            label = 'Header',
                             show_border = True,
                             ),
                     enabled_when = "saving_target != 'Array'"

@@ -5,7 +5,8 @@ from ..tasks import *
 
 #Importing the base task config
 from .base_task_config import (AbstractConfigTask, IniConfigTask, PyConfigTask,
-                              InstrConfigTask, ComplexTask)
+                              ComplexTask)
+from .instr_task_config import (InstrConfigTask)
 
 #Importing all the config for the simple task, potentially loopable
 

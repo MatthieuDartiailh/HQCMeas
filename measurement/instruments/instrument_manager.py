@@ -8,15 +8,17 @@ from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor, VGrid,
 
 import os, re, inspect
 from configobj import ConfigObj
+from textwrap import fill
+from visa import VisaIOError
 
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 from watchdog.events import FileSystemEventHandler, FileCreatedEvent,\
                             FileDeletedEvent, FileMovedEvent
 
-import instrument_drivers
+from .drivers import drivers
 
-drivers = instrument_drivers.drivers.keys()
+instr_drivers = drivers.keys()
 connection_types = ['GPIB', 'USB', 'LAN']
 module_path = os.path.dirname(__file__)
 
@@ -49,25 +51,29 @@ class InstrumentFormHandler(Handler):
         if is_ok:
             if (model.name != '' and model.driver != '' and
                 model.connection_type != '' and model.address != ''):
-                if instrument_drivers.check(driver = model.driver,
-                                   connection_type = model.connection_type,
-                                   address = model.address,
-                                   additionnal_mode = model.additionnal_mode):
-                    return True
-                else:
+                connect_str = model.connection_type + '::' + model.address +\
+                                '::' + model.additionnal_mode
+                try:
+                    instr = drivers[model.driver](connect_str)
+                    instr.close()
+                except VisaIOError:
                     message = inspect.cleandoc("""The software failed to
                                 establish the connection with the instrument
                                 please check all parameters and instrument state
                                 and try again""")
 
-                    error(message = message.replace('\n', ' '),
+                    error(message = fill(message.replace('\n', ' '),80),
                           title = 'Connection failure', buttons = ['OK'],
                           parent = info.ui.control)
+                    return False
+
+                return True
+
             else:
                 message = inspect.cleandoc("""You must fill the fields : name,
                                            driver, connection and address before
                                            validating""")
-                error(message = message.replace('\n', ' '),
+                error(message = fill(message.replace('\n', ' '),80),
                           title = 'Missing information', buttons = ['OK'],
                           parent = info.ui.control)
         else:
@@ -101,7 +107,8 @@ class InstrumentForm(HasTraits):
                     VGrid(
                         Label('Name'), UItem('name', style = 'readonly'),
                         Label('Driver'), UItem('driver',
-                                    editor = EnumEditor(values = drivers)),
+                                    editor = EnumEditor(values = instr_drivers)
+                                    ),
                         Label('Connection'), UItem('connection_type',
                                 editor = EnumEditor(values = connection_types)),
                         Label('Address'), UItem('address'),
@@ -118,7 +125,8 @@ class InstrumentForm(HasTraits):
                     VGrid(
                         Label('Name'), UItem('name'),
                         Label('Driver'), UItem('driver',
-                                    editor = EnumEditor(values = drivers)),
+                                    editor = EnumEditor(values = instr_drivers)
+                                    ),
                         Label('Connection'), UItem('connection_type',
                                 editor = EnumEditor(values = connection_types)),
                         Label('Address'), UItem('address'),
@@ -167,8 +175,9 @@ class InstrumentManagerHandler(Handler):
 
     def object_delete_instr_changed(self, info):
         model = info.object
-        if error(message = """Are you sure want to delete this instrument
-                        connection informations ?""",
+        message = inspect.cleandoc("""Are you sure want to delete this
+                        instrument connection informations ?""")
+        if error(message = fill(message.replace('\n', ' '),80),
                 title = 'Deletion confirmation',
                 parent = info.ui.control):
             instr_file = model.instrs[model.selected_inst_name]
@@ -221,10 +230,16 @@ class InstrumentManager(HasTraits):
         if self.instrs_name:
             self.selected_instr_name = self.instrs_name[0]
 
-    def matching_instr_list(self, instr_driver):
+    def matching_instr_list(self, driver_key):
         """Return a list of instrument whose driver match the argument
         """
-        pass
+        profile_list = []
+        for profile in self.instrs:
+            path = os.path.join(self.instr_folder, self.instrs[profile])
+            if driver_key == ConfigObj(path)['driver']:
+                profile_list.append(profile)
+
+        return profile_list
 
     @on_trait_change('selected_instr_name')
     def _new_selected_instr(self, new):

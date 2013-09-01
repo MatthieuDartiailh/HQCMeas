@@ -11,7 +11,6 @@ from inspect import getdoc
 
 from ...task_management import tasks
 from ..tasks import AbstractTask, ComplexTask, RootTask
-from ...instruments.instrument_manager import InstrumentManager
 
 class AbstractConfigTask(HasTraits):
     """
@@ -229,8 +228,3 @@ class PyConfigTask(AbstractConfigTask):
 
     def build_task(self):
         return self.task_class(task_name = self.task_name)
-
-class InstrConfigTask(PyConfigTask):
-    """
-    """
-    pass

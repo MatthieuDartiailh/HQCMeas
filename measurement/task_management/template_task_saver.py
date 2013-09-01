@@ -21,7 +21,7 @@ class TemplateTaskSaverHandler(Handler):
         if '.ini' not in model.template_filename:
             filename = model.template_filename + '.ini'
         else:
-            filename = filename.template_filename
+            filename = model.template_filename
 
         result = True
         if filename in model.template_tasks:
@@ -73,8 +73,9 @@ class TemplateTaskSaver(HasTraits):
                         HGroup(
                             UItem('template_tasks',
                                       editor = ListStrEditor(
-                                                  editable = False,
-                                                  title = 'Existing templates'),
+                                              editable = False,
+                                              selected = 'template_filename',
+                                              title = 'Existing templates'),
                                   ),
                             VGroup(
                                 HGroup(
