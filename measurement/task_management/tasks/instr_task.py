@@ -60,8 +60,8 @@ class InstrumentTask(SimpleTask):
                             + '::' + config['additionnal_mode']
         self.driver = driver_class(connection_str)
         instrs = self.task_database.get_value('root', 'instrs')
-        self.task_database.set_value('root', 'instrs',
-                                     instrs.append(self.driver))
+        instrs.append(self.driver)
+        self.task_database.set_value('root', 'instrs', instrs)
 
     def stop_driver(self):
         """

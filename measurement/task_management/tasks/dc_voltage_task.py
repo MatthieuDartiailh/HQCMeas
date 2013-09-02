@@ -23,7 +23,7 @@ class DCVoltageTask(InstrumentTask):
     driver_list = ['YokogawaGS200']
     loopable =  True
 
-    database_entries = ['voltage']
+    task_database_entries = ['voltage']
 
     task_view = View(
                     VGroup(
@@ -64,12 +64,11 @@ class DCVoltageTask(InstrumentTask):
     def process(self, target_value = None):
         """
         """
-        print self.last_value
         if not self.driver:
             self.start_driver()
             if hasattr(self.driver, 'set_function'):
                 self.driver.set_function('VOLT')
-
+                
         if target_value is not None:
             value = target_value
         else:

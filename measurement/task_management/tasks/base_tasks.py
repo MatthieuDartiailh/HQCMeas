@@ -612,6 +612,8 @@ class RootTask(ComplexTask):
         """
         for child in self.children_task:
             child.process()
+        for thread in self.task_database.get_value('root','threads'):
+            thread.join()
         for instr in self.task_database.get_value('root','instrs'):
             instr.close()
 

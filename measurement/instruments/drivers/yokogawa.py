@@ -9,13 +9,12 @@ class YokogawaGS200(Instrument):
 
     def __init__(self, connection_str):
 
-        super(YokogawaGS200, self).__init__(connection_str, term_chars = CR+LF)
+        super(YokogawaGS200, self).__init__(connection_str)
 
     def set_voltage(self, set_point):
         """
         """
-        print 'Setting voltage to {}'.format(set_point)
-        self.write(":SOURce:LEVel {}",set_point)
+        self.write(":SOURce:LEVel {}".format(set_point))
 
     def get_voltage(self):
         """
