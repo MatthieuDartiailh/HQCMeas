@@ -14,6 +14,7 @@ class YokogawaGS200(Instrument):
     def set_voltage(self, set_point):
         """
         """
+        print 'Setting voltage to {}'.format(set_point)
         self.write(":SOURce:LEVel {}",set_point)
 
     def get_voltage(self):

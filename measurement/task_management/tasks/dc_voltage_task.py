@@ -3,7 +3,7 @@
 from traits.api\
     import (Float, Bool)
 from traitsui.api\
-     import (View, Group, UItem, Label, EnumEditor)
+     import (View, Group, VGroup, UItem, Label, EnumEditor)
 
 import time
 
@@ -13,32 +13,36 @@ from .tools.task_decorator import make_stoppable, make_parallel
 class DCVoltageTask(InstrumentTask):
     """
     """
-    target_value = Float
-    back_step = Float
-    delay = Float(0.01)
-    check_value = Bool(False)
+    target_value = Float(preference = True)
+    back_step = Float(preference = True)
+    delay = Float(0.01, preference = True)
+    check_value = Bool(False, preference = True)
 
     last_value = Float
 
-    driver_list = ['Yokogawa']
+    driver_list = ['YokogawaGS200']
     loopable =  True
 
     database_entries = ['voltage']
 
     task_view = View(
-                    Group(Label('Instr'), Label('Target (V)'),
-                          Label('Back step'), Label('Delay (s)'),
-                          Label('Check voltage'),
-                          UItem('selected_profile',
-                                editor = EnumEditor(name = 'profile_list'),
-                                width = 100),
-                          UItem('target_value'), UItem('back_step'),
-                          UItem('delay'), UItem('check_value', tooltip =\
-                          'Should the program ask the instrument the value of\
-                          the applied voltage each time it is about to set\
-                          it'.replace('\n', ' ')),
-                          columns = 5,
-                          ),
+                    VGroup(
+                        UItem('task_name', style = 'readonly'),
+                        Group(Label('Instr'), Label('Target (V)'),
+                              Label('Back step'), Label('Delay (s)'),
+                              Label('Check voltage'),
+                              UItem('selected_profile',
+                                    editor = EnumEditor(name = 'profile_list'),
+                                    width = 100),
+                              UItem('target_value'), UItem('back_step'),
+                              UItem('delay'), UItem('check_value', tooltip =\
+                              'Should the program ask the instrument the value of\
+                              the applied voltage each time it is about to set\
+                              it'.replace('\n', ' ')),
+                              columns = 5,
+                              show_border = True,
+                              ),
+                        ),
                      )
     loop_view = View(
                     Group(Label('Instr'), Label('Back step (V)'),
@@ -60,6 +64,7 @@ class DCVoltageTask(InstrumentTask):
     def process(self, target_value = None):
         """
         """
+        print self.last_value
         if not self.driver:
             self.start_driver()
             if hasattr(self.driver, 'set_function'):

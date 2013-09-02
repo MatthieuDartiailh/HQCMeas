@@ -233,13 +233,13 @@ class InstrumentManager(HasTraits):
     def matching_instr_list(self, driver_key):
         """Return a list of instrument whose driver match the argument
         """
-        profile_list = []
+        profile_dict = {}
         for profile in self.instrs:
             path = os.path.join(self.instr_folder, self.instrs[profile])
             if driver_key == ConfigObj(path)['driver']:
-                profile_list.append(profile)
+                profile_dict[profile] = self.instrs[profile]
 
-        return profile_list
+        return profile_dict
 
     @on_trait_change('selected_instr_name')
     def _new_selected_instr(self, new):

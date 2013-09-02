@@ -52,8 +52,8 @@ class Test(HasTraits):
         sys.stdout = self.out
 
     @on_trait_change('editor:enqueue_button')
-    def enqueue_measurement(self):
-        if self.editor.root_task.check():
+    def enqueue_measurement(self):    
+        if self.editor.root_task.check(test_instr = not self.exe_control.running):
             self.exe_control.append_task(self.editor.root_task)
             self.editor.new_root_task()
 

@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import (Str, List, Instance)
+from traits.api import (Str, List, Instance, Dict)
 from visa import Instrument
 from configobj import ConfigObj
 import os
 
 from .base_tasks import SimpleTask
-from ...instruments import drivers
+from ...instruments.drivers import drivers
 from ...instruments.profiles import profiles_folder_path
 
 class InstrumentTask(SimpleTask):
     """
     """
-    profile_list = List(Str, preference = True)
+    profile_dict = Dict(Str, Str, preference = True)
+    profile_list = List(Str)
     selected_profile = Str(preference = True)
     driver_list = []
     selected_driver = Str(preference = True)
@@ -24,7 +25,7 @@ class InstrumentTask(SimpleTask):
         """
         try:
             full_path = os.path.join(profiles_folder_path,
-                                    self.selected_profile)
+                                    self.selected_profile + '.ini')
         except:
             print 'Failed to get the specified instr profile in {}'.format(
                                                                 self.task_name)
@@ -38,9 +39,9 @@ class InstrumentTask(SimpleTask):
         if kwargs['test_instr']:
             try:
                 config = ConfigObj(full_path)
-                connection_str = config['connection_type'] + '::'\
-                                    + config['address'] + '::'\
-                                    + config['additionnal_mode']
+                connection_str = config['connection_type']\
+                                 + '::' + config['address']\
+                                 + '::' + config['additionnal_mode']
                 driver_class(connection_str)
             except:
                 print 'Failed to establish the connection\
@@ -51,7 +52,8 @@ class InstrumentTask(SimpleTask):
     def start_driver(self):
         """
         """
-        full_path = os.path.join(profiles_folder_path, self.selected_profile)
+        profile = self.profile_dict[self.selected_profile]
+        full_path = os.path.join(profiles_folder_path, profile)
         driver_class = drivers[self.selected_driver]
         config = ConfigObj(full_path)
         connection_str = config['connection_type'] + '::' + config['address']\
@@ -65,3 +67,8 @@ class InstrumentTask(SimpleTask):
         """
         """
         self.driver.close()
+
+    def _profile_dict_changed(self):
+        """
+        """
+        self.profile_list = self.profile_dict.keys()

@@ -39,9 +39,10 @@ class InstrConfigTask(PyConfigTask):
         """
         """
         manager = InstrumentManager()
-        profile_list = manager.matching_instr_list(self.driver)
+        profile_dict = manager.matching_instr_list(self.driver)
         return self.task_class(task_name = self.task_name,
-                               profile_list = profile_list)
+                               profile_dict = profile_dict,
+                               selected_driver = self.driver)
 
     def check_parameters(self):
         if self.task_name != '' and self.driver != '':

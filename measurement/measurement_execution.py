@@ -73,7 +73,7 @@ class TaskProcess(Process):
                 self.task_stop.clear()
                 task.should_stop = self.task_stop
                 task.task_database.prepare_for_running()
-                if task.check():
+                if task.check(test_instr = True):
                     print 'Check successful'
                     task.process()
                     print 'Task processed'
