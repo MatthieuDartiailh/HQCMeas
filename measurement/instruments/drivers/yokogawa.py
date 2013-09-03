@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 """
-from visa import Instrument, CR, LF
+from visa import Instrument
 
 class YokogawaGS200(Instrument):
     """
