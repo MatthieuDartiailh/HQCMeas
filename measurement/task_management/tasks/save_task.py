@@ -31,11 +31,13 @@ class SaveTaskHandler(Handler):
             directory = dlg.selectedFiles()[0]
             info.object.folder = directory
 
-    def object_edit_header_changed(self, info):
+    def object_fill_header_changed(self, info):
         """
         """
-        info.object.edit_traits(view = 'header_view', parent = info.ui.control,
-                                kind = 'modal')
+        task = info.object
+        task.edit_traits(view = 'header_view',
+                                parent = info.ui.control,
+                                kind = 'livemodal')
 
 class SaveTask(SimpleTask):
     """
@@ -45,7 +47,7 @@ class SaveTask(SimpleTask):
     file_object = Any
     csv_writer = Any #Instance(csv.writer)
     header = Str('', preference = True)
-    edit_header = Button('Edit')
+    fill_header = Button('Edit')
 
     array = Array
 
@@ -247,7 +249,7 @@ class SaveTask(SimpleTask):
                             show_border = True,
                             ),
                         HGroup(
-                            UItem('edit_header'),
+                            UItem('fill_header'),
                             label = 'Header',
                             show_border = True,
                             ),

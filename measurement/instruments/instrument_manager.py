@@ -13,8 +13,8 @@ from visa import VisaIOError
 
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
-from watchdog.events import FileSystemEventHandler, FileCreatedEvent,\
-                            FileDeletedEvent, FileMovedEvent
+from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
+                            FileDeletedEvent, FileMovedEvent)
 
 from .drivers import drivers
 
@@ -46,7 +46,7 @@ class FileListUpdater(FileSystemEventHandler):
 class InstrumentFormHandler(Handler):
     """
     """
-    def close(self,info, is_ok):
+    def close(self, info, is_ok):
         model = info.object
         if is_ok:
             if (model.name != '' and model.driver != '' and
@@ -62,7 +62,7 @@ class InstrumentFormHandler(Handler):
                                 please check all parameters and instrument state
                                 and try again""")
 
-                    error(message = fill(message.replace('\n', ' '),80),
+                    error(message = fill(message.replace('\n', ' '), 80),
                           title = 'Connection failure', buttons = ['OK'],
                           parent = info.ui.control)
                     return False
@@ -73,7 +73,7 @@ class InstrumentFormHandler(Handler):
                 message = inspect.cleandoc("""You must fill the fields : name,
                                            driver, connection and address before
                                            validating""")
-                error(message = fill(message.replace('\n', ' '),80),
+                error(message = fill(message.replace('\n', ' '), 80),
                           title = 'Missing information', buttons = ['OK'],
                           parent = info.ui.control)
         else:
@@ -140,8 +140,12 @@ class InstrumentForm(HasTraits):
                 )
 
 class InstrumentManagerHandler(Handler):
+    """
+    """
 
     def object_add_instr_changed(self, info):
+        """
+        """
         instr = InstrumentForm()
         instr_ui = instr.edit_traits(view = 'new_view',
                                        parent = info.ui.control)
@@ -157,6 +161,8 @@ class InstrumentManagerHandler(Handler):
             instr_config.write()
 
     def object_edit_instr_changed(self, info):
+        """
+        """
         model = info.object
         instr_ui = model.selected_instr.edit_traits(view = 'edit_view',
                                        parent = info.ui.control)
@@ -174,6 +180,8 @@ class InstrumentManagerHandler(Handler):
             instr_config.write()
 
     def object_delete_instr_changed(self, info):
+        """
+        """
         model = info.object
         message = inspect.cleandoc("""Are you sure want to delete this
                         instrument connection informations ?""")

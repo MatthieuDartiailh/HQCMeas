@@ -2,13 +2,14 @@
 """
 """
 from traits.api import (Str, List, Instance, Dict)
-from visa import Instrument
+from visa import Instrument, VisaIOError
 from configobj import ConfigObj
 import os
 
 from .base_tasks import SimpleTask
 from ...instruments.drivers import drivers
 from ...instruments.profiles import profiles_folder_path
+from ...instruments.instrument_manager import InstrumentManager
 
 class InstrumentTask(SimpleTask):
     """
@@ -23,27 +24,28 @@ class InstrumentTask(SimpleTask):
     def check(self, *args, **kwargs):
         """
         """
-        try:
-            full_path = os.path.join(profiles_folder_path,
+        full_path = os.path.join(profiles_folder_path,
                                     self.selected_profile + '.ini')
-        except:
+        if not os.path.isfile(full_path):
             print 'Failed to get the specified instr profile in {}'.format(
                                                                 self.task_name)
             return False
-        try:
+
+        if drivers.has_key(self.selected_driver):
             driver_class = drivers[self.selected_driver]
-        except:
+        else:
             print 'Failed to get the specified instr driver in {}'.format(
                                                                 self.task_name)
             return False
+
         if kwargs['test_instr']:
+            config = ConfigObj(full_path)
+            connection_str = config['connection_type']\
+                             + '::' + config['address']\
+                             + '::' + config['additionnal_mode']
             try:
-                config = ConfigObj(full_path)
-                connection_str = config['connection_type']\
-                                 + '::' + config['address']\
-                                 + '::' + config['additionnal_mode']
                 driver_class(connection_str)
-            except:
+            except VisaIOError:
                 print 'Failed to establish the connection\
                     with the selected instrument in {}'.format(self.task_name)
                 return False
@@ -72,3 +74,9 @@ class InstrumentTask(SimpleTask):
         """
         """
         self.profile_list = self.profile_dict.keys()
+
+    def _selected_driver_changed(self, new):
+        """
+        """
+        manager = InstrumentManager()
+        self.profile_dict = manager.matching_instr_list(new)

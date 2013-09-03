@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
-
-from base_tasks import (AbstractTask, SimpleTask, ComplexTask,
+"""
+This module simply import all the tasks defined in the directory tasks and
+defines one module variable KNOWN_PY_TASKS storing all the tasks succeptible
+to be used as is by the user (no absract class)
+"""
+from .base_tasks import (AbstractTask, SimpleTask, ComplexTask,
                         LoopTask, RootTask)
 
-from test_tasks import (PrintTask)
-from save_task import SaveTask
-from formula_task import FormulaTask
-from instr_task import InstrumentTask
-from dc_voltage_task import DCVoltageTask
+from .test_tasks import (PrintTask)
+from .save_task import SaveTask
+from .formula_task import FormulaTask
+from .instr_task import InstrumentTask
+from .set_dc_voltage_task import SetDcVoltageTask
 
-known_py_tasks = [ComplexTask, LoopTask, PrintTask, SaveTask, FormulaTask,
-                  DCVoltageTask]
+KNOWN_PY_TASKS = [ComplexTask, LoopTask, PrintTask, SaveTask, FormulaTask,
+                  SetDcVoltageTask]

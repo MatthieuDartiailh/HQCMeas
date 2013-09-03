@@ -12,15 +12,14 @@ from configobj import ConfigObj
 
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
-from watchdog.events import FileSystemEventHandler, FileCreatedEvent,\
-                            FileDeletedEvent, FileMovedEvent
+from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
+                            FileDeletedEvent, FileMovedEvent)
 
-from .tasks import AbstractTask, known_py_tasks
+from .tasks import AbstractTask, KNOWN_PY_TASKS
 from ..task_management import tasks
 from .filters import task_filters, AbstractTaskFilter
 
-module_path = os.path.dirname(__file__)
-task_filters_name = sorted(task_filters.keys())
+MODULE_PATH = os.path.dirname(__file__)
 
 class FileListUpdater(FileSystemEventHandler):
     """
@@ -47,16 +46,16 @@ class TaskManager(HasTraits):
     """
     """
 
-    py_tasks = List(Type(AbstractTask), known_py_tasks)
+    py_tasks = List(Type(AbstractTask), KNOWN_PY_TASKS)
 
-    template_folder = Directory(os.path.join(module_path,'tasks/templates'))
+    template_folder = Directory(os.path.join(MODULE_PATH,'tasks/templates'))
     template_tasks = List(File)
     observer = Instance(Observer,())
     event_handler = Instance(FileListUpdater)
     watch = Instance(ObservedWatch)
 
-    task_filters = Dict(Str,Type(AbstractTaskFilter),task_filters)
-    task_filters_name = List(Str,task_filters_name)
+    task_filters = Dict(Str,Type(AbstractTaskFilter), task_filters)
+    task_filters_name = List(Str)
     selected_task_filter_name = Str('All')
 
     tasks = Dict(Str)
@@ -107,6 +106,7 @@ class TaskManager(HasTraits):
 
     def __init__(self, *args, **kwargs):
         super(TaskManager, self).__init__(*args, **kwargs)
+        self.task_filters_name = sorted(task_filters.keys())
         self.event_handler = FileListUpdater(self._update_list_file)
         self.watch = self.observer.schedule(self.event_handler,
                                             self.template_folder)
@@ -158,8 +158,7 @@ class TaskManager(HasTraits):
         """
         # sorted files only
         path = self.template_folder
-        tasks = sorted(f for f in os.listdir(path)
+        self.template_tasks = sorted(f for f in os.listdir(path)
                            if (os.path.isfile(os.path.join(path, f))
                            and f.endswith('.ini')))
-        self.template_tasks = tasks
         self._new_task_filter(self.selected_task_filter_name)

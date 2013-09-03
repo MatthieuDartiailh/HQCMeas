@@ -103,7 +103,7 @@ class MeasurementEditorHandler(Handler):
                             a part of it, use the contextual menu.""")
 
         result = error(message = textwrap.fill(message.replace('\n', ' '),80),
-                  title = 'Old measurement suppression',
+                  title = 'Saving measurement',
                   parent = info.ui.control)
 
         if result:

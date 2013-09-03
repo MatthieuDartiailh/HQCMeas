@@ -10,7 +10,7 @@ import time
 from .instr_task import InstrumentTask
 from .tools.task_decorator import make_stoppable, make_parallel
 
-class DCVoltageTask(InstrumentTask):
+class SetDcVoltageTask(InstrumentTask):
     """
     """
     target_value = Float(preference = True)
@@ -28,35 +28,43 @@ class DCVoltageTask(InstrumentTask):
     task_view = View(
                     VGroup(
                         UItem('task_name', style = 'readonly'),
-                        Group(Label('Instr'), Label('Target (V)'),
-                              Label('Back step'), Label('Delay (s)'),
-                              Label('Check voltage'),
-                              UItem('selected_profile',
-                                    editor = EnumEditor(name = 'profile_list'),
-                                    width = 100),
-                              UItem('target_value'), UItem('back_step'),
-                              UItem('delay'), UItem('check_value', tooltip =\
-                              'Should the program ask the instrument the value of\
-                              the applied voltage each time it is about to set\
-                              it'.replace('\n', ' ')),
-                              columns = 5,
-                              show_border = True,
-                              ),
+                        Group(
+                            Label('Driver'), Label('Instr'),
+                            Label('Target (V)'), Label('Back step'),
+                            Label('Delay (s)'),Label('Check voltage'),
+                            UItem('selected_driver',
+                                editor = EnumEditor(name = 'driver_list'),
+                                width = 100),
+                            UItem('selected_profile',
+                                editor = EnumEditor(name = 'profile_list'),
+                                width = 100),
+                            UItem('target_value'), UItem('back_step'),
+                            UItem('delay'), UItem('check_value', tooltip =\
+                            'Should the program ask the instrument the value of\
+                             the applied voltage each time it is about to set\
+                             it'.replace('\n', ' ')),
+                            columns = 6,
+                            show_border = True,
+                            ),
                         ),
                      )
     loop_view = View(
-                    Group(Label('Instr'), Label('Back step (V)'),
-                          Label('Delay (s)'), Label('Check voltage'),
-                          UItem('selected_profile',
+                    Group(
+                        Label('Driver'), Label('Instr'), Label('Back step (V)'),
+                        Label('Delay (s)'), Label('Check voltage'),
+                        UItem('selected_driver',
+                                editor = EnumEditor(name = 'driver_list'),
+                                width = 100),
+                        UItem('selected_profile',
                                 editor = EnumEditor(name = 'profile_list'),
                                 width = 100),
-                          UItem('back_step'), UItem('delay'),
-                          UItem('check_value', tooltip =\
-                          'Should the program ask the instrument the value of\
-                          the applied voltage each time it is about to set\
-                          it'.replace('\n', ' ')),
-                          columns = 4,
-                          ),
+                        UItem('back_step'), UItem('delay'),
+                        UItem('check_value', tooltip =\
+                        'Should the program ask the instrument the value of\
+                        the applied voltage each time it is about to set\
+                        it'.replace('\n', ' ')),
+                        columns = 5,
+                        ),
                      )
 
     @make_stoppable
@@ -68,7 +76,7 @@ class DCVoltageTask(InstrumentTask):
             self.start_driver()
             if hasattr(self.driver, 'set_function'):
                 self.driver.set_function('VOLT')
-                
+
         if target_value is not None:
             value = target_value
         else:
