@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""
+"""
 from traits.api import Str
 from traitsui.api import (View, Group, UItem, Label, HGroup,
                           LineCompleterEditor)
@@ -21,13 +23,17 @@ class PrintTask(SimpleTask):
 
     @make_stoppable
     def process(self, *args, **kwargs):
+        """
+        """
         mess = get_formatted_string(self.message,
                                     self.task_path,
                                     self.task_database)
         self.write_in_database('message', mess)
-        print self.message
+        print mess
 
     def check(self, *args, **kwargs):
+        """
+        """
         mess = get_formatted_string(self.message,
                                     self.task_path,
                                     self.task_database)

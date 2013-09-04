@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-
-from traits.api\
-    import (Float, Bool)
-from traitsui.api\
-     import (View, Group, VGroup, UItem, Label, EnumEditor)
+"""
+"""
+from traits.api import (Float, Bool, Any)
+from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
 
 import time
 
@@ -18,7 +17,8 @@ class SetDcVoltageTask(InstrumentTask):
     delay = Float(0.01, preference = True)
     check_value = Bool(False, preference = True)
 
-    last_value = Float
+    #Actually a Float but I don't want it to get initialised at 0
+    last_value = Any
 
     driver_list = ['YokogawaGS200']
     loopable =  True
@@ -104,3 +104,4 @@ class SetDcVoltageTask(InstrumentTask):
 
         self.driver.set_voltage(value)
         self.last_value = value
+        self.write_in_database('voltage', value)

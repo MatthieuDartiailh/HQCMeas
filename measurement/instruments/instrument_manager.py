@@ -19,7 +19,7 @@ from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
 from .drivers import drivers
 
 instr_drivers = drivers.keys()
-connection_types = ['GPIB', 'USB', 'LAN']
+CONNECTION_TYPES = ['GPIB', 'USB', 'TCPIP']
 module_path = os.path.dirname(__file__)
 
 class FileListUpdater(FileSystemEventHandler):
@@ -51,8 +51,12 @@ class InstrumentFormHandler(Handler):
         if is_ok:
             if (model.name != '' and model.driver != '' and
                 model.connection_type != '' and model.address != ''):
-                connect_str = model.connection_type + '::' + model.address +\
-                                '::' + model.additionnal_mode
+                if  model.additionnal_mode != '':
+                    connect_str = model.connection_type + '::' + model.address\
+                                + '::' + model.additionnal_mode
+                else:
+                    connect_str = model.connection_type + '::' + model.address
+
                 try:
                     instr = drivers[model.driver](connect_str)
                     instr.close()
@@ -110,7 +114,7 @@ class InstrumentForm(HasTraits):
                                     editor = EnumEditor(values = instr_drivers)
                                     ),
                         Label('Connection'), UItem('connection_type',
-                                editor = EnumEditor(values = connection_types)),
+                                editor = EnumEditor(values = CONNECTION_TYPES)),
                         Label('Address'), UItem('address'),
                         Label('Additionnal'), UItem('additionnal_mode'),
                     ),
@@ -128,7 +132,7 @@ class InstrumentForm(HasTraits):
                                     editor = EnumEditor(values = instr_drivers)
                                     ),
                         Label('Connection'), UItem('connection_type',
-                                editor = EnumEditor(values = connection_types)),
+                                editor = EnumEditor(values = CONNECTION_TYPES)),
                         Label('Address'), UItem('address'),
                         Label('Additionnal'), UItem('additionnal_mode'),
                     ),
@@ -172,10 +176,10 @@ class InstrumentManagerHandler(Handler):
             fullpath = os.path.join(path, instr_file)
             instr_config = ConfigObj(fullpath)
             instr_config['driver'] = model.selected_instr.driver
-            instr_config['connection_type'] =\
+            instr_config['connection_type'] = \
                                         model.selected_instr.connection_type
             instr_config['address'] = model.selected_instr.address
-            instr_config['additionnal_mode'] =\
+            instr_config['additionnal_mode'] = \
                                         model.selected_instr.additionnal_mode
             instr_config.write()
 
@@ -185,7 +189,7 @@ class InstrumentManagerHandler(Handler):
         model = info.object
         message = inspect.cleandoc("""Are you sure want to delete this
                         instrument connection informations ?""")
-        if error(message = fill(message.replace('\n', ' '),80),
+        if error(message = fill(message.replace('\n', ' '), 80),
                 title = 'Deletion confirmation',
                 parent = info.ui.control):
             instr_file = model.instrs[model.selected_inst_name]

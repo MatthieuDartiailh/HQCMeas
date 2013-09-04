@@ -48,6 +48,8 @@ class AbstractConfigTask(HasTraits):
         raise NotImplementedError(err_str)
 
     def _anytrait_changed(self):
+        """
+        """
         self.check_parameters()
 
 class IniConfigTaskHandler(Handler):
@@ -132,7 +134,8 @@ class IniConfigTask(AbstractConfigTask):
         #Handle the case of an attempt to make a root task of a task which is
         #not a ComplexTask. built_task will be returned but task will be the
         #object used for the following manipulations.
-        if self.task_class == RootTask and config['task_class']!= 'ComplexTask':
+        if self.task_class == RootTask and\
+                                    config['task_class'] != 'ComplexTask':
             built_task = RootTask()
             task = getattr(tasks, config['task_class'])(task_name =
                                                             config['task_name'])

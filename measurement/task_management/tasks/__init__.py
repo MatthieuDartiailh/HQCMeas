@@ -12,6 +12,8 @@ from .save_task import SaveTask
 from .formula_task import FormulaTask
 from .instr_task import InstrumentTask
 from .set_dc_voltage_task import SetDcVoltageTask
+from .meas_dc_voltage_task import MeasDcVoltageTask
+from .lock_in_measure_task import LockInMeasureTask
 
 KNOWN_PY_TASKS = [ComplexTask, LoopTask, PrintTask, SaveTask, FormulaTask,
-                  SetDcVoltageTask]
+                  SetDcVoltageTask, MeasDcVoltageTask, LockInMeasureTask]

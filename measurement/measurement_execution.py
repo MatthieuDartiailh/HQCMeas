@@ -19,9 +19,16 @@ class Text2PipeRedirector(object):
     """
     def __init__(self, pipe_inlet):
         self.pipe_inlet = pipe_inlet
+
     def write(self, string):
+        """
+        """
         self.pipe_inlet.send(string.rstrip())
-    def flush(self):
+
+    @staticmethod
+    def flush():
+        """
+        """
         return None
 
 class Pipe2TextThread(Thread):
@@ -168,6 +175,8 @@ class TaskExecutionControl(HasTraits):
         self.task_holders.append(task_holder)
 
     def _start_button_changed(self):
+        """
+        """
         print 'Starting process'
         self.task_stop.clear()
         self.process_stop.clear()
@@ -184,6 +193,8 @@ class TaskExecutionControl(HasTraits):
         Thread(group = None, target = self._process_listerner).start()
 
     def _stop_button_changed(self):
+        """
+        """
         print 'Stopping process'
         self.process_stop.set()
         self.pipe.send('STOP')
@@ -193,10 +204,14 @@ class TaskExecutionControl(HasTraits):
         self.running = False
 
     def _stop_task_button_changed(self):
+        """
+        """
         print 'Stopping task'
         self.task_stop.set()
 
     def _process_listerner(self):
+        """
+        """
         print 'Starting listener'
         while not self.process_stop.is_set():
             self.pipe.poll(None)

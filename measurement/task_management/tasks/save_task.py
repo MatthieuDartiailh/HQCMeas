@@ -15,6 +15,8 @@ from .tools.task_decorator import make_stoppable, make_wait
 from .base_tasks import SimpleTask
 
 class SavedValueObject(HasTraits):
+    """
+    """
 
     label = Str
     value = Str
@@ -190,7 +192,7 @@ class SaveTask(SimpleTask):
     def _update_database_entries(self):
         """
         """
-        self.accessible_entries =\
+        self.accessible_entries = \
                     self.task_database.list_accessible_entries(self.task_path)
         return self.accessible_entries
 

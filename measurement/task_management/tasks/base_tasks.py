@@ -99,6 +99,8 @@ class AbstractTask(HasTraits):
         raise NotImplementedError(err_str)
 
     def _task_class_default(self):
+        """
+        """
         return self.__class__.__name__
 
 
@@ -150,7 +152,7 @@ class SimpleTask(AbstractTask):
         """
         """
         for name in self.traits(preference = True):
-                self.task_preferences[name] = str(self.get(name).values()[0])
+            self.task_preferences[name] = str(self.get(name).values()[0])
 
     update_preferences_from_traits = register_preferences
 
@@ -287,7 +289,7 @@ class ComplexTask(AbstractTask):
         """
         """
         for name in self.traits(preference = True):
-                self.task_preferences[name] = str(self.get(name).values()[0])
+            self.task_preferences[name] = str(self.get(name).values()[0])
 
         for name in self.traits(child = True):
             child = self.get(name).values()[0]
@@ -307,7 +309,7 @@ class ComplexTask(AbstractTask):
         """
         """
         for name in self.traits(preference = True):
-                self.task_preferences[name] = str(self.get(name).values()[0])
+            self.task_preferences[name] = str(self.get(name).values()[0])
 
         for name in self.traits(child = True):
             child = self.get(name).values()[0]
@@ -464,9 +466,9 @@ class ComplexTask(AbstractTask):
 
     def _child_removed(self, child):
         """Method updating the database and preference tree when a child is
-        removed
+        removed.
         """
-        del self.task_preferences[child.task_name]
+        self.update_preferences_from_traits()
         child.unregister_from_database()
 
     @on_trait_change('root_task')
@@ -549,7 +551,7 @@ class LoopTask(ComplexTask):
         """
         """
         try:
-            num = int(abs((self.task_stop - self.task_start)/self.task_step)) + 1
+            num = int(abs((self.task_stop - self.task_start)/self.task_step))+ 1
             self.write_in_database('point_number', num)
         except:
             print 'Loop task {} did not succeed in computing the number of\
@@ -603,8 +605,8 @@ class RootTask(ComplexTask):
 
     def __init__(self, *args, **kwargs):
         super(RootTask, self).__init__(*args, **kwargs)
-        self.task_database.set_value('root','threads', [])
-        self.task_database.set_value('root','instrs', [])
+        self.task_database.set_value('root', 'threads', [])
+        self.task_database.set_value('root', 'instrs', [])
 
     @make_stoppable
     def process(self):
@@ -618,10 +620,12 @@ class RootTask(ComplexTask):
             instr.close()
 
     def request_child(self, parent, ui):
+        """
+        """
         #the parent attribute is for now useless as all parent related traits
         #are set at adding time
         builder = self.task_builder()
-        child = builder.build(parent = parent,ui = ui)
+        child = builder.build(parent = parent, ui = ui)
         return child
 
     def _child_added(self, child):
@@ -641,13 +645,6 @@ class RootTask(ComplexTask):
         child.register_in_database()
         #Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
-
-    def _child_removed(self, child):
-        """Method updating the database and preference tree when a child is
-        removed
-        """
-        del self.task_preferences[child.task_name]
-        child.unregister_from_database()
 
     def _task_class_default(self):
         return ComplexTask.__name__

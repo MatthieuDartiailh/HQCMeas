@@ -24,8 +24,9 @@ class InstrumentTask(SimpleTask):
     def check(self, *args, **kwargs):
         """
         """
+        profile = self.profile_dict[self.selected_profile]
         full_path = os.path.join(profiles_folder_path,
-                                    self.selected_profile + '.ini')
+                                    profile)
         if not os.path.isfile(full_path):
             print 'Failed to get the specified instr profile in {}'.format(
                                                                 self.task_name)
@@ -40,11 +41,16 @@ class InstrumentTask(SimpleTask):
 
         if kwargs['test_instr']:
             config = ConfigObj(full_path)
-            connection_str = config['connection_type']\
-                             + '::' + config['address']\
-                             + '::' + config['additionnal_mode']
+            if config['additionnal_mode'] != '':
+                connection_str = config['connection_type']\
+                                 + '::' + config['address']\
+                                 + '::' + config['additionnal_mode']
+            else:
+                connection_str = config['connection_type']\
+                                 + '::' + config['address']
             try:
-                driver_class(connection_str)
+                instr = driver_class(connection_str)
+                instr.close()
             except VisaIOError:
                 print 'Failed to establish the connection\
                     with the selected instrument in {}'.format(self.task_name)
@@ -58,8 +64,15 @@ class InstrumentTask(SimpleTask):
         full_path = os.path.join(profiles_folder_path, profile)
         driver_class = drivers[self.selected_driver]
         config = ConfigObj(full_path)
-        connection_str = config['connection_type'] + '::' + config['address']\
-                            + '::' + config['additionnal_mode']
+
+        if config['additionnal_mode'] != '':
+            connection_str = config['connection_type']\
+                                 + '::' + config['address']\
+                                 + '::' + config['additionnal_mode']
+        else:
+            connection_str = config['connection_type']\
+                             + '::' + config['address']
+
         self.driver = driver_class(connection_str)
         instrs = self.task_database.get_value('root', 'instrs')
         instrs.append(self.driver)

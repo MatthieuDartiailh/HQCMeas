@@ -28,6 +28,7 @@ class AbstractTaskFilter(HasTraits):
         name = re.sub('(?<!^[A-Z])(?=[A-Z])', ' ', name)
         name = re.sub('_', ' ', name)
         name = re.sub('^ ', '', name)
+        name = re.sub('Task', '', name)
         name = re.sub('.ini', '', name)
         return name.capitalize()
 

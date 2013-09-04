@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-
+"""
+"""
 from traits.api import (HasTraits, List, Str, File, Directory, Button, Bool,
                         on_trait_change)
 from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor, Label,
@@ -9,7 +10,7 @@ import os, textwrap
 from inspect import cleandoc
 from configobj import ConfigObj
 
-module_path = os.path.dirname(__file__)
+MODULE_PATH = os.path.dirname(__file__)
 
 class TemplateTaskSaverHandler(Handler):
     """
@@ -39,8 +40,8 @@ class TemplateTaskSaverHandler(Handler):
                 else:
                     full_path = os.path.join(model.template_folder,
                                              model.template_filename)
-                f = open(full_path, 'w')
-                f.close()
+                file_obj = open(full_path, 'w')
+                file_obj.close()
 
 
         info.ui.result = result
@@ -55,7 +56,7 @@ class TemplateTaskSaverHandler(Handler):
 class TemplateTaskSaver(HasTraits):
     """
     """
-    template_folder = Directory(os.path.join(module_path,'tasks/templates'))
+    template_folder = Directory(os.path.join(MODULE_PATH, 'tasks/templates'))
     template_tasks = List(File)
 
     template_filename = Str()
@@ -137,6 +138,8 @@ class TemplateTaskSaver(HasTraits):
 
     @on_trait_change('template_filename, template_doc')
     def _ready_to_save(self):
+        """
+        """
         if self.template_doc != '' and self.template_filename != '':
             self.ok_ready = True
         else:

@@ -83,12 +83,12 @@ class TaskBuilder(HasTraits):
                                         parent = ui.control)
         if build_ui.result:
             task = self.task_config.build_task()
-            if 'edit_view' in task.trait_views(View):
-                task.edit_traits(view = 'edit_view', kind = 'livemodal',
-                                 parent = ui.control)
-            else:
-                task.edit_traits(view = 'task_view', kind = 'livemodal',
-                                 parent = ui.control)
+#            if 'edit_view' in task.trait_views(View):
+#                task.edit_traits(view = 'edit_view', kind = 'livemodal',
+#                                 parent = ui.control)
+#            else:
+#                task.edit_traits(view = 'task_view', kind = 'livemodal',
+#                                 parent = ui.control)
 
             if self.creating_root:
                 task.task_builder = TaskBuilder
@@ -134,4 +134,6 @@ class TaskBuilder(HasTraits):
 
     @on_trait_change('task_config:config_ready')
     def _config_complete(self, new):
+        """
+        """
         self.ok_ready = new

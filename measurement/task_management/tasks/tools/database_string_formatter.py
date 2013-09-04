@@ -1,8 +1,9 @@
 """
 """
-completer_tooltip = """In this field you can enter a text and include
-                      fields which will be replaced by database
-                      entries by using the delimiters '{' and '}'."""
+import textwrap
+COMPLETER_TOOLTIP = textwrap.fill("""In this field you can enter a text and
+                        include fields which will be replaced by database
+                        entries by using the delimiters '{' and '}'.""", 80)
 
 def get_formatted_string(edit_str, path, database):
     """

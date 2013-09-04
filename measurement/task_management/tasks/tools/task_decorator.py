@@ -25,12 +25,12 @@ def make_parallel(process):
     """
     def wrapper(*args, **kwargs):
 
-        object = args[0]
+        obj = args[0]
         thread = Thread(group = None,
                         target = process,
                         args = args,
                         kwargs = kwargs)
-        threads = object.task_database.get_value('root', 'threads')
+        threads = obj.task_database.get_value('root', 'threads')
         threads.append(thread)
 
         return thread.start()
@@ -44,8 +44,8 @@ def make_wait(process):
     """
     def wrapper(*args, **kwargs):
 
-        object = args[0]
-        threads = object.task_database.get_value('root', 'threads')
+        obj = args[0]
+        threads = obj.task_database.get_value('root', 'threads')
         for thread in threads:
             thread.join()
         return process(*args, **kwargs)

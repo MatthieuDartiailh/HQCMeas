@@ -107,7 +107,6 @@ class TaskDatabase(HasTraits):
                 self._lock.release()
             else:
                 del node[safe_value_name]
-            self.entries_modified = True
         else:
             err_str = 'No entry {} in node {}'.format(value_name, node_path)
             raise ValueError(err_str)

@@ -54,7 +54,7 @@ class TaskManager(HasTraits):
     event_handler = Instance(FileListUpdater)
     watch = Instance(ObservedWatch)
 
-    task_filters = Dict(Str,Type(AbstractTaskFilter), task_filters)
+    task_filters = Dict(Str, Type(AbstractTaskFilter), task_filters)
     task_filters_name = List(Str)
     selected_task_filter_name = Str('All')
 

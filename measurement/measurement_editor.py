@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-
+"""
+"""
 from traits.api import (HasTraits, Instance, Button, Any, Bool)
 from traitsui.api import (View, HGroup, UItem, Handler,TreeEditor, Menu,
                           TreeNode, Action, Separator, Spring, error)
@@ -28,7 +29,7 @@ class MeasurementEditorHandler(Handler):
 
     def close(self, info, is_ok):
         """This method, called when the ui is going to be destroyed, save the
-        task being edited as a template to be reoponed on the next start of the
+        task being edited as a template to be reopened on the next start of the
         program
         """
         pass
@@ -85,7 +86,7 @@ class MeasurementEditorHandler(Handler):
                             or Cancel to go back to editing and get a chance to
                             save it.""")
 
-        result = error(message = textwrap.fill(message.replace('\n', ' '),80),
+        result = error(message = textwrap.fill(message.replace('\n', ' '), 80),
                   title = 'Old measurement suppression',
                   parent = info.ui.control)
 
@@ -102,7 +103,7 @@ class MeasurementEditorHandler(Handler):
                             are editing as a template. If you want to save only
                             a part of it, use the contextual menu.""")
 
-        result = error(message = textwrap.fill(message.replace('\n', ' '),80),
+        result = error(message = textwrap.fill(message.replace('\n', ' '), 80),
                   title = 'Saving measurement',
                   parent = info.ui.control)
 
