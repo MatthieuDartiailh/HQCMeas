@@ -7,7 +7,8 @@ from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
 import time
 
 from .instr_task import InstrumentTask
-from .tools.task_decorator import make_stoppable, make_parallel
+from .tools.task_decorator import (make_stoppable, make_parallel,
+                                   smooth_instr_crash)
 
 class SetDcVoltageTask(InstrumentTask):
     """
@@ -69,6 +70,7 @@ class SetDcVoltageTask(InstrumentTask):
 
     @make_stoppable
     @make_parallel
+    @smooth_instr_crash
     def process(self, target_value = None):
         """
         """

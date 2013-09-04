@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import (Str)
+from traits.api import (Str, Float)
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
 
+from textwrap import fill
+from time import sleep
+
 from .instr_task import InstrumentTask
-from .tools.task_decorator import make_stoppable, make_wait
+from .tools.task_decorator import make_stoppable, make_wait, smooth_instr_crash
 
 class LockInMeasureTask(InstrumentTask):
     """
     """
     selected_mode = Str(preference = True)
+    waiting_time = Float(preference = True)
 
     driver_list = ['SR7265-LI', 'SR7270-LI']
 
@@ -21,6 +25,7 @@ class LockInMeasureTask(InstrumentTask):
                         UItem('task_name', style = 'readonly'),
                         Group(
                             Label('Driver'), Label('Instr'), Label('Mode'),
+                            Label('Wait (s)'),
                             UItem('selected_driver',
                                 editor = EnumEditor(name = 'driver_list'),
                                 width = 100),
@@ -32,6 +37,10 @@ class LockInMeasureTask(InstrumentTask):
                                                               'Amp', 'Phase',
                                                               'Amp&Phase']),
                                 width = 100),
+                            UItem('waiting_time',
+                                  tooltip = fill('Time to wait before querying\
+                                          values from the lock-in', 80),
+                                ),
                             columns = 3,
                             show_border = True,
                             ),
@@ -40,11 +49,14 @@ class LockInMeasureTask(InstrumentTask):
 
     @make_stoppable
     @make_wait
+    @smooth_instr_crash
     def process(self):
         """
         """
         if not self.driver:
             self.start_driver()
+
+        sleep(self.waiting_time)
 
         if self.selected_mode == 'X':
             value = self.driver.read_x()

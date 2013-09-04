@@ -6,6 +6,7 @@ if ETSConfig.toolkit is '':
 from traits.api import (Str, HasTraits, Instance, Button, Any,
                         on_trait_change)
 from traitsui.api import View, UItem, HGroup, VGroup, TextEditor
+
 from measurement.measurement_editor import MeasurementEditor
 from measurement.measurement_execution import TaskExecutionControl
 import sys
@@ -14,11 +15,11 @@ class StdoutRedirection(HasTraits):
 
     string = Str('')
     out = Any
-    view = View(UItem('string', style = 'readonly',
-                      editor = TextEditor(multi_line = True),
+    view = View(UItem('string', style = 'custom',
+                    editor = TextEditor(multi_line = True,
+                                          read_only = True),
+                    height = -150,
                     ),
-                resizable = True,
-                scrollable = True
                 )
 
     def write(self, mess):
@@ -41,7 +42,7 @@ class Test(HasTraits):
                         UItem('exe_control@', width = -300),
                         ),
 #                    UItem('button2'),
-                    UItem('out@', height = -150, width = 1200),
+                    UItem('out@', height = -150),
                 ),
                 resizable = True,
                 )
@@ -52,7 +53,7 @@ class Test(HasTraits):
         sys.stdout = self.out
 
     @on_trait_change('editor:enqueue_button')
-    def enqueue_measurement(self):    
+    def enqueue_measurement(self):
         if self.editor.root_task.check(test_instr = not self.exe_control.running):
             self.exe_control.append_task(self.editor.root_task)
             self.editor.new_root_task()
