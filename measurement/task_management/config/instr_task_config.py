@@ -8,7 +8,7 @@ from .base_task_config import PyConfigTask
 from ...instruments.drivers import drivers
 from ...instruments.instrument_manager import InstrumentManager
 
-driver_list = drivers.keys()
+DRIVER_LIST = drivers.keys()
 
 class InstrConfigTask(PyConfigTask):
     """
@@ -33,7 +33,7 @@ class InstrConfigTask(PyConfigTask):
 
     def __init__(self, *args, **kwargs):
         super(InstrConfigTask, self).__init__(*args, **kwargs)
-        self.drivers = list(set(self.task_class.driver_list) & set(driver_list))
+        self.drivers = list(set(self.task_class.driver_list) & set(DRIVER_LIST))
 
     def build_task(self):
         """

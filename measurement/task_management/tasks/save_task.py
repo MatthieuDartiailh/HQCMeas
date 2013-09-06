@@ -113,9 +113,9 @@ class SaveTask(SimpleTask):
             self.initialized = True
 
         #writing
-        values = [get_formatted_string(value,
+        values = [eval(get_formatted_string(value,
                                        self.task_path,
-                                       self.task_database)
+                                       self.task_database))
                     for value in self.saved_values]
         if self.saving_target != 'Array':
             self.csv_writer.writerow(values)

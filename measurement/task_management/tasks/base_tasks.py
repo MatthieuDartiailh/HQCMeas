@@ -113,7 +113,7 @@ class SimpleTask(AbstractTask):
 
     def write_in_database(self, name, value):
         """This method build a task specific database entry from the task_name
-        and the name arg and set the database entry to the value specified.
+        and the name argument and set the database entry to the specified value.
         """
         value_name = self.task_name + '_' + name
         return self.task_database.set_value(self.task_path, value_name, value)

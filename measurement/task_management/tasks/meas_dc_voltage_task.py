@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 """
+from traits.api import Float
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
+
+from time import sleep
 
 from .instr_task import InstrumentTask
 from .tools.task_decorator import make_stoppable, make_wait, smooth_instr_crash
@@ -9,6 +12,8 @@ from .tools.task_decorator import make_stoppable, make_wait, smooth_instr_crash
 class MeasDcVoltageTask(InstrumentTask):
     """
     """
+    wait_time = Float(preference = True)
+
     driver_list = ['Agilent34410A']
 
     task_database_entries = ['voltage']
@@ -17,14 +22,15 @@ class MeasDcVoltageTask(InstrumentTask):
                     VGroup(
                         UItem('task_name', style = 'readonly'),
                         Group(
-                            Label('Driver'), Label('Instr'),
+                            Label('Driver'), Label('Instr'),Label('Wait (s)'),
                             UItem('selected_driver',
                                 editor = EnumEditor(name = 'driver_list'),
                                 width = 100),
                             UItem('selected_profile',
                                 editor = EnumEditor(name = 'profile_list'),
                                 width = 100),
-                            columns = 2,
+                            UItem('wiat_time'),
+                            columns = 3,
                             show_border = True,
                             ),
                         ),
@@ -39,6 +45,7 @@ class MeasDcVoltageTask(InstrumentTask):
         if not self.driver:
             self.start_driver()
 
+        sleep(self.wait_time)
+
         value = self.driver.read_voltage_dc()
-        print value
         self.write_in_database('voltage', value)

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import Str
+from traits.api import Str, Float
 from traitsui.api import (View, Group, UItem, Label, HGroup,
                           LineCompleterEditor)
+from time import sleep
 
 from .base_tasks import SimpleTask
-from .tools.task_decorator import make_stoppable
+from .tools.task_decorator import make_stoppable, make_wait
 from .tools.database_string_formatter import get_formatted_string
 
 class PrintTask(SimpleTask):
@@ -57,7 +58,36 @@ class PrintTask(SimpleTask):
                                   editor = LineCompleterEditor(
                               entries_updater = self._update_database_entries)
                               ),
+                            show_border = True,
                             ),
                         ),
                     )
         self.trait_view('task_view', task_view)
+
+class SleepTask(SimpleTask):
+    """
+    """
+
+    time = Float(preference = True)
+    task_view = View(
+                    Group(
+                        UItem('task_name', style = 'readonly'),
+                        HGroup(
+                            Label('Time to sleep (s)'),
+                            UItem('time'),
+                            show_border = True,
+                            ),
+                        ),
+                    )
+
+    @make_stoppable
+    @make_wait
+    def process(self):
+        """
+        """
+        sleep(self.time)
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        return True

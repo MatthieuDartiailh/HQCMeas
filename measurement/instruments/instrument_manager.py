@@ -192,7 +192,7 @@ class InstrumentManagerHandler(Handler):
         if error(message = fill(message.replace('\n', ' '), 80),
                 title = 'Deletion confirmation',
                 parent = info.ui.control):
-            instr_file = model.instrs[model.selected_inst_name]
+            instr_file = model.instrs[model.selected_instr_name]
             path = os.path.abspath(info.object.instr_folder)
             fullpath = os.path.join(path, instr_file)
             os.remove(fullpath)
@@ -285,8 +285,9 @@ class InstrumentManager(HasTraits):
     def _normalise_name(self, name):
         """
         """
-        name = re.sub('(?<!^)(?=[A-Z])', ' ', name)
+        name = re.sub('(?<!^[A-Z])(?=[A-Z])', ' ', name)
         name = re.sub('_', ' ', name)
+        name = re.sub('^ ', '', name)
         name = re.sub('.ini', '', name)
         return name.capitalize()
 

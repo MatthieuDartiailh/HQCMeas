@@ -3,28 +3,57 @@ from traits.etsconfig.etsconfig import ETSConfig
 if ETSConfig.toolkit is '':
     ETSConfig.toolkit = "qt4"
 
-from traits.api import (Str, HasTraits, Instance, Button, Any,
+from traits.api import (Str, HasTraits, Instance, Any,
                         on_trait_change)
-from traitsui.api import View, UItem, HGroup, VGroup, TextEditor
+from traitsui.api import (View, UItem, Group, HGroup, VGroup, TextEditor,
+                          Handler, Label)
+from pyface.qt import QtGui
 
 from measurement.measurement_editor import MeasurementEditor
 from measurement.measurement_execution import TaskExecutionControl
 import sys
 
+class Hack(Handler):
+    """
+    """
+    def init(self, info):
+        """
+        """
+        super(Hack, self).init(info)
+        info.main_out.control.setSizePolicy(QtGui.QSizePolicy.Expanding,
+                                          QtGui.QSizePolicy.Fixed)
+        info.process_out.control.setSizePolicy(QtGui.QSizePolicy.Expanding,
+                                          QtGui.QSizePolicy.Fixed)
+
 class StdoutRedirection(HasTraits):
 
-    string = Str('')
+    main_out = Str('')
+    process_out = Str('')
     out = Any
-    view = View(UItem('string', style = 'custom',
-                    editor = TextEditor(multi_line = True,
-                                          read_only = True),
-                    height = -150,
-                    ),
-                )
+    view = View(
+            Group(
+                Label('   Main process'), Label('   Measurement process'),
+                UItem('main_out', style = 'custom',
+                      editor = TextEditor(multi_line = True,
+                                              read_only = True),
+                      height = -150,
+                      ),
+                UItem('process_out', style = 'custom',
+                      editor = TextEditor(multi_line = True,
+                                              read_only = True),
+                      height = -150,
+                      ),
+                columns = 2,
+                ),
+            handler = Hack()
+            )
 
     def write(self, mess):
         mess.strip()
-        self.string += mess
+        if 'Subprocess' in mess:
+            self.process_out += mess.split(':')[1].strip()
+        else:
+            self.main_out += mess
 
         if self.out:
             self.out.write(mess)
