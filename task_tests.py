@@ -9,7 +9,7 @@ from traitsui.api import (View, UItem, Group, HGroup, VGroup, TextEditor,
                           Handler, Label)
 from pyface.qt import QtGui
 
-from measurement.measurement_editor import MeasurementEditor
+from measurement.measurement_edition import MeasurementBuilder
 from measurement.measurement_execution import TaskExecutionControl
 import sys
 
@@ -59,7 +59,7 @@ class StdoutRedirection(HasTraits):
             self.out.write(mess)
 
 class Test(HasTraits):
-    editor = Instance(MeasurementEditor)
+    editor = Instance(MeasurementBuilder)
     exe_control = Instance(TaskExecutionControl)
     out = Instance(StdoutRedirection)
 #    button2 = Button('Print database')
@@ -91,7 +91,7 @@ class Test(HasTraits):
 #        pprint(self.editor.root_task.task_database._database)
 
 if __name__ == '__main__':
-    editor = MeasurementEditor()
+    editor = MeasurementBuilder()
     editor.new_root_task()
 
     Test(editor = editor, exe_control = TaskExecutionControl()).configure_traits()
