@@ -10,7 +10,7 @@ from traits.api import (HasTraits, Instance, Button, Bool, Str, Any,
 from traitsui.api import (View, UItem, HGroup, VGroup, Handler,
                         ListInstanceEditor)
 from .task_management.tasks import RootTask
-from .measurement_editor import MeasurementEditor
+from .measurement_edition import MeasurementEditor
 from .task_management.config import IniConfigTask
 
 
