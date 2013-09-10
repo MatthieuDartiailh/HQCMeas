@@ -35,11 +35,11 @@ class AgilentPSGSignalGenerator(Instrument):
         """
         on = re.compile('on', re.IGNORECASE)
         off = re.compile('off', re.IGNORECASE)
-        if on.match(value):
+        if on.match(value) or value == 1:
             self.write(':OUTPUT ON')
             if self.ask(':OUTPUT?')!= '1':
                 raise VisaIOError('Instrument did not set correctly the output')
-        elif off.match(value):
+        elif off.match(value) or value == 0:
             self.write(':OUTPUT OFF')
             if self.ask(':OUTPUT?')!= '0':
                 raise VisaIOError('Instrument did not set correctly the output')

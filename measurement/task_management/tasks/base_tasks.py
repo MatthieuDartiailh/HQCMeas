@@ -424,18 +424,18 @@ class ComplexTask(AbstractTask):
                     if child:
                         if isinstance(child, list):
                             for aux in child:
-                                aux.task_path = self.task_path + new
+                                aux.task_path = self.task_path + '/' + new
                         else:
-                            child.task_path = self.task_path + new
+                            child.task_path = self.task_path + '/' + new
             elif name == 'task_path':
                 for name in self.traits(child = True):
                     child = self.get(name).values()[0]
                     if child:
                         if isinstance(child, list):
                             for aux in child:
-                                aux.task_path = new + self.task_name
+                                aux.task_path = new + '/' + self.task_name
                         else:
-                            child.task_path = new + self.task_name
+                            child.task_path = new + '/' + self.task_name
             elif name == 'task_depth':
                 for name in self.traits(child = True):
                     child = self.get(name).values()[0]

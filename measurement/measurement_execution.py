@@ -33,11 +33,12 @@ class Text2PipeRedirector(object):
 
 class Pipe2TextThread(Thread):
     """Worker Thread Class."""
-    def __init__(self, process, pipe_outlet):
+    def __init__(self, process, pipe_outlet, stream):
         """Init Worker Thread Class."""
         Thread.__init__(self)
         self.process = process
         self.pipe_outlet = pipe_outlet
+        self.stream = stream
 
     def run(self):
         """
@@ -49,7 +50,7 @@ class Pipe2TextThread(Thread):
                 string = self.pipe_outlet.recv()
                 string.rstrip()
                 if string != '':
-                    print 'Subprocess :' + string
+                    self.stream.write('Subprocess :' + string + '\n')
 
 class TaskProcess(Process):
     """
@@ -108,7 +109,7 @@ class TaskHolderHandler(Handler):
 class TaskHolder(HasTraits):
     """
     """
-    status = Str('')
+    status = Str('READY')
     edit_button = Button('Edit')
     is_running = Bool(False)
     root_task = Instance(RootTask)
@@ -186,7 +187,7 @@ class TaskExecutionControl(HasTraits):
                                    inlet_pipe,
                                    self.task_stop,
                                    self.process_stop)
-        self.thread = Pipe2TextThread(self.process, outlet_pipe)
+        self.thread = Pipe2TextThread(self.process, outlet_pipe, sys.stdout)
         self.process.start()
         self.thread.start()
         self.running = True
