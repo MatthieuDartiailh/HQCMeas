@@ -2,6 +2,7 @@
 """
 """
 import sys, os, logging
+from logging.handlers import RotatingFileHandler
 from multiprocessing import Process, Pipe, Queue
 from multiprocessing.synchronize import Event
 from threading import Thread
@@ -12,7 +13,7 @@ from traitsui.api import (View, UItem, HGroup, VGroup, Handler,
 from .task_management.tasks import RootTask
 from .measurement_edition import MeasurementEditor
 from .task_management.config import IniConfigTask
-from .logging.log_facility import (StreamToLogRedirector, QueueHandler,
+from .log.log_facility import (StreamToLogRedirector, QueueHandler,
                                    QueueLoggerThread)
 
 class TaskProcess(Process):
@@ -25,6 +26,7 @@ class TaskProcess(Process):
         self.process_stop = process_stop
         self.pipe = pipe
         self.queue = queue
+        self.meas_log_handler = None
 
     def run(self):
         """
@@ -41,10 +43,18 @@ class TaskProcess(Process):
             print 'Need task'
             self.pipe.send('Need task')
             self.pipe.poll(None)
-            config = self.pipe.recv()
+            name, config = self.pipe.recv()
             if config != 'STOP':
                 task = IniConfigTask().build_task_from_config(config)
                 print 'Task built'
+                if self.meas_log_handler != None:
+                    logger.removeHandler(self.meas_log_handler)
+                log_path = os.path.join(task.get_from_database('default_path'),
+                                        name + '.log')
+                self.meas_log_handler = RotatingFileHandler(log_path,
+                                                            mode = 'w',
+                                                            maxBytes = 10**6,
+                                                            backupCount = 10)
                 self.task_stop.clear()
                 task.should_stop = self.task_stop
                 task.task_database.prepare_for_running()
@@ -105,6 +115,7 @@ class TaskHolderHandler(Handler):
 class TaskHolder(HasTraits):
     """
     """
+    name = Str
     status = Str('READY')
     edit_button = Button('Edit')
     is_running = Bool(False)
@@ -112,6 +123,7 @@ class TaskHolder(HasTraits):
 
     traits_view = View(
                     VGroup(
+                        UItem('name', style = 'readonly'),
                         VGroup(
                             UItem('status', style = 'readonly',
                                   resizable = True),
@@ -126,6 +138,14 @@ class TaskHolder(HasTraits):
                     resizable = False,
                     height = -50,
                     )
+
+class TaskHolderDialog(HasTraits):
+    """
+    """
+    name = Str
+
+    traits_view = View(UItem('name'), buttons = ['OK'],
+                       title = 'Enter a name for your measurement')
 
 class TaskExecutionControl(HasTraits):
     """
@@ -169,7 +189,10 @@ class TaskExecutionControl(HasTraits):
     def append_task(self, new_task):
         """
         """
-        task_holder = TaskHolder(root_task = new_task)
+        dialog = TaskHolderDialog().edit_traits()
+        if dialog.name == '':
+            dialog.name = 'Meas' + str(len(self.task_holders))
+        task_holder = TaskHolder(root_task = new_task, name = dialog.name)
         self.task_holders.append(task_holder)
 
     def _start_button_changed(self):
@@ -222,15 +245,17 @@ class TaskExecutionControl(HasTraits):
                             i += 1
                             continue
                         else:
-                            task = self.task_holders.pop(i).root_task
+                            task_holder = self.task_holders.pop(i)
+                            task = task_holder.root_task
+                            name = task_holder.name
                             break
                     if task is not None:
                         task.update_preferences_from_traits()
-                        self.pipe.send(task.task_preferences)
+                        self.pipe.send((name, task.task_preferences))
                     else:
                         self.process_stop.set()
                         print 'The only task is the queue is being edited'
-                        self.pipe.send('STOP')
+                        self.pipe.send(('', 'STOP'))
                         self.process.join()
                         self.thread.join()
                         self.running = False

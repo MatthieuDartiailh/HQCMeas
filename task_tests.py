@@ -10,10 +10,11 @@ from pyface.qt import QtGui
 
 from measurement.measurement_edition import MeasurementBuilder
 from measurement.measurement_execution import TaskExecutionControl
-from measurement.logging.log_facility import (StreamToLogRedirector,
+from measurement.log.log_facility import (StreamToLogRedirector,
                                              GuiConsoleHandler)
 import pprint, sys, logging
 from logging.handlers import TimedRotatingFileHandler
+
 
 class Hack(Handler):
     """
@@ -68,7 +69,7 @@ class Test(HasTraits):
         gui_logger = GuiConsoleHandler({'MainProcess' : self.panel_main_process,
                                         'MeasureProcess' :
                                             self.panel_measure_process})
-        log_path = 'measurement/logging/log/measure.log'
+        log_path = 'measurement/log/log_files/measure.log'
         file_logger = TimedRotatingFileHandler(log_path, when = 'midnight')
         aux = '%(asctime)s | %(processName)s | %(levelname)s | %(message)s'
         formatter = logging.Formatter(aux)

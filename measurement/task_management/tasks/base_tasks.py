@@ -4,7 +4,7 @@
 
 from traits.api\
     import (HasTraits, Str, Int, Instance, List, Float, Bool, Type,
-            on_trait_change, Unicode)
+            on_trait_change, Unicode, Directory)
 from traits.api import self as trait_self
 from traitsui.api\
      import (View, ListInstanceEditor, VGroup, HGroup, UItem,
@@ -592,6 +592,7 @@ class RootTask(ComplexTask):
     """Special task which is always the root of a measurement and is the only
     task directly referencing the measurement editor.
     """
+    default_path = Directory
     task_builder = Type()
     root_task = trait_self
     has_root = True
@@ -600,7 +601,7 @@ class RootTask(ComplexTask):
     task_preferences = ConfigObj()
     task_depth = 0
     task_path = 'root'
-    task_database_entries = ['threads', 'instrs']
+    task_database_entries = ['threads', 'instrs', 'default_path']
     should_stop = Instance(Event)
 
     def __init__(self, *args, **kwargs):
@@ -646,7 +647,36 @@ class RootTask(ComplexTask):
         #Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
 
+    def _define_task_view(self):
+        """
+        """
+        task_view = View(
+                    VGroup(
+                        UItem('task_name', style = 'readonly'),
+                        UItem('default_path'),
+                        HGroup(
+                            UItem('children_task@',
+                                  editor = ListInstanceEditor(
+                                      style = 'custom',
+                                      editor = InstanceEditor(view =
+                                                              'task_view'),
+                                      item_factory = self.create_child)),
+                            show_border = True,
+                            ),
+                        ),
+                        title = 'Edit task',
+                        resizable = True,
+                    )
+
+        self.trait_view('task_view', task_view)
+
     def _task_class_default(self):
         return ComplexTask.__name__
+
+    @on_trait_change('default_path')
+    def _update_default_path_in_database(self, new):
+        """
+        """
+        self.write_in_database('default_path', new)
 
 AbstractTask.add_class_trait('root_task', Instance(RootTask))

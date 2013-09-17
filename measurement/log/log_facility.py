@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from logging.handlers import RotatingFileHandler
 from threading import Thread
 
 class StreamToLogRedirector(object):
