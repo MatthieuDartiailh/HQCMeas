@@ -19,7 +19,10 @@ class StreamToLogRedirector(object):
         message = message.strip()
         if message != '':
             if self.level != logging.CRITICAL:
-                if '<WARNING>' in message:
+                if '<DEBUG>' in message:
+                    message = message.replace('<DEBUG>','').strip()
+                    self.logger.warning(message)
+                elif '<WARNING>' in message:
                     message = message.replace('<WARNING>','').strip()
                     self.logger.warning(message)
                 elif '<ERROR>' in message:
@@ -103,34 +106,11 @@ class QueueHandler(logging.Handler):
 class GuiConsoleHandler(logging.Handler):
     """
     """
-    def __init__(self, panel):
+    def __init__(self, process_panel_dict):
         """
         """
         logging.Handler.__init__(self)
-        self.panel = panel
-
-    def prepare(self, record):
-        """
-        Prepares a record for queueing. The object returned by this
-        method is enqueued.
-        The base implementation formats the record to merge the message
-        and arguments, and removes unpickleable items from the record
-        in-place.
-        You might want to override this method if you want to convert
-        the record to a dict or JSON string, or send a modified copy
-        of the record while leaving the original intact.
-        """
-        # The format operation gets traceback text into record.exc_text
-        # (if there's exception data), and also puts the message into
-        # record.message. We can then use this to replace the original
-        # msg + args, as these might be unpickleable. We also zap the
-        # exc_info attribute, as it's no longer needed and, if not None,
-        # will typically not be pickleable.
-        self.format(record)
-        record.msg = record.message
-        record.args = None
-        record.exc_info = None
-        return record
+        self.process_panel_dict = process_panel_dict
 
     def emit(self, record):
         """
@@ -138,8 +118,16 @@ class GuiConsoleHandler(logging.Handler):
 
         Writes the LogRecord to the queue, preparing it first.
         """
+        panel = self.process_panel_dict[record.processName]
         try:
-            self.panel.string += self.prepare(record).message + '\n'
+            if record.levelname == 'INFO':
+                panel.string += record.message + '\n'
+            elif record.levelname == 'CRITICAL':
+                panel.string += 'An error occured please check the log file\
+                                for more details.\n'
+            else:
+                panel.string += record.levelname + ':' + \
+                                                record.message + '\n'
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
@@ -156,7 +144,7 @@ class QueueLoggerThread(Thread):
 
     def run(self):
         """
-        Pull any output from the pipe while the process runs
+        Pull any output from the queue while the process runs
         """
         while self.process.is_alive():
             #Collect all display output from process

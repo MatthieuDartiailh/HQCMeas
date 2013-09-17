@@ -3,15 +3,17 @@ from traits.etsconfig.etsconfig import ETSConfig
 if ETSConfig.toolkit is '':
     ETSConfig.toolkit = "qt4"
 
-from traits.api import (Str, HasTraits, Instance, Any,
-                        on_trait_change)
+from traits.api import (Str, HasTraits, Instance, on_trait_change, Button)
 from traitsui.api import (View, UItem, Group, HGroup, VGroup, TextEditor,
                           Handler, Label)
 from pyface.qt import QtGui
 
 from measurement.measurement_edition import MeasurementBuilder
 from measurement.measurement_execution import TaskExecutionControl
-import sys
+from measurement.logging.log_facility import (StreamToLogRedirector,
+                                             GuiConsoleHandler)
+import pprint, sys, logging
+from logging.handlers import TimedRotatingFileHandler
 
 class Hack(Handler):
     """
@@ -20,49 +22,27 @@ class Hack(Handler):
         """
         """
         super(Hack, self).init(info)
-        info.main_out.control.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                                          QtGui.QSizePolicy.Fixed)
-        info.process_out.control.setSizePolicy(QtGui.QSizePolicy.Expanding,
+        info.string.control.setSizePolicy(QtGui.QSizePolicy.Expanding,
                                           QtGui.QSizePolicy.Fixed)
 
-class StdoutRedirection(HasTraits):
+class MessagePanel(HasTraits):
 
-    main_out = Str('')
-    process_out = Str('')
-    out = Any
+    string = Str('')
     view = View(
-            Group(
-                Label('   Main process'), Label('   Measurement process'),
-                UItem('main_out', style = 'custom',
-                      editor = TextEditor(multi_line = True,
-                                              read_only = True),
-                      height = -150,
-                      ),
-                UItem('process_out', style = 'custom',
-                      editor = TextEditor(multi_line = True,
-                                              read_only = True),
-                      height = -150,
-                      ),
-                columns = 2,
-                ),
+            UItem('string', style = 'custom',
+                  editor = TextEditor(multi_line = True,
+                                          read_only = True),
+                  height = -150,
+                  ),
             handler = Hack()
             )
-
-    def write(self, mess):
-        mess.strip()
-        if 'Subprocess' in mess:
-            self.process_out += mess.split(':')[1].strip()
-        else:
-            self.main_out += mess
-
-        if self.out:
-            self.out.write(mess)
 
 class Test(HasTraits):
     editor = Instance(MeasurementBuilder)
     exe_control = Instance(TaskExecutionControl)
-    out = Instance(StdoutRedirection)
-#    button2 = Button('Print database')
+    panel_main_process = Instance(MessagePanel, ())
+    panel_measure_process = Instance(MessagePanel, ())
+    button2 = Button('Print database')
 
     view = View(
                 VGroup(
@@ -70,16 +50,35 @@ class Test(HasTraits):
                         UItem('editor@'),
                         UItem('exe_control@', width = -300),
                         ),
-#                    UItem('button2'),
-                    UItem('out@', height = -150),
+                    UItem('button2'),
+                    Group(
+                        Label('    Main process'), Label('    Measure process'),
+                        UItem('panel_main_process@'),
+                        UItem('panel_measure_process@'),
+                        columns = 2
+                        ),
                 ),
                 resizable = True,
                 )
 
     def __init__(self, *args, **kwargs):
         super(Test, self).__init__(*args, **kwargs)
-        self.out = StdoutRedirection(out = sys.stdout)
-        sys.stdout = self.out
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+        gui_logger = GuiConsoleHandler({'MainProcess' : self.panel_main_process,
+                                        'MeasureProcess' :
+                                            self.panel_measure_process})
+        log_path = 'measurement/logging/log/measure.log'
+        file_logger = TimedRotatingFileHandler(log_path, when = 'midnight')
+        aux = '%(asctime)s | %(processName)s | %(levelname)s | %(message)s'
+        formatter = logging.Formatter(aux)
+        file_logger.setFormatter(formatter)
+        logger.addHandler(file_logger)
+        logger.addHandler(gui_logger)
+        redir_stdout = StreamToLogRedirector(logger)
+        redir_stderr = StreamToLogRedirector(logger, stream_type = 'stderr')
+        sys.stdout = redir_stdout
+        sys.stderr = redir_stderr
 
     @on_trait_change('editor:enqueue_button')
     def enqueue_measurement(self):
@@ -87,8 +86,8 @@ class Test(HasTraits):
             self.exe_control.append_task(self.editor.root_task)
             self.editor.new_root_task()
 
-#    def _button2_changed(self):
-#        pprint(self.editor.root_task.task_database._database)
+    def _button2_changed(self):
+        pprint.pprint(self.editor.root_task.task_database._database)
 
 if __name__ == '__main__':
     editor = MeasurementBuilder()

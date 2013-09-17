@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 """
-import sys
-from multiprocessing import Process, Pipe
+import sys, os, logging
+from multiprocessing import Process, Pipe, Queue
 from multiprocessing.synchronize import Event
 from threading import Thread
 from traits.api import (HasTraits, Instance, Button, Bool, Str, Any,
@@ -12,64 +12,31 @@ from traitsui.api import (View, UItem, HGroup, VGroup, Handler,
 from .task_management.tasks import RootTask
 from .measurement_edition import MeasurementEditor
 from .task_management.config import IniConfigTask
-
-
-class Text2PipeRedirector(object):
-    """
-    """
-    def __init__(self, pipe_inlet):
-        self.pipe_inlet = pipe_inlet
-
-    def write(self, string):
-        """
-        """
-        self.pipe_inlet.send(string.rstrip())
-
-    @staticmethod
-    def flush():
-        """
-        """
-        return None
-
-class Pipe2TextThread(Thread):
-    """Worker Thread Class."""
-    def __init__(self, process, pipe_outlet, stream):
-        """Init Worker Thread Class."""
-        Thread.__init__(self)
-        self.process = process
-        self.pipe_outlet = pipe_outlet
-        self.stream = stream
-
-    def run(self):
-        """
-        Pull any output from the pipe while the process runs
-        """
-        while self.process.is_alive():
-            #Collect all display output from process
-            while self.pipe_outlet.poll():
-                string = self.pipe_outlet.recv()
-                string.rstrip()
-                if string != '':
-                    self.stream.write('Subprocess :' + string + '\n')
+from .logging.log_facility import (StreamToLogRedirector, QueueHandler,
+                                   QueueLoggerThread)
 
 class TaskProcess(Process):
     """
     """
 
-    def __init__(self, pipe, comm_pipe_in, task_stop, process_stop):
-        super(TaskProcess, self).__init__()
+    def __init__(self, pipe, queue, task_stop, process_stop):
+        super(TaskProcess, self).__init__(name = 'MeasureProcess')
         self.task_stop = task_stop
         self.process_stop = process_stop
         self.pipe = pipe
-        self.comm_pipe_in = comm_pipe_in
+        self.queue = queue
 
     def run(self):
         """
         """
-        redir = Text2PipeRedirector(self.comm_pipe_in)
-        sys.stdout = redir
+        self._config_log()
+        logger = logging.getLogger()
+        redir_stdout = StreamToLogRedirector(logger)
+        redir_stderr = StreamToLogRedirector(logger, stream_type = 'stderr')
+        sys.stdout = redir_stdout
+        sys.stderr = redir_stderr
+        logger.info('Logger parametrised')
         print 'Process running'
-#        sys.stderr = redir
         while not self.process_stop.is_set():
             print 'Need task'
             self.pipe.send('Need task')
@@ -89,6 +56,35 @@ class TaskProcess(Process):
         self.pipe.send('Closing')
         print 'Process shuting down'
         self.pipe.close()
+
+    def _config_log(self):
+        """
+        """
+        config_worker = {
+            'version': 1,
+            'disable_existing_loggers': True,
+            'handlers': {
+                'queue': {
+                    'class': QueueHandler,
+                    'queue': self.queue,
+                },
+            },
+            'root': {
+                'level': 'DEBUG',
+                'handlers': ['queue']
+            },
+        }
+        logging.config.dictConfig(config_worker)
+        if os.name == 'posix':
+            # On POSIX, the setup logger will have been configured in the
+            # parent process, but should have been disabled following the
+            # dictConfig call.
+            # On Windows, since fork isn't used, the setup logger won't
+            # exist in the child, so it would be created and the message
+            # would appear - hence the "if posix" clause.
+            logger = logging.getLogger('setup')
+            logger.critical('Should not appear, because of disabled logger ...')
+
 
 class TaskHolderHandler(Handler):
     """
@@ -146,6 +142,7 @@ class TaskExecutionControl(HasTraits):
 
     process = Instance(Process)
     thread = Instance(Thread)
+    queue = Instance(Queue, ())
     pipe = Any #Instance of Connection but ambiguous when the OS is not known
 
     traits_view = View(
@@ -182,12 +179,11 @@ class TaskExecutionControl(HasTraits):
         self.task_stop.clear()
         self.process_stop.clear()
         self.pipe, process_pipe = Pipe()
-        outlet_pipe, inlet_pipe = Pipe(duplex = False)
         self.process = TaskProcess(process_pipe,
-                                   inlet_pipe,
+                                   self.queue,
                                    self.task_stop,
                                    self.process_stop)
-        self.thread = Pipe2TextThread(self.process, outlet_pipe, sys.stdout)
+        self.thread = QueueLoggerThread(self.process, self.queue)
         self.process.start()
         self.thread.start()
         self.running = True
