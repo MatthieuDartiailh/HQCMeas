@@ -1,5 +1,5 @@
 from textwrap import fill
-from visa import Instrument
+from visa import Instrument, VisaIOError
 
 class InstrIOError(Exception):
     """
@@ -38,9 +38,9 @@ class BaseInstrument(object):
     caching_permissions = {}
     secure_com_except = ()
 
-    def __init__(self, caching_switch = False, caching_permissions = {}):
+    def __init__(self, caching_allowed = True, caching_permissions = {}):
         super(BaseInstrument, self).__init__()
-        if not caching_switch:
+        if caching_allowed:
             self.caching_permissions.update(caching_permissions)
             for prop_name in self.caching_permissions:
                 prop = getattr(self, prop_name)
@@ -105,9 +105,10 @@ class BaseInstrument(object):
 class VisaInstrument(BaseInstrument):
     """
     """
-    def __init__(self, connection_info, caching_switch = False,
+    def __init__(self, connection_info, caching_allowed = True,
                  caching_permissions = {}):
-        super(VisaInstrument, self).__init__(caching_switch,caching_permissions)
+        super(VisaInstrument, self).__init__(caching_allowed,
+                                                caching_permissions)
         if connection_info['additionnal_mode'] != '':
             self.connection_str = connection_info['connection_type']\
                                 + '::' + connection_info['address']\
@@ -118,10 +119,13 @@ class VisaInstrument(BaseInstrument):
 
         self.open_connection()
 
-    def open_connection(self):
+    def open_connection(self, **para):
         """
         """
-        self._driver = Instrument(self.connection_str)
+        try:
+            self._driver = Instrument(self.connection_str, **para)
+        except VisaIOError as er:
+            raise InstrIOError(str(er))
 
     def close_connection(self):
         """
@@ -140,7 +144,7 @@ class VisaInstrument(BaseInstrument):
                 'chunk_size' : self._driver.chunk_size,
                 }
         self._driver.close()
-        self._driver = Instrument(self.connection_str, **para)
+        self.open_connection(**para)
 
     def check_connection(self):
         """
