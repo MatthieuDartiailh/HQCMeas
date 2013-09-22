@@ -8,7 +8,7 @@ import os
 
 from .base_tasks import SimpleTask
 from ...instruments.drivers import drivers
-from ...instruments.profiles import profiles_folder_path
+from ...instruments.profiles import PROFILES_DIRECTORY_PATH
 from ...instruments.instrument_manager import InstrumentManager
 
 class InstrumentTask(SimpleTask):
@@ -20,12 +20,13 @@ class InstrumentTask(SimpleTask):
     driver_list = []
     selected_driver = Str(preference = True)
     driver = Instance(Instrument)
+    task_database_entries_default = List
 
     def check(self, *args, **kwargs):
         """
         """
         profile = self.profile_dict[self.selected_profile]
-        full_path = os.path.join(profiles_folder_path,
+        full_path = os.path.join(PROFILES_DIRECTORY_PATH,
                                     profile)
         if not os.path.isfile(full_path):
             print 'Failed to get the specified instr profile in {}'.format(
@@ -41,39 +42,27 @@ class InstrumentTask(SimpleTask):
 
         if kwargs['test_instr']:
             config = ConfigObj(full_path)
-            if config['additionnal_mode'] != '':
-                connection_str = config['connection_type']\
-                                 + '::' + config['address']\
-                                 + '::' + config['additionnal_mode']
-            else:
-                connection_str = config['connection_type']\
-                                 + '::' + config['address']
             try:
-                instr = driver_class(connection_str)
+                instr = driver_class(config)
                 instr.close()
             except VisaIOError:
                 print 'Failed to establish the connection\
                     with the selected instrument in {}'.format(self.task_name)
                 return False
+
+        for i, entry in enumerate(self.task_database_entries):
+            self.write_in_database(entry, self.task_database_entries_default[i])
+
         return True
 
     def start_driver(self):
         """
         """
         profile = self.profile_dict[self.selected_profile]
-        full_path = os.path.join(profiles_folder_path, profile)
+        full_path = os.path.join(PROFILES_DIRECTORY_PATH, profile)
         driver_class = drivers[self.selected_driver]
         config = ConfigObj(full_path)
-
-        if config['additionnal_mode'] != '':
-            connection_str = config['connection_type']\
-                                 + '::' + config['address']\
-                                 + '::' + config['additionnal_mode']
-        else:
-            connection_str = config['connection_type']\
-                             + '::' + config['address']
-
-        self.driver = driver_class(connection_str)
+        self.driver = driver_class(config)
         instrs = self.task_database.get_value('root', 'instrs')
         instrs.append(self.driver)
         self.task_database.set_value('root', 'instrs', instrs)
@@ -81,7 +70,7 @@ class InstrumentTask(SimpleTask):
     def stop_driver(self):
         """
         """
-        self.driver.close()
+        self.driver.close_connection()
 
     def _profile_dict_changed(self):
         """

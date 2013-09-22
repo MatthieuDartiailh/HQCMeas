@@ -3,7 +3,8 @@
 """
 
 from threading import Thread
-from visa import VisaIOError, VisaTypeError
+import logging
+from ....instruments.drivers.driver_tools import InstrIOError
 
 def make_stoppable(function_to_decorate):
     """This decorator should be used on the process method of every task as it
@@ -62,9 +63,8 @@ def make_wait(process):
 
 def smooth_instr_crash(process, max_recursion = 10):
     """This decorator should be used on any instr task. It handles possible
-    communications errors during the processing of the task. First it attempt
-    to exceute the command again after closing and reopening the communication.
-    If it fails ask the immediate end of the measurement to prevent any damages
+    communications errors during the processing of the task. If the command
+    fails it asks the immediate end of the measurement to prevent any damages
     to the sample.
     """
     def decorator(*args, **kwargs):
@@ -72,17 +72,13 @@ def smooth_instr_crash(process, max_recursion = 10):
         decorator.__name__ = process.__name__
         decorator.__doc__ = process.__doc__
         obj = args[0]
-        i = 1
-        while i < max_recursion:
-            try:
-                process(*args, **kwargs)
-                return
-            except (VisaIOError, VisaTypeError):
-                obj.stop_driver()
+
         try:
             process(*args, **kwargs)
-        except (VisaIOError, VisaTypeError) as error:
+        except (InstrIOError) as error:
             obj.root_task.should_stop.set()
-            print error
+            log = logging.getLogger()
+            log.critical(error.message)
+
 
     return decorator

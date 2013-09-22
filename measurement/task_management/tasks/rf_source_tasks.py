@@ -20,6 +20,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
 
     driver_list = ['AgilentE8257D']
     task_database_entries = ['frequency', 'unit']
+    task_database_entries_default = [1, 'GHZ']
     loopable = True
 
     task_view = View(
@@ -58,12 +59,13 @@ class RFSourceSetFrequencyTask(InstrumentTask):
         if not self.driver:
             self.start_driver()
             if self.auto_start:
-                self.driver.set_output_on_off('On')
+                self.driver.output = 'On'
 
         if not frequency:
             frequency = self.frequency
 
-        self.driver.set_fixed_frequency(frequency, self.unit)
+        self.driver.frequency_unit = self.unit
+        self.driver.fixed_frequency = frequency
         self.write_in_database('frequency', frequency)
 
     def check(self, *args, **kwargs):
@@ -83,6 +85,7 @@ class RFSourceSetPowerTask(InstrumentTask):
 
     driver_list = ['AgilentE8257D']
     task_database_entries = ['power']
+    task_database_entries_default = [1]
     loopable = True
 
     task_view = View(
@@ -122,7 +125,7 @@ class RFSourceSetPowerTask(InstrumentTask):
         if not power:
             power = self.power
 
-        self.driver.set_fixed_power(power)
+        self.driver.fixed_power = power
         self.write_in_database('power', power)
 
     def check(self, *args, **kwargs):
@@ -140,7 +143,8 @@ class RFSourceSetOnOffTask(InstrumentTask):
     switch = Str(preference = True)
 
     driver_list = ['AgilentE8257D']
-    task_database_entries = ['switch']
+    task_database_entries = ['output']
+    task_database_entries_default = ['Off']
     loopable = True
 
     task_view = View(
@@ -176,14 +180,14 @@ class RFSourceSetOnOffTask(InstrumentTask):
             switch = self.switch
 
         if switch == 'On':
-            self.driver.switch_on_off('On')
-            self.write_in_database('switch', 'On')
+            self.driver.output = 'On'
+            self.write_in_database('output', 'On')
         else:
-            self.driver.switch_on_off('Off')
-            self.write_in_database('switch', 'Off')
+            self.driver.output = 'Off'
+            self.write_in_database('output', 'Off')
 
     def check(self, *args, **kwargs):
         """
         """
-        self.write_in_database('switch', self.switch)
+        self.write_in_database('output', self.switch)
         return super(RFSourceSetOnOffTask, self).check(*args, **kwargs)

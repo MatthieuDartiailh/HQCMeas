@@ -3,9 +3,10 @@
 
 """
 
-from visa import Instrument, VisaIOError
+from driver_tools import (VisaInstrument, InstrIOError,
+                          secure_communication)
 
-class LockInSR72Series(Instrument):
+class LockInSR72Series(VisaInstrument):
     """
     """
 
@@ -15,66 +16,73 @@ class LockInSR72Series(Instrument):
             kwargs['term_chars'] = '\0'
         super(LockInSR72Series, self).__init__(*args, **kwargs)
 
+    @secure_communication
     def read_x(self):
         """
         """
         value = self.ask_for_values('X.')[0]
         status = self._check_status()
         if status != 'OK':
-            raise VisaIOError('The command did not complete correctly')
+            raise InstrIOError('The command did not complete correctly')
         else:
             return value
 
+    @secure_communication
     def read_y(self):
         """
         """
         value = self.ask_for_values('Y.')[0]
         status = self._check_status()
         if status != 'OK':
-            raise VisaIOError('The command did not complete correctly')
+            raise InstrIOError('The command did not complete correctly')
         else:
             return value
 
+    @secure_communication
     def read_xy(self):
         """
         """
         values = self.ask_for_values('XY.')
         status = self._check_status()
         if status != 'OK':
-            raise VisaIOError('The command did not complete correctly')
+            raise InstrIOError('The command did not complete correctly')
         else:
             return values
 
+    @secure_communication
     def read_amplitude(self):
         """
         """
         value = self.ask_for_values('MAG.')[0]
         status = self._check_status()
         if status != 'OK':
-            return status
+            return InstrIOError('The command did not complete correctly')
         else:
             return value
 
+    @secure_communication
     def read_phase(self):
         """
         """
         value = self.ask_for_values('PHA.')[0]
         status = self._check_status()
         if status != 'OK':
-            raise VisaIOError('The command did not complete correctly')
+            raise InstrIOError('The command did not complete correctly')
         else:
             return value
 
+    @secure_communication
     def read_amp_and_phase(self):
         """
         """
         values = self.ask_for_values('MP.')
         status = self._check_status()
         if status != 'OK':
-            raise VisaIOError('The command did not complete correctly')
+            raise InstrIOError('The command did not complete correctly')
         else:
             return values
 
+    @secure_communication
     def _check_status(self):
         """
         """

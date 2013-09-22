@@ -1,4 +1,5 @@
 from textwrap import fill
+from inspect import cleandoc
 from visa import Instrument, VisaIOError
 
 class InstrIOError(Exception):
@@ -32,59 +33,13 @@ class instrument_property(property):
         """
         self._cache = None
 
-class BaseInstrument(object):
-    """
-    """
-    caching_permissions = {}
-    secure_com_except = ()
-
-    def __init__(self, caching_allowed = True, caching_permissions = {}):
-        super(BaseInstrument, self).__init__()
-        if caching_allowed:
-            self.caching_permissions.update(caching_permissions)
-            for prop_name in self.caching_permissions:
-                prop = getattr(self, prop_name)
-                prop.allow_caching = self.caching_permissions[prop_name]
-
-    def open_connection(self):
-        """
-        """
-        message = fill('''This method is used to open the connection with the
-                       instrument and should be implemented by classes
-                       subclassing BaseInstrument''', 80)
-        raise NotImplementedError(message)
-
-    def close_connection(self):
-        """
-        """
-        message = fill('''This method is used to close the connection with the
-                       instrument and should be implemented by classes
-                       subclassing BaseInstrument''', 80)
-        raise NotImplementedError(message)
-
-    def reopen_connection(self):
-        """
-        """
-        message = fill('''This method is used to reopen a connection whose state
-                       is suspect, for example the last message sent did not
-                       go through.''', 80)
-        raise NotImplementedError(message)
-
-    def check_connection(self):
-        """
-        """
-        message = fill('''This method is used to check that the instrument is
-                       in remote mode and that none of the values in the cache
-                       has been corrupted by a local user.''', 80)
-        raise NotImplementedError(message)
-
-    def secure_communication(self, max_iter = 10):
+def secure_communication(max_iter = 10):
         """
         """
         def decorator(method):
             """
             """
-            def wrapper(*args, **kwargs):
+            def wrapper(self, *args, **kwargs):
                 wrapper.__name__ = method.__name__
                 wrapper.__doc__ = method.__doc__
                 i = 0
@@ -102,9 +57,65 @@ class BaseInstrument(object):
 
         return decorator
 
+class BaseInstrument(object):
+    """
+    """
+    caching_permissions = {}
+    secure_com_except = ()
+
+    def __init__(self, caching_allowed = True, caching_permissions = {}):
+        super(BaseInstrument, self).__init__()
+        if caching_allowed:
+            self.caching_permissions.update(caching_permissions)
+            for prop_name in self.caching_permissions:
+                prop = getattr(self, prop_name)
+                prop.allow_caching = self.caching_permissions[prop_name]
+
+    def open_connection(self):
+        """
+        """
+        message = fill(cleandoc(
+                    '''This method is used to open the connectionwith the
+                    instrument and should be implemented by classes
+                    subclassing BaseInstrument'''),
+                    80)
+        raise NotImplementedError(message)
+
+    def close_connection(self):
+        """
+        """
+        message = fill(cleandoc(
+                    '''This method is used to close the connection with the
+                    instrument and should be implemented by classes
+                    subclassing BaseInstrument'''),
+                    80)
+        raise NotImplementedError(message)
+
+    def reopen_connection(self):
+        """
+        """
+        message = fill(cleandoc(
+                    '''This method is used to reopen a connection whose state
+                    is suspect, for example the last message sent did not
+                    go through.'''),
+                    80)
+        raise NotImplementedError(message)
+
+    def check_connection(self):
+        """
+        """
+        message = fill(cleandoc(
+                        '''This method is used to check that the instrument is
+                        in remote mode and that none of the values in the cache
+                        has been corrupted by a local user.'''),
+                    80)
+        raise NotImplementedError(message)
+
 class VisaInstrument(BaseInstrument):
     """
     """
+    secure_com_except = (InstrIOError, VisaIOError)
+
     def __init__(self, connection_info, caching_allowed = True,
                  caching_permissions = {}):
         super(VisaInstrument, self).__init__(caching_allowed,

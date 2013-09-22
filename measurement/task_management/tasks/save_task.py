@@ -160,6 +160,16 @@ class SaveTask(SimpleTask):
                                                             self.task_name)
             return False
 
+        try:
+            [eval(get_formatted_string(value,
+                                       self.task_path,
+                                       self.task_database))
+                    for value in self.saved_values]
+        except:
+            print 'In {}, failed to evaluate one of the entries'.format(
+                                                            self.task_name)
+            return False
+
         return True
 
     def update_preferences_from_traits(self):

@@ -2,9 +2,9 @@
 """
 
 """
-from visa import Instrument
+from .driver_tools import VisaInstrument
 
-class Agilent34410A(Instrument):
+class Agilent34410A(VisaInstrument):
     """
     """
 
