@@ -19,6 +19,7 @@ class LockInMeasureTask(InstrumentTask):
     driver_list = ['SR7265-LI', 'SR7270-LI']
 
     task_database_entries = ['x','y','phase','amplitude']
+    task_database_entries_default = [1,1,1,1]
 
     task_view = View(
                     VGroup(

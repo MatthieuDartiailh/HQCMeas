@@ -3,7 +3,8 @@
 """
 
 from threading import Thread
-from visa import VisaIOError, VisaTypeError
+import logging
+from ....instruments.drivers.driver_tools import InstrIOError
 
 def make_stoppable(function_to_decorate):
     """This decorator should be used on the process method of every task as it
@@ -15,25 +16,23 @@ def make_stoppable(function_to_decorate):
             return
 
         function_to_decorate(*args, **kwargs)
-        decorator.__name__ = function_to_decorate.__name__
-        decorator.__doc__ = function_to_decorate.__doc__
+
+    decorator.__name__ = function_to_decorate.__name__
+    decorator.__doc__ = function_to_decorate.__doc__
 
     return decorator
 
 
-def make_parallel(process):
+def make_parallel(function_to_decorate):
     """This decorator should be used when there is no need to wait for the
     process method to return to start the next task,ie the process method
     decorated don't use any data succeptible to be corrupted by the next task.
     """
     def decorator(*args, **kwargs):
 
-
-        decorator.__name__ = process.__name__
-        decorator.__doc__ = process.__doc__
         obj = args[0]
         thread = Thread(group = None,
-                        target = process,
+                        target = function_to_decorate,
                         args = args,
                         kwargs = kwargs)
         threads = obj.task_database.get_value('root', 'threads')
@@ -41,48 +40,43 @@ def make_parallel(process):
 
         return thread.start()
 
+    decorator.__name__ = function_to_decorate.__name__
+    decorator.__doc__ = function_to_decorate.__doc__
     return decorator
 
-def make_wait(process):
+def make_wait(function_to_decorate):
     """This decorator should be used when the process method need to access
     data in the database or need to be sure that physical quantities reached
     their expected values.
     """
     def decorator(*args, **kwargs):
 
-        decorator.__name__ = process.__name__
-        decorator.__doc__ = process.__doc__
         obj = args[0]
         threads = obj.task_database.get_value('root', 'threads')
         for thread in threads:
             thread.join()
-        return process(*args, **kwargs)
+        return function_to_decorate(*args, **kwargs)
 
+    decorator.__name__ = function_to_decorate.__name__
+    decorator.__doc__ = function_to_decorate.__doc__
     return decorator
 
-def smooth_instr_crash(process, max_recursion = 10):
+def smooth_instr_crash(function_to_decorate, max_recursion = 10):
     """This decorator should be used on any instr task. It handles possible
-    communications errors during the processing of the task. First it attempt
-    to exceute the command again after closing and reopening the communication.
-    If it fails ask the immediate end of the measurement to prevent any damages
+    communications errors during the processing of the task. If the command
+    fails it asks the immediate end of the measurement to prevent any damages
     to the sample.
     """
     def decorator(*args, **kwargs):
-
-        decorator.__name__ = process.__name__
-        decorator.__doc__ = process.__doc__
         obj = args[0]
-        i = 1
-        while i < max_recursion:
-            try:
-                process(*args, **kwargs)
-                return
-            except (VisaIOError, VisaTypeError):
-                obj.stop_driver()
-        try:
-            process(*args, **kwargs)
-        except (VisaIOError, VisaTypeError) as error:
-            obj.root_task.should_stop.set()
-            print error
 
+        try:
+            function_to_decorate(*args, **kwargs)
+        except (InstrIOError) as error:
+            obj.root_task.should_stop.set()
+            log = logging.getLogger()
+            log.critical(error.message)
+
+    decorator.__name__ = function_to_decorate.__name__
+    decorator.__doc__ = function_to_decorate.__doc__
     return decorator

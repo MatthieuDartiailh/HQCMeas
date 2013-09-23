@@ -5,10 +5,9 @@ from traits.api import (List, Str)
 from traitsui.api import (View, UItem, TextEditor, HGroup, Label, EnumEditor)
 
 from .base_task_config import PyConfigTask
-from ...instruments.drivers import drivers
+from ...instruments.drivers import DRIVERS
 from ...instruments.instrument_manager import InstrumentManager
 
-DRIVER_LIST = drivers.keys()
 
 class InstrConfigTask(PyConfigTask):
     """
@@ -33,7 +32,8 @@ class InstrConfigTask(PyConfigTask):
 
     def __init__(self, *args, **kwargs):
         super(InstrConfigTask, self).__init__(*args, **kwargs)
-        self.drivers = list(set(self.task_class.driver_list) & set(DRIVER_LIST))
+        self.drivers = list(set(self.task_class.driver_list)
+                                                & set(DRIVERS.keys()))
 
     def build_task(self):
         """

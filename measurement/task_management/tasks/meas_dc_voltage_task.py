@@ -17,6 +17,7 @@ class MeasDcVoltageTask(InstrumentTask):
     driver_list = ['Agilent34410A']
 
     task_database_entries = ['voltage']
+    task_database_entries_default = [1]
 
     task_view = View(
                     VGroup(
@@ -29,7 +30,7 @@ class MeasDcVoltageTask(InstrumentTask):
                             UItem('selected_profile',
                                 editor = EnumEditor(name = 'profile_list'),
                                 width = 100),
-                            UItem('wiat_time'),
+                            UItem('wait_time'),
                             columns = 3,
                             show_border = True,
                             ),

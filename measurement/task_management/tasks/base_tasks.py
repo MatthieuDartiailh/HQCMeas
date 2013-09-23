@@ -622,7 +622,7 @@ class RootTask(ComplexTask):
         for thread in self.task_database.get_value('root','threads'):
             thread.join()
         for instr in self.task_database.get_value('root','instrs'):
-            instr.close()
+            instr.close_connection()
 
     def request_child(self, parent, ui):
         """

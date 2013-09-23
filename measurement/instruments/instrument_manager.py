@@ -4,23 +4,23 @@
 from traits.api import (HasTraits, List, Dict, Str, File, Directory,
                         Instance, Button, on_trait_change)
 from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor, VGrid,
-                          Label, OKCancelButtons, Handler, EnumEditor, error)
+                          Label, OKCancelButtons, Handler, EnumEditor, error,
+                          InstanceEditor)
 
-import os, re, inspect
+import os, re
 from configobj import ConfigObj
 from textwrap import fill
-from visa import VisaIOError
+from inspect import cleandoc
 
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                             FileDeletedEvent, FileMovedEvent)
 
-from .drivers import drivers
+from .drivers import DRIVERS, DRIVER_TYPES, InstrIOError
+from connection_forms import AbstractConnectionForm, FORMS, VisaForm
 
-instr_drivers = drivers.keys()
-CONNECTION_TYPES = ['GPIB', 'USB', 'TCPIP']
-module_path = os.path.dirname(__file__)
+MODULE_PATH = os.path.dirname(__file__)
 
 class FileListUpdater(FileSystemEventHandler):
     """
@@ -49,24 +49,19 @@ class InstrumentFormHandler(Handler):
     def close(self, info, is_ok):
         model = info.object
         if is_ok:
-            if (model.name != '' and model.driver != '' and
-                model.connection_type != '' and model.address != ''):
-                if  model.additionnal_mode != '':
-                    connect_str = model.connection_type + '::' + model.address\
-                                + '::' + model.additionnal_mode
-                else:
-                    connect_str = model.connection_type + '::' + model.address
-
+            if (model.name != '' and model.driver_type and model.driver != ''
+                and model.form.check()):
+                connection_dict = model.form.connection_dict()
                 try:
-                    instr = drivers[model.driver](connect_str)
-                    instr.close()
-                except VisaIOError:
-                    message = inspect.cleandoc("""The software failed to
+                    instr = DRIVERS[model.driver](connection_dict)
+                    instr.close_connection()
+                except InstrIOError:
+                    message = cleandoc("""The software failed to
                                 establish the connection with the instrument
                                 please check all parameters and instrument state
                                 and try again""")
 
-                    error(message = fill(message.replace('\n', ' '), 80),
+                    error(message = fill(message, 80),
                           title = 'Connection failure', buttons = ['OK'],
                           parent = info.ui.control)
                     return False
@@ -74,10 +69,11 @@ class InstrumentFormHandler(Handler):
                 return True
 
             else:
-                message = inspect.cleandoc("""You must fill the fields : name,
-                                           driver, connection and address before
-                                           validating""")
-                error(message = fill(message.replace('\n', ' '), 80),
+                message = cleandoc("""You must fill the fields : name,
+                           driver type, driver, {} before
+                           validating""".format(model.form.required_fields())
+                                       )
+                error(message = fill(message, 80),
                           title = 'Missing information', buttons = ['OK'],
                           parent = info.ui.control)
         else:
@@ -87,36 +83,38 @@ class InstrumentForm(HasTraits):
     """
     """
     name = Str('')
+    driver_type = Str()
+    driver_list = List(Str)
     driver = Str('')
-    connection_type = Str('')
-    address = Str('')
-    additionnal_mode = Str('')
+    form = Instance(AbstractConnectionForm, VisaForm())
 
     traits_view = View(
-                    VGrid(
-                        Label('Name'), UItem('name',
-                                                    style = 'readonly'),
-                        Label('Driver'), UItem('driver',
-                                                    style = 'readonly'),
-                        Label('Connection'), UItem('connection_type',
-                                                    style = 'readonly'),
-                        Label('Address'), UItem('address',
-                                                    style = 'readonly'),
-                        Label('Additionnal'), UItem('additionnal_mode',
-                                                    style = 'readonly'),
+                    VGroup(
+                        VGrid(
+                            Label('Name'), UItem('name',
+                                                        style = 'readonly'),
+                            Label('Driver type'), UItem('driver_type',
+                                                        style = 'readonly'),
+                            Label('Driver'), UItem('driver',
+                                                        style = 'readonly'),
+                            ),
+                        UItem('form', style = 'custom'),
                     ),
                 )
 
     edit_view = View(
-                    VGrid(
-                        Label('Name'), UItem('name', style = 'readonly'),
-                        Label('Driver'), UItem('driver',
-                                    editor = EnumEditor(values = instr_drivers)
-                                    ),
-                        Label('Connection'), UItem('connection_type',
-                                editor = EnumEditor(values = CONNECTION_TYPES)),
-                        Label('Address'), UItem('address'),
-                        Label('Additionnal'), UItem('additionnal_mode'),
+                    VGroup(
+                        VGrid(
+                            Label('Name'), UItem('name', style = 'readonly'),
+                            Label('Driver type'), UItem('driver_type',
+                                                editor = EnumEditor(
+                                                values = DRIVER_TYPES.keys())),
+                            Label('Driver'), UItem('driver',
+                                                editor = EnumEditor(
+                                                    name = 'driver_list')),
+                            ),
+                        UItem('form@',
+                                  editor = InstanceEditor(view = 'edit_view'))
                     ),
                     buttons = OKCancelButtons,
                     handler = InstrumentFormHandler(),
@@ -126,15 +124,18 @@ class InstrumentForm(HasTraits):
                 )
 
     new_view = View(
-                    VGrid(
-                        Label('Name'), UItem('name'),
-                        Label('Driver'), UItem('driver',
-                                    editor = EnumEditor(values = instr_drivers)
-                                    ),
-                        Label('Connection'), UItem('connection_type',
-                                editor = EnumEditor(values = CONNECTION_TYPES)),
-                        Label('Address'), UItem('address'),
-                        Label('Additionnal'), UItem('additionnal_mode'),
+                    VGroup(
+                        VGrid(
+                            Label('Name'), UItem('name'),
+                            Label('Driver type'), UItem('driver_type',
+                                                editor = EnumEditor(
+                                                values = DRIVER_TYPES.keys())),
+                            Label('Driver'), UItem('driver',
+                                                editor = EnumEditor(
+                                                    name = 'driver_list')),
+                            ),
+                        UItem('form@',
+                                  editor = InstanceEditor(view = 'edit_view'))
                     ),
                     buttons = OKCancelButtons,
                     handler = InstrumentFormHandler(),
@@ -142,6 +143,23 @@ class InstrumentForm(HasTraits):
                     kind = 'modal',
                     width = 250,
                 )
+
+    def __init__(self, *args, **kwargs):
+        super(InstrumentForm, self).__init__(*args, **kwargs)
+        self.form = FORMS.get(self.driver_type, VisaForm)(**kwargs)
+
+    @on_trait_change('driver_type')
+    def _new_driver_type(self, new):
+        """
+        """
+        driver_list = []
+        driver_base_class = DRIVER_TYPES[new]
+        for driver_name, driver_class in DRIVERS.items():
+            if issubclass(driver_class, driver_base_class):
+                driver_list.append(driver_name)
+        self.driver_list = driver_list
+        self.form = FORMS.get(new, VisaForm)()
+
 
 class InstrumentManagerHandler(Handler):
     """
@@ -158,10 +176,9 @@ class InstrumentManagerHandler(Handler):
             filename = instr.name + '.ini'
             fullpath = os.path.join(path, filename)
             instr_config = ConfigObj(fullpath)
+            instr_config['driver_type'] = instr.driver_type
             instr_config['driver'] = instr.driver
-            instr_config['connection_type'] = instr.connection_type
-            instr_config['address'] = instr.address
-            instr_config['additionnal_mode'] = instr.additionnal_mode
+            instr_config.update(instr.form.connection_dict())
             instr_config.write()
 
     def object_edit_instr_changed(self, info):
@@ -175,21 +192,18 @@ class InstrumentManagerHandler(Handler):
             path = os.path.abspath(info.object.instr_folder)
             fullpath = os.path.join(path, instr_file)
             instr_config = ConfigObj(fullpath)
+            instr_config['driver_type'] = model.driver_type
             instr_config['driver'] = model.selected_instr.driver
-            instr_config['connection_type'] = \
-                                        model.selected_instr.connection_type
-            instr_config['address'] = model.selected_instr.address
-            instr_config['additionnal_mode'] = \
-                                        model.selected_instr.additionnal_mode
+            instr_config.update(model.selected_instr.form.connection_dict())
             instr_config.write()
 
     def object_delete_instr_changed(self, info):
         """
         """
         model = info.object
-        message = inspect.cleandoc("""Are you sure want to delete this
+        message = cleandoc("""Are you sure want to delete this
                         instrument connection informations ?""")
-        if error(message = fill(message.replace('\n', ' '), 80),
+        if error(message = fill(message, 80),
                 title = 'Deletion confirmation',
                 parent = info.ui.control):
             instr_file = model.instrs[model.selected_instr_name]
@@ -201,7 +215,7 @@ class InstrumentManager(HasTraits):
     """
     """
 
-    instr_folder = Directory(os.path.join(module_path,'profiles'))
+    instr_folder = Directory(os.path.join(MODULE_PATH, 'profiles'))
     instrs = Dict(Str, File)
     instrs_name = List(Str)
     selected_instr_name = Str

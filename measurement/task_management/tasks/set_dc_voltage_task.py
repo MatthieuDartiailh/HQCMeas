@@ -25,6 +25,7 @@ class SetDcVoltageTask(InstrumentTask):
     loopable =  True
 
     task_database_entries = ['voltage']
+    task_database_entries_default = [1]
 
     task_view = View(
                     VGroup(
@@ -76,8 +77,8 @@ class SetDcVoltageTask(InstrumentTask):
         """
         if not self.driver:
             self.start_driver()
-            if hasattr(self.driver, 'set_function'):
-                self.driver.set_function('VOLT')
+            if hasattr(self.driver, 'function'):
+                self.driver.function = 'VOLT'
 
         if target_value is not None:
             value = target_value
@@ -85,14 +86,14 @@ class SetDcVoltageTask(InstrumentTask):
             value = self.target_value
 
         if self.check_value:
-            last_value = self.driver.get_voltage()
+            last_value = self.driver.voltage
         elif self.last_value == None:
-            last_value = self.driver.get_voltage()
+            last_value = self.driver.voltage
 
         if last_value == value:
             return
         elif self.back_step == 0:
-            self.driver.set_voltage(value)
+            self.driver.voltage = value
         else:
             if (value - last_value)/self.back_step > 0:
                 step = self.back_step
@@ -101,9 +102,9 @@ class SetDcVoltageTask(InstrumentTask):
 
         while abs(value-last_value) > abs(step):
             last_value += step
-            self.driver.set_voltage(last_value)
+            self.driver.voltage = last_value
             time.sleep(self.delay)
 
-        self.driver.set_voltage(value)
+        self.driver.voltage = value
         self.last_value = value
         self.write_in_database('voltage', value)
