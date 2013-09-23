@@ -77,8 +77,8 @@ class SetDcVoltageTask(InstrumentTask):
         """
         if not self.driver:
             self.start_driver()
-            if hasattr(self.driver, 'set_function'):
-                self.driver.set_function('VOLT')
+            if hasattr(self.driver, 'function'):
+                self.driver.function = 'VOLT'
 
         if target_value is not None:
             value = target_value

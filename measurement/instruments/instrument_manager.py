@@ -54,7 +54,7 @@ class InstrumentFormHandler(Handler):
                 connection_dict = model.form.connection_dict()
                 try:
                     instr = DRIVERS[model.driver](connection_dict)
-                    instr.close()
+                    instr.close_connection()
                 except InstrIOError:
                     message = cleandoc("""The software failed to
                                 establish the connection with the instrument
@@ -152,7 +152,6 @@ class InstrumentForm(HasTraits):
     def _new_driver_type(self, new):
         """
         """
-        print new
         driver_list = []
         driver_base_class = DRIVER_TYPES[new]
         for driver_name, driver_class in DRIVERS.items():
@@ -177,6 +176,7 @@ class InstrumentManagerHandler(Handler):
             filename = instr.name + '.ini'
             fullpath = os.path.join(path, filename)
             instr_config = ConfigObj(fullpath)
+            instr_config['driver_type'] = instr.driver_type
             instr_config['driver'] = instr.driver
             instr_config.update(instr.form.connection_dict())
             instr_config.write()
@@ -192,6 +192,7 @@ class InstrumentManagerHandler(Handler):
             path = os.path.abspath(info.object.instr_folder)
             fullpath = os.path.join(path, instr_file)
             instr_config = ConfigObj(fullpath)
+            instr_config['driver_type'] = model.driver_type
             instr_config['driver'] = model.selected_instr.driver
             instr_config.update(model.selected_instr.form.connection_dict())
             instr_config.write()

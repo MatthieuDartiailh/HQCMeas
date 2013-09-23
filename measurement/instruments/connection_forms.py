@@ -65,5 +65,21 @@ class VisaForm(AbstractConnectionForm):
                         Label('Additionnal'), UItem('additionnal_mode'),
                     ),
                 )
+    def check(self):
+        """
+        """
+        return (self.connection_type != '' and self.address != '')
+
+    def required_fields(self):
+        """
+        """
+        return 'connection type and address'
+
+    def connection_dict(self):
+        """
+        """
+        return {'connection_type' : self.connection_type,
+                'address' : self.address,
+                'additionnal_mode' : self.additionnal_mode}
 
 FORMS = {'Visa' : VisaForm}

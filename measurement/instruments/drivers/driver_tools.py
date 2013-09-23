@@ -24,7 +24,7 @@ class instrument_property(property):
     def __set__(self, obj, value):
         """
         """
-        super(instrument_property,self).__get__(obj, value)
+        super(instrument_property,self).__set__(obj, value)
         if self.allow_caching:
             self._cache = value
 
@@ -33,28 +33,36 @@ class instrument_property(property):
         """
         self._cache = None
 
-def secure_communication(max_iter = 10):
+def secure_communication(method, max_iter = 10):
+    """
+    """
+    def decorator(method):
         """
         """
-        def decorator(method):
-            """
-            """
-            def wrapper(self, *args, **kwargs):
-                wrapper.__name__ = method.__name__
-                wrapper.__doc__ = method.__doc__
-                i = 0
-                while i < max_iter:
-                    try:
-                        return method(*args, **kwargs)
-                        break
-                    except self.secure_com_except:
-                        if i == max_iter-1:
-                            raise
-                        else:
-                            self.close_connection
+        def wrapper(self, *args, **kwargs):
 
-            return wrapper
+            i = 0
+            while i < max_iter:
+                try:
+                    return method(self, *args, **kwargs)
+                    break
+                except self.secure_com_except as e:
+                    if i == max_iter-1:
+                        raise
+                    else:
+                        print e
+                        self.reopen_connection()
+                        i += 1
 
+        wrapper.__name__ = method.__name__
+        wrapper.__doc__ = method.__doc__
+        return wrapper
+
+    if method:
+        # This was an actual decorator call, ex: @cached_property
+        return decorator(method)
+    else:
+        # This is a factory call, ex: @cached_property()
         return decorator
 
 class BaseInstrument(object):

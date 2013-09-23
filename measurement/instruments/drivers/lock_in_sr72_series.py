@@ -12,9 +12,8 @@ class LockInSR72Series(VisaInstrument):
 
     def __init__(self, *args, **kwargs):
 
-        if not kwargs.has_key('term_chars'):
-            kwargs['term_chars'] = '\0'
         super(LockInSR72Series, self).__init__(*args, **kwargs)
+        self.term_chars = '\0'
 
     @secure_communication
     def read_x(self):

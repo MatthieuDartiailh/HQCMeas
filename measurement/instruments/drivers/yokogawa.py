@@ -25,12 +25,13 @@ class YokogawaGS200(VisaInstrument):
 
     @voltage.setter
     @secure_communication
-    def set_voltage(self, set_point):
+    def voltage(self, set_point):
         """
         """
         self.write(":SOURce:LEVel {}".format(set_point))
         value = self.ask_for_values('SOURce:LEVel?')[0]
-        if value != set_point:
+        #to avoid floating point rouding
+        if abs(value - set_point) > 10**-12:
             raise InstrIOError('Instrument did not set correctly the voltage')
 
     @instrument_property
@@ -46,7 +47,7 @@ class YokogawaGS200(VisaInstrument):
 
     @function.setter
     @secure_communication
-    def set_function(self, mode):
+    def function(self, mode):
         """
         """
         volt = re.compile('VOLT', re.IGNORECASE)
@@ -79,7 +80,7 @@ class YokogawaGS200(VisaInstrument):
 
     @output.setter
     @secure_communication
-    def set_output(self, value):
+    def output(self, value):
         """
         """
         on = re.compile('on', re.IGNORECASE)

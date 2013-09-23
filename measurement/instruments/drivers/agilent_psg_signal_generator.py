@@ -35,7 +35,7 @@ class AgilentPSGSignalGenerator(VisaInstrument):
             result /= 10**6
         elif unit == 'KHZ':
             result /= 10**3
-        if result != value:
+        if abs(result - value) > 10**-12:
             raise InstrIOError('Instrument did not set correctly the frequency')
 
     @instrument_property
@@ -54,7 +54,7 @@ class AgilentPSGSignalGenerator(VisaInstrument):
         """
         self.write(':POWER {}DBM'.format(value))
         result = self.ask_for_values('POWER?')[0]
-        if result != value:
+        if abs(result > value) > 10**-12:
             raise InstrIOError('Instrument did not set correctly the power')
 
     @instrument_property
