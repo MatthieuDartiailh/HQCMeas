@@ -29,21 +29,26 @@ class Hack(Handler):
 class MessagePanel(HasTraits):
 
     string = Str('')
+    clean_button = Button('Clean')
     view = View(
             UItem('string', style = 'custom',
                   editor = TextEditor(multi_line = True,
                                           read_only = True),
                   height = -150,
                   ),
+            UItem('clean_button'),
             handler = Hack()
             )
+
+    @on_trait_change('clean_button')
+    def _clean_process(self):
+        self.string = ''
 
 class Test(HasTraits):
     editor = Instance(MeasurementBuilder)
     exe_control = Instance(TaskExecutionControl)
     panel_main_process = Instance(MessagePanel, ())
     panel_measure_process = Instance(MessagePanel, ())
-    button2 = Button('Print database')
 
     view = View(
                 VGroup(
@@ -51,7 +56,6 @@ class Test(HasTraits):
                         UItem('editor@'),
                         UItem('exe_control@', width = -300),
                         ),
-                    UItem('button2'),
                     Group(
                         Label('    Main process'), Label('    Measure process'),
                         UItem('panel_main_process@'),
@@ -89,8 +93,9 @@ class Test(HasTraits):
         else:
             message('Your measurement did not pass the check please check your parameters')
 
-    def _button2_changed(self):
-        pprint.pprint(self.editor.root_task.task_database._database)
+
+#    def _button2_changed(self):
+#        pprint.pprint(self.editor.root_task.task_database._database)
 
 if __name__ == '__main__':
     editor = MeasurementBuilder()
