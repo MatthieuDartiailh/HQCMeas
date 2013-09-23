@@ -5,7 +5,7 @@ if ETSConfig.toolkit is '':
 
 from traits.api import (Str, HasTraits, Instance, on_trait_change, Button)
 from traitsui.api import (View, UItem, Group, HGroup, VGroup, TextEditor,
-                          Handler, Label)
+                          Handler, Label, message)
 from pyface.qt import QtGui
 
 from measurement.measurement_edition import MeasurementBuilder
@@ -86,6 +86,8 @@ class Test(HasTraits):
         if self.editor.root_task.check(test_instr = not self.exe_control.running):
             self.exe_control.append_task(self.editor.root_task)
             self.editor.new_root_task()
+        else:
+            message('Your measurement did not pass the check please check your parameters')
 
     def _button2_changed(self):
         pprint.pprint(self.editor.root_task.task_database._database)

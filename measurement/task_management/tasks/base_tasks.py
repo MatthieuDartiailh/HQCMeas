@@ -4,7 +4,7 @@
 
 from traits.api\
     import (HasTraits, Str, Int, Instance, List, Float, Bool, Type,
-            on_trait_change, Unicode, Directory)
+            on_trait_change, Unicode, Directory, BaseStr, BaseUnicode)
 from traits.api import self as trait_self
 from traitsui.api\
      import (View, ListInstanceEditor, VGroup, HGroup, UItem,
@@ -12,6 +12,7 @@ from traitsui.api\
 
 from configobj import Section, ConfigObj
 from numpy import linspace
+import os
 
 from .tools.task_database import TaskDatabase
 from .tools.task_decorator import make_stoppable
@@ -374,13 +375,12 @@ class ComplexTask(AbstractTask):
     def _from_str_to_basetrait(self, value, trait):
         """
         """
-        handler = trait.handler
          # If the trait type is 'Str' then we just take the raw value.
-        if isinstance(handler, Str):
+        if isinstance(trait, BaseStr) or trait.is_str:
             pass
 
         # If the trait type is 'Unicode' then we convert the raw value.
-        elif isinstance(handler, Unicode):
+        elif isinstance(trait, BaseUnicode):
             value = unicode(value)
 
         # Otherwise, we eval it!
@@ -592,13 +592,13 @@ class RootTask(ComplexTask):
     """Special task which is always the root of a measurement and is the only
     task directly referencing the measurement editor.
     """
-    default_path = Directory
+    default_path = Directory(preference = True)
     task_builder = Type()
     root_task = trait_self
     has_root = True
     task_database = TaskDatabase()
     task_name = 'Root'
-    task_preferences = ConfigObj()
+    task_preferences = ConfigObj(indent_type = '    ')
     task_depth = 0
     task_path = 'root'
     task_database_entries = ['threads', 'instrs', 'default_path']
@@ -608,6 +608,10 @@ class RootTask(ComplexTask):
         super(RootTask, self).__init__(*args, **kwargs)
         self.task_database.set_value('root', 'threads', [])
         self.task_database.set_value('root', 'instrs', [])
+
+    def check(self, *args, **kwargs):
+        return (os.path.isdir(self.default_path)
+                    and super(RootTask, self).check(*args, **kwargs))
 
     @make_stoppable
     def process(self):
@@ -677,6 +681,7 @@ class RootTask(ComplexTask):
     def _update_default_path_in_database(self, new):
         """
         """
-        self.write_in_database('default_path', new)
+        self.default_path = os.path.normpath(new)
+        self.task_database.set_value('root', 'default_path', self.default_path)
 
 AbstractTask.add_class_trait('root_task', Instance(RootTask))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from logging.handlers import RotatingFileHandler
+from inspect import cleandoc
 from threading import Thread
 
 class StreamToLogRedirector(object):
@@ -124,8 +124,8 @@ class GuiConsoleHandler(logging.Handler):
             if record.levelname == 'INFO':
                 panel.string += record.message + '\n'
             elif record.levelname == 'CRITICAL':
-                panel.string += 'An error occured please check the log file\
-                                for more details.\n'
+                panel.string += cleandoc('''An error occured please check the
+                                log file for more details.''') + '\n'
             else:
                 panel.string += record.levelname + ':' + \
                                                 record.message + '\n'
@@ -137,17 +137,17 @@ class GuiConsoleHandler(logging.Handler):
 
 class QueueLoggerThread(Thread):
     """Worker Thread Class."""
-    def __init__(self, process, queue):
+    def __init__(self, queue):
         """Init Worker Thread Class."""
         Thread.__init__(self)
         self.queue = queue
-        self.process = process
+        self.go_on = True
 
     def run(self):
         """
         Pull any output from the queue while the process runs
         """
-        while self.process.is_alive():
+        while self.go_on:
             #Collect all display output from process
             record = self.queue.get()
             logger = logging.getLogger(record.name)
