@@ -5,9 +5,10 @@ if ETSConfig.toolkit is '':
 
 from traits.api import (Str, HasTraits, Instance, on_trait_change, Button)
 from traitsui.api import (View, UItem, Group, HGroup, VGroup, TextEditor,
-                          Handler, Label, message)
+                          Handler, Label, message, MenuBar, Menu, Action)
 from pyface.qt import QtGui
 
+from measurement.instruments.instrument_manager import InstrumentManager
 from measurement.measurement_edition import MeasurementBuilder
 from measurement.measurement_execution import TaskExecutionControl
 from measurement.log.log_facility import (StreamToLogRedirector,
@@ -15,6 +16,7 @@ from measurement.log.log_facility import (StreamToLogRedirector,
 import pprint, sys, logging
 from logging.handlers import TimedRotatingFileHandler
 
+logging.captureWarnings(True)
 
 class Hack(Handler):
     """
@@ -43,12 +45,28 @@ class MessagePanel(HasTraits):
     @on_trait_change('clean_button')
     def _clean_process(self):
         self.string = ''
+        
+class TestHandler(Handler):
+    """
+    """
+    def open_instr_manager(self, info):
+        """
+        """
+        InstrumentManager().edit_traits()
 
 class Test(HasTraits):
     editor = Instance(MeasurementBuilder)
     exe_control = Instance(TaskExecutionControl)
     panel_main_process = Instance(MessagePanel, ())
     panel_measure_process = Instance(MessagePanel, ())
+
+    menubar = MenuBar(
+                    Menu(
+                        Action(name = 'Open manager',
+                                action = 'open_instr_manager',
+                                ),
+                        name = 'Instr'),
+                    )
 
     view = View(
                 VGroup(
@@ -57,13 +75,15 @@ class Test(HasTraits):
                         UItem('exe_control@', width = -300),
                         ),
                     Group(
-                        Label('    Main process'), Label('    Measure process'),
+                        Label('    Main process'), Label('   Measure process'),
                         UItem('panel_main_process@'),
                         UItem('panel_measure_process@'),
                         columns = 2
                         ),
                 ),
                 resizable = True,
+                menubar = menubar,
+                handler = TestHandler(),
                 )
 
     def __init__(self, *args, **kwargs):
@@ -92,7 +112,6 @@ class Test(HasTraits):
             self.editor.new_root_task()
         else:
             message('Your measurement did not pass the check please check your parameters')
-
 
 #    def _button2_changed(self):
 #        pprint.pprint(self.editor.root_task.task_database._database)

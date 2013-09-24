@@ -156,7 +156,7 @@ class VisaInstrument(BaseInstrument):
         """
         """
         para = {'timeout' : self._driver.timeout,
-                'send_send' : self._driver.send_end,
+                'send_end' : self._driver.send_end,
                 'delay' : self._driver.delay,
                 'term_chars' : self._driver.term_chars,
                 'values_format' : self._driver.values_format,

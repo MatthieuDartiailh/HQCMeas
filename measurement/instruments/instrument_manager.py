@@ -185,15 +185,16 @@ class InstrumentManagerHandler(Handler):
         """
         """
         model = info.object
-        instr_ui = model.selected_instr.edit_traits(view = 'edit_view',
+        instr = model.selected_instr
+        instr_ui = instr.edit_traits(view = 'edit_view',
                                        parent = info.ui.control)
         if instr_ui.result:
             instr_file = model.instrs[model.selected_instr_name]
             path = os.path.abspath(info.object.instr_folder)
             fullpath = os.path.join(path, instr_file)
             instr_config = ConfigObj(fullpath)
-            instr_config['driver_type'] = model.driver_type
-            instr_config['driver'] = model.selected_instr.driver
+            instr_config['driver_type'] = instr.driver_type
+            instr_config['driver'] = instr.driver
             instr_config.update(model.selected_instr.form.connection_dict())
             instr_config.write()
 

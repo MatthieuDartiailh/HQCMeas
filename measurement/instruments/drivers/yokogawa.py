@@ -108,6 +108,7 @@ class YokogawaGS200(VisaInstrument):
 class Yokogawa7651(VisaInstrument):
     """
     """
+        
     @instrument_property
     @secure_communication
     def voltage(self):
@@ -125,7 +126,7 @@ class Yokogawa7651(VisaInstrument):
     def voltage(self, set_point):
         """
         """
-        self.write("S{}fE".format(set_point))
+        self.write("S{:+E};E".format(set_point))
         data = self.ask("OD")
         value = float(data[4::])
         #to avoid floating point rouding
@@ -153,12 +154,12 @@ class Yokogawa7651(VisaInstrument):
         volt = re.compile('VOLT', re.IGNORECASE)
         curr = re.compile('CURR', re.IGNORECASE)
         if volt.match(mode):
-            self.write('F1')
-            value = self.ask('OD?')
+            self.write('F1;E')
+            value = self.ask('OD')
             if value[3] != 'V':
                 raise InstrIOError('Instrument did not set correctly the mode')
         elif curr.match(mode):
-            self.write('F5')
+            self.write('F5;E')
             value = self.ask('OD')
             if value[3] != 'A':
                 raise InstrIOError('Instrument did not set correctly the mode')
@@ -172,7 +173,7 @@ class Yokogawa7651(VisaInstrument):
     def output(self):
         """
         """
-        value = ('{0:08b}'.format(ord(self.ask('OC'))))[3]
+        value = ('{0:08b}'.format(int(self.ask('OC'))))[3]
         if value == 0:
             return 'OFF'
         elif value == 1:
@@ -188,13 +189,13 @@ class Yokogawa7651(VisaInstrument):
         on = re.compile('on', re.IGNORECASE)
         off = re.compile('off', re.IGNORECASE)
         if on.match(value) or value == 1:
-            self.write('O1fE')
-            if ('{0:08b}'.format(ord(self.ask('OC'))))[3] != '1':
+            self.write('O1;E')
+            if ('{0:08b}'.format(int(self.ask('OC'))))[3] != '1':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
         elif off.match(value) or value ==0:
-            self.write('O0fE')
-            if('{0:08b}'.format(ord(self.ask('OC'))))[3] != '0':
+            self.write('O0;E')
+            if('{0:08b}'.format(int(self.ask('OC'))))[3] != '0':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
         else:

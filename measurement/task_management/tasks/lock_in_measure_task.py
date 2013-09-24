@@ -42,7 +42,7 @@ class LockInMeasureTask(InstrumentTask):
                                   tooltip = fill('Time to wait before querying\
                                           values from the lock-in', 80),
                                 ),
-                            columns = 3,
+                            columns = 4,
                             show_border = True,
                             ),
                         ),

@@ -75,7 +75,7 @@ def smooth_instr_crash(function_to_decorate, max_recursion = 10):
         except (InstrIOError) as error:
             obj.root_task.should_stop.set()
             log = logging.getLogger()
-            log.critical(error.message)
+            log.exception(error.message)
 
     decorator.__name__ = function_to_decorate.__name__
     decorator.__doc__ = function_to_decorate.__doc__
