@@ -6,22 +6,27 @@
 from driver_tools import (VisaInstrument, InstrIOError,
                           secure_communication)
 
-class LockInSR72Series(VisaInstrument):
+class LockInSR830(VisaInstrument):
     """
     """
 
     def __init__(self, *args, **kwargs):
 
-        super(LockInSR72Series, self).__init__(*args, **kwargs)
-        self.term_chars = '\0'
+        super(LockInSR830, self).__init__(*args, **kwargs)
+        bus = kwargs.get('bus','GPIB')
+        if bus == 'GPIB':
+            self.write('OUTX1')
+        elif bus == 'RS232':
+            self.write('OUTX0')
+        else:
+            raise InstrIOError('In invalib bus was specified')
 
     @secure_communication
     def read_x(self):
         """
         """
-        value = self.ask_for_values('X.')
-        status = self._check_status()
-        if status != 'OK' or not value:
+        value = self.ask_for_values('OUTP?1')
+        if not value:
             raise InstrIOError('The command did not complete correctly')
         else:
             return value[0]
@@ -30,9 +35,8 @@ class LockInSR72Series(VisaInstrument):
     def read_y(self):
         """
         """
-        value = self.ask_for_values('Y.')
-        status = self._check_status()
-        if status != 'OK' or not value:
+        value = self.ask_for_values('OUTP?2')
+        if not value:
             raise InstrIOError('The command did not complete correctly')
         else:
             return value[0]
@@ -41,9 +45,8 @@ class LockInSR72Series(VisaInstrument):
     def read_xy(self):
         """
         """
-        values = self.ask_for_values('XY.')
-        status = self._check_status()
-        if status != 'OK' or not values:
+        values = self.ask_for_values('SNAP?1,2')
+        if not values:
             raise InstrIOError('The command did not complete correctly')
         else:
             return values
@@ -52,9 +55,8 @@ class LockInSR72Series(VisaInstrument):
     def read_amplitude(self):
         """
         """
-        value = self.ask_for_values('MAG.')
-        status = self._check_status()
-        if status != 'OK' or not value:
+        value = self.ask_for_values('OUTP?3')
+        if not value:
             return InstrIOError('The command did not complete correctly')
         else:
             return value[0]
@@ -63,9 +65,8 @@ class LockInSR72Series(VisaInstrument):
     def read_phase(self):
         """
         """
-        value = self.ask_for_values('PHA.')
-        status = self._check_status()
-        if status != 'OK' or not value:
+        value = self.ask_for_values('OUTP?4')
+        if not value:
             raise InstrIOError('The command did not complete correctly')
         else:
             return value[0]
@@ -74,20 +75,8 @@ class LockInSR72Series(VisaInstrument):
     def read_amp_and_phase(self):
         """
         """
-        values = self.ask_for_values('MP.')
-        status = self._check_status()
-        if status != 'OK' or not values:
+        values = self.ask_for_values('SNAP?3,4')
+        if not values:
             raise InstrIOError('The command did not complete correctly')
         else:
             return values
-
-    @secure_communication
-    def _check_status(self):
-        """
-        """
-        bites = self.read()
-        status_byte = ('{0:08b}'.format(ord(bites[0])))[::-1]
-        if not status_byte[0]:
-            return 'Command went wrong'
-        else:
-            return 'OK'

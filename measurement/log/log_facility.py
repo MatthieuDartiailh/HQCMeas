@@ -141,14 +141,15 @@ class QueueLoggerThread(Thread):
         """Init Worker Thread Class."""
         Thread.__init__(self)
         self.queue = queue
-        self.go_on = True
 
     def run(self):
         """
         Pull any output from the queue while the process runs
         """
-        while self.go_on:
+        while True:
             #Collect all display output from process
             record = self.queue.get()
+            if record is None:
+                break
             logger = logging.getLogger(record.name)
             logger.handle(record)

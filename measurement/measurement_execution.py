@@ -75,6 +75,7 @@ class TaskProcess(Process):
         self.pipe.send('Closing')
         print 'Process shuting down'
         self.meas_log_handler.close()
+        self.queue.put_nowait(None)
         self.pipe.close()
 
     def _config_log(self):
@@ -218,10 +219,9 @@ class TaskExecutionControl(HasTraits):
                                    self.queue,
                                    self.task_stop,
                                    self.process_stop)
-        if not self.thread:
-            self.thread = QueueLoggerThread(self.queue)
-            self.thread.daemon = True
-            self.thread.start()
+        self.thread = QueueLoggerThread(self.queue)
+        self.thread.daemon = True
+        self.thread.start()
 
         self.process.start()
         self.running = True
@@ -277,6 +277,7 @@ class TaskExecutionControl(HasTraits):
                         self.pipe.poll(None)
                         self.pipe.close()
                         self.process.join()
+                        self.thread.join()
                         self.running = False
                         break
                 else:
@@ -286,6 +287,7 @@ class TaskExecutionControl(HasTraits):
                     self.pipe.poll(None)
                     self.pipe.close()
                     self.process.join()
+                    self.thread.join()
                     self.running = False
                     break
             else:

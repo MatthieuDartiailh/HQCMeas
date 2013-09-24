@@ -21,7 +21,7 @@ class SetDcVoltageTask(InstrumentTask):
     #Actually a Float but I don't want it to get initialised at 0
     last_value = Any
 
-    driver_list = ['YokogawaGS200']
+    driver_list = ['YokogawaGS200', 'Yokogawa7651']
     loopable =  True
 
     task_database_entries = ['voltage']
