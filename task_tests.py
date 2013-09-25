@@ -45,7 +45,7 @@ class MessagePanel(HasTraits):
     @on_trait_change('clean_button')
     def _clean_process(self):
         self.string = ''
-        
+
 class TestHandler(Handler):
     """
     """
@@ -59,6 +59,7 @@ class Test(HasTraits):
     exe_control = Instance(TaskExecutionControl)
     panel_main_process = Instance(MessagePanel, ())
     panel_measure_process = Instance(MessagePanel, ())
+#    button2 = Button('Print database')
 
     menubar = MenuBar(
                     Menu(
@@ -80,6 +81,7 @@ class Test(HasTraits):
                         UItem('panel_measure_process@'),
                         columns = 2
                         ),
+#                    UItem('button2'),
                 ),
                 resizable = True,
                 menubar = menubar,
@@ -108,8 +110,9 @@ class Test(HasTraits):
     @on_trait_change('editor:enqueue_button')
     def enqueue_measurement(self):
         if self.editor.root_task.check(test_instr = not self.exe_control.running):
-            self.exe_control.append_task(self.editor.root_task)
-            self.editor.new_root_task()
+            result = self.exe_control.append_task(self.editor.root_task)
+            if result:
+                self.editor.new_root_task()
         else:
             message('Your measurement did not pass the check please check your parameters')
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import (Str, Float)
+from traits.api import (Str, Float, on_trait_change)
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
 
 from textwrap import fill
@@ -18,8 +18,8 @@ class LockInMeasureTask(InstrumentTask):
 
     driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830']
 
-    task_database_entries = ['x','y','phase','amplitude']
-    task_database_entries_default = [1,1,1,1]
+    task_database_entries = ['x']
+    task_database_entries_default = [1]
 
     task_view = View(
                     VGroup(
@@ -79,3 +79,26 @@ class LockInMeasureTask(InstrumentTask):
             amplitude, phase = self.driver.read_amp_and_phase()
             self.write_in_database('amplitude', amplitude)
             self.write_in_database('phase', phase)
+
+    @on_trait_change('selected_mode')
+    def _update_database_entries(self, new):
+        """
+        """
+        if self.selected_mode == 'X':
+            self.task_database_entries = ['x']
+            self.task_database_entries_default = [1]
+        elif self.selected_mode == 'Y':
+            self.task_database_entries = ['y']
+            self.task_database_entries_default = [1]
+        elif self.selected_mode == 'X&Y':
+            self.task_database_entries = ['x', 'y']
+            self.task_database_entries_default = [1,1]
+        elif self.selected_mode == 'Amp':
+            self.task_database_entries = ['amplitude']
+            self.task_database_entries_default = [1]
+        elif self.selected_mode == 'Phase':
+            self.task_database_entries = ['phase']
+            self.task_database_entries_default = [1]
+        elif self.selected_mode == 'Amp&Phase':
+            self.task_database_entries = ['amplitude', 'phase']
+            self.task_database_entries_default = [1,1]

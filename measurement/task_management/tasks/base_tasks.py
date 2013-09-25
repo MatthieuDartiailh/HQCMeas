@@ -194,6 +194,18 @@ class SimpleTask(AbstractTask):
 
             self.trait_set(**{name : validated})
 
+    @on_trait_change('task_database_entries')
+    def _update_database(self, obj, name, old, new):
+        """
+        """
+        added = set(new) - set(old)
+        removed = set(old) - set(new)
+        if self.task_database:
+            for entry in removed:
+                self.remove_from_database(self.task_name + '_' + entry)
+            for entry in added:
+                self.write_in_database(entry, None)
+
 class ComplexTask(AbstractTask):
     """Task composed of several subtasks.
     """
@@ -596,7 +608,7 @@ class RootTask(ComplexTask):
     task_builder = Type()
     root_task = trait_self
     has_root = True
-    task_database = TaskDatabase()
+    task_database = TaskDatabase
     task_name = 'Root'
     task_preferences = ConfigObj(indent_type = '    ')
     task_depth = 0
@@ -606,6 +618,7 @@ class RootTask(ComplexTask):
 
     def __init__(self, *args, **kwargs):
         super(RootTask, self).__init__(*args, **kwargs)
+        self.task_database = TaskDatabase()
         self.task_database.set_value('root', 'threads', [])
         self.task_database.set_value('root', 'instrs', [])
 

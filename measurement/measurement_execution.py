@@ -9,9 +9,10 @@ from threading import Thread
 from traits.api import (HasTraits, Instance, Button, Bool, Str, Any,
                         List)
 from traitsui.api import (View, UItem, HGroup, VGroup, Handler,
-                        ListInstanceEditor)
+                        ListInstanceEditor, Item, Label)
 from .task_management.tasks import RootTask
 from .measurement_edition import MeasurementEditor
+from .measurement_monitoring import MeasureSpy, MeasureMonitor
 from .task_management.config import IniConfigTask
 from .log.log_facility import (StreamToLogRedirector, QueueLoggerThread)
 
@@ -19,12 +20,13 @@ class TaskProcess(Process):
     """
     """
 
-    def __init__(self, pipe, queue, task_stop, process_stop):
+    def __init__(self, pipe, log_queue, monitor_queue, task_stop, process_stop):
         super(TaskProcess, self).__init__(name = 'MeasureProcess')
         self.task_stop = task_stop
         self.process_stop = process_stop
         self.pipe = pipe
-        self.queue = queue
+        self.log_queue = log_queue
+        self.monitor_queue = monitor_queue
         self.meas_log_handler = None
 
     def run(self):
@@ -41,10 +43,14 @@ class TaskProcess(Process):
                 print 'Need task'
                 self.pipe.send('Need task')
                 self.pipe.poll(None)
-                name, config = self.pipe.recv()
+                name, config, monitored_entries = self.pipe.recv()
                 if config != 'STOP':
                     task = IniConfigTask().build_task_from_config(config)
                     print 'Task built'
+
+                    if monitored_entries:
+                        spy = MeasureSpy(self.monitor_queue, monitored_entries,
+                                         task.task_database)
 
                     if self.meas_log_handler != None:
                         logger.removeHandler(self.meas_log_handler)
@@ -69,13 +75,17 @@ class TaskProcess(Process):
                         task.process()
                         print 'Task processed'
 
+                    if spy:
+                        spy.close()
+                        del spy
+
             except Exception as e:
                 logger.exception(e.message)
 
         self.pipe.send('Closing')
         print 'Process shuting down'
         self.meas_log_handler.close()
-        self.queue.put_nowait(None)
+        self.log_queue.put_nowait(None)
         self.pipe.close()
 
     def _config_log(self):
@@ -87,7 +97,7 @@ class TaskProcess(Process):
             'handlers': {
                 'queue': {
                     'class': 'measurement.log.log_facility.QueueHandler',
-                    'queue': self.queue,
+                    'queue': self.log_queue,
                 },
             },
             'root': {
@@ -122,6 +132,13 @@ class TaskHolderHandler(Handler):
                                 )
         model.status = ''
 
+    def object_edit_monitor_changed(self, info):
+        """
+        """
+        model = info.object
+        model.monitor.define_monitored_entries(model.root_task.task_database,
+                                               parent = info.ui.control)
+
 
 class TaskHolder(HasTraits):
     """
@@ -132,6 +149,10 @@ class TaskHolder(HasTraits):
     is_running = Bool(False)
     root_task = Instance(RootTask)
 
+    monitor = Instance(MeasureMonitor, ())
+    use_monitor = Bool(True)
+    edit_monitor = Button('Edit monitor')
+
     traits_view = View(
                     VGroup(
                         UItem('name', style = 'readonly'),
@@ -141,7 +162,15 @@ class TaskHolder(HasTraits):
                             show_border = True,
                             label = 'Status',
                             ),
-                        UItem('edit_button', enabled_when = 'not is_running'),
+                        HGroup(
+                            UItem('edit_button',
+                                  enabled_when = 'not is_running'),
+                            Item('use_monitor',
+                                  enabled_when = 'not is_running'),
+                            UItem('edit_monitor',
+                                  enabled_when = 'not is_running',
+                                  visible_when = 'use_monitor'),
+                            ),
                         show_border = True,
                         label = 'Measure',
                         ),
@@ -154,10 +183,27 @@ class TaskHolderDialog(HasTraits):
     """
     """
     name = Str
+    use_monitor = Bool(True)
 
-    traits_view = View(UItem('name'), buttons = ['OK'],
-                       title = 'Enter a name for your measurement',
-                       width = 200, kind = 'modal')
+    traits_view = View(
+                    VGroup(
+                        UItem('name'),
+                        HGroup(
+                            Label('Use monitor'),
+                            UItem('use_monitor'),
+                            ),
+                       ),
+                   buttons = ['OK', 'Cancel'],
+                   title = 'Enter a name for your measurement',
+                   width = 200, kind = 'modal')
+
+class TaskExecutionControlHandler(Handler):
+    """
+    """
+    def closed(self, info, is_ok):
+        if info.object.current_monitor:
+            if hasattr(info.object.current_monitor, 'ui'):
+                info.object.current_monitor.ui.dispose()
 
 class TaskExecutionControl(HasTraits):
     """
@@ -166,6 +212,7 @@ class TaskExecutionControl(HasTraits):
     start_button = Button('Start')
     stop_button = Button('Stop all')
     stop_task_button = Button('Stop task')
+    show_monitor = Button('Show monitor')
     running = Bool(False)
     task_stop = Instance(Event, ())
     process_stop = Instance(Event, ())
@@ -173,8 +220,10 @@ class TaskExecutionControl(HasTraits):
     task_holders = List(Instance(TaskHolder), [])
 
     process = Instance(Process)
-    thread = Instance(Thread)
-    queue = Instance(Queue, ())
+    log_thread = Instance(Thread)
+    log_queue = Instance(Queue, ())
+    monitor_queue = Instance(Queue, ())
+    current_monitor = Instance(MeasureMonitor)
     pipe = Any #Instance of Connection but ambiguous when the OS is not known
 
     traits_view = View(
@@ -193,20 +242,28 @@ class TaskExecutionControl(HasTraits):
                             UItem('stop_task_button', enabled_when = 'running'),
                             UItem('stop_button', enabled_when = 'running'),
                             ),
+                        UItem('show_monitor', enabled_when = 'running'),
                         ),
                     resizable = False,
                     width = 300,
+                    handler = TaskExecutionControlHandler(),
                     )
 
     def append_task(self, new_task):
         """
         """
         dialog = TaskHolderDialog()
-        dialog.edit_traits()
-        if dialog.name == '':
-            dialog.name = 'Meas' + str(len(self.task_holders))
-        task_holder = TaskHolder(root_task = new_task, name = dialog.name)
-        self.task_holders.append(task_holder)
+        ui = dialog.edit_traits()
+        if ui.result:
+            if dialog.name == '':
+                dialog.name = 'Meas' + str(len(self.task_holders))
+            task_holder = TaskHolder(root_task = new_task, name = dialog.name)
+            if dialog.use_monitor:
+                res = task_holder.monitor.define_monitored_entries(
+                                            task_holder.root_task.task_database)
+                task_holder.use_monitor = res
+            self.task_holders.append(task_holder)
+            return True
 
     def _start_button_changed(self):
         """
@@ -216,12 +273,13 @@ class TaskExecutionControl(HasTraits):
         self.process_stop.clear()
         self.pipe, process_pipe = Pipe()
         self.process = TaskProcess(process_pipe,
-                                   self.queue,
+                                   self.log_queue,
+                                   self.monitor_queue,
                                    self.task_stop,
                                    self.process_stop)
-        self.thread = QueueLoggerThread(self.queue)
-        self.thread.daemon = True
-        self.thread.start()
+        self.log_thread = QueueLoggerThread(self.log_queue)
+        self.log_thread.daemon = True
+        self.log_thread.start()
 
         self.process.start()
         self.running = True
@@ -235,7 +293,7 @@ class TaskExecutionControl(HasTraits):
         self.pipe.send('STOP')
         self.task_stop.set()
         self.process.join()
-        self.queue.join()
+        self.log_thread.join()
         self.running = False
 
     def _stop_task_button_changed(self):
@@ -243,6 +301,11 @@ class TaskExecutionControl(HasTraits):
         """
         print 'Stopping task'
         self.task_stop.set()
+
+    def _show_monitor_changed(self):
+        """
+        """
+        self.current_monitor.open_window()
 
     def _process_listerner(self):
         """
@@ -269,27 +332,44 @@ class TaskExecutionControl(HasTraits):
                         path = os.path.join(task.default_path, name+'.ini')
                         with open(path, 'w') as f:
                             task.task_preferences.write(f)
-                        self.pipe.send((name, task.task_preferences))
+
+                        if self.current_monitor:
+                            self.current_monitor.stop_monitor()
+                            self.current_monitor = None
+
+                        if task_holder.use_monitor:
+                            self.current_monitor = task_holder.monitor
+                            self.current_monitor.start_monitor(
+                                                        self.monitor_queue)
+                            self.current_monitor.open_window()
+                            self.pipe.send((name, task.task_preferences,
+                                    self.current_monitor.monitored_map.keys()))
+                        else:
+                            self.pipe.send((name, task.task_preferences,
+                                        None))
                     else:
                         self.process_stop.set()
                         print 'The only task is the queue is being edited'
-                        self.pipe.send(('', 'STOP'))
+                        self.pipe.send(('', 'STOP',''))
                         self.pipe.poll(None)
                         self.pipe.close()
                         self.process.join()
-                        self.thread.join()
+                        self.log_thread.join()
                         self.running = False
                         break
                 else:
                     self.process_stop.set()
                     print 'All tasks have been sent'
-                    self.pipe.send(('','STOP'))
+                    self.pipe.send(('','STOP',''))
                     self.pipe.poll(None)
                     self.pipe.close()
                     self.process.join()
-                    self.thread.join()
+                    self.log_thread.join()
                     self.running = False
                     break
             else:
                 self.pipe.close()
+                self.process.join()
+                self.log_thread.join()
+                self.running = False
                 break

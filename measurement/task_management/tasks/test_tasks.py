@@ -41,7 +41,7 @@ class PrintTask(SimpleTask):
         self.write_in_database('message', mess)
         return True
 
-    def _update_database_entries(self):
+    def _list_database_entries(self):
         """
         """
         return self.task_database.list_accessible_entries(self.task_path)
@@ -56,7 +56,7 @@ class PrintTask(SimpleTask):
                             Label('Message'),
                             UItem('message',
                                   editor = LineCompleterEditor(
-                              entries_updater = self._update_database_entries)
+                              entries_updater = self._list_database_entries)
                               ),
                             show_border = True,
                             ),

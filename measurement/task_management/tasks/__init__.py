@@ -11,6 +11,7 @@ from .test_tasks import (PrintTask, SleepTask)
 from .save_task import SaveTask
 from .formula_task import FormulaTask
 from .instr_task import InstrumentTask
+from .timing_loop import TimingLoopTask
 from .set_dc_voltage_task import SetDcVoltageTask
 from .meas_dc_voltage_task import MeasDcVoltageTask
 from .lock_in_measure_task import LockInMeasureTask
@@ -20,4 +21,4 @@ from .rf_source_tasks import (RFSourceSetFrequencyTask, RFSourceSetPowerTask,
 KNOWN_PY_TASKS = [ComplexTask, LoopTask, PrintTask, SaveTask, FormulaTask,
                   SetDcVoltageTask, MeasDcVoltageTask, LockInMeasureTask,
                   RFSourceSetFrequencyTask, RFSourceSetPowerTask,
-                  RFSourceSetOnOffTask, SleepTask]
+                  RFSourceSetOnOffTask, SleepTask, TimingLoopTask]

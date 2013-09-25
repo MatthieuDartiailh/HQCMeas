@@ -5,6 +5,8 @@ from traits.api import (Float, Bool, Any)
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
 
 import time
+from inspect import cleandoc
+from textwrap import fill
 
 from .instr_task import InstrumentTask
 from .tools.task_decorator import (make_stoppable, make_parallel,
@@ -41,10 +43,11 @@ class SetDcVoltageTask(InstrumentTask):
                                 editor = EnumEditor(name = 'profile_list'),
                                 width = 100),
                             UItem('target_value'), UItem('back_step'),
-                            UItem('delay'), UItem('check_value', tooltip =\
-                            'Should the program ask the instrument the value of\
-                             the applied voltage each time it is about to set\
-                             it'.replace('\n', ' ')),
+                            UItem('delay'), UItem('check_value', tooltip = \
+                            fill(cleandoc(
+                            '''Should the program ask the instrument the value
+                            of the applied voltage each time it is about to set
+                            it'''), 80)),
                             columns = 6,
                             show_border = True,
                             ),
@@ -61,10 +64,10 @@ class SetDcVoltageTask(InstrumentTask):
                                 editor = EnumEditor(name = 'profile_list'),
                                 width = 100),
                         UItem('back_step'), UItem('delay'),
-                        UItem('check_value', tooltip =\
-                        'Should the program ask the instrument the value of\
-                        the applied voltage each time it is about to set\
-                        it'.replace('\n', ' ')),
+                        UItem('check_value', tooltip = fill(cleandoc(
+                        '''Should the program ask the instrument the value of
+                        the applied voltage each time it is about to set
+                        it'''), 80)),
                         columns = 5,
                         ),
                      )
@@ -89,8 +92,11 @@ class SetDcVoltageTask(InstrumentTask):
             last_value = self.driver.voltage
         elif self.last_value == None:
             last_value = self.driver.voltage
+        else:
+            last_value = self.last_value
 
         if last_value == value:
+            self.write_in_database('voltage', value)
             return
         elif self.back_step == 0:
             self.driver.voltage = value

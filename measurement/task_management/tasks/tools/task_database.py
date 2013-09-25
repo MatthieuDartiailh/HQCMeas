@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import HasTraits, Dict, Bool, Any
+from traits.api import HasTraits, Dict, Bool, Any, Event
 from threading import Lock
 
 class TaskDatabase(HasTraits):
     """
     """
+    notifier = Event
     _running = Bool(False)
     _database = Dict()
     _lock = Any
@@ -41,6 +42,7 @@ class TaskDatabase(HasTraits):
         if self._running:
             self._lock.acquire()
             node[safe_value_name] = value
+            self.notifier = (node_path + '/' + value_name, value)
             self._lock.release()
         else:
             node[safe_value_name] = value
@@ -130,6 +132,7 @@ class TaskDatabase(HasTraits):
             keys = node.keys()
             for key in keys:
                 if not isinstance(node[key], dict):
+                    # removing the leading underscore
                     entries.append(key[1:])
             node_path = node_path.rpartition('/')[0]
 
@@ -139,8 +142,26 @@ class TaskDatabase(HasTraits):
             if not isinstance(node[key], dict):
                 entries.append(key[1:])
 
-        entries.remove('threads')
+        entries.remove('threads', 'instrs')
         return entries
+
+    def list_all_entries(self, path = 'root'):
+        """
+        """
+        entries = []
+        node = self._go_to_path(path)
+        for entry in node.keys():
+            if isinstance(node[entry], dict):
+                entries += self.list_all_entries(path = path + '/' + entry)
+            else:
+                # removing the leading underscore
+                entries.append(path + '/' + entry[1:])
+
+        if path == 'root':
+            entries.remove('root/threads')
+            entries.remove('root/instrs')
+            entries.remove('root/default_path')
+        return sorted(entries)
 
     def create_node(self, parent_path, node_name):
         """Method used to create a new node in the database

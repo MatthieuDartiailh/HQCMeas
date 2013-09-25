@@ -226,10 +226,10 @@ class MeasurementBuilderHandler(MeasurementEditorHandler):
         """
         """
         if info.initialized:
-            message = cleandoc("""The measurement you are editing is about to be
-                                destroyed to create a new one. Press OK to confirm,
-                                or Cancel to go back to editing and get a chance to
-                                save it.""")
+            message = cleandoc("""The measurement you are editing is about to
+                            be destroyed to create a new one. Press OK to
+                            confirm, or Cancel to go back to editing and get a
+                            chance to save it.""")
 
             result = error(message = textwrap.fill(message.replace('\n', ' '), 80),
                       title = 'Old measurement suppression',
@@ -237,9 +237,6 @@ class MeasurementBuilderHandler(MeasurementEditorHandler):
 
             if result:
                 info.object.new_root_task()
-                editor = info.tree
-                nid = editor._get_object_nid(info.object.root_task)
-                editor._tree.setCurrentItem(nid.child(0))
 
     def object_load_button_changed(self, info):
         """

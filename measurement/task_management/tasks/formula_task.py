@@ -102,12 +102,12 @@ class FormulaTask(SimpleTask):
         removed = set(old) - set(new)
         for label in removed:
             self.task_database_entries.remove(label)
-            self.remove_from_database(self.task_name + '_' + label)
+#            self.remove_from_database(self.task_name + '_' + label)
         for label in added:
             self.task_database_entries.append(label)
-            self.write_in_database(label, None)
+#            self.write_in_database(label, None)
 
-    def _update_database_entries(self):
+    def _list_database_entries(self):
         """
         """
         return self.task_database.list_accessible_entries(self.task_path)
@@ -126,7 +126,7 @@ class FormulaTask(SimpleTask):
                     label = 'Formula',
                     horizontal_alignment = 'center',
                     editor = LineCompleterEditor(
-                        entries_updater = self._update_database_entries),
+                        entries_updater = self._list_database_entries),
                     width = 0.7,
                     )
         table_ed = TableEditor(

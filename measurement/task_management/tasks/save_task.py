@@ -199,7 +199,7 @@ class SaveTask(SimpleTask):
         self.saved_labels = [obj.label for obj in self.saved_objects]
         self.saved_values = [obj.value for obj in self.saved_objects]
 
-    def _update_database_entries(self):
+    def _list_database_entries(self):
         """
         """
         self.accessible_entries = \
@@ -210,7 +210,7 @@ class SaveTask(SimpleTask):
         """
         """
         line_completer = LineCompleterEditor(
-                             entries_updater = self._update_database_entries)
+                             entries_updater = self._list_database_entries)
         label_col = ObjectColumn(name = 'label',
                          label = 'Label',
                          horizontal_alignment = 'center',
