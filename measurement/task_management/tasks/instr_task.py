@@ -4,6 +4,7 @@
 from traits.api import (Str, List, Instance, Dict)
 from configobj import ConfigObj
 import os
+from inspect import cleandoc
 
 from .base_tasks import SimpleTask
 from ...instruments.drivers import DRIVERS
@@ -25,20 +26,21 @@ class InstrumentTask(SimpleTask):
     def check(self, *args, **kwargs):
         """
         """
+        traceback = {}
         profile = self.profile_dict[self.selected_profile]
         full_path = os.path.join(PROFILES_DIRECTORY_PATH,
                                     profile)
         if not os.path.isfile(full_path):
-            print 'Failed to get the specified instr profile in {}'.format(
-                                                                self.task_name)
-            return False
+            traceback[self.task_path + '/' +self.task_name] =\
+                'Failed to get the specified instr profile'''
+            return False, traceback
 
         if self.selected_driver in DRIVERS:
             driver_class = DRIVERS[self.selected_driver]
         else:
-            print 'Failed to get the specified instr driver in {}'.format(
-                                                                self.task_name)
-            return False
+            traceback[self.task_path + '/' +self.task_name] =\
+                'Failed to get the specified instr driver'''
+            return False, traceback
 
         if kwargs['test_instr']:
             config = ConfigObj(full_path)
@@ -46,14 +48,15 @@ class InstrumentTask(SimpleTask):
                 instr = driver_class(config)
                 instr.close_connection()
             except InstrIOError:
-                print 'Failed to establish the connection\
-                    with the selected instrument in {}'.format(self.task_name)
-                return False
+                traceback[self.task_path + '/' +self.task_name] = cleandoc(
+                '''Failed to establish the connection with the selected
+                    instrument''')
+                return False, traceback
 
         for i, entry in enumerate(self.task_database_entries):
             self.write_in_database(entry, self.task_database_entries_default[i])
 
-        return True
+        return True, traceback
 
     def start_driver(self):
         """

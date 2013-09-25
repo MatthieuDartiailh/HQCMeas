@@ -229,15 +229,21 @@ class ComplexTask(AbstractTask):
         """Implementation of the test method of AbstractTask
         """
         test = True
+        traceback = {}
         for name in self.traits(child = True):
             child = self.get(name).values()[0]
             if child:
                 if isinstance(child, list):
                     for aux in child:
-                        test = test and aux.check(*args, **kwargs)
+                        check = aux.check(*args, **kwargs)
+                        test = test and check[0]
+                        traceback.update(check[1])
                 else:
-                    test = test and child.check(*args, **kwargs)
-        return test
+                    check = child.check(*args, **kwargs)
+                    test = test and check[0]
+                    traceback.update(check[1])
+
+        return test, traceback
 
     def create_child(self, ui):
         """Method to handle the adding of a child through the list editor
@@ -562,14 +568,19 @@ class LoopTask(ComplexTask):
     def check(self, *args, **kwargs):
         """
         """
+        test = True
+        traceback = {}
         try:
             num = int(abs((self.task_stop - self.task_start)/self.task_step))+ 1
             self.write_in_database('point_number', num)
         except:
-            print 'Loop task {} did not succeed in computing the number of\
-                    point'.format(self.task_name)
-            return False
-        return super(LoopTask, self).check( *args, **kwargs)
+            test = False
+            traceback[self.task_path + '/' + self.task_name] = \
+                'Loop task did not success to compute point number'
+        check = super(LoopTask, self).check( *args, **kwargs)
+        test = test and check[0]
+        traceback.update(check[1])
+        return test, traceback
 
     def _define_task_view(self):
         task_view = View(

@@ -39,7 +39,7 @@ class PrintTask(SimpleTask):
                                     self.task_path,
                                     self.task_database)
         self.write_in_database('message', mess)
-        return True
+        return True, {}
 
     def _list_database_entries(self):
         """
@@ -90,4 +90,4 @@ class SleepTask(SimpleTask):
     def check(self, *args, **kwargs):
         """
         """
-        return True
+        return True, {}

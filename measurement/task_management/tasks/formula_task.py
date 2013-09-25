@@ -47,22 +47,25 @@ class FormulaTask(SimpleTask):
     def check(self, *args, **kwargs):
         """
         """
+        traceback = {}
         for i, formula in enumerate(self.formulas):
             try:
                 for_str = get_formatted_string(formula,
                                            self.task_path,
                                            self.task_database)
             except:
-                print "Failed to format the formula {}, in {}".format(
-                                            self.labels[i], self.task_name)
-                return False
+                traceback[self.task_path + '/' +self.task_name] =\
+                    "Failed to format the formula {}".format(
+                                            self.labels[i])
+                return False, traceback
             try:
                 self.write_in_database(self.labels[i], eval(for_str))
             except:
-                print "Failed to eval the formula {}, in {}".format(
-                                            self.labels[i], self.task_name)
-                return False
-        return True
+                traceback[self.task_path + '/' +self.task_name] =\
+                    "Failed to eval the formula {}".format(
+                                            self.labels[i])
+                return False, traceback
+        return True, traceback
 
     def register_in_database(self):
         """

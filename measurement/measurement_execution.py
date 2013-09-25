@@ -74,6 +74,10 @@ class TaskProcess(Process):
                         print 'Check successful'
                         task.process()
                         print 'Task processed'
+                    else:
+                        pass
+                    #TODO here must log the dict as CRITICAL use pprint as it
+                    #is too late to do anything useful
 
                     if spy:
                         spy.close()
@@ -329,6 +333,9 @@ class TaskExecutionControl(HasTraits):
                             break
                     if task is not None:
                         task.update_preferences_from_traits()
+                        #TODO move that to enqueuing part (NB if default_path
+                        #change must delete old file and save a new one,
+                        #and also update file)
                         path = os.path.join(task.default_path, name+'.ini')
                         with open(path, 'w') as f:
                             task.task_preferences.write(f)

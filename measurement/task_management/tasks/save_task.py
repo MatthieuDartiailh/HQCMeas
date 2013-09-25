@@ -132,14 +132,15 @@ class SaveTask(SimpleTask):
     def check(self, *args, **kwargs):
         """
         """
+        traceback = {}
         try:
             full_folder_path = get_formatted_string(self.folder,
                                                          self.task_path,
                                                          self.task_database)
         except:
-            print 'In {}, failed to format the folder path'.format(
-                                                            self.task_name)
-            return False
+            traceback[self.task_path + '/' +self.task_name] =\
+                'Failed to format the folder path'
+            return False, traceback
 
         full_path = os.path.join(full_folder_path, self.filename)
 
@@ -147,18 +148,18 @@ class SaveTask(SimpleTask):
             f = open(full_path, 'wb')
             f.close()
         except:
-            print 'In {}, failed to open the specified file'.format(
-                                                            self.task_name)
-            return False
+            traceback[self.task_path + '/' +self.task_name] =\
+                'Failed to open the specified file'
+            return False, traceback
 
         try:
             eval(get_formatted_string(self.array_size,
                                        self.task_path,
                                        self.task_database))
         except:
-            print 'In {}, failed to compute the array size'.format(
-                                                            self.task_name)
-            return False
+            traceback[self.task_path + '/' +self.task_name] =\
+                'Failed to compute the array size'
+            return False, traceback
 
         try:
             [eval(get_formatted_string(value,
@@ -166,8 +167,8 @@ class SaveTask(SimpleTask):
                                        self.task_database))
                     for value in self.saved_values]
         except:
-            print 'In {}, failed to evaluate one of the entries'.format(
-                                                            self.task_name)
+            traceback[self.task_path + '/' +self.task_name] =\
+                'Failed to evaluate one of the entries'
             return False
 
         return True
