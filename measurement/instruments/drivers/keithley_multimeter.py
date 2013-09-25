@@ -22,16 +22,17 @@ class Keithley2000(VisaInstrument):
     @function.setter
     @secure_communication
     def function(self, value):
-        self.write('FUNCtion {}'.format(value))
-        if not(self.ask('FUNCtion?').lower() == value.lower()):
+        self.write('FUNCtion "{}"'.format(value))
+        # The Keithley returns "VOLT:DC" needs to remove the quotes
+        if not(self.ask('FUNCtion?')[1:-1].lower() == value.lower()):
             raise InstrIOError('Instrument failed to set function')
 
     @secure_communication
     def read_voltage_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """
         """
-        if self.function != 'VOLT':
-            self.function = 'VOLT'
+        if self.function != 'VOLT:DC':
+            self.function = 'VOLT:DC'
         
         value = self.ask_for_values('FETCh?')
         if value:
@@ -69,8 +70,8 @@ class Keithley2000(VisaInstrument):
     def read_current_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """
         """
-        if self.function != 'CURR':
-            self.function = 'CURR'
+        if self.function != 'CURR:DC':
+            self.function = 'CURR:DC'
         
         value = self.ask_for_values('FETCh?')
         if value:
