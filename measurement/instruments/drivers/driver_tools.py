@@ -1,5 +1,6 @@
 from textwrap import fill
 from inspect import cleandoc
+import inspect
 from visa import Instrument, VisaIOError
 
 class InstrIOError(Exception):
@@ -7,11 +8,32 @@ class InstrIOError(Exception):
     """
     pass
 
+class BypassDescriptor(object):
+    """Class allowing to acces to a descriptor instance"""
+    def __init__(self, descriptor):
+        self.descriptor = descriptor
+
+    def __getattr__(self, name):
+        return getattr(self.descriptor, name)
+
+
+class AllowBypassableDescriptors(type):
+    """Metaclass allowing to access to bypassed descriptor (_descriptorName).
+    Here customized to access instrument properties.
+    """
+    def __new__(cls, name, bases, members):
+        new_members = {}
+        for name, value in members.iteritems():
+            if isinstance(value, instrument_property):
+                new_members['_' + name] = BypassDescriptor(value)
+        members.update(new_members)
+        return type.__new__(cls, name, bases, members)
+
 class instrument_property(property):
     """
     """
     _cache = None
-    allow_caching = False
+    _allow_caching = False
 
     def __get__(self, obj, objtype = None):
         """
@@ -25,13 +47,18 @@ class instrument_property(property):
         """
         """
         super(instrument_property,self).__set__(obj, value)
-        if self.allow_caching:
+        if self._allow_caching:
             self._cache = value
 
     def clear_cache(self):
         """
         """
         self._cache = None
+
+    def set_caching_authorization(self, author):
+        """
+        """
+        self._allow_caching = author
 
 def secure_communication(method, max_iter = 10):
     """
@@ -68,6 +95,7 @@ def secure_communication(method, max_iter = 10):
 class BaseInstrument(object):
     """
     """
+    __metaclass__ = AllowBypassableDescriptors
     caching_permissions = {}
     secure_com_except = ()
 
@@ -76,8 +104,10 @@ class BaseInstrument(object):
         if caching_allowed:
             self.caching_permissions.update(caching_permissions)
             for prop_name in self.caching_permissions:
-                prop = getattr(self, prop_name)
-                prop.allow_caching = self.caching_permissions[prop_name]
+                #Accessing bypass descriptor to call their methods
+                prop = getattr(self, '_' + prop_name)
+                author  = self.caching_permissions[prop_name]
+                prop.set_caching_authorization(author)
 
     def open_connection(self):
         """
@@ -118,6 +148,15 @@ class BaseInstrument(object):
                         has been corrupted by a local user.'''),
                     80)
         raise NotImplementedError(message)
+
+    def clear_instrument_cache(self):
+        """
+        """
+        test = lambda obj: isinstance(obj, instrument_property)
+        for name, instr_prop in inspect.getmembers(self.__class__, test):
+            if name.startswith('_'):
+                # Calling method only on bypassed descriptor
+                instr_prop.clear_cache()
 
 class VisaInstrument(BaseInstrument):
     """

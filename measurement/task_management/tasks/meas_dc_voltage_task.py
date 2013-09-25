@@ -14,7 +14,7 @@ class MeasDcVoltageTask(InstrumentTask):
     """
     wait_time = Float(preference = True)
 
-    driver_list = ['Agilent34410A']
+    driver_list = ['Agilent34410A', 'Keithley2000']
 
     task_database_entries = ['voltage']
     task_database_entries_default = [1]
