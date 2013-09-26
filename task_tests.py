@@ -109,15 +109,9 @@ class Test(HasTraits):
 
     @on_trait_change('editor:enqueue_button')
     def enqueue_measurement(self):
-        check = self.editor.root_task.check(
-                    test_instr = not self.exe_control.running)
-        if check[0]:
-            result = self.exe_control.append_task(self.editor.root_task)
-            if result:
-                self.editor.new_root_task()
-        else:
-            #TODO Parse the dict and display it in usable way
-            message('Your measurement did not pass the check please check your parameters')
+        result = self.exe_control.append_task(self.editor.root_task)
+        if result:
+            self.editor.new_root_task()
 
 #    def _button2_changed(self):
 #        pprint.pprint(self.editor.root_task.task_database._database)

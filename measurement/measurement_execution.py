@@ -7,9 +7,10 @@ from multiprocessing import Process, Pipe, Queue
 from multiprocessing.synchronize import Event
 from threading import Thread
 from traits.api import (HasTraits, Instance, Button, Bool, Str, Any,
-                        List)
+                        List, Dict, on_trait_change)
 from traitsui.api import (View, UItem, HGroup, VGroup, Handler,
-                        ListInstanceEditor, Item, Label)
+                        ListInstanceEditor, Item, Label, ListStrEditor,
+                        TextEditor, TitleEditor)
 from .task_management.tasks import RootTask
 from .measurement_edition import MeasurementEditor
 from .measurement_monitoring import MeasureSpy, MeasureMonitor
@@ -70,21 +71,22 @@ class TaskProcess(Process):
                     task.should_stop = self.task_stop
                     task.task_database.prepare_for_running()
 
-                    if task.check(test_instr = True):
+                    check = task.check(test_instr = True)
+                    if check[0]:
                         print 'Check successful'
                         task.process()
                         print 'Task processed'
                     else:
-                        pass
-                    #TODO here must log the dict as CRITICAL use pprint as it
-                    #is too late to do anything useful
+                        message = '\n'.join('{} : {}'.format(path, mes)
+                                    for path, mes in check[1].iteritems())
+                        logger.critical(message)
 
                     if spy:
                         spy.close()
                         del spy
 
             except Exception as e:
-                logger.exception(e.message)
+                logger.critical(e.message, exc_info = True)
 
         self.pipe.send('Closing')
         print 'Process shuting down'
@@ -121,6 +123,53 @@ class TaskProcess(Process):
             logger.critical('Should not appear, because of disabled logger ...')
 
 
+class TaskCheckDisplay(HasTraits):
+    """
+    """
+    check_dict_result = Dict(Str, Str)
+
+    name_to_path_dict = Dict(Str, Str)
+    failed_check_list = List(Str)
+
+    seleted_check = Str
+    full_path = Str
+    message = Str
+
+    view = View(
+            HGroup(
+                UItem('failed_check_list',
+                      editor = ListStrEditor(selected = 'selected_check'),
+                    width = 300),
+                VGroup(
+                    UItem('full_path', editor = TitleEditor(), width = 500),
+                    UItem('message', editor = TextEditor(multi_line = True,
+                                          read_only = True)),
+                    ),
+                ),
+            kind = 'live',
+            title = 'Errors in the check'
+            )
+
+    def __init__(self, check_dict_result):
+        super(TaskCheckDisplay, self).__init__()
+        self.check_dict_result = check_dict_result
+        self.name_to_path_dict = {key.rpartition('/')[-1] : key
+                                    for key in self.check_dict_result.keys()}
+        self.failed_check_list = self.name_to_path_dict.keys()
+        self.seleted_check = self.failed_check_list[0]
+        self.full_path = self.name_to_path_dict[self.seleted_check]
+        self.message = self.check_dict_result[self.full_path]
+        self.edit_traits()
+
+    @on_trait_change('selected_check')
+    def _update(self, new):
+        """
+        """
+        self.full_path = self.name_to_path_dict[new]
+        self.message = self.check_dict_result[self.full_path]
+
+
+
 class TaskHolderHandler(Handler):
     """
     """
@@ -131,9 +180,24 @@ class TaskHolderHandler(Handler):
         meas_editor = MeasurementEditor(root_task = model.root_task,
                                         is_new_meas = False)
         model.status = 'EDITING'
+        task =  model.root_task
+        default_path = task.default_path
         meas_editor.edit_traits(parent = info.ui.control,
-                                kind = 'live',
+                                kind = 'livemodal',
                                 )
+        print default_path, task.default_path
+        path = os.path.join(default_path,
+                                model.name + '.ini')
+        if task.default_path == default_path:
+            with open(path, 'w') as f:
+                task.task_preferences.write(f)
+        else:
+            os.remove(path)
+            path = os.path.join(task.default_path,
+                                model.name + '.ini')
+            with open(path, 'w') as f:
+                task.task_preferences.write(f)
+
         model.status = ''
 
     def object_edit_monitor_changed(self, info):
@@ -153,7 +217,7 @@ class TaskHolder(HasTraits):
     is_running = Bool(False)
     root_task = Instance(RootTask)
 
-    monitor = Instance(MeasureMonitor, ())
+    monitor = Instance(MeasureMonitor)
     use_monitor = Bool(True)
     edit_monitor = Button('Edit monitor')
 
@@ -182,6 +246,10 @@ class TaskHolder(HasTraits):
                     resizable = False,
                     height = -50,
                     )
+    def __init__(self, *args, **kwargs):
+        super(TaskHolder, self).__init__(*args, **kwargs)
+        print kwargs['name']
+        self.monitor = MeasureMonitor(measure_name = kwargs.get('name',''))
 
 class TaskHolderDialog(HasTraits):
     """
@@ -256,18 +324,32 @@ class TaskExecutionControl(HasTraits):
     def append_task(self, new_task):
         """
         """
-        dialog = TaskHolderDialog()
-        ui = dialog.edit_traits()
-        if ui.result:
-            if dialog.name == '':
-                dialog.name = 'Meas' + str(len(self.task_holders))
-            task_holder = TaskHolder(root_task = new_task, name = dialog.name)
-            if dialog.use_monitor:
-                res = task_holder.monitor.define_monitored_entries(
-                                            task_holder.root_task.task_database)
-                task_holder.use_monitor = res
-            self.task_holders.append(task_holder)
-            return True
+        check = new_task.check(
+                    test_instr = not self.running)
+        if check[0]:
+            dialog = TaskHolderDialog()
+            ui = dialog.edit_traits()
+            if ui.result:
+                if dialog.name == '':
+                    dialog.name = 'Meas' + str(len(self.task_holders))
+                task_holder = TaskHolder(root_task = new_task,
+                                         name = dialog.name)
+                if dialog.use_monitor:
+                    res = task_holder.monitor.define_monitored_entries(
+                                        task_holder.root_task.task_database)
+                    task_holder.use_monitor = res
+                self.task_holders.append(task_holder)
+
+                path = os.path.join(new_task.default_path, dialog.name + '.ini')
+                with open(path, 'w') as f:
+                    new_task.task_preferences.write(f)
+
+                return True
+            else:
+                return False
+        else:
+           TaskCheckDisplay(check[1])
+           return False
 
     def _start_button_changed(self):
         """
@@ -333,12 +415,6 @@ class TaskExecutionControl(HasTraits):
                             break
                     if task is not None:
                         task.update_preferences_from_traits()
-                        #TODO move that to enqueuing part (NB if default_path
-                        #change must delete old file and save a new one,
-                        #and also update file)
-                        path = os.path.join(task.default_path, name+'.ini')
-                        with open(path, 'w') as f:
-                            task.task_preferences.write(f)
 
                         if self.current_monitor:
                             self.current_monitor.stop_monitor()
@@ -346,6 +422,7 @@ class TaskExecutionControl(HasTraits):
 
                         if task_holder.use_monitor:
                             self.current_monitor = task_holder.monitor
+                            self.current_monitor.status = 'Running'
                             self.current_monitor.start_monitor(
                                                         self.monitor_queue)
                             self.current_monitor.open_window()
@@ -365,6 +442,8 @@ class TaskExecutionControl(HasTraits):
                         self.running = False
                         break
                 else:
+                    if self.current_monitor:
+                        self.current_monitor.status = 'Stopped'
                     self.process_stop.set()
                     print 'All tasks have been sent'
                     self.pipe.send(('','STOP',''))
@@ -380,3 +459,5 @@ class TaskExecutionControl(HasTraits):
                 self.log_thread.join()
                 self.running = False
                 break
+        if self.current_monitor:
+            self.current_monitor.status = 'Stopped'

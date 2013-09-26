@@ -2,7 +2,8 @@
 
 from threading import Thread
 from traits.api import (HasTraits, Set, Instance, Any, Str, List, Dict)
-from traitsui.api import (View, UItem, TabularEditor, SetEditor)
+from traitsui.api import (View, UItem, TabularEditor, SetEditor, HGroup, Label,
+                          TitleEditor, VGroup)
 from traitsui.tabular_adapter import TabularAdapter
 from pyface.api import GUI
 from time import sleep
@@ -62,17 +63,24 @@ class MeasureMonitor(HasTraits):
     monitored_map = Dict(Str, Instance(MonitoredPair))
     monitored_entries = List(Str)
     monitoring_thread = Instance(Thread)
+    status = Str
+    measure_name = Str
 
     monitoring_view = View(
-                        UItem('monitored_pairs',
-                              editor = TabularEditor(
-                                          adapter = MonitoredPairAdapter(),
-                                            operations = ['move'],
-                                            selectable = False,
-                                            editable = False,
-                                            auto_update = True,
-                                            auto_resize = True,
-                                            drag_move = True),
+                        VGroup(
+                            UItem('measure_name', editor = TitleEditor()),
+                            HGroup(Label('STATUS'),
+                                   UItem('status', style = 'readonly')),
+                            UItem('monitored_pairs',
+                                  editor = TabularEditor(
+                                              adapter = MonitoredPairAdapter(),
+                                                operations = ['move'],
+                                                selectable = False,
+                                                editable = False,
+                                                auto_update = True,
+                                                auto_resize = True,
+                                                drag_move = True),
+                                ),
                             ),
                         title = 'Measurement monitor',
                         resizable = True, width = 300,

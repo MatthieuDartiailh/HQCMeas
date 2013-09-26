@@ -634,8 +634,16 @@ class RootTask(ComplexTask):
         self.task_database.set_value('root', 'instrs', [])
 
     def check(self, *args, **kwargs):
-        return (os.path.isdir(self.default_path)
-                    and super(RootTask, self).check(*args, **kwargs))
+        traceback = {}
+        test = True
+        if not os.path.isdir(self.default_path):
+            test = False
+            traceback[self.task_path + '/' + self.task_name] =\
+                'The provided default path is not a valid directory'
+        check = super(RootTask, self).check(*args, **kwargs)
+        test = test and check[0]
+        traceback.update(check[1])
+        return test, traceback
 
     @make_stoppable
     def process(self):
