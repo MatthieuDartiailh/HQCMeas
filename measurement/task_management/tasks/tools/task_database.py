@@ -142,7 +142,8 @@ class TaskDatabase(HasTraits):
             if not isinstance(node[key], dict):
                 entries.append(key[1:])
 
-        entries.remove('threads', 'instrs')
+        entries.remove('threads')
+        entries.remove('instrs')
         return entries
 
     def list_all_entries(self, path = 'root'):

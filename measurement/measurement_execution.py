@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 """
-import sys, os, logging, logging.config
+import sys, os, logging, logging.config, warnings
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process, Pipe, Queue
 from multiprocessing.synchronize import Event
@@ -34,6 +34,8 @@ class TaskProcess(Process):
         """
         """
         self._config_log()
+        # Ugly patch to avoid pyvisa complaining about missing filters
+        warnings.simplefilter("ignore")
         logger = logging.getLogger()
         redir_stdout = StreamToLogRedirector(logger)
         sys.stdout = redir_stdout
@@ -58,6 +60,8 @@ class TaskProcess(Process):
                     log_path = os.path.join(
                                         task.get_from_database('default_path'),
                                         name + '.log')
+                    if os.path.isfile(log_path):
+                        os.remove(log_path)
                     self.meas_log_handler = RotatingFileHandler(log_path,
                                                             mode = 'w',
                                                             maxBytes = 10**6,
@@ -75,7 +79,10 @@ class TaskProcess(Process):
                     if check[0]:
                         print 'Check successful'
                         task.process()
-                        print 'Task processed'
+                        if self.task_stop:
+                            print 'Task interrupted'
+                        else:
+                            print 'Task processed'
                     else:
                         message = '\n'.join('{} : {}'.format(path, mes)
                                     for path, mes in check[1].iteritems())
@@ -185,7 +192,6 @@ class TaskHolderHandler(Handler):
         meas_editor.edit_traits(parent = info.ui.control,
                                 kind = 'livemodal',
                                 )
-        print default_path, task.default_path
         path = os.path.join(default_path,
                                 model.name + '.ini')
         if task.default_path == default_path:
@@ -248,7 +254,6 @@ class TaskHolder(HasTraits):
                     )
     def __init__(self, *args, **kwargs):
         super(TaskHolder, self).__init__(*args, **kwargs)
-        print kwargs['name']
         self.monitor = MeasureMonitor(measure_name = kwargs.get('name',''))
 
 class TaskHolderDialog(HasTraits):
@@ -431,6 +436,7 @@ class TaskExecutionControl(HasTraits):
                         else:
                             self.pipe.send((name, task.task_preferences,
                                         None))
+                        print 'Measurement sent'
                     else:
                         self.process_stop.set()
                         print 'The only task is the queue is being edited'
@@ -445,7 +451,7 @@ class TaskExecutionControl(HasTraits):
                     if self.current_monitor:
                         self.current_monitor.status = 'Stopped'
                     self.process_stop.set()
-                    print 'All tasks have been sent'
+                    print 'All measurements have been sent'
                     self.pipe.send(('','STOP',''))
                     self.pipe.poll(None)
                     self.pipe.close()

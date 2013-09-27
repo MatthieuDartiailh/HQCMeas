@@ -154,7 +154,11 @@ class Yokogawa7651(VisaInstrument):
         volt = re.compile('VOLT', re.IGNORECASE)
         curr = re.compile('CURR', re.IGNORECASE)
         if volt.match(mode):
-            self.write('F1;E')
+            self.write('OS')
+            self.read()
+            current_range = self.read()[2:4]
+            self.read();self.read();self.read()
+            self.write('F1{};E'.format(current_range))
             value = self.ask('OD')
             if value[3] != 'V':
                 raise InstrIOError('Instrument did not set correctly the mode')

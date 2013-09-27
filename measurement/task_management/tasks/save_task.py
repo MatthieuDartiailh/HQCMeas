@@ -3,7 +3,7 @@
 """
 
 from traits.api import (Instance, Array, List, Str, Enum, Any, HasTraits,
-                        Button, Bool, Int)
+                        Button, Bool, Int, on_trait_change)
 from traitsui.api import (View, HGroup, VGroup, UItem, ObjectColumn, Handler,
                           TableEditor, Label, LineCompleterEditor)
 from pyface.qt import QtGui
@@ -64,7 +64,7 @@ class SaveTask(SimpleTask):
     saved_objects = List(Instance(SavedValueObject))
 
     initialized = Bool(False)
-    database_entries = ['array', 'file']
+    task_database_entries = ['file']
     accessible_entries = List(Str)
     explore_button = Button('Browse')
 
@@ -169,9 +169,9 @@ class SaveTask(SimpleTask):
         except:
             traceback[self.task_path + '/' +self.task_name] =\
                 'Failed to evaluate one of the entries'
-            return False
+            return False, traceback
 
-        return True
+        return True, traceback
 
     def update_preferences_from_traits(self):
         """
@@ -206,6 +206,17 @@ class SaveTask(SimpleTask):
         self.accessible_entries = \
                     self.task_database.list_accessible_entries(self.task_path)
         return self.accessible_entries
+        
+    @on_trait_change('saving_target')
+    def _update_database_entries(self, new):
+        """
+        """
+        if new == 'File':
+            self.task_database_entries = ['file']
+        elif new == 'Array':
+            self.task_database_entries = ['array']
+        else:
+            self.task_database_entries = ['file','array']
 
     def _define_task_view(self):
         """
@@ -245,12 +256,14 @@ class SaveTask(SimpleTask):
                         UItem('array_size',
                             editor = line_completer,
                             tooltip = "Enter the number of points to be saved",
+                            springy = True,
                             ),
                         ),
                     HGroup(
                         HGroup(
                             UItem('folder',
                                 editor = line_completer,
+                                springy = True,
                                 ),
                             UItem('explore_button'),
                             label = 'Folder',

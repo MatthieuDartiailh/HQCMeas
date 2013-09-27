@@ -4,7 +4,7 @@
 from traits.api import (Float, Bool, Any)
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
 
-import time
+import time, logging
 from inspect import cleandoc
 from textwrap import fill
 
@@ -80,8 +80,13 @@ class SetDcVoltageTask(InstrumentTask):
         """
         if not self.driver:
             self.start_driver()
-            if hasattr(self.driver, 'function'):
-                self.driver.function = 'VOLT'
+            if not self.driver.function == 'VOLT':
+                log = logging.getLogger()
+                log.fatal(cleandoc('''Instrument assigned to {} is not
+                            configured to output a voltage'''.format(
+                                                        self.task_name)))
+                self.root_task.task_stop.set()
+                return
 
         if target_value is not None:
             value = target_value

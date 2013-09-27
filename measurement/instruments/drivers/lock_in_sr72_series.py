@@ -6,14 +6,9 @@
 from driver_tools import (VisaInstrument, InstrIOError,
                           secure_communication)
 
-class LockInSR72Series(VisaInstrument):
+class LockInSR7265(VisaInstrument):
     """
     """
-
-    def __init__(self, *args, **kwargs):
-
-        super(LockInSR72Series, self).__init__(*args, **kwargs)
-        self.term_chars = '\0'
 
     @secure_communication
     def read_x(self):
@@ -81,6 +76,26 @@ class LockInSR72Series(VisaInstrument):
         else:
             return values
 
+    @secure_communication
+    def _check_status(self):
+        """
+        """
+        bites = self.ask('ST')
+        status_byte = ('{0:08b}'.format(ord(bites[0])))[::-1]
+        if not status_byte[0]:
+            return 'Command went wrong'
+        else:
+            return 'OK'
+            
+class LockInSR7270(LockInSR7265):
+    """
+    """
+
+    def __init__(self, *args, **kwargs):
+
+        super(LockInSR7270, self).__init__(*args, **kwargs)
+        self.term_chars = '\0'
+        
     @secure_communication
     def _check_status(self):
         """
