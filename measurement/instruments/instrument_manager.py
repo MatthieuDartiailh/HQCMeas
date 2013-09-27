@@ -157,7 +157,7 @@ class InstrumentForm(HasTraits):
         for driver_name, driver_class in DRIVERS.items():
             if issubclass(driver_class, driver_base_class):
                 driver_list.append(driver_name)
-        self.driver_list = driver_list
+        self.driver_list = sorted(driver_list)
         self.form = FORMS.get(new, VisaForm)()
 
 
@@ -211,6 +211,7 @@ class InstrumentManagerHandler(Handler):
             path = os.path.abspath(info.object.instr_folder)
             fullpath = os.path.join(path, instr_file)
             os.remove(fullpath)
+        model.selected_instr = model.instrs_name[0]
 
 class InstrumentManager(HasTraits):
     """
@@ -243,7 +244,8 @@ class InstrumentManager(HasTraits):
                             UItem('delete_instr'),
                             ),
                         ),
-                        handler = InstrumentManagerHandler()
+                    handler = InstrumentManagerHandler(),
+                    title = 'Instrument Manager',
                     )
 
     def __init__(self, *args, **kwargs):
