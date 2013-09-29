@@ -1,5 +1,30 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : instrument_manager.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 """
+This module defines the tools used to manage instruments.
+
+Instruments connection's informations are stored in .ini files in the profiles
+folder. The instrument manager provides a GUI to create and edit profiles and
+also capabilities to filter through the available profiles.
+
+:Contains:
+    InstrumentManager
+        Main class of the module, the only one which needs to be exported
+    InstrumentManagerHandler
+        Handler for the UI of the `InstrumentManager`
+    InstrumentForm
+        UI block used when displaying, creating or editing a profile
+    InstrumentFormHandler
+        Handler for the UI of the `InstrumentForm`
+    FileListUpdater
+        `watchdog` handler subclass to automatically update the list of profiles
+    MODULE_PATH
+        Path to this module
+
 """
 from traits.api import (HasTraits, List, Dict, Str, File, Directory,
                         Instance, Button, on_trait_change)
@@ -18,12 +43,12 @@ from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                             FileDeletedEvent, FileMovedEvent)
 
 from .drivers import DRIVERS, DRIVER_TYPES, InstrIOError
-from connection_forms import AbstractConnectionForm, FORMS, VisaForm
+from .connection_forms import AbstractConnectionForm, FORMS, VisaForm
 
 MODULE_PATH = os.path.dirname(__file__)
 
 class FileListUpdater(FileSystemEventHandler):
-    """
+    """Simple `watchdog` handler used for auto-updating the profiles list
     """
     def __init__(self, handler):
         self.handler = handler
@@ -44,7 +69,11 @@ class FileListUpdater(FileSystemEventHandler):
             self.handler()
 
 class InstrumentFormHandler(Handler):
-    """
+    """Handler for the UI of an `InstrumentForm` instance
+
+    Before closing the `InstrumentForm` UI instance ensure that the informations
+    provided allow to open the connection to the specified instrument.
+
     """
     def close(self, info, is_ok):
         model = info.object
@@ -81,6 +110,33 @@ class InstrumentFormHandler(Handler):
 
 class InstrumentForm(HasTraits):
     """
+    Simple UI panel used to display, create or edit an instrument profile
+
+    Parameters
+    ----------
+    **kwargs
+        Keyword arguments used to initialize attributes and form attributes
+
+    Attributes
+    ----------
+    name : str
+        Name of the instrument used to identify him. Should be different from
+        the driver name
+    driver_type : str
+        Kind of driver to use, ie which kind of standard is used for communicate
+    driver_list : list(str)
+        List of known driver matching `driver_type`
+    driver : str
+        Name of the selected driver
+    form : instance(AbstractConnectionForm)
+        Form used to display the informations specific to the `driver_type`
+
+    Views
+    -----
+    traits_view : Used when displaying the content of a profile
+    edit_view : Used when editing an existing profile
+    new_view : Used when creating a new profile
+
     """
     name = Str('')
     driver_type = Str()
@@ -150,7 +206,9 @@ class InstrumentForm(HasTraits):
 
     @on_trait_change('driver_type')
     def _new_driver_type(self, new):
-        """
+        """Build the list of driver matching the selected type and select the
+        right form
+
         """
         driver_list = []
         driver_base_class = DRIVER_TYPES[new]
@@ -162,11 +220,26 @@ class InstrumentForm(HasTraits):
 
 
 class InstrumentManagerHandler(Handler):
-    """
+    """Handler for the UI of an `InstrumentManager` instance
+
+    Methods
+    -------
+    object_add_instr_changed :
+        If the user clicked the 'OK' button of the `InstrumentForm`, save the
+        new profile
+    object_edit_instr_changed :
+        If the user clicked the 'OK' button of the `InstrumentForm`, save the
+        edited profile
+    object_delete_instr_changed :
+        Prompt a confirmation dialo.
+
     """
 
     def object_add_instr_changed(self, info):
         """
+        Open a dialog to create a new profile and save it if the user close the
+        dialog by cicking the 'OK' button.
+
         """
         instr = InstrumentForm()
         instr_ui = instr.edit_traits(view = 'new_view',
@@ -183,6 +256,9 @@ class InstrumentManagerHandler(Handler):
 
     def object_edit_instr_changed(self, info):
         """
+        Open a dialog to edit a profile and save the modifications if the user
+        close the dialog by cicking the 'OK' button.
+
         """
         model = info.object
         instr = model.selected_instr
@@ -200,6 +276,7 @@ class InstrumentManagerHandler(Handler):
 
     def object_delete_instr_changed(self, info):
         """
+        Open confirmation dialog when the user asks to delete a profile
         """
         model = info.object
         message = cleandoc("""Are you sure want to delete this
@@ -215,6 +292,41 @@ class InstrumentManagerHandler(Handler):
 
 class InstrumentManager(HasTraits):
     """
+    Main object used to manage the instrument profile and filter them
+
+    This class can be used either to create/edit/delete instrument profiles
+    using a GUI or to get a list of profiles according to a specified driver.
+
+    Attributes
+    ----------
+    instr_folder : directory path
+        Path in which the profiles are stored.
+    instrs : dict(str, path)
+        Dict mapping profile names to the associated filename
+    instrs_name : list(str)
+        List of the keys of `instrs`
+    selected_instr_name : str
+        Name of the selected instrumen profile
+    selected_instr : instance(`InstrumentForm`)
+        `InstrumentForm` instance associated to the selected profile
+    add_instr : button
+        Button to create a new profile
+    edit_instr : button
+        Button to edit an existing profile
+    delete_instr : button
+        Button to delete a profile
+    observer, event_handler, watch
+        `watchdog` objects ensuring that the list of profiles stays up to date
+
+    Views
+    -----
+    instrs_view : main UI
+
+    Method
+    ------
+    matching_instr_list(driver_key)
+        Return a list of instrument whose driver match the argument
+
     """
 
     instr_folder = Directory(os.path.join(MODULE_PATH, 'profiles'))
@@ -272,7 +384,7 @@ class InstrumentManager(HasTraits):
 
     @on_trait_change('selected_instr_name')
     def _new_selected_instr(self, new):
-        """
+        """Create a form for the selected instrument
         """
         path = self.instr_folder
         instr_file = self.instrs[new]
@@ -282,7 +394,7 @@ class InstrumentManager(HasTraits):
         self.selected_instr = InstrumentForm(**instr_dict)
 
     def _update_instr_list(self):
-        """
+        """Update the list of profiles. Use as handle method for watchdog.
         """
         # sorted files only
         path = self.instr_folder
@@ -299,14 +411,13 @@ class InstrumentManager(HasTraits):
         self.instrs = instrs
         self.instrs_name = instrs_name
 
-    def _normalise_name(self, name):
-        """
+    @staticmethod
+    def _normalise_name(name):
+        """Normalize the name of the profiles by replacing '_' by spaces,
+        removing the extension, and adding spaces between 'aA' sequences.
         """
         name = re.sub('(?<!^[A-Z])(?=[A-Z])', ' ', name)
         name = re.sub('_', ' ', name)
         name = re.sub('^ ', '', name)
         name = re.sub('.ini', '', name)
         return name.capitalize()
-
-if __name__ == "__main__":
-    InstrumentManager().configure_traits()

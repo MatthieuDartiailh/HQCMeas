@@ -1,12 +1,28 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : __init__.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+This module gives an easy access to the driver package
+
+It exports all the drivers defined in the driver package, the general exception
+used in instrument drivers `InstrIOError` and also defines two
+modules constants :
+- `DRIVERS` : A dictionnary mapping driver names to the class implementing them.
+- `DRIVER_TYPE` : A dictionnary mapping the driver type names to the base
+            classes implementing them.
+
+"""
 
 from .driver_tools import (VisaInstrument, InstrIOError)
 from .yokogawa import YokogawaGS200, Yokogawa7651
-from .agilent_multimeter import Agilent34410A
-from keithley_multimeter import Keithley2000
+from .agilent_multimeters import Agilent34410A
+from .keithley_multimeters import Keithley2000
 from .lock_in_sr72_series import LockInSR7270, LockInSR7265
 from .lock_in_sr830 import LockInSR830
-from .agilent_psg_signal_generator import AgilentPSGSignalGenerator
+from .agilent_psg_signal_generators import AgilentPSGSignalGenerator
 
 DRIVERS = {'YokogawaGS200' : YokogawaGS200,
            'Yokogawa7651' : Yokogawa7651,

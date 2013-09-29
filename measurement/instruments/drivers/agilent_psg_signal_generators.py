@@ -1,4 +1,16 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : agilent_multimeter.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+This module defines drivers for agilent PSG SignalGenerator using VISA library.
+
+:Contains:
+    AgilentPSGSignalGenerator : tested for Agilent
+
+"""
 
 from driver_tools import (VisaInstrument, InstrIOError, instrument_property,
                           secure_communication)
@@ -9,22 +21,51 @@ import re
 
 class AgilentPSGSignalGenerator(VisaInstrument):
     """
+    Generic driver for Agilent PSG SignalGenerator, using the VISA library.
+
+    This driver does not give access to all the functionnality of the instrument
+    but you can extend it if needed. See the documentation of the `driver_tools`
+    package for more details about writing instruments drivers.
+
+    Parameters
+    ----------
+    see the `VisaInstrument` parameters
+
+    Attributes
+    ----------
+    frequency_unit : str
+        Frequency unit used by the driver. The default unit is 'GHZ'. Other
+        valid units are : 'MHZ', 'KHZ', 'HZ'
+    frequency : float, instrument_property
+        Fixed frequency of the output signal.
+    power : float, instrument_property
+        Fixed power of the output signal.
+    output : bool, instrument_property
+        State of the output 'ON'(True)/'OFF'(False).
+
+    Notes
+    -----
+    This driver has been written for the  but might work for other
+    models using the same SCPI commands.
+
     """
     frequency_unit = 'GHZ'
 
     @instrument_property
     @secure_communication
-    def fixed_frequency(self):
+    def frequency(self):
+        """Frequency getter method
+        """
         freq =  self.ask_for_values(':FREQuency:FIXed?')[0]
         if freq is not None:
             return freq
         else:
             raise InstrIOError
 
-    @fixed_frequency.setter
+    @frequency.setter
     @secure_communication
-    def set_fixed_frequency(self, value):
-        """
+    def frequency(self, value):
+        """Frequency setter method
         """
         unit =  self.frequency_unit
         self.write(':FREQuency:FIXed {}{}'.format(value,unit))
@@ -40,17 +81,19 @@ class AgilentPSGSignalGenerator(VisaInstrument):
 
     @instrument_property
     @secure_communication
-    def fixed_power(self):
+    def power(self):
+        """Power getter method
+        """
         power =  self.ask_for_values(':POWER?')[0]
         if power is not None:
             return power
         else:
             raise InstrIOError
 
-    @fixed_power.setter
+    @power.setter
     @secure_communication
-    def set_fixed_power(self, value):
-        """
+    def power(self, value):
+        """Power setter method
         """
         self.write(':POWER {}DBM'.format(value))
         result = self.ask_for_values('POWER?')[0]
@@ -60,19 +103,18 @@ class AgilentPSGSignalGenerator(VisaInstrument):
     @instrument_property
     @secure_communication
     def output(self):
-        output =  self.ask_for_values(':OUTPUT?')[0]
+        """Output getter method
+        """
+        output =  self.ask_for_values(':OUTPUT?')
         if output is not None:
-            if output == 1:
-                return True
-            else:
-                return False
+            return bool(output[0])
         else:
-            raise InstrIOError
+            raise InstrIOError('PSG signal generator did not return its output')
 
     @output.setter
     @secure_communication
-    def set_output(self, value):
-        """
+    def output(self, value):
+        """Output setter method
         """
         on = re.compile('on', re.IGNORECASE)
         off = re.compile('off', re.IGNORECASE)
