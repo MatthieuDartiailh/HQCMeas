@@ -89,7 +89,7 @@ class SaveTask(SimpleTask):
                                                          self.task_database)
                 full_path = os.path.join(full_folder_path, self.filename)
                 try:
-                    self.file_object = open(full_path, 'w', buffering = 1)
+                    self.file_object = open(full_path, 'w')
                 except IOError:
                     print 'In {}, to open the specified file'.format(
                                                                 self.task_name)
@@ -97,7 +97,8 @@ class SaveTask(SimpleTask):
                     return
 
                 self.write_in_database('file', self.file_object)
-                self.file_object.write('\t'.join(self.saved_labels)+'\n')
+                self.file_object.write('\t'.join(self.saved_labels))
+                self.file_object.flush()
 
             if self.saving_target != 'File':
                 self.array_length = eval(get_formatted_string(self.array_size,
@@ -117,8 +118,9 @@ class SaveTask(SimpleTask):
                                        self.task_database))
                     for value in self.saved_values]
         if self.saving_target != 'Array':
-            self.file_object.write('\t'.join([str(val) for val in values] +\
-                                                                        '\n'))
+            self.file_object.write('\n' + '\t'.join([str(val)
+                                                     for val in values]))
+            self.file_object.flush()
         if self.saving_target != 'File':
             self.array[self.line_index] = tuple(values)
 
