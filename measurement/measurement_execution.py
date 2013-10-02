@@ -347,6 +347,7 @@ class TaskExecutionControl(HasTraits):
 
                 path = os.path.join(new_task.default_path, dialog.name + '.ini')
                 with open(path, 'w') as f:
+                    new_task.update_preferences_from_traits()
                     new_task.task_preferences.write(f)
 
                 return True

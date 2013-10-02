@@ -56,9 +56,9 @@ class AgilentPSGSignalGenerator(VisaInstrument):
     def frequency(self):
         """Frequency getter method
         """
-        freq =  self.ask_for_values(':FREQuency:FIXed?')[0]
-        if freq is not None:
-            return freq
+        freq =  self.ask_for_values(':FREQuency:FIXed?')
+        if freq:
+            return freq[0]
         else:
             raise InstrIOError
 
@@ -69,15 +69,16 @@ class AgilentPSGSignalGenerator(VisaInstrument):
         """
         unit =  self.frequency_unit
         self.write(':FREQuency:FIXed {}{}'.format(value,unit))
-        result = self.ask_for_values(':FREQuency:FIXed?')[0]
-        if unit == 'GHZ':
-            result /= 10**9
-        elif unit == 'MHZ':
-            result /= 10**6
-        elif unit == 'KHZ':
-            result /= 10**3
-        if abs(result - value) > 10**-12:
-            raise InstrIOError('Instrument did not set correctly the frequency')
+        result = self.ask_for_values(':FREQuency:FIXed?')
+        if result:
+            if unit == 'GHZ':
+                result[0] /= 10**9
+            elif unit == 'MHZ':
+                result[0] /= 10**6
+            elif unit == 'KHZ':
+                result[0] /= 10**3
+            if abs(result[0] - value) > 10**-12:
+                raise InstrIOError('Instrument did not set correctly the frequency')
 
     @instrument_property
     @secure_communication
