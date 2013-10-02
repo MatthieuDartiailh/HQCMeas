@@ -8,7 +8,7 @@ from traitsui.api import (View, HGroup, VGroup, UItem, ObjectColumn, Handler,
                           TableEditor, Label, LineCompleterEditor)
 from pyface.qt import QtGui
 
-import csv, os, numpy
+import os, numpy
 
 from .tools.database_string_formatter import get_formatted_string
 from .tools.task_decorator import make_stoppable, make_wait
@@ -47,7 +47,6 @@ class SaveTask(SimpleTask):
     folder = Str('', preference = True)
     filename = Str('', preference = True)
     file_object = Any
-    csv_writer = Any #Instance(csv.writer)
     header = Str('', preference = True)
     fill_header = Button('Edit')
 
@@ -90,15 +89,15 @@ class SaveTask(SimpleTask):
                                                          self.task_database)
                 full_path = os.path.join(full_folder_path, self.filename)
                 try:
-                    self.file_object = open(full_path, 'wb')
+                    self.file_object = open(full_path, 'w', buffering = 1)
                 except IOError:
                     print 'In {}, to open the specified file'.format(
                                                                 self.task_name)
                     self.root_task.should_stop.set()
                     return
-                self.csv_writer = csv.writer(self.file_object, delimiter = '\t')
+
                 self.write_in_database('file', self.file_object)
-                self.csv_writer.writerow(self.saved_labels)
+                self.file_object.write('\t'.join(self.saved_labels)+'\n')
 
             if self.saving_target != 'File':
                 self.array_length = eval(get_formatted_string(self.array_size,
@@ -118,7 +117,8 @@ class SaveTask(SimpleTask):
                                        self.task_database))
                     for value in self.saved_values]
         if self.saving_target != 'Array':
-            self.csv_writer.writerow(values)
+            self.file_object.write('\t'.join([str(val) for val in values] +\
+                                                                        '\n'))
         if self.saving_target != 'File':
             self.array[self.line_index] = tuple(values)
 
@@ -138,7 +138,7 @@ class SaveTask(SimpleTask):
                                                          self.task_path,
                                                          self.task_database)
         except:
-            traceback[self.task_path + '/' +self.task_name] =\
+            traceback[self.task_path + '/' +self.task_name] = \
                 'Failed to format the folder path'
             return False, traceback
 
@@ -148,7 +148,7 @@ class SaveTask(SimpleTask):
             f = open(full_path, 'wb')
             f.close()
         except:
-            traceback[self.task_path + '/' +self.task_name] =\
+            traceback[self.task_path + '/' +self.task_name] = \
                 'Failed to open the specified file'
             return False, traceback
 
@@ -157,7 +157,7 @@ class SaveTask(SimpleTask):
                                        self.task_path,
                                        self.task_database))
         except:
-            traceback[self.task_path + '/' +self.task_name] =\
+            traceback[self.task_path + '/' +self.task_name] = \
                 'Failed to compute the array size'
             return False, traceback
 
@@ -167,7 +167,7 @@ class SaveTask(SimpleTask):
                                        self.task_database))
                     for value in self.saved_values]
         except:
-            traceback[self.task_path + '/' +self.task_name] =\
+            traceback[self.task_path + '/' +self.task_name] = \
                 'Failed to evaluate one of the entries'
             return False, traceback
 
@@ -206,7 +206,7 @@ class SaveTask(SimpleTask):
         self.accessible_entries = \
                     self.task_database.list_accessible_entries(self.task_path)
         return self.accessible_entries
-        
+
     @on_trait_change('saving_target')
     def _update_database_entries(self, new):
         """

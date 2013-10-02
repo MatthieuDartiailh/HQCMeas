@@ -111,10 +111,14 @@ class SetDcVoltageTask(InstrumentTask):
             else:
                 step = -self.back_step
 
-        while abs(value-last_value) > abs(step):
-            last_value += step
-            self.driver.voltage = last_value
-            time.sleep(self.delay)
+        if abs(value-last_value) > abs(step):
+            while True:
+                last_value += step
+                self.driver.voltage = last_value
+                if abs(value-last_value) > abs(step):
+                    time.sleep(self.delay)
+                else:
+                    break
 
         self.driver.voltage = value
         self.last_value = value
