@@ -61,14 +61,17 @@ class InstrumentTask(SimpleTask):
     def start_driver(self):
         """
         """
-        profile = self.profile_dict[self.selected_profile]
-        full_path = os.path.join(PROFILES_DIRECTORY_PATH, profile)
-        driver_class = DRIVERS[self.selected_driver]
-        config = ConfigObj(full_path)
-        self.driver = driver_class(config)
         instrs = self.task_database.get_value('root', 'instrs')
-        instrs.append(self.driver)
-        self.task_database.set_value('root', 'instrs', instrs)
+        if self.selected_profile in instrs:
+            self.driver = instrs[self.selected_profile]
+        else:
+            profile = self.profile_dict[self.selected_profile]
+            full_path = os.path.join(PROFILES_DIRECTORY_PATH, profile)
+            driver_class = DRIVERS[self.selected_driver]
+            config = ConfigObj(full_path)
+            self.driver = driver_class(config)
+            instrs[self.selected_driver] = self.driver
+            self.task_database.set_value('root', 'instrs', instrs)
 
     def stop_driver(self):
         """

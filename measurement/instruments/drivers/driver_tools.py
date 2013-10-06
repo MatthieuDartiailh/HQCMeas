@@ -76,9 +76,13 @@ class instrument_property(property):
     def __set__(self, obj, value):
         """
         """
-        super(instrument_property, self).__set__(obj, value)
         if self._allow_caching:
+            if self._cache == value:
+                return
+            super(instrument_property, self).__set__(obj, value)
             self._cache = value
+        else:
+            super(instrument_property, self).__set__(obj, value)
 
     def clear_cache(self):
         """Clear the cached value.
@@ -153,6 +157,10 @@ class BaseInstrument(object):
     secure_com_except : tuple(Exception)
         Tuple of the exceptions to be catched by the `secure_communication`
         decorator
+    owner : str
+        Identifier of the last owner of the driver. Used to know whether or not
+        previous settings might heve been modified by other parts of the
+        program.
 
     Methods
     -------
@@ -172,6 +180,7 @@ class BaseInstrument(object):
     __metaclass__ = AllowBypassableDescriptors
     caching_permissions = {}
     secure_com_except = ()
+    owner = ''
 
     def __init__(self, connection_info, caching_allowed = True,
                  caching_permissions = {}):
@@ -334,7 +343,9 @@ class VisaInstrument(BaseInstrument):
     def close_connection(self):
         """Close the connection to the instr
         """
-        self._driver.close()
+        if self._driver:
+            self._driver.close()
+        self._driver = None
         return True
 
     def reopen_connection(self):

@@ -631,7 +631,7 @@ class RootTask(ComplexTask):
         super(RootTask, self).__init__(*args, **kwargs)
         self.task_database = TaskDatabase()
         self.task_database.set_value('root', 'threads', [])
-        self.task_database.set_value('root', 'instrs', [])
+        self.task_database.set_value('root', 'instrs', {})
 
     def check(self, *args, **kwargs):
         traceback = {}
@@ -653,8 +653,9 @@ class RootTask(ComplexTask):
             child.process()
         for thread in self.task_database.get_value('root','threads'):
             thread.join()
-        for instr in self.task_database.get_value('root','instrs'):
-            instr.close_connection()
+        instrs = self.task_database.get_value('root','instrs')
+        for instr_profile in instrs:
+            instrs[instr_profile].close_connection()
 
     def request_child(self, parent, ui):
         """
