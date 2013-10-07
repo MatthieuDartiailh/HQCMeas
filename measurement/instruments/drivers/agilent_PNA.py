@@ -212,7 +212,8 @@ class AgilentPNAChannel(BaseInstrument):
         """
         info = meas_name.split(':')
         self.create_meas(meas_name)
-        self.format_meas(info[2], meas_name)
+        if len(info) > 2:
+            self.format_meas(info[2], meas_name)
         if clear_window:
             if window_num in self._pna.windows:
                 self._pna.clear_traces_from_window(window_num)
@@ -633,6 +634,30 @@ class AgilentPNA(VisaInstrument):
         if result != value:
             raise InstrIOError(cleandoc('''PNA did not set correctly the
                 trigger scope'''))
+
+    @instrument_property
+    @secure_communication
+    def trigger_source(self):
+        """
+        """
+        scope = self.ask('TRIGger:SEQuence:SOURce?')
+        if scope:
+            return scope
+        else:
+            raise InstrIOError(cleandoc('''Agilent PNA did not return the
+                    trigger source'''))
+
+    @trigger_source.setter
+    @secure_communication
+    def trigger_source(self, value):
+        """
+        """
+        self.write('TRIGger:SEQuence:SOURce {}'.format(value))
+        result = self.ask('TRIGger:SEQuence:SOURce?')
+
+        if result != value:
+            raise InstrIOError(cleandoc('''PNA did not set correctly the
+                trigger source'''))
 
     @instrument_property
     @secure_communication

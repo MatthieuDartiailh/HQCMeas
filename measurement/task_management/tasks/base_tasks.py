@@ -25,6 +25,7 @@ class AbstractTask(HasTraits):
     """
     task_class = Str(preference = True)
     task_name = Str(preference = True)
+    task_label = Str
     task_depth = Int
     task_preferences = Instance(Section)
     task_database = Instance(TaskDatabase)
@@ -103,6 +104,11 @@ class AbstractTask(HasTraits):
         """
         """
         return self.__class__.__name__
+
+    def _task_name_changed(self, new):
+        """
+        """
+        self.task_label = new + ' (' + self.task_class + ')'
 
 
 class SimpleTask(AbstractTask):
@@ -621,6 +627,7 @@ class RootTask(ComplexTask):
     has_root = True
     task_database = TaskDatabase
     task_name = 'Root'
+    task_label = 'Root'
     task_preferences = ConfigObj(indent_type = '    ')
     task_depth = 0
     task_path = 'root'

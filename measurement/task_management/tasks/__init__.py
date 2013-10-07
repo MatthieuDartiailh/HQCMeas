@@ -17,8 +17,12 @@ from .meas_dc_voltage_task import MeasDcVoltageTask
 from .lock_in_measure_task import LockInMeasureTask
 from .rf_source_tasks import (RFSourceSetFrequencyTask, RFSourceSetPowerTask,
                               RFSourceSetOnOffTask)
+from .pna_tasks import (PNASinglePointMeasureTask, PNAFreqSweepTask,
+                        PNASetFreqTask, PNASetPowerTask)
 
 KNOWN_PY_TASKS = [ComplexTask, LoopTask, PrintTask, SaveTask, FormulaTask,
                   SetDcVoltageTask, MeasDcVoltageTask, LockInMeasureTask,
                   RFSourceSetFrequencyTask, RFSourceSetPowerTask,
-                  RFSourceSetOnOffTask, SleepTask, TimingLoopTask]
+                  RFSourceSetOnOffTask, SleepTask, TimingLoopTask,
+                  PNASinglePointMeasureTask, PNAFreqSweepTask, PNASetFreqTask,
+                  PNASetPowerTask]

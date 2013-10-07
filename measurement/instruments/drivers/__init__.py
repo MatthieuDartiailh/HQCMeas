@@ -23,6 +23,7 @@ from .keithley_multimeters import Keithley2000
 from .lock_in_sr72_series import LockInSR7270, LockInSR7265
 from .lock_in_sr830 import LockInSR830
 from .agilent_psg_signal_generators import AgilentPSGSignalGenerator
+from .agilent_pna import AgilentPNA
 
 DRIVERS = {'YokogawaGS200' : YokogawaGS200,
            'Yokogawa7651' : Yokogawa7651,
@@ -31,6 +32,7 @@ DRIVERS = {'YokogawaGS200' : YokogawaGS200,
            'SR830' : LockInSR830,
            'Agilent34410A' : Agilent34410A,
            'Keithley2000' : Keithley2000,
-           'AgilentE8257D' : AgilentPSGSignalGenerator}
+           'AgilentE8257D' : AgilentPSGSignalGenerator,
+           'AgilentPNA' : AgilentPNA}
 
 DRIVER_TYPES = {'Visa' : VisaInstrument}
