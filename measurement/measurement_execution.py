@@ -79,7 +79,7 @@ class TaskProcess(Process):
                     if check[0]:
                         print 'Check successful'
                         task.process()
-                        if self.task_stop:
+                        if self.task_stop.is_set():
                             print 'Task interrupted'
                         else:
                             print 'Task processed'

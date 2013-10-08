@@ -18,7 +18,8 @@ from configobj import ConfigObj
 from textwrap import fill
 
 from .instr_task import InstrumentTask
-from .tools.task_decorator import (make_stoppable, smooth_instr_crash)
+from .tools.task_decorator import (make_stoppable, smooth_instr_crash,
+                                   make_wait)
 from .tools.database_string_formatter import get_formatted_string
 from ...instruments.profiles import PROFILES_DIRECTORY_PATH
 from ...instruments.drivers import DRIVERS
@@ -27,7 +28,7 @@ from ...instruments.drivers.driver_tools import InstrIOError
 class PNATasks(InstrumentTask):
     """
     """
-    channels = List(Int)
+    channels = List(Int, preference = True)
 
     def check(self, *args, **kwargs):
         """
@@ -78,8 +79,8 @@ class PNATasks(InstrumentTask):
 class PNASetFreqTask(PNATasks):
     """
     """
-    channel = Int(1)
-    value = Str
+    channel = Int(1, preference = True)
+    value = Str(preference = True)
 
     driver_list = ['AgilentPNA']
     task_database_entries = ['frequency']
@@ -101,7 +102,8 @@ class PNASetFreqTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        freq = eval(get_formatted_string(self.value))
+        freq = eval(get_formatted_string(self.value, self.task_path,
+                                         self.task_database))
         self.channel_driver.frequency = freq
         self.write_in_database('frequency', freq)
 
@@ -141,9 +143,9 @@ class PNASetFreqTask(PNATasks):
 class PNASetPowerTask(PNATasks):
     """
     """
-    channel = Int(1)
-    value = Str
-    port = Int(1)
+    channel = Int(1, preference = True)
+    value = Str(preference = True)
+    port = Int(1, preference = True)
 
     driver_list = ['AgilentPNA']
     task_database_entries = ['power']
@@ -165,7 +167,8 @@ class PNASetPowerTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        power = eval(get_formatted_string(self.value))
+        power = eval(get_formatted_string(self.value, self.task_path,
+                                         self.task_database))
         self.channel_driver.port = self.port
         self.channel_driver.power = power
         self.write_in_database('power', power)
@@ -207,12 +210,12 @@ class PNASetPowerTask(PNATasks):
 class PNASinglePointMeasureTask(PNATasks):
     """
     """
-    channel = Int(1)
-    measures = List(Str)
-    measure_format = List
+    channel = Int(1, preference = True)
+    measures = List(Str, preference = True)
+    measure_format = List(preference = True)
 
-    if_bandwidth = Int(2)
-    window = Int(1)
+    if_bandwidth = Int(2, preference = True)
+    window = Int(1, preference = True)
 
     driver_list = ['AgilentPNA']
     task_database_entries = []
@@ -239,8 +242,10 @@ class PNASinglePointMeasureTask(PNATasks):
                                       and followed by ':' and then the format in
                                       which to diplay and read them, if omitted,
                                       the measurement will return the complex
-                                      number. ex : 'S21:PHA. Available formats
-                                      are : MLIN, MLOG, PHA, REA, IMAG'''), 80),
+                                      number. ex : 'S21:PHAS.'''), 80) + '\n' +\
+                                      fill(cleandoc('''Available formats
+                                      are : MLIN, MLOG, PHAS, REA,
+                                      IMAG'''),80),
                                       ),
                             label = 'Measures',
                             show_border = True,
@@ -255,6 +260,7 @@ class PNASinglePointMeasureTask(PNATasks):
                     )
 
     @make_stoppable
+    @make_wait
     @smooth_instr_crash
     def process(self):
         """
@@ -267,21 +273,21 @@ class PNASinglePointMeasureTask(PNATasks):
         if self.driver.owner != self.task_name:
             self.driver.owner = self.task_name
             self.driver.set_all_chanel_to_hold()
-            self.driver.trigger_scope('CURRent')
+            self.driver.trigger_scope = 'CURRent'
             if self.if_bandwidth > 5:
-                self.driver.trigger_source('IMMediate')
+                self.driver.trigger_source = 'IMMediate'
             else:
-                self.driver.trigger_source('MANual')
-            self.channel_driver.sweep_mode = 'SINGle'
+                self.driver.trigger_source = 'MANual'
 
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
-            self.channel_driver.sweep_mode = 'SINGle'
             self.channel_driver.if_bandwidth = self.if_bandwidth
+            self.channel_driver.sweep_points = 1
             clear = True
+            self.channel_driver.delete_all_meas()
             for i, measure in enumerate(self.measures):
-                meas_name = 'Ch{}_'.format(self.channel) + measure
-                self.channel_driver.preapre_measure(meas_name, self.window, i+1,
+                meas_name = 'Ch{}:'.format(self.channel) + measure
+                self.channel_driver.prepare_measure(meas_name, self.window, i+1,
                                                     clear)
                 clear = False
 
@@ -295,7 +301,7 @@ class PNASinglePointMeasureTask(PNATasks):
 
 
         for i, measure in enumerate(self.measures):
-            meas_name = 'Ch{}_'.format(self.channel) + measure
+            meas_name = 'Ch{}:'.format(self.channel) + measure
             if self.measure_format[i]:
                 data = self.channel_driver.read_formatted_data(meas_name)[0]
             else:
@@ -308,7 +314,7 @@ class PNASinglePointMeasureTask(PNATasks):
         """
         self.channels = [new]
 
-    @on_trait_change('measures')
+    @on_trait_change('measures[]')
     def _post_measures_update(self):
         """
         """
@@ -330,16 +336,16 @@ class PNASinglePointMeasureTask(PNATasks):
 class PNAFreqSweepTask(PNATasks):
     """
     """
-    channel = Int(1)
-    start = Str
-    stop = Str
-    points = Str
-    sweep_type = Enum('Frequency', 'Power')
-    measures = List(Str)
-    measure_format = List
+    channel = Int(1, preference = True)
+    start = Str(preference = True)
+    stop = Str(preference = True)
+    points = Str(preference = True)
+    sweep_type = Enum('Frequency', 'Power', preference = True)
+    measures = List(Str, preference = True)
+    measure_format = List(preference = True)
 
-    if_bandwidth = Int(10)
-    window = Int(1)
+    if_bandwidth = Int(10, preference = True)
+    window = Int(1, preference = True)
 
     driver_list = ['AgilentPNA']
     task_database_entries = []
@@ -350,6 +356,7 @@ class PNAFreqSweepTask(PNATasks):
         self._define_task_view()
 
     @make_stoppable
+    @make_wait
     @smooth_instr_crash
     def process(self):
         """
@@ -362,13 +369,11 @@ class PNAFreqSweepTask(PNATasks):
         if self.driver.owner != self.task_name:
             self.driver.owner = self.task_name
             self.driver.set_all_chanel_to_hold()
-            self.driver.trigger_scope('CURRent')
-            self.driver.trigger_source('MANual')
-            self.channel_driver.sweep_mode = 'SINGle'
+            self.driver.trigger_scope = 'CURRent'
+            self.driver.trigger_source = 'MANual'
 
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
-            self.channel_driver.sweep_mode = 'SINGle'
             self.channel_driver.if_bandwidth = self.if_bandwidth
             clear = True
             for i, measure in enumerate(self.measures):
@@ -377,9 +382,12 @@ class PNAFreqSweepTask(PNATasks):
                                                     clear)
                 clear = False
 
-        start = eval(get_formatted_string(self.start))
-        stop = eval(get_formatted_string(self.stop))
-        points = eval(get_formatted_string(self.points))
+        start = eval(get_formatted_string(self.start, self.task_path,
+                                         self.task_database))
+        stop = eval(get_formatted_string(self.stop, self.task_path,
+                                         self.task_database))
+        points = eval(get_formatted_string(self.points, self.task_path,
+                                         self.task_database))
         self.channel_driver.prepare_sweep(self.type.upper(), start, stop,
                                           points)
         waiting_time = 1/self.if_bandwidth*points
@@ -453,12 +461,14 @@ class PNAFreqSweepTask(PNATasks):
                             UItem('measures', style = 'custom',
                                   editor = ListInstanceEditor(),
                                   tooltip = fill(cleandoc('''Measure should
-                                  be described by the parameter to measure
-                                  and followed by ':' and then the format in
-                                  which to diplay and read them, if omitted,
-                                  the measurement will return the complex
-                                  number. ex : 'S21:PHA. Available formats
-                                  are : MLIN, MLOG, PHA, REA, IMAG'''), 80),
+                                      be described by the parameter to measure
+                                      and followed by ':' and then the format in
+                                      which to diplay and read them, if omitted,
+                                      the measurement will return the complex
+                                      number. ex : 'S21:PHAS.'''), 80) + '\n' +\
+                                      fill(cleandoc('''Available formats
+                                      are : MLIN, MLOG, PHAS, REA,
+                                      IMAG'''),80),
                                   ),
                         label = 'Measures',
                         show_border = True,

@@ -73,9 +73,10 @@ def smooth_instr_crash(function_to_decorate, max_recursion = 10):
         try:
             function_to_decorate(*args, **kwargs)
         except (InstrIOError) as error:
-            obj.root_task.should_stop.set()
+            print 'Instrument crashed'
             log = logging.getLogger()
             log.exception(error.message)
+            obj.root_task.should_stop.set()
 
     decorator.__name__ = function_to_decorate.__name__
     decorator.__doc__ = function_to_decorate.__doc__
