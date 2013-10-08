@@ -18,7 +18,7 @@ from textwrap import fill
 from .instr_task import InstrumentTask
 from .tools.task_decorator import (make_stoppable, smooth_instr_crash,
                                    make_parallel)
-from .tools.database_string_formatter import get_formatted_string
+from .tools.database_string_formatter import format_and_eval_string
 
 class ApplyMagFieldTask(InstrumentTask):
     """
@@ -34,6 +34,7 @@ class ApplyMagFieldTask(InstrumentTask):
     driver_list = ['IPS12010']
 
     loop_view = View(
+                    UItem('task_name', style = 'readonly'),
                     Group(
                     Label('Driver'), Label('Instr'),
                     Label('Sweep rate (T/min)'),
@@ -51,6 +52,7 @@ class ApplyMagFieldTask(InstrumentTask):
                               each new value'''),80),
                         ),
                     columns = 4,
+                    show_border = True,
                     ),
                 )
 
@@ -73,9 +75,9 @@ class ApplyMagFieldTask(InstrumentTask):
             self.driver.make_ready()
 
         if not target_value:
-            target_value = eval(get_formatted_string(self.target_field,
+            target_value = format_and_eval_string(self.target_field,
                                                      self.task_path,
-                                                     self.task_database))
+                                                     self.task_database)
         self.driver.go_to_field(target_value, self.rate, self.auto_stop_heater)
         self.write_in_database('Bfield', target_value)
 

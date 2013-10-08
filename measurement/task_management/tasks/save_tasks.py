@@ -10,7 +10,8 @@ from pyface.qt import QtGui
 
 import os, numpy
 
-from .tools.database_string_formatter import get_formatted_string
+from .tools.database_string_formatter import (get_formatted_string,
+                                              format_and_eval_string)
 from .tools.task_decorator import make_stoppable, make_wait
 from .base_tasks import SimpleTask
 
@@ -20,6 +21,20 @@ class SavedValueObject(HasTraits):
 
     label = Str
     value = Str
+
+class HeaderHandler(Handler):
+    """
+    """
+    def object_def_header_changed(self, info):
+        """
+        """
+        model = info.object
+        database = model.task_database
+        entries = database.list_accesible_entries(self.task_path)
+        if 'default_header' in entries:
+            model.header = model.get_from_database('default_header')
+        else:
+            model.header = ''
 
 class SaveTaskHandler(Handler):
     """
@@ -48,6 +63,7 @@ class SaveTask(SimpleTask):
     filename = Str('', preference = True)
     file_object = Any
     header = Str('', preference = True)
+    def_header = Button('Default header')
     fill_header = Button('Edit')
 
     array = Array
@@ -67,7 +83,11 @@ class SaveTask(SimpleTask):
     explore_button = Button('Browse')
 
     #task_view = View()
-    header_view = View(UItem('header@'), buttons = ['OK', 'Cancel'])
+    header_view = View(
+                    UItem('header@'),
+                    UItem('def_header'),
+                    handler = HeaderHandler(),
+                    buttons = ['OK', 'Cancel'])
 
     def __init__(self, *args, **kwargs):
         super(SaveTask, self).__init__(*args, **kwargs)
@@ -96,13 +116,15 @@ class SaveTask(SimpleTask):
                     return
 
                 self.write_in_database('file', self.file_object)
+                for line in self.header.split('\n'):
+                    self.file_object.write('# ' + line + '\n')
                 self.file_object.write('\t'.join(self.saved_labels) + '\n')
                 self.file_object.flush()
 
             if self.saving_target != 'File':
-                self.array_length = eval(get_formatted_string(self.array_size,
+                self.array_length = format_and_eval_string(self.array_size,
                                                            self.task_path,
-                                                           self.task_database))
+                                                           self.task_database)
                 array_type = numpy.dtype([(name, 'f8')
                                             for name in self.saved_labels])
                 self.array = numpy.empty((self.array_length,
@@ -112,9 +134,9 @@ class SaveTask(SimpleTask):
             self.initialized = True
 
         #writing
-        values = [eval(get_formatted_string(value,
+        values = [format_and_eval_string(value,
                                        self.task_path,
-                                       self.task_database))
+                                       self.task_database)
                     for value in self.saved_values]
         if self.saving_target != 'Array':
             self.file_object.write('\t'.join([str(val)
@@ -154,25 +176,26 @@ class SaveTask(SimpleTask):
             return False, traceback
 
         try:
-            eval(get_formatted_string(self.array_size,
+            format_and_eval_string(self.array_size,
                                        self.task_path,
-                                       self.task_database))
+                                       self.task_database)
         except:
             traceback[self.task_path + '/' +self.task_name] = \
                 'Failed to compute the array size'
             return False, traceback
 
-        try:
-            [eval(get_formatted_string(value,
-                                       self.task_path,
-                                       self.task_database))
-                    for value in self.saved_values]
-        except:
-            traceback[self.task_path + '/' +self.task_name] = \
-                'Failed to evaluate one of the entries'
-            return False, traceback
+        test = True
+        for i, value in enumerate(self.saved_values):
+            try:
+                format_and_eval_string(value,
+                                   self.task_path,
+                                   self.task_database)
+            except:
+                traceback[self.task_path + '/' +self.task_name + str(i)] = \
+                    'Failed to evaluate entry : {}'.format(self.saved_labels[i])
+                test = False
 
-        return True, traceback
+        return test, traceback
 
     def update_preferences_from_traits(self):
         """

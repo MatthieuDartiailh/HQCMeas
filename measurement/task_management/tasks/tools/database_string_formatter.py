@@ -1,6 +1,10 @@
 """
 """
 import textwrap
+from math import (cos, sin, tan, acos, asin, atan,
+                exp, log, cosh, sinh, tanh)
+from math import pi as Pi
+import numpy as np
 COMPLETER_TOOLTIP = textwrap.fill("""In this field you can enter a text and
                         include fields which will be replaced by database
                         entries by using the delimiters '{' and '}'.""", 80)
@@ -21,7 +25,11 @@ def get_formatted_string(edit_str, path, database):
             str_to_format = str_to_format[:-2]
         else:
             str_to_format = str_to_format[:-2]
-    
+
         return str_to_format.format(*replacement_values)
     else:
         return edit_str
+
+def format_and_eval_string(edit_str, path, database):
+
+    return eval(get_formatted_string(edit_str, path, database))

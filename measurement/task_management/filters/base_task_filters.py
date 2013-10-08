@@ -5,7 +5,8 @@
 from traits.api import (HasTraits, List, Type, File)
 import re
 
-from ..tasks import AbstractTask, LoopTask, ComplexTask, InstrumentTask
+from ..tasks import (AbstractTask, BaseLoopTask, ComplexTask, InstrumentTask,
+                     SimpleLoopTask)
 
 class AbstractTaskFilter(HasTraits):
     """
@@ -87,11 +88,26 @@ class SimpleTaskFilter(AbstractTaskFilter):
         """
         tasks = {}
         for py_task in self.py_tasks:
-            if py_task is not ComplexTask and py_task is not LoopTask:
+            if not issubclass(py_task, ComplexTask):
                 task_name = self.normalise_name(py_task.__name__)
                 tasks[task_name] = py_task
 
         return tasks
+
+class LoopTaskFilter(AbstractTaskFilter):
+    """
+    """
+    def filter_tasks(self):
+        """
+        """
+        tasks = {}
+        for py_task in self.py_tasks:
+            if issubclass(py_task, BaseLoopTask) :
+                task_name = self.normalise_name(py_task.__name__)
+                tasks[task_name] = py_task
+
+        return tasks
+
 
 class LoopableTaskFilter(AbstractTaskFilter):
     """

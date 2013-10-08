@@ -2,11 +2,13 @@
 
 from base_task_filters import (AllTaskFilter, PyTaskFilter, TemplateTaskFilter,
                                SimpleTaskFilter, AbstractTaskFilter,
-                               LoopableTaskFilter, InstrumentTaskFilter)
+                               LoopableTaskFilter, InstrumentTaskFilter,
+                               LoopTaskFilter)
 
 task_filters = {'All' : AllTaskFilter,
                 'Python' : PyTaskFilter,
                 'Template' : TemplateTaskFilter,
                 'Simple' : SimpleTaskFilter,
                 'Loopable' : LoopableTaskFilter,
-                'Instrs' : InstrumentTaskFilter}
+                'Instrs' : InstrumentTaskFilter,
+                'Loop' : LoopTaskFilter}

@@ -3,15 +3,14 @@
 """
 
 from traits.api\
-    import (HasTraits, Str, Int, Instance, List, Float, Bool, Type,
+    import (HasTraits, Str, Int, Instance, List, Bool, Type,
             on_trait_change, Unicode, Directory, BaseStr, BaseUnicode)
 from traits.api import self as trait_self
 from traitsui.api\
      import (View, ListInstanceEditor, VGroup, HGroup, UItem,
-             InstanceEditor, Group, Label)
+             InstanceEditor)
 
 from configobj import Section, ConfigObj
-from numpy import linspace
 import os
 
 from .tools.task_database import TaskDatabase
@@ -547,72 +546,6 @@ class ComplexTask(AbstractTask):
                         resizable = True,
                     )
 
-        self.trait_view('task_view', task_view)
-
-
-class LoopTask(ComplexTask):
-    """Complex task which, at each iteration, performs a task with a different
-    value and then call all its child tasks.
-    """
-    task = Instance(SimpleTask, child = True)
-    task_start = Float(0.0, preference = True)
-    task_stop = Float(1.0, preference = True)
-    task_step = Float(0.1, preference = True)
-    task_database_entries = ['point_number']
-
-    @make_stoppable
-    def process(self):
-        """
-        """
-        num = int((self.task_stop - self.task_start)/self.task_step) + 1
-        self.write_in_database('point_number', num)
-        for value in linspace(self.task_start, self.task_stop, num):
-            self.task.process(value)
-            for child in self.children_task:
-                child.process()
-
-    def check(self, *args, **kwargs):
-        """
-        """
-        test = True
-        traceback = {}
-        try:
-            num = int(abs((self.task_stop - self.task_start)/self.task_step))+ 1
-            self.write_in_database('point_number', num)
-        except:
-            test = False
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Loop task did not success to compute point number'
-        check = super(LoopTask, self).check( *args, **kwargs)
-        test = test and check[0]
-        traceback.update(check[1])
-        return test, traceback
-
-    def _define_task_view(self):
-        task_view = View(
-                    UItem('task_name', style = 'readonly'),
-                    VGroup(
-                        VGroup(
-                            Group(
-                                Label('Start'), Label('Stop'), Label('Step'),
-                                UItem('task_start'),UItem('task_stop'),
-                                UItem('task_step'),
-                                columns = 3,
-                                ),
-                            UItem('task', style = 'custom',
-                                  editor = InstanceEditor(view = 'loop_view')),
-                            show_border = True,
-                            ),
-                        UItem('children_task',
-                          editor = ListInstanceEditor(
-                              style = 'custom',
-                              editor = InstanceEditor(view = 'task_view'),
-                              item_factory = self.create_child)),
-                        show_border = True,
-                        ),
-                    title = 'Edit task',
-                    resizable = True,
-                    )
         self.trait_view('task_view', task_view)
 
 from multiprocessing.synchronize import Event

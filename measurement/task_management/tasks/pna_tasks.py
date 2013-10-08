@@ -16,11 +16,12 @@ import time, os
 from inspect import cleandoc
 from configobj import ConfigObj
 from textwrap import fill
+import numpy as np
 
 from .instr_task import InstrumentTask
 from .tools.task_decorator import (make_stoppable, smooth_instr_crash,
                                    make_wait)
-from .tools.database_string_formatter import get_formatted_string
+from .tools.database_string_formatter import (format_and_eval_string)
 from ...instruments.profiles import PROFILES_DIRECTORY_PATH
 from ...instruments.drivers import DRIVERS
 from ...instruments.drivers.driver_tools import InstrIOError
@@ -102,8 +103,8 @@ class PNASetFreqTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        freq = eval(get_formatted_string(self.value, self.task_path,
-                                         self.task_database))
+        freq = format_and_eval_string(self.value, self.task_path,
+                                         self.task_database)
         self.channel_driver.frequency = freq
         self.write_in_database('frequency', freq)
 
@@ -123,6 +124,7 @@ class PNASetFreqTask(PNATasks):
         line_completer = LineCompleterEditor(
                              entries_updater = self._list_database_entries)
         view = View(
+                UItem('task_name', style = 'readonly'),
                 Group(
                     Label('Driver'), Label('Instr'),
                     Label('Channel'), Label('Freq (Hz)'),
@@ -166,8 +168,8 @@ class PNASetPowerTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        power = eval(get_formatted_string(self.value, self.task_path,
-                                         self.task_database))
+        power = format_and_eval_string(self.value, self.task_path,
+                                         self.task_database)
         self.channel_driver.port = self.port
         self.channel_driver.power = power
         self.write_in_database('power', power)
@@ -188,6 +190,7 @@ class PNASetPowerTask(PNATasks):
         line_completer = LineCompleterEditor(
                              entries_updater = self._list_database_entries)
         view = View(
+                UItem('task_name', style = 'readonly'),
                 Group(
                     Label('Driver'), Label('Instr'),
                     Label('Channel'), Label('Port'), Label('Power (dBm)'),
@@ -220,6 +223,7 @@ class PNASinglePointMeasureTask(PNATasks):
     task_database_entries_default = []
 
     task_view = View(
+                    UItem('task_name', style = 'readonly'),
                     VGroup(
                         Group(
                             Label('Driver'), Label('Instr'),
@@ -346,8 +350,8 @@ class PNAFreqSweepTask(PNATasks):
     window = Int(1, preference = True)
 
     driver_list = ['AgilentPNA']
-    task_database_entries = []
-    task_database_entries_default = []
+    task_database_entries = ['sweep_data']
+    task_database_entries_default = [np.array([0])]
 
     def __init__(self, *args, **kwargs):
         super(PNAFreqSweepTask, self).__init__(*args, **kwargs)
@@ -380,12 +384,12 @@ class PNAFreqSweepTask(PNATasks):
                                                     clear)
                 clear = False
 
-        start = eval(get_formatted_string(self.start, self.task_path,
-                                         self.task_database))
-        stop = eval(get_formatted_string(self.stop, self.task_path,
-                                         self.task_database))
-        points = eval(get_formatted_string(self.points, self.task_path,
-                                         self.task_database))
+        start = format_and_eval_string(self.start, self.task_path,
+                                         self.task_database)
+        stop = format_and_eval_string(self.stop, self.task_path,
+                                         self.task_database)
+        points = format_and_eval_string(self.points, self.task_path,
+                                         self.task_database)
         self.channel_driver.prepare_sweep(self.type.upper(), start, stop,
                                           points)
         waiting_time = 1/self.if_bandwidth*points
@@ -395,13 +399,17 @@ class PNAFreqSweepTask(PNATasks):
         while not self.driver.check_operation_completion():
             time.sleep(0.01*waiting_time)
 
+        data = [np.linspace(start, stop, points)]
         for i, measure in enumerate(self.measures):
             meas_name = 'Ch{}_'.format(self.channel) + measure
             if self.measure_format[i]:
-                data = self.channel_driver.read_formatted_data(meas_name)
+                data.append(self.channel_driver.read_formatted_data(meas_name))
             else:
-                data = self.channel_driver.read_raw_data(meas_name)
-            self.write_in_database(measure, data)
+                data.append(self.channel_driver.read_raw_data(meas_name))
+
+        names = [self.sweep_type] + self.measures
+        final_arr = np.core.records.fromarrays(data, names = names)
+        self.write_in_database(measure, final_arr)
 
 
     @on_trait_change('channel')
@@ -433,6 +441,7 @@ class PNAFreqSweepTask(PNATasks):
         line_completer = LineCompleterEditor(
                              entries_updater = self._list_database_entries)
         view = View(
+                UItem('task_name', style = 'readonly'),
                 VGroup(
                     Group(
                         Label('Driver'), Label('Instr'),

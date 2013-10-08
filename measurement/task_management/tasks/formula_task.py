@@ -10,7 +10,8 @@ from math import (cos, sin, tan, acos, asin, atan,
 from math import pi as Pi
 
 from .base_tasks import SimpleTask
-from .tools.database_string_formatter import get_formatted_string
+from .tools.database_string_formatter import (get_formatted_string,
+                                              format_and_eval_string)
 from .tools.task_decorator import make_stoppable, make_wait
 
 class FormulaObject(HasTraits):
@@ -39,9 +40,9 @@ class FormulaTask(SimpleTask):
         """
         """
         for i, label in enumerate(self.labels):
-            value = eval(get_formatted_string(self.formulas[i],
+            value = format_and_eval_string(self.formulas[i],
                                                 self.task_path,
-                                                self.task_database))
+                                                self.task_database)
             self.write_in_database(label, value)
 
     def check(self, *args, **kwargs):
@@ -54,14 +55,14 @@ class FormulaTask(SimpleTask):
                                            self.task_path,
                                            self.task_database)
             except:
-                traceback[self.task_path + '/' +self.task_name] =\
+                traceback[self.task_path + '/' +self.task_name + str(i)] =\
                     "Failed to format the formula {}".format(
                                             self.labels[i])
                 return False, traceback
             try:
                 self.write_in_database(self.labels[i], eval(for_str))
             except:
-                traceback[self.task_path + '/' +self.task_name] =\
+                traceback[self.task_path + '/' +self.task_name + str(-i)] =\
                     "Failed to eval the formula {}".format(
                                             self.labels[i])
                 return False, traceback
