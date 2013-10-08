@@ -114,9 +114,8 @@ class PNASetFreqTask(PNATasks):
     def _list_database_entries(self):
         """
         """
-        self.accessible_entries = \
-                    self.task_database.list_accessible_entries(self.task_path)
-        return self.accessible_entries
+        entries =  self.task_database.list_accessible_entries(self.task_path)
+        return entries
 
     def _define_task_view(self):
         """
@@ -180,9 +179,8 @@ class PNASetPowerTask(PNATasks):
     def _list_database_entries(self):
         """
         """
-        self.accessible_entries = \
-                    self.task_database.list_accessible_entries(self.task_path)
-        return self.accessible_entries
+        entries =  self.task_database.list_accessible_entries(self.task_path)
+        return entries
 
     def _define_task_view(self):
         """
@@ -426,9 +424,8 @@ class PNAFreqSweepTask(PNATasks):
     def _list_database_entries(self):
         """
         """
-        self.accessible_entries = \
-                    self.task_database.list_accessible_entries(self.task_path)
-        return self.accessible_entries
+        entries =  self.task_database.list_accessible_entries(self.task_path)
+        return entries
 
     def _define_task_view(self):
         """

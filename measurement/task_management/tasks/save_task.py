@@ -64,7 +64,6 @@ class SaveTask(SimpleTask):
 
     initialized = Bool(False)
     task_database_entries = ['file']
-    accessible_entries = List(Str)
     explore_button = Button('Browse')
 
     #task_view = View()
@@ -205,9 +204,8 @@ class SaveTask(SimpleTask):
     def _list_database_entries(self):
         """
         """
-        self.accessible_entries = \
-                    self.task_database.list_accessible_entries(self.task_path)
-        return self.accessible_entries
+        entries =  self.task_database.list_accessible_entries(self.task_path)
+        return entries
 
     @on_trait_change('saving_target')
     def _update_database_entries(self, new):

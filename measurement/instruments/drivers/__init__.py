@@ -24,6 +24,7 @@ from .lock_in_sr72_series import LockInSR7270, LockInSR7265
 from .lock_in_sr830 import LockInSR830
 from .agilent_psg_signal_generators import AgilentPSGSignalGenerator
 from .agilent_pna import AgilentPNA
+from .oxford_ips import IPS12010
 
 DRIVERS = {'YokogawaGS200' : YokogawaGS200,
            'Yokogawa7651' : Yokogawa7651,
@@ -33,6 +34,7 @@ DRIVERS = {'YokogawaGS200' : YokogawaGS200,
            'Agilent34410A' : Agilent34410A,
            'Keithley2000' : Keithley2000,
            'AgilentE8257D' : AgilentPSGSignalGenerator,
-           'AgilentPNA' : AgilentPNA}
+           'AgilentPNA' : AgilentPNA,
+           'IPS12010' : IPS12010}
 
 DRIVER_TYPES = {'Visa' : VisaInstrument}
