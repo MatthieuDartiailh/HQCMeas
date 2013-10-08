@@ -313,3 +313,96 @@ class SaveTask(SimpleTask):
                 resizable = True,
                 )
         self.trait_view('task_view', view)
+
+
+def SaveArrayTask(SimpleTask):
+    """
+    """
+    folder = Str('', preference = True)
+    explore_button = Button('Browse')
+    filename = Str('', preference = True)
+    file_object = Any
+    header = Str('', preference = True)
+    def_header = Button('Default header')
+    fill_header = Button('Edit')
+
+    target_array = Str
+    mode = Enum('Text file', 'Binary file')
+
+    #task_view = View()
+    header_view = View(
+                    UItem('header@'),
+                    UItem('def_header'),
+                    handler = HeaderHandler(),
+                    buttons = ['OK', 'Cancel'])
+
+    def __init__(self, *args, **kwargs):
+        super(SaveTask, self).__init__(*args, **kwargs)
+        self._define_task_view()
+
+    @make_stoppable
+    @make_wait
+    def process(self):
+        """
+        """
+        #Init
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        traceback = {}
+        try:
+            full_folder_path = get_formatted_string(self.folder,
+                                                         self.task_path,
+                                                         self.task_database)
+        except:
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to format the folder path'
+            return False, traceback
+
+        full_path = os.path.join(full_folder_path, self.filename)
+
+        try:
+            f = open(full_path, 'wb')
+            f.close()
+        except:
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to open the specified file'
+            return False, traceback
+
+        return True, traceback
+
+    def _define_task_view(self):
+        """
+        """
+        line_completer = LineCompleterEditor(
+                             entries_updater = self._list_database_entries)
+        view = View(
+                UItem('task_name', style = 'readonly'),
+                VGroup(
+                    HGroup(
+                        HGroup(
+                            UItem('folder',
+                                editor = line_completer,
+                                springy = True,
+                                ),
+                            UItem('explore_button'),
+                            label = 'Folder',
+                            show_border = True,
+                            ),
+                        HGroup(
+                            UItem('filename', springy = True),
+                            label = 'Filename',
+                            show_border = True,
+                            ),
+                        HGroup(
+                            UItem('fill_header'),
+                            label = 'Header',
+                            show_border = True,
+                            ),
+                    ),
+                ),
+                handler = SaveTaskHandler(),
+                resizable = True,
+                )
+        self.trait_view('task_view', view)

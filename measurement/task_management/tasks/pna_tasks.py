@@ -408,7 +408,7 @@ class PNAFreqSweepTask(PNATasks):
                 data.append(self.channel_driver.read_raw_data(meas_name))
 
         names = [self.sweep_type] + self.measures
-        final_arr = np.core.records.fromarrays(data, names = names)
+        final_arr = np.rec.fromarrays(data, names = names)
         self.write_in_database(measure, final_arr)
 
 
