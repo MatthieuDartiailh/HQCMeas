@@ -88,7 +88,7 @@ class TaskProcess(Process):
                                     for path, mes in check[1].iteritems())
                         logger.critical(message)
 
-                    if spy:
+                    if monitored_entries:
                         spy.close()
                         del spy
 
@@ -187,24 +187,27 @@ class TaskHolderHandler(Handler):
         meas_editor = MeasurementEditor(root_task = model.root_task,
                                         is_new_meas = False)
         model.status = 'EDITING'
-        task =  model.root_task
-        default_path = task.default_path
+        default_path = meas_editor.root_task.default_path
         meas_editor.edit_traits(parent = info.ui.control,
                                 kind = 'livemodal',
                                 )
+
+        task = model.root_task = meas_editor.root_task
         path = os.path.join(default_path,
                                 model.name + '.ini')
         if task.default_path == default_path:
             with open(path, 'w') as f:
+                task.update_preferences_from_traits()
                 task.task_preferences.write(f)
         else:
             os.remove(path)
             path = os.path.join(task.default_path,
                                 model.name + '.ini')
             with open(path, 'w') as f:
+                task.update_preferences_from_traits()
                 task.task_preferences.write(f)
 
-        model.status = ''
+        model.status = 'READY'
 
     def object_edit_monitor_changed(self, info):
         """

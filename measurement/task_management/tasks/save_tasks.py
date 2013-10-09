@@ -9,6 +9,7 @@ from traitsui.api import (View, HGroup, VGroup, UItem, ObjectColumn, Handler,
 from pyface.qt import QtGui
 
 import os, numpy
+from inspect import cleandoc
 
 from .tools.database_string_formatter import (get_formatted_string,
                                               format_and_eval_string)
@@ -106,11 +107,13 @@ class SaveTask(SimpleTask):
                 full_folder_path = get_formatted_string(self.folder,
                                                          self.task_path,
                                                          self.task_database)
-                full_path = os.path.join(full_folder_path, self.filename)
+                filename = get_formatted_string(self.filename, self.task_path,
+                                                         self.task_database)
+                full_path = os.path.join(full_folder_path, filename)
                 try:
                     self.file_object = open(full_path, 'w')
                 except IOError:
-                    print 'In {}, to open the specified file'.format(
+                    print 'In {}, failed to open the specified file'.format(
                                                                 self.task_name)
                     self.root_task.should_stop.set()
                     return
@@ -165,7 +168,15 @@ class SaveTask(SimpleTask):
                 'Failed to format the folder path'
             return False, traceback
 
-        full_path = os.path.join(full_folder_path, self.filename)
+        try:
+            filename = get_formatted_string(self.filename, self.task_path,
+                                                         self.task_database)
+        except:
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to format the filename'
+            return False, traceback
+
+        full_path = os.path.join(full_folder_path, filename)
 
         try:
             f = open(full_path, 'wb')
@@ -293,7 +304,8 @@ class SaveTask(SimpleTask):
                             show_border = True,
                             ),
                         HGroup(
-                            UItem('filename', springy = True),
+                            UItem('filename',editor = line_completer,
+                                  springy = True),
                             label = 'Filename',
                             show_border = True,
                             ),
@@ -315,7 +327,7 @@ class SaveTask(SimpleTask):
         self.trait_view('task_view', view)
 
 
-def SaveArrayTask(SimpleTask):
+class SaveArrayTask(SimpleTask):
     """
     """
     folder = Str('', preference = True)
@@ -337,7 +349,7 @@ def SaveArrayTask(SimpleTask):
                     buttons = ['OK', 'Cancel'])
 
     def __init__(self, *args, **kwargs):
-        super(SaveTask, self).__init__(*args, **kwargs)
+        super(SaveArrayTask, self).__init__(*args, **kwargs)
         self._define_task_view()
 
     @make_stoppable
@@ -345,7 +357,41 @@ def SaveArrayTask(SimpleTask):
     def process(self):
         """
         """
-        #Init
+        array_to_save = self.get_from_database(self.target_array[1:-1])
+
+        full_folder_path = get_formatted_string(self.folder,
+                                                         self.task_path,
+                                                         self.task_database)
+        filename = get_formatted_string(self.filename, self.task_path,
+                                                 self.task_database)
+        full_path = os.path.join(full_folder_path, filename)
+
+        if self.mode == 'Text file':
+            try:
+                self.file_object = open(full_path, 'wb')
+            except IOError:
+                print 'In {}, failed to open the specified file'.format(
+                                                            self.task_name)
+                self.root_task.should_stop.set()
+                return
+
+            for line in self.header.split('\n'):
+                self.file_object.write('# ' + line + '\n')
+
+            self.file_object.write('\t'.join(array_to_save.dtype.names) + '\n')
+            numpy.savetxt(self.file_object, array_to_save, delimiter = '\t')
+
+        else:
+            try:
+                self.file_object = open(full_path, 'wb')
+                self.file_object.close()
+            except IOError:
+                print 'In {}, failed to open the specified file'.format(
+                                                            self.task_name)
+                self.root_task.should_stop.set()
+                return
+
+            numpy.save(full_path, array_to_save)
 
     def check(self, *args, **kwargs):
         """
@@ -360,7 +406,22 @@ def SaveArrayTask(SimpleTask):
                 'Failed to format the folder path'
             return False, traceback
 
-        full_path = os.path.join(full_folder_path, self.filename)
+        if self.mode == 'Binary file':
+            if len(self.filename) > 3:
+                if self.filename[-4] == '.':
+                    self.filename = self.filename[:-4] + '.npy'
+                    print cleandoc("""The extension of the file will be replaced
+                        by '.npy' in task {}""".format(self.task_name))
+
+        try:
+            filename = get_formatted_string(self.filename, self.task_path,
+                                                         self.task_database)
+        except:
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to format the filename'
+            return False, traceback
+
+        full_path = os.path.join(full_folder_path, filename)
 
         try:
             f = open(full_path, 'wb')
@@ -372,6 +433,12 @@ def SaveArrayTask(SimpleTask):
 
         return True, traceback
 
+    def _list_database_entries(self):
+        """
+        """
+        entries =  self.task_database.list_accessible_entries(self.task_path)
+        return entries
+
     def _define_task_view(self):
         """
         """
@@ -381,15 +448,15 @@ def SaveArrayTask(SimpleTask):
                 UItem('task_name', style = 'readonly'),
                 VGroup(
                     HGroup(
-                        HGroup(
-                            UItem('folder',
-                                editor = line_completer,
-                                springy = True,
-                                ),
-                            UItem('explore_button'),
-                            label = 'Folder',
-                            show_border = True,
+                        UItem('folder',
+                            editor = line_completer,
+                            springy = True,
                             ),
+                        UItem('explore_button'),
+                        label = 'Folder',
+                        show_border = True,
+                        ),
+                    HGroup(
                         HGroup(
                             UItem('filename', springy = True),
                             label = 'Filename',
@@ -400,8 +467,13 @@ def SaveArrayTask(SimpleTask):
                             label = 'Header',
                             show_border = True,
                             ),
+                            ),
+                    HGroup(
+                        Label('Array to save'),
+                        UItem('target_array', editor = line_completer),
+                        ),
+                    show_border = True,
                     ),
-                ),
                 handler = SaveTaskHandler(),
                 resizable = True,
                 )

@@ -3,10 +3,8 @@
 """
 
 from traits.api import (HasTraits, List, Type, File)
-import re
 
-from ..tasks import (AbstractTask, BaseLoopTask, ComplexTask, InstrumentTask,
-                     SimpleLoopTask)
+from ..tasks import (AbstractTask, BaseLoopTask, ComplexTask, InstrumentTask)
 
 class AbstractTaskFilter(HasTraits):
     """
@@ -26,12 +24,32 @@ class AbstractTaskFilter(HasTraits):
     def normalise_name(self, name):
         """
         """
-        name = re.sub('(?<!^[A-Z])(?=[A-Z])', ' ', name)
-        name = re.sub('_', ' ', name)
-        name = re.sub('^ ', '', name)
-        name = re.sub('Task', '', name)
-        name = re.sub('.ini', '', name)
-        return name.capitalize()
+        if name.endswith('.ini') or name.endswith('Task'):
+            name = name[:-4] + '\0'
+        aux = ''
+        for i, char in enumerate(name):
+            if char == '_':
+                aux += ' '
+                continue
+
+            if char != '\0':
+                if char.isupper() and i!=0 :
+                    if name[i-1].islower():
+                        if name[i+1].islower():
+                            aux += ' ' + char.lower()
+                        else:
+                            aux += ' ' + char
+                    else:
+                        if name[i+1].islower():
+                            aux += ' ' + char.lower()
+                        else:
+                            aux += char
+                else:
+                    if i == 0:
+                        aux += char.upper()
+                    else:
+                        aux += char
+        return aux
 
 class AllTaskFilter(AbstractTaskFilter):
     """

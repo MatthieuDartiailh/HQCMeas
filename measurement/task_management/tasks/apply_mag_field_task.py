@@ -81,6 +81,22 @@ class ApplyMagFieldTask(InstrumentTask):
         self.driver.go_to_field(target_value, self.rate, self.auto_stop_heater)
         self.write_in_database('Bfield', target_value)
 
+    def check(self, *args, **kwargs):
+        """
+        """
+        test, traceback = super(ApplyMagFieldTask, self).check(*args,
+                                                                     **kwargs)
+        try:
+            val = format_and_eval_string(self.target_field, self.task_path,
+                                               self.task_database)
+        except:
+            test = False
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to eval the target field formula {}'.format(
+                                                            self.target_value)
+        self.write_in_database('Bfield', val)
+        return test, traceback
+
     def _list_database_entries(self):
         """
         """

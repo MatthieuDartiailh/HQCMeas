@@ -32,7 +32,7 @@ from traitsui.api import (View, VGroup, HGroup, UItem, ListStrEditor, VGrid,
                           Label, OKCancelButtons, Handler, EnumEditor, error,
                           InstanceEditor)
 
-import os, re
+import os
 from configobj import ConfigObj
 from textwrap import fill
 from inspect import cleandoc
@@ -367,7 +367,6 @@ class InstrumentManager(HasTraits):
                                             self.instr_folder)
         self.observer.start()
 
-        self._update_instr_list()
         if self.instrs_name:
             self.selected_instr_name = self.instrs_name[0]
 
@@ -416,8 +415,29 @@ class InstrumentManager(HasTraits):
         """Normalize the name of the profiles by replacing '_' by spaces,
         removing the extension, and adding spaces between 'aA' sequences.
         """
-        name = re.sub('(?<!^[A-Z])(?=[A-Z])', ' ', name)
-        name = re.sub('_', ' ', name)
-        name = re.sub('^ ', '', name)
-        name = re.sub('.ini', '', name)
-        return name.capitalize()
+        if name.endswith('.ini') or name.endswith('Task'):
+            name = name[:-4] + '\0'
+        aux = ''
+        for i, char in enumerate(name):
+            if char == '_':
+                aux += ' '
+                continue
+
+            if char != '\0':
+                if char.isupper() and i!=0 :
+                    if name[i-1].islower():
+                        if name[i+1].islower():
+                            aux += ' ' + char.lower()
+                        else:
+                            aux += ' ' + char
+                    else:
+                        if name[i+1].islower():
+                            aux += ' ' + char.lower()
+                        else:
+                            aux += char
+                else:
+                    if i == 0:
+                        aux += char.upper()
+                    else:
+                        aux += char
+        return aux

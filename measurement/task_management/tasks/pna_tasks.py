@@ -335,7 +335,7 @@ class PNASinglePointMeasureTask(PNATasks):
         self.task_database_entries_default = entries_def
         self.task_database_entries = entries
 
-class PNAFreqSweepTask(PNATasks):
+class PNASweepTask(PNATasks):
     """
     """
     channel = Int(1, preference = True)
@@ -392,7 +392,7 @@ class PNAFreqSweepTask(PNATasks):
                                          self.task_database)
         self.channel_driver.prepare_sweep(self.sweep_type.upper(), start, stop,
                                           points)
-                                          
+
         waiting_time = 1.0/self.if_bandwidth*points
         self.driver.fire_trigger(self.channel)
         time.sleep(waiting_time)

@@ -9,7 +9,7 @@ from time import sleep
 from .instr_task import InstrumentTask
 from .tools.task_decorator import make_stoppable, make_wait, smooth_instr_crash
 
-class MeasDcVoltageTask(InstrumentTask):
+class MeasDCVoltageTask(InstrumentTask):
     """
     """
     wait_time = Float(preference = True)

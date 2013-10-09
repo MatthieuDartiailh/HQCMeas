@@ -15,7 +15,7 @@ can use instrument properties (see below). Drivers should not directly subclass
 :Contains:
     InstrIOError : General exception for instrument communication error
     BaseInstrument : Base class for all drivers
-    VisaINstrument : Base class for drivers using the VISA protocol
+    VisaInstrument : Base class for drivers using the VISA protocol
     instrument_properties : subclass of property allowing to cache a property
         on certain condition, and to reset the cache
     secure_communication : decorator making sure that a communication error

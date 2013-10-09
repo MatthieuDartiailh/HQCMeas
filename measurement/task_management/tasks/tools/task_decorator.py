@@ -61,7 +61,7 @@ def make_wait(function_to_decorate):
     decorator.__doc__ = function_to_decorate.__doc__
     return decorator
 
-def smooth_instr_crash(function_to_decorate, max_recursion = 10):
+def smooth_instr_crash(function_to_decorate):
     """This decorator should be used on any instr task. It handles possible
     communications errors during the processing of the task. If the command
     fails it asks the immediate end of the measurement to prevent any damages

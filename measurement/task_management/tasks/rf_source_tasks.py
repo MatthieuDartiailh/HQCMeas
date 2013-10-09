@@ -71,7 +71,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
                                                self.task_database)
 
         self.driver.frequency_unit = self.unit
-        self.driver.fixed_frequency = frequency
+        self.driver.frequency = frequency
         self.write_in_database('frequency', frequency)
 
     def check(self, *args, **kwargs):

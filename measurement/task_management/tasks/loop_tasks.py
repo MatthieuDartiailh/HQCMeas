@@ -2,7 +2,7 @@
 """
 """
 from traits.api\
-    import (Str, Instance, Bool)
+    import (Str, Instance, Bool, on_trait_change)
 from traitsui.api\
      import (View, ListInstanceEditor, VGroup, UItem,
              InstanceEditor, Group, Label, LineCompleterEditor)
@@ -18,9 +18,9 @@ class BaseLoopTask(ComplexTask):
     """
     """
     task_start = Str('0.0', preference = True)
-    task_stop = Str('0.0', preference = True)
+    task_stop = Str('1.0', preference = True)
     task_step = Str('0.1', preference = True)
-    timing = Bool(False)
+    timing = Bool(preference = True)
 
     task_database_entries = ['point_number']
 
@@ -57,17 +57,25 @@ class BaseLoopTask(ComplexTask):
             test = False
             traceback[self.task_path + '/' + self.task_name] = \
                 'Loop task did not success to compute point number'
-        check = super(LoopTask, self).check( *args, **kwargs)
+
+        if self.timing:
+            self.process = self.process_with_timing
+        else:
+            self.process = self.process_no_timing
+
+        check = super(BaseLoopTask, self).check( *args, **kwargs)
         test = test and check[0]
         traceback.update(check[1])
         return test, traceback
 
-    def _timing_changed(self, new):
+    @on_trait_change('timing')
+    def _on_timing_changed(self, new):
         """
         """
         if new:
             self.process = self.process_with_timing
-            self.task_database_entries.append('elapsed_time')
+            self.task_database_entries = self.task_database_entries + \
+                                                            ['elapsed_time']
         else:
             self.process = self.process_no_timing
             self.task_database_entries.remove('elapsed_time')
@@ -89,7 +97,7 @@ class SimpleLoopTask(BaseLoopTask):
                                          self.task_database)
         num = int(abs(((stop - start)/step))) + 1
         self.write_in_database('point_number', num)
-        for value in linspace(self.task_start, self.task_stop, num):
+        for value in linspace(start, stop, num):
             self.write_in_database('index', value)
             for child in self.children_task:
                 child.process()
@@ -106,7 +114,7 @@ class SimpleLoopTask(BaseLoopTask):
                                          self.task_database)
         num = int(abs(((stop - start)/step))) + 1
         self.write_in_database('point_number', num)
-        for value in linspace(self.task_start, self.task_stop, num):
+        for value in linspace(start, stop, num):
             tic = default_timer()
             for child in self.children_task:
                 child.process()
@@ -176,7 +184,7 @@ class LoopTask(BaseLoopTask):
                                          self.task_database)
         num = int(abs(((stop - start)/step))) + 1
         self.write_in_database('point_number', num)
-        for value in linspace(self.task_start, self.task_stop, num):
+        for value in linspace(start, stop, num):
             self.task.process(value)
             for child in self.children_task:
                 child.process()
@@ -193,8 +201,9 @@ class LoopTask(BaseLoopTask):
                                          self.task_database)
         num = int(abs(((stop - start)/step))) + 1
         self.write_in_database('point_number', num)
-        for value in linspace(self.task_start, self.task_stop, num):
+        for value in linspace(start, stop, num):
             tic = default_timer()
+            self.task.process(value)
             for child in self.children_task:
                 child.process()
             self.write_in_database('elapsed_time', default_timer()-tic)

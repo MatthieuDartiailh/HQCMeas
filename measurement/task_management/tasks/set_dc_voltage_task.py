@@ -5,7 +5,7 @@ from traits.api import (Float, Bool, Any, Str)
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor,
                           LineCompleterEditor)
 
-import time, logging
+import time
 from inspect import cleandoc
 from textwrap import fill
 
@@ -14,7 +14,7 @@ from .tools.task_decorator import (make_stoppable, make_parallel,
                                    smooth_instr_crash)
 from .tools.database_string_formatter import format_and_eval_string
 
-class SetDcVoltageTask(InstrumentTask):
+class SetDCVoltageTask(InstrumentTask):
     """
     """
     target_value = Str(preference = True)
@@ -50,6 +50,10 @@ class SetDcVoltageTask(InstrumentTask):
                         ),
                      )
 
+    def __init__(self, *args, **kwargs):
+        super(SetDCVoltageTask, self).__init__(*args, **kwargs)
+        self._define_task_view()
+
     @make_stoppable
     @make_parallel
     @smooth_instr_crash
@@ -59,15 +63,15 @@ class SetDcVoltageTask(InstrumentTask):
         if not self.driver:
             self.start_driver()
 
-        if self.driver.owner != self.task_name:
-            self.driver.owner = self.task_name
-            if not self.driver.function == 'VOLT':
-                log = logging.getLogger()
-                log.fatal(cleandoc('''Instrument assigned to {} is not
-                            configured to output a voltage'''.format(
-                                                        self.task_name)))
-                self.root_task.task_stop.set()
-                return
+#        if self.driver.owner != self.task_name:
+#            self.driver.owner = self.task_name
+#            if not self.driver.function == 'VOLT':
+#                log = logging.getLogger()
+#                log.fatal(cleandoc('''Instrument assigned to {} is not
+#                            configured to output a voltage'''.format(
+#                                                        self.task_name)))
+#                self.root_task.task_stop.set()
+#                return
 
         if target_value is not None:
             value = target_value
@@ -110,14 +114,16 @@ class SetDcVoltageTask(InstrumentTask):
         """
         """
         test, traceback = super(SetDcVoltageTask, self).check(*args,
-                                                                     **kwargs)
-        try:
-            val = format_and_eval_string(self.target_value, self.task_path,
-                                               self.task_database)
-        except:
-            test = False
-            traceback[self.task_path + '/' +self.task_name] = \
-                'Failed to eval the target value formula {}'.format(
+                                                                    **kwargs)
+        val = None
+        if self.target_value:
+            try:
+                val = format_and_eval_string(self.target_value, self.task_path,
+                                                   self.task_database)
+            except:
+                test = False
+                traceback[self.task_path + '/' +self.task_name] = \
+                    'Failed to eval the target value formula {}'.format(
                                                             self.target_value)
         self.write_in_database('voltage', val)
         return test, traceback
@@ -158,4 +164,5 @@ class SetDcVoltageTask(InstrumentTask):
                             ),
                         ),
                      )
+
         self.trait_view('task_view', view)

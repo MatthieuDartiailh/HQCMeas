@@ -109,6 +109,18 @@ class AbstractTask(HasTraits):
         """
         self.task_label = new + ' (' + self.task_class + ')'
 
+    @on_trait_change('task_database_entries[]')
+    def _update_database(self, obj, name, old, new):
+        """
+        """
+        added = set(new) - set(old)
+        removed = set(old) - set(new)
+        if self.task_database:
+            for entry in removed:
+                self.remove_from_database(self.task_name + '_' + entry)
+            for entry in added:
+                self.write_in_database(entry, None)
+
 
 class SimpleTask(AbstractTask):
     """Task with no child task, written in pure Python.
@@ -199,18 +211,6 @@ class SimpleTask(AbstractTask):
 
             self.trait_set(**{name : validated})
 
-    @on_trait_change('task_database_entries')
-    def _update_database(self, obj, name, old, new):
-        """
-        """
-        added = set(new) - set(old)
-        removed = set(old) - set(new)
-        if self.task_database:
-            for entry in removed:
-                self.remove_from_database(self.task_name + '_' + entry)
-            for entry in added:
-                self.write_in_database(entry, None)
-
 class ComplexTask(AbstractTask):
     """Task composed of several subtasks.
     """
@@ -269,6 +269,13 @@ class ComplexTask(AbstractTask):
         of the task that wrote the value in the database).
         """
         return self.task_database.get_value(self.task_path, full_name)
+
+    def remove_from_database(self, full_name):
+        """This method deletes the database entry specified by
+        the full name (ie task_name + '_' + entry, where task_name is the name
+        of the task that wrote the value in the database).
+        """
+        return self.task_database.delete_value(self.task_path, full_name)
 
     def register_in_database(self):
         """
