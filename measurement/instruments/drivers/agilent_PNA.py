@@ -14,10 +14,16 @@ This module defines drivers for agilent PNA.
 
 """
 from inspect import cleandoc
-from numpy import array
+import numpy as np
 from visa import ascii, single, double
 from .driver_tools import (BaseInstrument, VisaInstrument, InstrIOError,
                            secure_communication, instrument_property)
+
+FORMATTING_DICT = {'PHAS' : lambda x: np.angle(x, deg=True),
+                   'MLIN' : np.abs,
+                   'MLOG' : lambda x: 10*np.log10(np.abs(x)),
+                   'REAL' : np.real,
+                   'IMAG' : np.imag}
 
 class AgilentPNAChannelError(Exception):
     """
@@ -56,15 +62,15 @@ class AgilentPNAChannel(BaseInstrument):
 
         if self._pna.data_format == 'REAL,32':
             data = self._pna.ask_for_values(
-                            'CALCulate{}:DATA? FDATA'.format(self._channel),
+                            'CALCulate{}:DATA? SDATA'.format(self._channel),
                             single)
         elif self._pna.data_format == 'REAL,64':
             data = self._pna.ask_for_values(
-                            'CALCulate{}:DATA? FDATA'.format(self._channel),
+                            'CALCulate{}:DATA? SDATA'.format(self._channel),
                             double)
         else:
             data = self._pna.ask_for_values(
-                            'CALCulate{}:DATA? FDATA'.format(self._channel),
+                            'CALCulate{}:DATA? SDATA'.format(self._channel),
                             ascii)
         if meas_name and selected_meas:
             self.selected_measure = selected_meas
@@ -72,7 +78,7 @@ class AgilentPNAChannel(BaseInstrument):
             meas_name = self.selected_measure
 
         if data:
-            return array(data)
+            return np.array(data)
         else:
             raise InstrIOError(cleandoc('''Agilent PNA did not return the
                 channel {} formatted data for meas {}'''.format(
@@ -104,12 +110,18 @@ class AgilentPNAChannel(BaseInstrument):
             meas_name = self.selected_measure
 
         if data:
-            aux = array(data)
+            aux = np.array(data)
             return aux[::2] + 1j*aux[1::2]
         else:
             raise InstrIOError(cleandoc('''Agilent PNA did not return the
                 channel {} formatted data for meas {}'''.format(
                 self._channel, meas_name)))
+                
+    def read_and_format_raw_data(self, meas_format, meas_name = ''):
+        """
+        """
+        data = self.read_raw_data(meas_name)
+        return FORMATTING_DICT[meas_format](data)
 
     @secure_communication
     def list_existing_measures(self):
@@ -230,7 +242,7 @@ class AgilentPNAChannel(BaseInstrument):
     def prepare_sweep(self, sweep_type, start, stop, sweep_points):
         """
         """
-        if sweep_type == 'FREQ':
+        if sweep_type == 'FREQUENCY':
             self._pna.write('SENSe{}:FREQuency:STARt {}'.format(self._channel,
                                                                 start))
             self._pna.write('SENSe{}:FREQuency:STOP {}'.format(self._channel,
@@ -571,14 +583,15 @@ class AgilentPNA(VisaInstrument):
             self.write('INITiate:IMMediate')
         else:
             self.write('INITiate{}:IMMediate'.format(channel))
+        self.write('*OPC')
 
     @secure_communication
     def check_operation_completion(self):
         """
         """
         bites = self.ask('*ESR?')
-        status_byte = ('{0:08b}'.format(ord(bites[0])))[::-1]
-        return bool(status_byte[0])
+        status_byte = ('{0:08b}'.format(int(bites)))[::-1]
+        return bool(int(status_byte[0]))
 
     @secure_communication
     def set_all_chanel_to_hold(self):
@@ -602,7 +615,8 @@ class AgilentPNA(VisaInstrument):
         """
         channels = self.ask('SYSTem:CHANnels:CATalog?')
         if channels:
-            defined_channels = [int(channel) for channel in channels[1:-1].split(',')]
+            defined_channels = [int(channel) 
+                        for channel in channels[1:-1].split(',')]
             return defined_channels
         else:
             raise InstrIOError(cleandoc('''Agilent PNA did not return the

@@ -267,7 +267,7 @@ class PNASinglePointMeasureTask(PNATasks):
     def process(self):
         """
         """
-        waiting_time = 1.05*1/self.if_bandwidth
+        waiting_time = 1.0/self.if_bandwidth
         if not self.driver:
             self.start_driver()
             self.channel_driver = self.driver.get_channel(self.channel)
@@ -344,7 +344,6 @@ class PNAFreqSweepTask(PNATasks):
     points = Str(preference = True)
     sweep_type = Enum('Frequency', 'Power', preference = True)
     measures = List(Str, preference = True)
-    measure_format = List(preference = True)
 
     if_bandwidth = Int(10, preference = True)
     window = Int(1, preference = True)
@@ -363,7 +362,7 @@ class PNAFreqSweepTask(PNATasks):
     def process(self):
         """
         """
-        waiting_time = 1.05*1/self.if_bandwidth
+        measures_format = self.measures_format()
         if not self.driver:
             self.start_driver()
             self.channel_driver = self.driver.get_channel(self.channel)
@@ -378,10 +377,11 @@ class PNAFreqSweepTask(PNATasks):
             self.channel_driver.owner = self.task_name
             self.channel_driver.if_bandwidth = self.if_bandwidth
             clear = True
+            self.channel_driver.delete_all_meas()
             for i, measure in enumerate(self.measures):
-                meas_name = 'Ch{}_'.format(self.channel) + measure
-                self.channel_driver.preapre_measure(meas_name, self.window, i+1,
-                                                    clear)
+                meas_name = 'Ch{}:'.format(self.channel) + measure
+                self.channel_driver.prepare_measure(meas_name,
+                                                    self.window, i+1, clear)
                 clear = False
 
         start = format_and_eval_string(self.start, self.task_path,
@@ -390,44 +390,46 @@ class PNAFreqSweepTask(PNATasks):
                                          self.task_database)
         points = format_and_eval_string(self.points, self.task_path,
                                          self.task_database)
-        self.channel_driver.prepare_sweep(self.type.upper(), start, stop,
+        self.channel_driver.prepare_sweep(self.sweep_type.upper(), start, stop,
                                           points)
-        waiting_time = 1/self.if_bandwidth*points
-
+                                          
+        waiting_time = 1.0/self.if_bandwidth*points
         self.driver.fire_trigger(self.channel)
         time.sleep(waiting_time)
         while not self.driver.check_operation_completion():
-            time.sleep(0.01*waiting_time)
+            time.sleep(0.1*waiting_time)
 
         data = [np.linspace(start, stop, points)]
         for i, measure in enumerate(self.measures):
-            meas_name = 'Ch{}_'.format(self.channel) + measure
-            if self.measure_format[i]:
-                data.append(self.channel_driver.read_formatted_data(meas_name))
+            meas_name = 'Ch{}:'.format(self.channel) + measure
+            if measures_format[i]:
+                meas_format = meas_name.split(':')[2]
+                data.append(
+                    self.channel_driver.read_and_format_raw_data(meas_format,
+                                                                 meas_name))
             else:
                 data.append(self.channel_driver.read_raw_data(meas_name))
-
         names = [self.sweep_type] + self.measures
         final_arr = np.rec.fromarrays(data, names = names)
-        self.write_in_database(measure, final_arr)
+        self.write_in_database('sweep_data', final_arr)
 
 
     @on_trait_change('channel')
     def _update_channels(self, new):
         self.channels = [new]
 
-    @on_trait_change('measures')
-    def _update_database_entries(self):
-        entries_def = []
+    def measures_format(self):
+        """
+        """
         entries = self.measures
+        meas_for = []
         for measure in entries:
             if len(measure.split(':')) > 1:
-                entries_def.append(1)
+                meas_for.append(True)
             else:
-                entries_def.append(1+1j)
+                meas_for.append(False)
 
-        self.task_database_entries_default = entries_def
-        self.task_database_entries = entries
+        return meas_for
 
     def _list_database_entries(self):
         """
