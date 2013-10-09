@@ -81,11 +81,11 @@ class PNASetFreqTask(PNATasks):
     """
     """
     channel = Int(1, preference = True)
-    value = Str(preference = True)
+    frequency = Str(preference = True)
 
     driver_list = ['AgilentPNA']
-    task_database_entries = ['frequency']
-    task_database_entries_default = [1e9]
+    task_database_entries = {'frequency' : 1e9}
+    loopable = True
 
     def __init__(self, *args, **kwargs):
         super(PNASetFreqTask, self).__init__(*args, **kwargs)
@@ -93,7 +93,7 @@ class PNASetFreqTask(PNATasks):
 
     @make_stoppable
     @smooth_instr_crash
-    def process(self):
+    def process(self, freq = None):
         """
         """
         if not self.driver:
@@ -103,10 +103,26 @@ class PNASetFreqTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        freq = format_and_eval_string(self.value, self.task_path,
+        if not freq:
+            freq = format_and_eval_string(self.frequency, self.task_path,
                                          self.task_database)
+
         self.channel_driver.frequency = freq
         self.write_in_database('frequency', freq)
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
+        try:
+            format_and_eval_string(self.power, self.task_path,
+                                         self.task_database)
+        except:
+            test = False
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to eval the power formula {}'.format(
+                                                        self.power)
+        return test, traceback
 
     @on_trait_change('channel')
     def _update_channels(self, new):
@@ -135,7 +151,7 @@ class PNASetFreqTask(PNATasks):
                         editor = EnumEditor(name = 'profile_list'),
                         width = 100),
                     UItem('channel'),
-                    UItem('value', editor = line_completer),
+                    UItem('frequency', editor = line_completer),
                     columns = 4,
                     ),
                 )
@@ -145,12 +161,12 @@ class PNASetPowerTask(PNATasks):
     """
     """
     channel = Int(1, preference = True)
-    value = Str(preference = True)
+    power = Str(preference = True)
     port = Int(1, preference = True)
 
     driver_list = ['AgilentPNA']
-    task_database_entries = ['power']
-    task_database_entries_default = [10]
+    task_database_entries = {'power' : -10}
+    loopable = True
 
     def __init__(self, *args, **kwargs):
         super(PNASetPowerTask, self).__init__(*args, **kwargs)
@@ -158,7 +174,7 @@ class PNASetPowerTask(PNATasks):
 
     @make_stoppable
     @smooth_instr_crash
-    def process(self):
+    def process(self, power = None):
         """
         """
         if not self.driver:
@@ -168,11 +184,26 @@ class PNASetPowerTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        power = format_and_eval_string(self.value, self.task_path,
+        if not power:
+            power = format_and_eval_string(self.power, self.task_path,
                                          self.task_database)
         self.channel_driver.port = self.port
         self.channel_driver.power = power
         self.write_in_database('power', power)
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
+        try:
+            format_and_eval_string(self.power, self.task_path,
+                                         self.task_database)
+        except:
+            test = False
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to eval the power formula {}'.format(
+                                                        self.power)
+        return test, traceback
 
     @on_trait_change('channel')
     def _update_channels(self, new):
@@ -201,7 +232,7 @@ class PNASetPowerTask(PNATasks):
                         editor = EnumEditor(name = 'profile_list'),
                         width = 100),
                     UItem('channel', width = 50), UItem('port', width = 50),
-                    UItem('value', editor = line_completer),
+                    UItem('power', editor = line_completer),
                     columns = 5,
                     ),
                 )
@@ -219,8 +250,7 @@ class PNASinglePointMeasureTask(PNATasks):
     window = Int(1, preference = True)
 
     driver_list = ['AgilentPNA']
-    task_database_entries = []
-    task_database_entries_default = []
+    task_database_entries = {}
 
     task_view = View(
                     UItem('task_name', style = 'readonly'),
@@ -320,19 +350,17 @@ class PNASinglePointMeasureTask(PNATasks):
     def _post_measures_update(self):
         """
         """
-        entries_def = []
-        entries = self.measures
+        entries = {}
         meas_for = []
-        for measure in entries:
+        for measure in self.measures:
             if len(measure.split(':')) > 1:
-                entries_def.append(1)
+                entries[measure] = 1.0
                 meas_for.append(True)
             else:
-                entries_def.append(1+1j)
+                entries[measure] = 1.0 + 1j
                 meas_for.append(False)
 
         self.measure_format = meas_for
-        self.task_database_entries_default = entries_def
         self.task_database_entries = entries
 
 class PNASweepTask(PNATasks):
@@ -349,11 +377,10 @@ class PNASweepTask(PNATasks):
     window = Int(1, preference = True)
 
     driver_list = ['AgilentPNA']
-    task_database_entries = ['sweep_data']
-    task_database_entries_default = [np.array([0])]
+    task_database_entries = {'sweep_data' : np.array([0])}
 
     def __init__(self, *args, **kwargs):
-        super(PNAFreqSweepTask, self).__init__(*args, **kwargs)
+        super(PNASweepTask, self).__init__(*args, **kwargs)
         self._define_task_view()
 
     @make_stoppable
@@ -413,6 +440,35 @@ class PNASweepTask(PNATasks):
         final_arr = np.rec.fromarrays(data, names = names)
         self.write_in_database('sweep_data', final_arr)
 
+    def check(self, *args, **kwargs):
+        """
+        """
+        test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
+        try:
+            format_and_eval_string(self.start, self.task_path,
+                                         self.task_database)
+        except:
+            test = False
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to eval the start formula {}'.format(
+                                                        self.start)
+        try:
+             format_and_eval_string(self.stop, self.task_path,
+                                             self.task_database)
+        except:
+            test = False
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to eval the stop formula {}'.format(
+                                                        self.stop)
+        try:
+            format_and_eval_string(self.points, self.task_path,
+                                         self.task_database)
+        except:
+            test = False
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Failed to eval the points formula {}'.format(
+                                                        self.points)
+        return test, traceback
 
     @on_trait_change('channel')
     def _update_channels(self, new):

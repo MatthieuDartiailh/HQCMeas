@@ -21,7 +21,6 @@ class InstrumentTask(SimpleTask):
     driver_list = []
     selected_driver = Str(preference = True)
     driver = Instance(BaseInstrument)
-    task_database_entries_default = List
 
     def check(self, *args, **kwargs):
         """
@@ -52,9 +51,6 @@ class InstrumentTask(SimpleTask):
                 '''Failed to establish the connection with the selected
                     instrument''')
                 return False, traceback
-
-        for i, entry in enumerate(self.task_database_entries):
-            self.write_in_database(entry, self.task_database_entries_default[i])
 
         return True, traceback
 

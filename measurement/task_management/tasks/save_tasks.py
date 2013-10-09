@@ -80,7 +80,7 @@ class SaveTask(SimpleTask):
     saved_objects = List(Instance(SavedValueObject))
 
     initialized = Bool(False)
-    task_database_entries = ['file']
+    task_database_entries = {'file' : None}
     explore_button = Button('Browse')
 
     #task_view = View()
@@ -246,12 +246,12 @@ class SaveTask(SimpleTask):
         """
         """
         if new == 'File':
-            self.task_database_entries = ['file']
+            self.task_database_entries = {'file' : None}
         elif new == 'Array':
-            self.task_database_entries = ['array']
+            self.task_database_entries = {'array' : numpy.array([1.0])}
         else:
-            self.task_database_entries = ['file','array']
-
+            self.task_database_entries = {'file' : None,
+                                          'array' : numpy.array([1.0])}
     def _define_task_view(self):
         """
         """

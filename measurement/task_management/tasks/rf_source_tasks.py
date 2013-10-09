@@ -21,8 +21,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
     auto_start = Bool(False, preference = True)
 
     driver_list = ['AgilentE8257D']
-    task_database_entries = ['frequency', 'unit']
-    task_database_entries_default = [1, 'GHZ']
+    task_database_entries = {'frequency' : 1.0, 'unit' : 'GHZ'}
     loopable = True
 
     loop_view = View(
@@ -138,8 +137,7 @@ class RFSourceSetPowerTask(InstrumentTask):
     auto_start = Bool(False, preference = True)
 
     driver_list = ['AgilentE8257D']
-    task_database_entries = ['power']
-    task_database_entries_default = [1]
+    task_database_entries = {'power' : -10}
     loopable = True
 
     loop_view = View(
@@ -245,8 +243,7 @@ class RFSourceSetOnOffTask(InstrumentTask):
     switch = Str(preference = True)
 
     driver_list = ['AgilentE8257D']
-    task_database_entries = ['output']
-    task_database_entries_default = ['Off']
+    task_database_entries = {'output' : 'Off'}
     loopable = True
 
     task_view = View(

@@ -75,7 +75,7 @@ class FormulaTask(SimpleTask):
             self.database_ready = True
             self.on_trait_change(name = 'labels[]',
                             handler = self._labels_modified)
-        self.task_database_entries = self.labels
+        self.task_database_entries = {lab : 0.0 for lab in self.labels}
         super(FormulaTask, self).register_in_database()
 
     def update_traits_from_preferences(self, **preferences):
@@ -106,10 +106,8 @@ class FormulaTask(SimpleTask):
         removed = set(old) - set(new)
         for label in removed:
             self.task_database_entries.remove(label)
-#            self.remove_from_database(self.task_name + '_' + label)
         for label in added:
-            self.task_database_entries.append(label)
-#            self.write_in_database(label, None)
+            self.task_database_entries[label] = 0.0
 
     def _list_database_entries(self):
         """

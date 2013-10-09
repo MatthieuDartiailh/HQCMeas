@@ -5,7 +5,7 @@ from traits.api import (Float, Bool, Any, Str)
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor,
                           LineCompleterEditor)
 
-import time
+import time, logging
 from inspect import cleandoc
 from textwrap import fill
 
@@ -28,8 +28,7 @@ class SetDCVoltageTask(InstrumentTask):
     driver_list = ['YokogawaGS200', 'Yokogawa7651']
     loopable =  True
 
-    task_database_entries = ['voltage']
-    task_database_entries_default = [1]
+    task_database_entries = {'voltage' : 1.0}
 
     loop_view = View(
                     Group(
@@ -63,15 +62,15 @@ class SetDCVoltageTask(InstrumentTask):
         if not self.driver:
             self.start_driver()
 
-#        if self.driver.owner != self.task_name:
-#            self.driver.owner = self.task_name
-#            if not self.driver.function == 'VOLT':
-#                log = logging.getLogger()
-#                log.fatal(cleandoc('''Instrument assigned to {} is not
-#                            configured to output a voltage'''.format(
-#                                                        self.task_name)))
-#                self.root_task.task_stop.set()
-#                return
+        if self.driver.owner != self.task_name:
+            self.driver.owner = self.task_name
+            if not self.driver.function == 'VOLT':
+                log = logging.getLogger()
+                log.fatal(cleandoc('''Instrument assigned to {} is not
+                            configured to output a voltage'''.format(
+                                                        self.task_name)))
+                self.root_task.task_stop.set()
+                return
 
         if target_value is not None:
             value = target_value
@@ -113,7 +112,7 @@ class SetDCVoltageTask(InstrumentTask):
     def check(self, *args, **kwargs):
         """
         """
-        test, traceback = super(SetDcVoltageTask, self).check(*args,
+        test, traceback = super(SetDCVoltageTask, self).check(*args,
                                                                     **kwargs)
         val = None
         if self.target_value:

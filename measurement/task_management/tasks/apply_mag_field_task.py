@@ -29,8 +29,7 @@ class ApplyMagFieldTask(InstrumentTask):
     rate = Float(preference = True)
     auto_stop_heater = Bool(True, preference = True)
 
-    task_database_entries = ['Bfield']
-    task_database_entries_default = [0.01]
+    task_database_entries = {'Bfield' : 0.01}
     driver_list = ['IPS12010']
 
     loop_view = View(

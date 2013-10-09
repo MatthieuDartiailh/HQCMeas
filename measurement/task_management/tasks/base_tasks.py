@@ -4,7 +4,8 @@
 
 from traits.api\
     import (HasTraits, Str, Int, Instance, List, Bool, Type,
-            on_trait_change, Unicode, Directory, BaseStr, BaseUnicode)
+            on_trait_change, Unicode, Directory, BaseStr, BaseUnicode, Dict,
+            Any)
 from traits.api import self as trait_self
 from traitsui.api\
      import (View, ListInstanceEditor, VGroup, HGroup, UItem,
@@ -28,7 +29,7 @@ class AbstractTask(HasTraits):
     task_depth = Int
     task_preferences = Instance(Section)
     task_database = Instance(TaskDatabase)
-    task_database_entries = List(Str)
+    task_database_entries = Dict(Str, Any)
     task_path = Str
 
     #root_task = Instance(RootTask)
@@ -119,7 +120,7 @@ class AbstractTask(HasTraits):
             for entry in removed:
                 self.remove_from_database(self.task_name + '_' + entry)
             for entry in added:
-                self.write_in_database(entry, None)
+                self.write_in_database(entry, self.task_database_entries[entry])
 
 
 class SimpleTask(AbstractTask):
@@ -156,7 +157,8 @@ class SimpleTask(AbstractTask):
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 self.task_database.set_value(self.task_path,
-                                             self.task_name + '_' + entry, None)
+                                             self.task_name + '_' + entry,
+                                             self.task_database_entries[entry])
 
     def unregister_from_database(self):
         """
@@ -283,7 +285,8 @@ class ComplexTask(AbstractTask):
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 self.task_database.set_value(self.task_path,
-                                             self.task_name + '_' + entry, None)
+                                             self.task_name + '_' + entry,
+                                             self.task_database_entries[entry])
 
         self.task_database.create_node(self.task_path, self.task_name)
 

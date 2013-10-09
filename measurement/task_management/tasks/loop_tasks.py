@@ -22,7 +22,7 @@ class BaseLoopTask(ComplexTask):
     task_step = Str('0.1', preference = True)
     timing = Bool(preference = True)
 
-    task_database_entries = ['point_number']
+    task_database_entries = {'point_number' : 11}
 
     def check(self, *args, **kwargs):
         """
@@ -74,16 +74,15 @@ class BaseLoopTask(ComplexTask):
         """
         if new:
             self.process = self.process_with_timing
-            self.task_database_entries = self.task_database_entries + \
-                                                            ['elapsed_time']
+            self.task_database_entries['elapsed_time'] = 1.0
         else:
             self.process = self.process_no_timing
-            self.task_database_entries.remove('elapsed_time')
+            self.task_database_entries.pop('elapsed_time')
 
 class SimpleLoopTask(BaseLoopTask):
     """Complex task which, at each iteration, call all its child tasks.
     """
-    task_database_entries = ['point_number', 'index']
+    task_database_entries = {'point_number' : 11, 'index' : 0}
 
     @make_stoppable
     def process_no_timing(self):
@@ -128,13 +127,7 @@ class SimpleLoopTask(BaseLoopTask):
 
     def _define_task_view(self):
         """
-     start = format_and_eval_string(self.task_start, self.task_path,
-                                         self.task_database)
-        stop = format_and_eval_string(self.task_stop, self.task_path,
-                                         self.task_database)
-        step = format_and_eval_string(self.task_step, self.task_path,
-                                         self.task_database)
-        num = int(abs(((stop - start)/step))) + 1   """
+        """
         line_completer = LineCompleterEditor(
                              entries_updater = self._list_database_entries)
 
@@ -170,7 +163,6 @@ class LoopTask(BaseLoopTask):
     value and then call all its child tasks.
     """
     task = Instance(SimpleTask, child = True)
-    task_database_entries = ['point_number']
 
     @make_stoppable
     def process_no_timing(self):

@@ -16,7 +16,7 @@ class PrintTask(SimpleTask):
     """
 
     loopable = True
-    task_database_entries = ['message']
+    task_database_entries = {'message' : ''}
     message = Str('', preference = True)
 
     def __init__(self, *args, **kwargs):

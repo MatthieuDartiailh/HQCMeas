@@ -16,8 +16,7 @@ class MeasDCVoltageTask(InstrumentTask):
 
     driver_list = ['Agilent34410A', 'Keithley2000']
 
-    task_database_entries = ['voltage']
-    task_database_entries_default = [1]
+    task_database_entries = {'voltage' : 1.0}
 
     task_view = View(
                     VGroup(
