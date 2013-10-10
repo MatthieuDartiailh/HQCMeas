@@ -34,7 +34,7 @@ class AnritsuMG3694(VisaInstrument):
         self.write("IL1") #'Selects internal leveling of output power
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def frequency(self):
         """
         """
@@ -50,14 +50,14 @@ class AnritsuMG3694(VisaInstrument):
             raise InstrIOError(''' ''')
 
     @frequency.setter
-    @secure_communication
+    @secure_communication()
     def frequency(self, value):
         """
         """
         self.write("CF0 {} {}".format(value, self.frequency_unit))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def power(self):
         """
         """

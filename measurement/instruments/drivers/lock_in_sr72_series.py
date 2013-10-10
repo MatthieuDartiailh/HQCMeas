@@ -49,7 +49,7 @@ class LockInSR7265(VisaInstrument):
 
     """
 
-    @secure_communication
+    @secure_communication()
     def read_x(self):
         """
         Return the x quadrature measured by the instrument
@@ -65,7 +65,7 @@ class LockInSR7265(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_y(self):
         """
         Return the y quadrature measured by the instrument
@@ -81,7 +81,7 @@ class LockInSR7265(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_xy(self):
         """
         Return the x and y quadratures measured by the instrument
@@ -97,7 +97,7 @@ class LockInSR7265(VisaInstrument):
         else:
             return values
 
-    @secure_communication
+    @secure_communication()
     def read_amplitude(self):
         """
         Return the amplitude of the signal measured by the instrument
@@ -113,7 +113,7 @@ class LockInSR7265(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_phase(self):
         """
         Return the phase of the signal measured by the instrument
@@ -129,7 +129,7 @@ class LockInSR7265(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_amp_and_phase(self):
         """
         Return the amplitude and phase of the signal measured by the instrument
@@ -145,7 +145,7 @@ class LockInSR7265(VisaInstrument):
         else:
             return values
 
-    @secure_communication
+    @secure_communication()
     def _check_status(self):
         """
         Read the value of the status byte to determine if the last command
@@ -200,7 +200,7 @@ class LockInSR7270(LockInSR7265):
         super(LockInSR7270, self).__init__(*args, **kwargs)
         self.term_chars = '\0'
 
-    @secure_communication
+    @secure_communication()
     def _check_status(self):
         """
         Read the value of the status byte to determine if the last command

@@ -9,6 +9,7 @@ from traitsui.api\
 
 from numpy import linspace
 from timeit import default_timer
+import copy
 
 from .tools.task_decorator import make_stoppable
 from .tools.database_string_formatter import format_and_eval_string
@@ -22,8 +23,6 @@ class BaseLoopTask(ComplexTask):
     task_step = Str('0.1', preference = True)
     timing = Bool(preference = True)
 
-    task_database_entries = {'point_number' : 11}
-
     def check(self, *args, **kwargs):
         """
         """
@@ -34,29 +33,29 @@ class BaseLoopTask(ComplexTask):
                                          self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' + self.task_name] = \
+            traceback[self.task_path + '/' + self.task_name + '-start'] = \
                 'Loop task did not success to compute  the start value'
         try:
             stop = format_and_eval_string(self.task_stop, self.task_path,
                                          self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' + self.task_name] = \
+            traceback[self.task_path + '/' + self.task_name + '-stop'] = \
                 'Loop task did not success to compute  the stop value'
         try:
             step = format_and_eval_string(self.task_step, self.task_path,
                                          self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Loop task did not success to compute  the step value'
+            traceback[self.task_path + '/' + self.task_name + '-step'] = \
+                'Loop task did not success to compute the step value'
         try:
             num = int(abs((stop - start)/step))+ 1
             self.write_in_database('point_number', num)
         except:
             test = False
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Loop task did not success to compute point number'
+            traceback[self.task_path + '/' + self.task_name + '-points'] = \
+                'Loop task did not success to compute the point number'
 
         if self.timing:
             self.process = self.process_with_timing
@@ -74,10 +73,15 @@ class BaseLoopTask(ComplexTask):
         """
         if new:
             self.process = self.process_with_timing
-            self.task_database_entries['elapsed_time'] = 1.0
+            aux = copy.deepcopy(self.task_database_entries)
+            aux['elapsed_time'] = 1.0
+            self.task_database_entries = aux
         else:
             self.process = self.process_no_timing
-            self.task_database_entries.pop('elapsed_time')
+            aux = copy.deepcopy(self.task_database_entries)
+            aux.pop('elapsed_time')
+            self.task_database_entries = aux
+
 
 class SimpleLoopTask(BaseLoopTask):
     """Complex task which, at each iteration, call all its child tasks.
@@ -114,6 +118,7 @@ class SimpleLoopTask(BaseLoopTask):
         num = int(abs(((stop - start)/step))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
+            self.write_in_database('index', value)
             tic = default_timer()
             for child in self.children_task:
                 child.process()
@@ -163,6 +168,7 @@ class LoopTask(BaseLoopTask):
     value and then call all its child tasks.
     """
     task = Instance(SimpleTask, child = True)
+    task_database_entries = {'point_number' : 11}
 
     @make_stoppable
     def process_no_timing(self):

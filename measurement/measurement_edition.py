@@ -118,7 +118,7 @@ class MeasurementTreeView(HasTraits):
                                                     add_before_action,
                                                     add_after_action,
                                                     Separator(),
-                                                    save_action,
+#                                                    save_action,
                                                     DeleteAction,
                                                     Separator(),
                                                     RenameAction,
@@ -166,6 +166,7 @@ class MeasurementEditorHandler(Handler):
         """
         if info.initialized:
             dlg = QtGui.QFileDialog(info.ui.control)
+            dlg.setAcceptMode(QtGui.QFileDialog.AcceptSave)
             dlg.setNameFilter('*.ini')
             dlg.setDefaultSuffix('ini')
             if dlg.exec_() == QtGui.QDialog.Accepted:

@@ -116,7 +116,7 @@ class AgilentPNAChannel(BaseInstrument):
             raise InstrIOError(cleandoc('''Agilent PNA did not return the
                 channel {} formatted data for meas {}'''.format(
                 self._channel, meas_name)))
-                
+
     def read_and_format_raw_data(self, meas_format, meas_name = ''):
         """
         """
@@ -150,7 +150,7 @@ class AgilentPNAChannel(BaseInstrument):
                                         self._channel))
         if meas_name not in measures:
             param = meas_name.split(':')[1]
-            
+
             self._pna.write(
                 "CALCulate{}:PARameter:DEFine:EXTended '{}','{}'".format(
                                         self._channel, meas_name, param))
@@ -159,7 +159,7 @@ class AgilentPNAChannel(BaseInstrument):
                                             self._channel))
             if meas:
                 if meas_name not in meas:
-                    raise InstrIOError(cleandoc('''The Pna did not create the 
+                    raise InstrIOError(cleandoc('''The Pna did not create the
                     meas {} for channel {}'''.format(meas_name, self._channel)))
 
     @secure_communication
@@ -569,10 +569,10 @@ class AgilentPNA(VisaInstrument):
             for trace in traces[1:-1].split(','):
                 self.write('DISPlay:WINDow{}:TRACe{}:DELete'.format(window_num,
                                 int(trace)))
-                                
+
             traces = self.ask('DISPlay:WINDow{}:CATalog?'.format(window_num))
             if 'EMPTY' not in traces:
-                raise InstrIOError(cleandoc('''Agilent PNA did not clear all 
+                raise InstrIOError(cleandoc('''Agilent PNA did not clear all
                     traces from window {}'''.format(window_num)))
 
     @secure_communication
@@ -615,7 +615,7 @@ class AgilentPNA(VisaInstrument):
         """
         channels = self.ask('SYSTem:CHANnels:CATalog?')
         if channels:
-            defined_channels = [int(channel) 
+            defined_channels = [int(channel)
                         for channel in channels[1:-1].split(',')]
             return defined_channels
         else:

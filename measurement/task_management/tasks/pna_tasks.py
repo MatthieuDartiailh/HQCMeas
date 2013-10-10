@@ -63,7 +63,9 @@ class PNATasks(InstrumentTask):
         channels_present = True
         for channel in self.channels:
             if channel not in instr.defined_channels:
-                traceback[self.task_path + '/' +self.task_name] = cleandoc(
+                string = self.task_path + '/' + self.task_name + '_' + \
+                                                                str(channel)
+                traceback[string] = cleandoc(
                 '''Channel {} is not defined in the PNA {}, please define it
                 yourself and try again.'''.format(channel,
                                                   self.selected_profile))
@@ -119,7 +121,7 @@ class PNASetFreqTask(PNATasks):
                                          self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' +self.task_name + '-freq'] = \
                 'Failed to eval the power formula {}'.format(
                                                         self.power)
         return test, traceback
@@ -200,7 +202,7 @@ class PNASetPowerTask(PNATasks):
                                          self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' +self.task_name + '-power'] = \
                 'Failed to eval the power formula {}'.format(
                                                         self.power)
         return test, traceback
@@ -292,7 +294,7 @@ class PNASinglePointMeasureTask(PNATasks):
                     )
 
     @make_stoppable
-    @make_wait
+    @make_wait()
     @smooth_instr_crash
     def process(self):
         """
@@ -384,7 +386,7 @@ class PNASweepTask(PNATasks):
         self._define_task_view()
 
     @make_stoppable
-    @make_wait
+    @make_wait()
     @smooth_instr_crash
     def process(self):
         """
@@ -449,7 +451,7 @@ class PNASweepTask(PNATasks):
                                          self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' + self.task_name + '-start'] = \
                 'Failed to eval the start formula {}'.format(
                                                         self.start)
         try:
@@ -457,7 +459,7 @@ class PNASweepTask(PNATasks):
                                              self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' +self.task_name + '-stop'] = \
                 'Failed to eval the stop formula {}'.format(
                                                         self.stop)
         try:
@@ -465,9 +467,16 @@ class PNASweepTask(PNATasks):
                                          self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' +self.task_name + '-step'] = \
                 'Failed to eval the points formula {}'.format(
                                                         self.points)
+
+        data = [np.array([0.0,1.0])] + \
+                    [np.array([0.0,1.0]) for meas in self.measures]
+        names = [self.sweep_type] + self.measures
+        final_arr = np.rec.fromarrays(data, names = names)
+
+        self.write_in_database('sweep_data', final_arr)
         return test, traceback
 
     @on_trait_change('channel')

@@ -22,34 +22,36 @@ def make_stoppable(function_to_decorate):
 
     return decorator
 
-def make_parallel(method, switch = None):
+def make_parallel(switch = None):
     """This decorator should be used when there is no need to wait for the
     process method to return to start the next task,ie the process method
     decorated don't use any data succeptible to be corrupted by the next task.
     """
     def decorator(method):
         if switch:
-            def wrapper(self, *args, **kwargs):
+            def wrapper(*args, **kwargs):
 
-                if getattr(self, switch):
+                obj = args[0]
+                if getattr(obj, switch):
                     thread = Thread(group = None,
                                     target = method,
                                     args = args,
                                     kwargs = kwargs)
-                    threads = self.task_database.get_value('root', 'threads')
+                    threads = obj.task_database.get_value('root', 'threads')
                     threads.append(thread)
 
                     return thread.start()
                 else:
                     return method(*args, **kwargs)
         else:
-            def wrapper(self, *args, **kwargs):
+            def wrapper(*args, **kwargs):
 
+                obj = args[0]
                 thread = Thread(group = None,
                                 target = method,
                                 args = args,
                                 kwargs = kwargs)
-                threads = self.task_database.get_value('root', 'threads')
+                threads = obj.task_database.get_value('root', 'threads')
                 threads.append(thread)
 
                 return thread.start()
@@ -58,31 +60,28 @@ def make_parallel(method, switch = None):
         wrapper.__doc__ = method.__doc__
         return wrapper
 
-    if method:
-        # This was an actual decorator call, ex: @secure_communication
-        return decorator(method)
-    else:
-        # This is a factory call, ex: @secure_communication()
-        return decorator
+    return decorator
 
-def make_wait(method, switch = None):
+def make_wait(switch = None):
     """This decorator should be used when the process method need to access
     data in the database or need to be sure that physical quantities reached
     their expected values.
     """
     def decorator(method):
         if switch:
-            def wrapper(self, *args, **kwargs):
+            def wrapper(*args, **kwargs):
 
-                if getattr(self, switch):
-                    threads = self.task_database.get_value('root', 'threads')
+                obj = args[0]
+                if getattr(obj, switch):
+                    threads = obj.task_database.get_value('root', 'threads')
                     for thread in threads:
                         thread.join()
                 return method(*args, **kwargs)
         else:
-            def wrapper(self, *args, **kwargs):
+            def wrapper(*args, **kwargs):
 
-                threads = self.task_database.get_value('root', 'threads')
+                obj = args[0]
+                threads = obj.task_database.get_value('root', 'threads')
                 for thread in threads:
                     thread.join()
                 return method(*args, **kwargs)
@@ -92,12 +91,7 @@ def make_wait(method, switch = None):
 
         return wrapper
 
-    if method:
-        # This was an actual decorator call, ex: @secure_communication
-        return decorator(method)
-    else:
-        # This is a factory call, ex: @secure_communication()
-        return decorator
+    return decorator
 
 def smooth_instr_crash(function_to_decorate):
     """This decorator should be used on any instr task. It handles possible

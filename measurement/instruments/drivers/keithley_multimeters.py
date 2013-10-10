@@ -54,7 +54,7 @@ class Keithley2000(VisaInstrument):
     caching_permissions = {'function' : True}
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def function(self):
         """Function setter
         """
@@ -65,7 +65,7 @@ class Keithley2000(VisaInstrument):
             raise InstrIOError('Keithley2000 : Failed to return function')
 
     @function.setter
-    @secure_communication
+    @secure_communication()
     def function(self, value):
         """Function setter
         """
@@ -74,7 +74,7 @@ class Keithley2000(VisaInstrument):
         if not(self.ask('FUNCtion?')[1:-1].lower() == value.lower()):
             raise InstrIOError('Keithley2000: Failed to set function')
 
-    @secure_communication
+    @secure_communication()
     def read_voltage_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the DC voltage read by the instrument.
 
@@ -93,7 +93,7 @@ class Keithley2000(VisaInstrument):
         else:
             raise InstrIOError('Keithley2000: DC voltage measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_voltage_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the AC voltage read by the instrument.
 
@@ -112,7 +112,7 @@ class Keithley2000(VisaInstrument):
         else:
             raise InstrIOError('Keithley2000: AC voltage measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_resistance(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """
         Return the resistance read by the instrument.
@@ -132,7 +132,7 @@ class Keithley2000(VisaInstrument):
         else:
             raise InstrIOError('Keithley2000: Resistance measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_current_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the DC current read by the instrument.
 
@@ -151,7 +151,7 @@ class Keithley2000(VisaInstrument):
         else:
             raise InstrIOError('Keithley2000: DC current measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_current_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the AC current read by the instrument.
 
@@ -170,7 +170,7 @@ class Keithley2000(VisaInstrument):
         else:
             raise InstrIOError('Keithley2000: AC current measure failed')
 
-    @secure_communication
+    @secure_communication()
     def check_connection(self):
         """Check wether or not a front panel user set the instrument in local.
         If a front panel user set the instrument in local the cache can be

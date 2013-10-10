@@ -94,7 +94,7 @@ class instrument_property(property):
         """
         self._allow_caching = author
 
-def secure_communication(method, max_iter = 10):
+def secure_communication(max_iter = 10):
     """Decorator making sure that a communication error cannot simply be
     resolved by attempting again to send a message.
 
@@ -126,12 +126,7 @@ def secure_communication(method, max_iter = 10):
         wrapper.__doc__ = method.__doc__
         return wrapper
 
-    if method:
-        # This was an actual decorator call, ex: @secure_communication
-        return decorator(method)
-    else:
-        # This is a factory call, ex: @secure_communication()
-        return decorator
+    return decorator
 
 class BaseInstrument(object):
     """Base class for all drivers

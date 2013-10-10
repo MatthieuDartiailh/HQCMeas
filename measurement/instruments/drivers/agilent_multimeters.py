@@ -44,7 +44,7 @@ class Agilent34410A(VisaInstrument):
     This driver has been written for the Agilent 34410A but might work for other
     models using the same SCPI commands.
     """
-    @secure_communication
+    @secure_communication()
     def read_voltage_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the DC voltage measured by the instrument
         """
@@ -56,7 +56,7 @@ class Agilent34410A(VisaInstrument):
         else:
             raise InstrIOError('DC voltage measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_voltage_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the AC voltage measured by the instrument
         """
@@ -68,7 +68,7 @@ class Agilent34410A(VisaInstrument):
         else:
             raise InstrIOError('AC voltage measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_resistance(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the resistance measured by the instrument
         """
@@ -80,7 +80,7 @@ class Agilent34410A(VisaInstrument):
         else:
             raise InstrIOError('Resistance measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_current_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the DC current measured by the instrument
         """
@@ -92,7 +92,7 @@ class Agilent34410A(VisaInstrument):
         else:
             raise InstrIOError('DC current measure failed')
 
-    @secure_communication
+    @secure_communication()
     def read_current_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
         """Return the AC current measured by the instrument
         """

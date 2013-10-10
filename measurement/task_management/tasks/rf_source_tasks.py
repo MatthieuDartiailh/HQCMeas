@@ -55,7 +55,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
         self._define_task_view()
 
     @make_stoppable
-    @make_parallel
+    @make_parallel()
     @smooth_instr_crash
     def process(self, frequency = None):
         """
@@ -83,7 +83,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
                                                self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' +self.task_name + '-freq'] = \
                 'Failed to eval the frequency formula {}'.format(self.frequency)
         self.write_in_database('unit', self.unit)
         self.write_in_database('frequency', freq)
@@ -163,11 +163,11 @@ class RFSourceSetPowerTask(InstrumentTask):
                      )
 
     def __init__(self, *args, **kwargs):
-        super(RFSourceSetFrequencyTask, self).__init__(*args, **kwargs)
+        super(RFSourceSetPowerTask, self).__init__(*args, **kwargs)
         self._define_task_view()
 
     @make_stoppable
-    @make_parallel
+    @make_parallel()
     @smooth_instr_crash
     def process(self, power = None):
         """
@@ -175,12 +175,13 @@ class RFSourceSetPowerTask(InstrumentTask):
         if not self.driver:
             self.start_driver()
             if self.auto_start:
-                self.driver.set_output_on_off('On')
+                self.driver.output = 'On'
 
         if not power:
-            power = self.power
+            power = format_and_eval_string(self.power, self.task_path,
+                                               self.task_database)
 
-        self.driver.fixed_power = power
+        self.driver.power = power
         self.write_in_database('power', power)
 
     def check(self, *args, **kwargs):
@@ -193,7 +194,7 @@ class RFSourceSetPowerTask(InstrumentTask):
                                                self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' +self.task_name + '-power'] = \
                 'Failed to eval the frequency power {}'.format(self.power)
 
         self.write_in_database('power', power)
@@ -267,7 +268,7 @@ class RFSourceSetOnOffTask(InstrumentTask):
                      )
 
     @make_stoppable
-    @make_parallel
+    @make_parallel()
     @smooth_instr_crash
     def process(self, switch = None):
         """

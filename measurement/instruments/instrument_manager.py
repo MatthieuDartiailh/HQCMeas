@@ -288,7 +288,7 @@ class InstrumentManagerHandler(Handler):
             path = os.path.abspath(info.object.instr_folder)
             fullpath = os.path.join(path, instr_file)
             os.remove(fullpath)
-        model.selected_instr = model.instrs_name[0]
+        model.selected_instr_name = model.instrs_name[0]
 
 class InstrumentManager(HasTraits):
     """
@@ -366,7 +366,7 @@ class InstrumentManager(HasTraits):
         self.watch = self.observer.schedule(self.event_handler,
                                             self.instr_folder)
         self.observer.start()
-
+        self._update_instr_list()
         if self.instrs_name:
             self.selected_instr_name = self.instrs_name[0]
 

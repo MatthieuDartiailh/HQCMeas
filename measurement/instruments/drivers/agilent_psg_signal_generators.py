@@ -52,7 +52,7 @@ class AgilentPSGSignalGenerator(VisaInstrument):
     frequency_unit = 'GHZ'
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def frequency(self):
         """Frequency getter method
         """
@@ -63,7 +63,7 @@ class AgilentPSGSignalGenerator(VisaInstrument):
             raise InstrIOError
 
     @frequency.setter
-    @secure_communication
+    @secure_communication()
     def frequency(self, value):
         """Frequency setter method
         """
@@ -81,7 +81,7 @@ class AgilentPSGSignalGenerator(VisaInstrument):
                 raise InstrIOError('Instrument did not set correctly the frequency')
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def power(self):
         """Power getter method
         """
@@ -92,17 +92,17 @@ class AgilentPSGSignalGenerator(VisaInstrument):
             raise InstrIOError
 
     @power.setter
-    @secure_communication
+    @secure_communication()
     def power(self, value):
         """Power setter method
         """
         self.write(':POWER {}DBM'.format(value))
         result = self.ask_for_values('POWER?')[0]
-        if abs(result > value) > 10**-12:
+        if abs(result - value) > 10**-12:
             raise InstrIOError('Instrument did not set correctly the power')
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def output(self):
         """Output getter method
         """
@@ -113,7 +113,7 @@ class AgilentPSGSignalGenerator(VisaInstrument):
             raise InstrIOError('PSG signal generator did not return its output')
 
     @output.setter
-    @secure_communication
+    @secure_communication()
     def output(self, value):
         """Output setter method
         """

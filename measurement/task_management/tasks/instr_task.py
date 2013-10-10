@@ -26,7 +26,13 @@ class InstrumentTask(SimpleTask):
         """
         """
         traceback = {}
-        profile = self.profile_dict[self.selected_profile]
+        if self.selected_profile:
+            profile = self.profile_dict[self.selected_profile]
+        else:
+            traceback[self.task_path + '/' +self.task_name] = cleandoc(
+                '''You must provide an instrument profile''')
+            return False, traceback
+
         full_path = os.path.join(PROFILES_DIRECTORY_PATH,
                                     profile)
         if not os.path.isfile(full_path):
@@ -66,7 +72,7 @@ class InstrumentTask(SimpleTask):
             driver_class = DRIVERS[self.selected_driver]
             config = ConfigObj(full_path)
             self.driver = driver_class(config)
-            instrs[self.selected_driver] = self.driver
+            instrs[self.selected_profile] = self.driver
             self.task_database.set_value('root', 'instrs', instrs)
 
     def stop_driver(self):

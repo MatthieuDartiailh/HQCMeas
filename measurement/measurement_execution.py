@@ -51,7 +51,7 @@ class TaskProcess(Process):
                     task = IniConfigTask().build_task_from_config(config)
                     print 'Task built'
 
-                    if monitored_entries:
+                    if monitored_entries is not None:
                         spy = MeasureSpy(self.monitor_queue, monitored_entries,
                                          task.task_database)
 
@@ -88,7 +88,7 @@ class TaskProcess(Process):
                                     for path, mes in check[1].iteritems())
                         logger.critical(message)
 
-                    if monitored_entries:
+                    if monitored_entries is not None:
                         spy.close()
                         del spy
 
@@ -138,14 +138,15 @@ class TaskCheckDisplay(HasTraits):
     name_to_path_dict = Dict(Str, Str)
     failed_check_list = List(Str)
 
-    seleted_check = Str
+    selected_check = Str
     full_path = Str
     message = Str
 
     view = View(
             HGroup(
                 UItem('failed_check_list',
-                      editor = ListStrEditor(selected = 'selected_check'),
+                      editor = ListStrEditor(selected = 'selected_check',
+                                             editable = False),
                     width = 300),
                 VGroup(
                     UItem('full_path', editor = TitleEditor(), width = 500),
@@ -172,10 +173,9 @@ class TaskCheckDisplay(HasTraits):
     def _update(self, new):
         """
         """
+        print 'tot'
         self.full_path = self.name_to_path_dict[new]
         self.message = self.check_dict_result[self.full_path]
-
-
 
 class TaskHolderHandler(Handler):
     """
@@ -346,6 +346,8 @@ class TaskExecutionControl(HasTraits):
                     res = task_holder.monitor.define_monitored_entries(
                                         task_holder.root_task.task_database)
                     task_holder.use_monitor = res
+                else:
+                    task_holder.use_monitor = False
                 self.task_holders.append(task_holder)
 
                 path = os.path.join(new_task.default_path, dialog.name + '.ini')

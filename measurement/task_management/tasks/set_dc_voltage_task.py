@@ -21,6 +21,7 @@ class SetDCVoltageTask(InstrumentTask):
     back_step = Float(preference = True)
     delay = Float(0.01, preference = True)
     check_value = Bool(False, preference = True)
+    use_parallel = Bool(True, preference = True)
 
     #Actually a Float but I don't want it to get initialised at 0
     last_value = Any
@@ -34,6 +35,7 @@ class SetDCVoltageTask(InstrumentTask):
                     Group(
                         Label('Driver'), Label('Instr'), Label('Back step (V)'),
                         Label('Delay (s)'), Label('Check voltage'),
+                        Label('Parallelize'),
                         UItem('selected_driver',
                                 editor = EnumEditor(name = 'driver_list'),
                                 width = 100),
@@ -45,7 +47,8 @@ class SetDCVoltageTask(InstrumentTask):
                         '''Should the program ask the instrument the value of
                         the applied voltage each time it is about to set
                         it'''), 80)),
-                        columns = 5,
+                        UItem('use_parallel'),
+                        columns = 6,
                         ),
                      )
 
@@ -54,7 +57,7 @@ class SetDCVoltageTask(InstrumentTask):
         self._define_task_view()
 
     @make_stoppable
-    @make_parallel
+    @make_parallel('use_parallel')
     @smooth_instr_crash
     def process(self, target_value = None):
         """
@@ -64,9 +67,9 @@ class SetDCVoltageTask(InstrumentTask):
 
         if self.driver.owner != self.task_name:
             self.driver.owner = self.task_name
-            if not self.driver.function == 'VOLT':
+            if self.driver.function != 'VOLT':
                 log = logging.getLogger()
-                log.fatal(cleandoc('''Instrument assigned to {} is not
+                log.fatal(cleandoc('''Instrument assigned to task {} is not
                             configured to output a voltage'''.format(
                                                         self.task_name)))
                 self.root_task.task_stop.set()
@@ -90,6 +93,7 @@ class SetDCVoltageTask(InstrumentTask):
             return
         elif self.back_step == 0:
             self.driver.voltage = value
+            return
         else:
             if (value - last_value)/self.back_step > 0:
                 step = self.back_step
@@ -121,7 +125,7 @@ class SetDCVoltageTask(InstrumentTask):
                                                    self.task_database)
             except:
                 test = False
-                traceback[self.task_path + '/' +self.task_name] = \
+                traceback[self.task_path + '/' +self.task_name + '-volt'] = \
                     'Failed to eval the target value formula {}'.format(
                                                             self.target_value)
         self.write_in_database('voltage', val)
@@ -145,6 +149,7 @@ class SetDCVoltageTask(InstrumentTask):
                             Label('Driver'), Label('Instr'),
                             Label('Target (V)'), Label('Back step'),
                             Label('Delay (s)'),Label('Check voltage'),
+                            Label('Parallelize'),
                             UItem('selected_driver',
                                 editor = EnumEditor(name = 'driver_list'),
                                 width = 100),
@@ -158,7 +163,8 @@ class SetDCVoltageTask(InstrumentTask):
                             '''Should the program ask the instrument the value
                             of the applied voltage each time it is about to set
                             it'''), 80)),
-                            columns = 6,
+                            UItem('use_parallel'),
+                            columns = 7,
                             show_border = True,
                             ),
                         ),

@@ -60,7 +60,7 @@ class ApplyMagFieldTask(InstrumentTask):
         self._define_task_view()
 
     @make_stoppable
-    @make_parallel
+    @make_parallel()
     @smooth_instr_crash
     def process(self, target_value = None):
         """
@@ -90,7 +90,7 @@ class ApplyMagFieldTask(InstrumentTask):
                                                self.task_database)
         except:
             test = False
-            traceback[self.task_path + '/' +self.task_name] = \
+            traceback[self.task_path + '/' + self.task_name + '-field'] = \
                 'Failed to eval the target field formula {}'.format(
                                                             self.target_value)
         self.write_in_database('Bfield', val)

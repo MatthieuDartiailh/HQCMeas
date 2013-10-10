@@ -48,7 +48,7 @@ class LockInMeasureTask(InstrumentTask):
                      )
 
     @make_stoppable
-    @make_wait
+    @make_wait()
     @smooth_instr_crash
     def process(self):
         """

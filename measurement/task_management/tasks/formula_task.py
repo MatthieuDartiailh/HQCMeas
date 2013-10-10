@@ -3,15 +3,10 @@
 """
 from traits.api import (Str, List, Instance, HasTraits, Bool)
 from traitsui.api import (View, UItem, VGroup, LineCompleterEditor, TableEditor,
-                        ObjectColumn, TextEditor)
-
-from math import (cos, sin, tan, acos, asin, atan,
-                exp, log, cosh, sinh, tanh)
-from math import pi as Pi
+                        ObjectColumn)
 
 from .base_tasks import SimpleTask
-from .tools.database_string_formatter import (get_formatted_string,
-                                              format_and_eval_string)
+from .tools.database_string_formatter import (format_and_eval_string)
 from .tools.task_decorator import make_stoppable, make_wait
 
 class FormulaObject(HasTraits):
@@ -31,11 +26,11 @@ class FormulaTask(SimpleTask):
     def __init__(self, *args, **kwargs):
         super(FormulaTask, self).__init__(*args, **kwargs)
         self._define_task_view()
-        self.on_trait_change(name = 'objects:[label, formula]',
+        self.on_trait_change(name = 'objects.[label, formula]',
                             handler = self._objects_modified)
 
     @make_stoppable
-    @make_wait
+    @make_wait()
     def process(self):
         """
         """
@@ -49,32 +44,24 @@ class FormulaTask(SimpleTask):
         """
         """
         traceback = {}
+        test = True
         for i, formula in enumerate(self.formulas):
             try:
-                for_str = get_formatted_string(formula,
-                                           self.task_path,
-                                           self.task_database)
+                val = format_and_eval_string(formula, self.task_path,
+                                     self.task_database)
+                self.write_in_database(self.labels[i], val)
             except:
-                traceback[self.task_path + '/' +self.task_name + str(i)] =\
-                    "Failed to format the formula {}".format(
-                                            self.labels[i])
-                return False, traceback
-            try:
-                self.write_in_database(self.labels[i], eval(for_str))
-            except:
-                traceback[self.task_path + '/' +self.task_name + str(-i)] =\
+                test = False
+                traceback[self.task_path + '/' +self.task_name + str(-(i+1))] =\
                     "Failed to eval the formula {}".format(
                                             self.labels[i])
-                return False, traceback
-        return True, traceback
+        return test, traceback
 
     def register_in_database(self):
         """
         """
         if not self.database_ready:
             self.database_ready = True
-            self.on_trait_change(name = 'labels[]',
-                            handler = self._labels_modified)
         self.task_database_entries = {lab : 0.0 for lab in self.labels}
         super(FormulaTask, self).register_in_database()
 
@@ -82,13 +69,13 @@ class FormulaTask(SimpleTask):
         """
         """
         super(FormulaTask, self). update_traits_from_preferences(**preferences)
-        self.on_trait_change(name = 'objects:[label, formula]',
+        self.on_trait_change(name = 'objects.[label, formula]',
                             handler = self._objects_modified,
                             remove = True)
         self.objects = [FormulaObject(label = self.labels[i],
                                       formula = self.formulas[i])
                         for i in xrange(len(self.labels))]
-        self.on_trait_change(name = 'objects:[label, formula]',
+        self.on_trait_change(name = 'objects.[label, formula]',
                             handler = self._objects_modified)
 
     #@on_trait_change('objects:[label, formula]')
@@ -97,17 +84,8 @@ class FormulaTask(SimpleTask):
         """
         self.labels = [obj.label for obj in self.objects]
         self.formulas = [obj.formula for obj in self.objects]
-
-    #@on_trait_change('labels[]')
-    def _labels_modified(self, obj, name, old, new):
-        """
-        """
-        added = set(new) - set(old)
-        removed = set(old) - set(new)
-        for label in removed:
-            self.task_database_entries.remove(label)
-        for label in added:
-            self.task_database_entries[label] = 0.0
+        self.task_database_entries = {obj.label : obj.formula
+                                            for obj in self.objects}
 
     def _list_database_entries(self):
         """
@@ -119,7 +97,6 @@ class FormulaTask(SimpleTask):
                     name = 'label',
                     label = 'Label',
                     horizontal_alignment = 'center',
-                    editor = TextEditor(auto_set = False, enter_set = True),
                     width = 0.3,
                     auto_editable = True,
                     )

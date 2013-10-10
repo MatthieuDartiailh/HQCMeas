@@ -116,7 +116,7 @@ class IPS12010(VisaInstrument):
         heat = int(status[8])
         return _GET_HEATER_DICT[heat]
 
-    @secure_communication
+    @secure_communication()
     def set_mode(self, mode):
         """
         """
@@ -134,7 +134,7 @@ class IPS12010(VisaInstrument):
             raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
                 set_mode method'''.format(mode)))
 
-    @secure_communication
+    @secure_communication()
     def set_communications_protocol(self, use_line_feed, extended_resolution):
         """
         """
@@ -149,7 +149,7 @@ class IPS12010(VisaInstrument):
             else:
                 self.write('Q0')
 
-    @secure_communication
+    @secure_communication()
     def read_parameter(self, parameter):
         """
         """
@@ -183,7 +183,7 @@ class IPS12010(VisaInstrument):
             raise ValueError(cleandoc('''The switch is in fault or absent'''))
 
     @heater_state.setter
-    @secure_communication
+    @secure_communication()
     def heater_state(self, state):
         """
         """
@@ -214,7 +214,7 @@ class IPS12010(VisaInstrument):
             return 'Auto-Run-Down'
 
     @control.setter
-    @secure_communication
+    @secure_communication()
     def control(self, control):
         """
         """
@@ -237,7 +237,7 @@ class IPS12010(VisaInstrument):
         return [k for k, v in _ACTIVITY_DICT.iteritems() if v == act][0]
 
     @activity.setter
-    @secure_communication
+    @secure_communication()
     def activity(self, value):
         """
         """
@@ -270,7 +270,7 @@ class IPS12010(VisaInstrument):
         return float(self.read_parameter('Target current'))
 
     @target_current.setter
-    @secure_communication
+    @secure_communication()
     def target_current(self, target):
         """
         """
@@ -286,7 +286,7 @@ class IPS12010(VisaInstrument):
         return float(self.read_parameter('Current sweep rate'))
 
     @current_sweep_rate.setter
-    @secure_communication
+    @secure_communication()
     def current_sweep_rate(self, rate):
         """
         """
@@ -303,7 +303,7 @@ class IPS12010(VisaInstrument):
         return float(self.read_parameter('Target field'))
 
     @target_field.setter
-    @secure_communication
+    @secure_communication()
     def target_field(self, target):
         """
         """
@@ -319,7 +319,7 @@ class IPS12010(VisaInstrument):
         return float(self.read_parameter('Current sweep rate'))
 
     @field_sweep_rate.setter
-    @secure_communication
+    @secure_communication()
     def field_sweep_rate(self, rate):
         """
         """
@@ -329,7 +329,7 @@ class IPS12010(VisaInstrument):
             raise InstrIOError(cleandoc('''IPS120-10 did not set the
                     rate field to {}'''.format(rate)))
 
-    @secure_communication
+    @secure_communication()
     def _get_status(self):
         """
         """

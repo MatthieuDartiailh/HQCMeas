@@ -54,7 +54,7 @@ class LockInSR830(VisaInstrument):
         else:
             raise InstrIOError('In invalib bus was specified')
 
-    @secure_communication
+    @secure_communication()
     def read_x(self):
         """
         Return the x quadrature measured by the instrument
@@ -69,7 +69,7 @@ class LockInSR830(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_y(self):
         """
         Return the y quadrature measured by the instrument
@@ -84,7 +84,7 @@ class LockInSR830(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_xy(self):
         """
         Return the x and y quadratures measured by the instrument
@@ -99,7 +99,7 @@ class LockInSR830(VisaInstrument):
         else:
             return values
 
-    @secure_communication
+    @secure_communication()
     def read_amplitude(self):
         """
         Return the amplitude of the signal measured by the instrument
@@ -114,7 +114,7 @@ class LockInSR830(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_phase(self):
         """
         Return the phase of the signal measured by the instrument
@@ -129,7 +129,7 @@ class LockInSR830(VisaInstrument):
         else:
             return value[0]
 
-    @secure_communication
+    @secure_communication()
     def read_amp_and_phase(self):
         """
         Return the amplitude and phase of the signal measured by the instrument

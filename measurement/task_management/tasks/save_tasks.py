@@ -5,7 +5,7 @@
 from traits.api import (Instance, Array, List, Str, Enum, Any, HasTraits,
                         Button, Bool, Int, on_trait_change)
 from traitsui.api import (View, HGroup, VGroup, UItem, ObjectColumn, Handler,
-                          TableEditor, Label, LineCompleterEditor)
+                          TableEditor, Label, LineCompleterEditor, Group)
 from pyface.qt import QtGui
 
 import os, numpy
@@ -31,7 +31,7 @@ class HeaderHandler(Handler):
         """
         model = info.object
         database = model.task_database
-        entries = database.list_accesible_entries(self.task_path)
+        entries = database.list_accessible_entries(model.task_path)
         if 'default_header' in entries:
             model.header = model.get_from_database('default_header')
         else:
@@ -97,7 +97,7 @@ class SaveTask(SimpleTask):
                              handler = self._saved_objects_modified)
 
     @make_stoppable
-    @make_wait
+    @make_wait()
     def process(self):
         """
         """
@@ -119,8 +119,9 @@ class SaveTask(SimpleTask):
                     return
 
                 self.write_in_database('file', self.file_object)
-                for line in self.header.split('\n'):
-                    self.file_object.write('# ' + line + '\n')
+                if self.header:
+                    for line in self.header.split('\n'):
+                        self.file_object.write('# ' + line + '\n')
                 self.file_object.write('\t'.join(self.saved_labels) + '\n')
                 self.file_object.flush()
 
@@ -128,10 +129,10 @@ class SaveTask(SimpleTask):
                 self.array_length = format_and_eval_string(self.array_size,
                                                            self.task_path,
                                                            self.task_database)
-                array_type = numpy.dtype([(name, 'f8')
+                print [(name, 'f8') for name in self.saved_labels]
+                array_type = numpy.dtype([(str(name), 'f8')
                                             for name in self.saved_labels])
-                self.array = numpy.empty((self.array_length,
-                                          len(self.saved_labels)),
+                self.array = numpy.empty((self.array_length),
                                          dtype = array_type)
                 self.write_in_database('array', self.array)
             self.initialized = True
@@ -152,6 +153,7 @@ class SaveTask(SimpleTask):
 
         #Closing
         if self.line_index == self.array_length:
+            self.write_in_database('array', self.array)
             self.file_object.close()
             self.initialized = False
 
@@ -205,6 +207,13 @@ class SaveTask(SimpleTask):
                 traceback[self.task_path + '/' +self.task_name + str(i)] = \
                     'Failed to evaluate entry : {}'.format(self.saved_labels[i])
                 test = False
+
+        if self.saving_target != 'File':
+            data = [numpy.array([0.0,1.0]) for lab in self.saved_labels]
+            names = str(','.join(self.saved_labels))
+            final_arr = numpy.rec.fromarrays(data, names = names)
+
+        self.write_in_database('array', final_arr)
 
         return test, traceback
 
@@ -338,8 +347,8 @@ class SaveArrayTask(SimpleTask):
     def_header = Button('Default header')
     fill_header = Button('Edit')
 
-    target_array = Str
-    mode = Enum('Text file', 'Binary file')
+    target_array = Str(preference = True)
+    mode = Enum('Text file', 'Binary file', preference = True)
 
     #task_view = View()
     header_view = View(
@@ -353,7 +362,7 @@ class SaveArrayTask(SimpleTask):
         self._define_task_view()
 
     @make_stoppable
-    @make_wait
+    @make_wait()
     def process(self):
         """
         """
@@ -375,11 +384,14 @@ class SaveArrayTask(SimpleTask):
                 self.root_task.should_stop.set()
                 return
 
-            for line in self.header.split('\n'):
-                self.file_object.write('# ' + line + '\n')
-
-            self.file_object.write('\t'.join(array_to_save.dtype.names) + '\n')
+            if self.header:
+                for line in self.header.split('\n'):
+                    self.file_object.write('# ' + line + '\n')
+            if array_to_save.dtype.names:
+                self.file_object.write('\t'.join(array_to_save.dtype.names) + \
+                                        '\n')
             numpy.savetxt(self.file_object, array_to_save, delimiter = '\t')
+            self.file_object.close()
 
         else:
             try:
@@ -408,7 +420,7 @@ class SaveArrayTask(SimpleTask):
 
         if self.mode == 'Binary file':
             if len(self.filename) > 3:
-                if self.filename[-4] == '.':
+                if self.filename[-4] == '.' and self.filename[-3:] != 'npy':
                     self.filename = self.filename[:-4] + '.npy'
                     print cleandoc("""The extension of the file will be replaced
                         by '.npy' in task {}""".format(self.task_name))
@@ -429,6 +441,12 @@ class SaveArrayTask(SimpleTask):
         except:
             traceback[self.task_path + '/' +self.task_name] = \
                 'Failed to open the specified file'
+            return False, traceback
+
+        entries = self.task_database.list_accessible_entries(self.task_path)
+        if self.target_array[1:-1] not in entries:
+            traceback[self.task_path + '/' +self.task_name] = \
+                'Specified array is absent from the database'
             return False, traceback
 
         return True, traceback
@@ -458,7 +476,8 @@ class SaveArrayTask(SimpleTask):
                         ),
                     HGroup(
                         HGroup(
-                            UItem('filename', springy = True),
+                            UItem('filename', editor = line_completer,
+                                  springy = True),
                             label = 'Filename',
                             show_border = True,
                             ),
@@ -468,9 +487,11 @@ class SaveArrayTask(SimpleTask):
                             show_border = True,
                             ),
                             ),
-                    HGroup(
-                        Label('Array to save'),
+                    Group(
+                        Label('Mode'),Label('Array to save'),
+                        UItem('mode'),
                         UItem('target_array', editor = line_completer),
+                        columns = 2,
                         ),
                     show_border = True,
                     ),

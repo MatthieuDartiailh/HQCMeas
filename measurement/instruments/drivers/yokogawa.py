@@ -45,7 +45,7 @@ class YokogawaGS200(VisaInstrument):
     """
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def voltage(self):
         """Voltage getter method. NB: does not check the current function.
         """
@@ -56,7 +56,7 @@ class YokogawaGS200(VisaInstrument):
             raise InstrIOError('Instrument did not return the voltage')
 
     @voltage.setter
-    @secure_communication
+    @secure_communication()
     def voltage(self, set_point):
         """Voltage setter method. NB: does not check the current function.
         """
@@ -67,18 +67,19 @@ class YokogawaGS200(VisaInstrument):
             raise InstrIOError('Instrument did not set correctly the voltage')
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def function(self):
         """Function getter method
         """
         value = self.ask('SOURce:FUNCtion?')
         if value is not None:
+            #Stripping leading and trailing '
             return value
         else:
             raise InstrIOError('Instrument did not return the function')
 
     @function.setter
-    @secure_communication
+    @secure_communication()
     def function(self, mode):
         """Function setter method
         """
@@ -87,12 +88,12 @@ class YokogawaGS200(VisaInstrument):
         if volt.match(mode):
             self.write(':SOURce:FUNCtion VOLT')
             value = self.ask('SOURce:FUNCtion?')
-            if value != 'VOLT':
+            if value[1:-1] != 'VOLT':
                 raise InstrIOError('Instrument did not set correctly the mode')
         elif curr.match(mode):
             self.write(':SOURce:FUNCtion CURR')
             value = self.ask('SOURce:FUNCtion?')
-            if value != 'CURR':
+            if value[1:-1] != 'CURR':
                 raise InstrIOError('Instrument did not set correctly the mode')
         else:
             mess = fill('''The invalid value {} was sent to set_function
@@ -100,7 +101,7 @@ class YokogawaGS200(VisaInstrument):
             raise VisaTypeError(mess)
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def output(self):
         """Output getter method
         """
@@ -111,7 +112,7 @@ class YokogawaGS200(VisaInstrument):
             raise InstrIOError('Instrument did not return the output state')
 
     @output.setter
-    @secure_communication
+    @secure_communication()
     def output(self, value):
         """Output setter method
         """
@@ -162,7 +163,7 @@ class Yokogawa7651(VisaInstrument):
     """
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def voltage(self):
         """Voltage getter method
         """
@@ -174,7 +175,7 @@ class Yokogawa7651(VisaInstrument):
             raise InstrIOError('Instrument did not return the voltage')
 
     @voltage.setter
-    @secure_communication
+    @secure_communication()
     def voltage(self, set_point):
         """Voltage setter method
         """
@@ -186,7 +187,7 @@ class Yokogawa7651(VisaInstrument):
             raise InstrIOError('Instrument did not set correctly the voltage')
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def function(self):
         """Function getter method
         """
@@ -199,7 +200,7 @@ class Yokogawa7651(VisaInstrument):
             raise InstrIOError('Instrument did not return the function')
 
     @function.setter
-    @secure_communication
+    @secure_communication()
     def function(self, mode):
         """Function setter method
         """
@@ -225,7 +226,7 @@ class Yokogawa7651(VisaInstrument):
             raise VisaTypeError(mess)
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def output(self):
         """Output getter method
         """
@@ -238,7 +239,7 @@ class Yokogawa7651(VisaInstrument):
             raise InstrIOError('Instrument did not return the output state')
 
     @output.setter
-    @secure_communication
+    @secure_communication()
     def output(self, value):
         """Output setter method
         """

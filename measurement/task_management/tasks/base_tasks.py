@@ -171,6 +171,7 @@ class SimpleTask(AbstractTask):
     def register_preferences(self):
         """
         """
+        self.task_preferences.clear()
         for name in self.traits(preference = True):
             self.task_preferences[name] = str(self.get(name).values()[0])
 
@@ -322,6 +323,7 @@ class ComplexTask(AbstractTask):
     def register_preferences(self):
         """
         """
+        self.task_preferences.clear()
         for name in self.traits(preference = True):
             self.task_preferences[name] = str(self.get(name).values()[0])
 
@@ -428,13 +430,14 @@ class ComplexTask(AbstractTask):
         source"""
         if self.has_root:
             if new and old:
-                inter = set(new).symmetric_difference(old)
-                if inter:
-                    for child in inter:
-                        if child in new:
-                            self._child_added(child)
-                        else:
-                            self._child_removed(child)
+                added = set(new) - set(old)
+                removed = set(old) - set(new)
+                if added:
+                    for child in added:
+                        self._child_added(child)
+                if removed:
+                    for child in removed:
+                        self._child_removed(child)
             elif new:
                 for child in new:
                     self._child_added(child)
@@ -501,7 +504,7 @@ class ComplexTask(AbstractTask):
         """Method updating the database and preference tree when a child is
         removed.
         """
-        self.update_preferences_from_traits()
+        self.register_preferences()
         child.unregister_from_database()
 
     @on_trait_change('root_task')
@@ -574,7 +577,7 @@ class RootTask(ComplexTask):
     task_preferences = ConfigObj(indent_type = '    ')
     task_depth = 0
     task_path = 'root'
-    task_database_entries = ['threads', 'instrs', 'default_path']
+    task_database_entries = {'threads' : [], 'instrs' : {}, 'default_path' : ''}
     should_stop = Instance(Event)
 
     def __init__(self, *args, **kwargs):
@@ -582,6 +585,7 @@ class RootTask(ComplexTask):
         self.task_database = TaskDatabase()
         self.task_database.set_value('root', 'threads', [])
         self.task_database.set_value('root', 'instrs', {})
+        self.task_database.set_value('root', 'default_path', '')
 
     def check(self, *args, **kwargs):
         traceback = {}
