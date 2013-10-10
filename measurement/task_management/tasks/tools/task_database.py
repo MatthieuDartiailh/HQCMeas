@@ -4,6 +4,9 @@
 from traits.api import HasTraits, Dict, Bool, Any, Event
 from threading import Lock
 
+class DatabaseNode(dict):
+    pass
+
 class TaskDatabase(HasTraits):
     """
     """
@@ -131,7 +134,7 @@ class TaskDatabase(HasTraits):
             node = self._go_to_path(node_path)
             keys = node.keys()
             for key in keys:
-                if not isinstance(node[key], dict):
+                if not isinstance(node[key], DatabaseNode):
                     # removing the leading underscore
                     entries.append(key[1:])
             node_path = node_path.rpartition('/')[0]
@@ -139,7 +142,7 @@ class TaskDatabase(HasTraits):
         node = self._go_to_path(node_path)
         keys = node.keys()
         for key in keys:
-            if not isinstance(node[key], dict):
+            if not isinstance(node[key], DatabaseNode):
                 entries.append(key[1:])
 
         entries.remove('threads')
@@ -152,7 +155,7 @@ class TaskDatabase(HasTraits):
         entries = []
         node = self._go_to_path(path)
         for entry in node.keys():
-            if isinstance(node[entry], dict):
+            if isinstance(node[entry], DatabaseNode):
                 entries += self.list_all_entries(path = path + '/' + entry)
             else:
                 # removing the leading underscore
@@ -181,7 +184,7 @@ class TaskDatabase(HasTraits):
             Name of the new node to create
         """
         parent_node = self._go_to_path(parent_path)
-        parent_node[node_name] = {}
+        parent_node[node_name] = DatabaseNode()
 
     def rename_node(self, parent_path, new_name, old_name):
         """Method used to rename a node in the database

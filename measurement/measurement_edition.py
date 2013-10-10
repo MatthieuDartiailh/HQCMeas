@@ -94,7 +94,7 @@ class MeasurementTreeView(HasTraits):
                             TreeNode( node_for  = [ ComplexTask ],
                                       auto_open = True,
                                       children  = 'children_task',
-                                      label     = 'task_name',
+                                      label     = 'task_label',
                                       view_name = 'task_view',
                                       add       = [AbstractTask],
                                       menu      = Menu(Separator(),
@@ -112,13 +112,13 @@ class MeasurementTreeView(HasTraits):
                             TreeNode( node_for  = [ SimpleTask ],
                                       auto_open = True,
                                       children  = '',
-                                      label     = 'task_name',
+                                      label     = 'task_label',
                                       view_name = 'task_view',
                                       menu      = Menu(Separator(),
                                                     add_before_action,
                                                     add_after_action,
                                                     Separator(),
-                                                    save_action,
+#                                                    save_action,
                                                     DeleteAction,
                                                     Separator(),
                                                     RenameAction,
@@ -166,6 +166,7 @@ class MeasurementEditorHandler(Handler):
         """
         if info.initialized:
             dlg = QtGui.QFileDialog(info.ui.control)
+            dlg.setAcceptMode(QtGui.QFileDialog.AcceptSave)
             dlg.setNameFilter('*.ini')
             dlg.setDefaultSuffix('ini')
             if dlg.exec_() == QtGui.QDialog.Accepted:

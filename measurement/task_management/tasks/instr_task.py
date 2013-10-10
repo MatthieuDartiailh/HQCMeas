@@ -21,13 +21,18 @@ class InstrumentTask(SimpleTask):
     driver_list = []
     selected_driver = Str(preference = True)
     driver = Instance(BaseInstrument)
-    task_database_entries_default = List
 
     def check(self, *args, **kwargs):
         """
         """
         traceback = {}
-        profile = self.profile_dict[self.selected_profile]
+        if self.selected_profile:
+            profile = self.profile_dict[self.selected_profile]
+        else:
+            traceback[self.task_path + '/' +self.task_name] = cleandoc(
+                '''You must provide an instrument profile''')
+            return False, traceback
+
         full_path = os.path.join(PROFILES_DIRECTORY_PATH,
                                     profile)
         if not os.path.isfile(full_path):
@@ -53,22 +58,22 @@ class InstrumentTask(SimpleTask):
                     instrument''')
                 return False, traceback
 
-        for i, entry in enumerate(self.task_database_entries):
-            self.write_in_database(entry, self.task_database_entries_default[i])
-
         return True, traceback
 
     def start_driver(self):
         """
         """
-        profile = self.profile_dict[self.selected_profile]
-        full_path = os.path.join(PROFILES_DIRECTORY_PATH, profile)
-        driver_class = DRIVERS[self.selected_driver]
-        config = ConfigObj(full_path)
-        self.driver = driver_class(config)
         instrs = self.task_database.get_value('root', 'instrs')
-        instrs.append(self.driver)
-        self.task_database.set_value('root', 'instrs', instrs)
+        if self.selected_profile in instrs:
+            self.driver = instrs[self.selected_profile]
+        else:
+            profile = self.profile_dict[self.selected_profile]
+            full_path = os.path.join(PROFILES_DIRECTORY_PATH, profile)
+            driver_class = DRIVERS[self.selected_driver]
+            config = ConfigObj(full_path)
+            self.driver = driver_class(config)
+            instrs[self.selected_profile] = self.driver
+            self.task_database.set_value('root', 'instrs', instrs)
 
     def stop_driver(self):
         """

@@ -22,46 +22,78 @@ def make_stoppable(function_to_decorate):
 
     return decorator
 
-
-def make_parallel(function_to_decorate):
+def make_parallel(switch = None):
     """This decorator should be used when there is no need to wait for the
     process method to return to start the next task,ie the process method
     decorated don't use any data succeptible to be corrupted by the next task.
     """
-    def decorator(*args, **kwargs):
+    def decorator(method):
+        if switch:
+            def wrapper(*args, **kwargs):
 
-        obj = args[0]
-        thread = Thread(group = None,
-                        target = function_to_decorate,
-                        args = args,
-                        kwargs = kwargs)
-        threads = obj.task_database.get_value('root', 'threads')
-        threads.append(thread)
+                obj = args[0]
+                if getattr(obj, switch):
+                    thread = Thread(group = None,
+                                    target = method,
+                                    args = args,
+                                    kwargs = kwargs)
+                    threads = obj.task_database.get_value('root', 'threads')
+                    threads.append(thread)
 
-        return thread.start()
+                    return thread.start()
+                else:
+                    return method(*args, **kwargs)
+        else:
+            def wrapper(*args, **kwargs):
 
-    decorator.__name__ = function_to_decorate.__name__
-    decorator.__doc__ = function_to_decorate.__doc__
+                obj = args[0]
+                thread = Thread(group = None,
+                                target = method,
+                                args = args,
+                                kwargs = kwargs)
+                threads = obj.task_database.get_value('root', 'threads')
+                threads.append(thread)
+
+                return thread.start()
+
+        wrapper.__name__ = method.__name__
+        wrapper.__doc__ = method.__doc__
+        return wrapper
+
     return decorator
 
-def make_wait(function_to_decorate):
+def make_wait(switch = None):
     """This decorator should be used when the process method need to access
     data in the database or need to be sure that physical quantities reached
     their expected values.
     """
-    def decorator(*args, **kwargs):
+    def decorator(method):
+        if switch:
+            def wrapper(*args, **kwargs):
 
-        obj = args[0]
-        threads = obj.task_database.get_value('root', 'threads')
-        for thread in threads:
-            thread.join()
-        return function_to_decorate(*args, **kwargs)
+                obj = args[0]
+                if getattr(obj, switch):
+                    threads = obj.task_database.get_value('root', 'threads')
+                    for thread in threads:
+                        thread.join()
+                return method(*args, **kwargs)
+        else:
+            def wrapper(*args, **kwargs):
 
-    decorator.__name__ = function_to_decorate.__name__
-    decorator.__doc__ = function_to_decorate.__doc__
+                obj = args[0]
+                threads = obj.task_database.get_value('root', 'threads')
+                for thread in threads:
+                    thread.join()
+                return method(*args, **kwargs)
+
+        wrapper.__name__ = method.__name__
+        wrapper.__doc__ = method.__doc__
+
+        return wrapper
+
     return decorator
 
-def smooth_instr_crash(function_to_decorate, max_recursion = 10):
+def smooth_instr_crash(function_to_decorate):
     """This decorator should be used on any instr task. It handles possible
     communications errors during the processing of the task. If the command
     fails it asks the immediate end of the measurement to prevent any damages
@@ -73,9 +105,10 @@ def smooth_instr_crash(function_to_decorate, max_recursion = 10):
         try:
             function_to_decorate(*args, **kwargs)
         except (InstrIOError) as error:
-            obj.root_task.should_stop.set()
+            print 'Instrument crashed'
             log = logging.getLogger()
             log.exception(error.message)
+            obj.root_task.should_stop.set()
 
     decorator.__name__ = function_to_decorate.__name__
     decorator.__doc__ = function_to_decorate.__doc__

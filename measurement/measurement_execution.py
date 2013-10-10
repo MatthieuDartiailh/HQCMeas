@@ -51,7 +51,7 @@ class TaskProcess(Process):
                     task = IniConfigTask().build_task_from_config(config)
                     print 'Task built'
 
-                    if monitored_entries:
+                    if monitored_entries is not None:
                         spy = MeasureSpy(self.monitor_queue, monitored_entries,
                                          task.task_database)
 
@@ -79,7 +79,7 @@ class TaskProcess(Process):
                     if check[0]:
                         print 'Check successful'
                         task.process()
-                        if self.task_stop:
+                        if self.task_stop.is_set():
                             print 'Task interrupted'
                         else:
                             print 'Task processed'
@@ -88,7 +88,7 @@ class TaskProcess(Process):
                                     for path, mes in check[1].iteritems())
                         logger.critical(message)
 
-                    if spy:
+                    if monitored_entries is not None:
                         spy.close()
                         del spy
 
@@ -138,14 +138,15 @@ class TaskCheckDisplay(HasTraits):
     name_to_path_dict = Dict(Str, Str)
     failed_check_list = List(Str)
 
-    seleted_check = Str
+    selected_check = Str
     full_path = Str
     message = Str
 
     view = View(
             HGroup(
                 UItem('failed_check_list',
-                      editor = ListStrEditor(selected = 'selected_check'),
+                      editor = ListStrEditor(selected = 'selected_check',
+                                             editable = False),
                     width = 300),
                 VGroup(
                     UItem('full_path', editor = TitleEditor(), width = 500),
@@ -172,10 +173,9 @@ class TaskCheckDisplay(HasTraits):
     def _update(self, new):
         """
         """
+        print 'tot'
         self.full_path = self.name_to_path_dict[new]
         self.message = self.check_dict_result[self.full_path]
-
-
 
 class TaskHolderHandler(Handler):
     """
@@ -187,24 +187,27 @@ class TaskHolderHandler(Handler):
         meas_editor = MeasurementEditor(root_task = model.root_task,
                                         is_new_meas = False)
         model.status = 'EDITING'
-        task =  model.root_task
-        default_path = task.default_path
+        default_path = meas_editor.root_task.default_path
         meas_editor.edit_traits(parent = info.ui.control,
                                 kind = 'livemodal',
                                 )
+
+        task = model.root_task = meas_editor.root_task
         path = os.path.join(default_path,
                                 model.name + '.ini')
         if task.default_path == default_path:
             with open(path, 'w') as f:
+                task.update_preferences_from_traits()
                 task.task_preferences.write(f)
         else:
             os.remove(path)
             path = os.path.join(task.default_path,
                                 model.name + '.ini')
             with open(path, 'w') as f:
+                task.update_preferences_from_traits()
                 task.task_preferences.write(f)
 
-        model.status = ''
+        model.status = 'READY'
 
     def object_edit_monitor_changed(self, info):
         """
@@ -343,10 +346,13 @@ class TaskExecutionControl(HasTraits):
                     res = task_holder.monitor.define_monitored_entries(
                                         task_holder.root_task.task_database)
                     task_holder.use_monitor = res
+                else:
+                    task_holder.use_monitor = False
                 self.task_holders.append(task_holder)
 
                 path = os.path.join(new_task.default_path, dialog.name + '.ini')
                 with open(path, 'w') as f:
+                    new_task.update_preferences_from_traits()
                     new_task.task_preferences.write(f)
 
                 return True

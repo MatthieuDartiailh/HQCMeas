@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 """
-from traits.api import Float
+from traits.api import Float, Bool
 from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor)
 
 from time import sleep
@@ -9,21 +9,22 @@ from time import sleep
 from .instr_task import InstrumentTask
 from .tools.task_decorator import make_stoppable, make_wait, smooth_instr_crash
 
-class MeasDcVoltageTask(InstrumentTask):
+class MeasDCVoltageTask(InstrumentTask):
     """
     """
     wait_time = Float(preference = True)
+    wait_parallel = Bool(True)
 
     driver_list = ['Agilent34410A', 'Keithley2000']
 
-    task_database_entries = ['voltage']
-    task_database_entries_default = [1]
+    task_database_entries = {'voltage' : 1.0}
 
     task_view = View(
                     VGroup(
                         UItem('task_name', style = 'readonly'),
                         Group(
                             Label('Driver'), Label('Instr'),Label('Wait (s)'),
+                            Label('Wait parallel task'),
                             UItem('selected_driver',
                                 editor = EnumEditor(name = 'driver_list'),
                                 width = 100),
@@ -31,14 +32,15 @@ class MeasDcVoltageTask(InstrumentTask):
                                 editor = EnumEditor(name = 'profile_list'),
                                 width = 100),
                             UItem('wait_time'),
-                            columns = 3,
+                            UItem('wait_parallel'),
+                            columns = 4,
                             show_border = True,
                             ),
                         ),
                      )
 
     @make_stoppable
-    @make_wait
+    @make_wait('wait_parallel')
     @smooth_instr_crash
     def process(self):
         """

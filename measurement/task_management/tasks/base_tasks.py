@@ -3,15 +3,15 @@
 """
 
 from traits.api\
-    import (HasTraits, Str, Int, Instance, List, Float, Bool, Type,
-            on_trait_change, Unicode, Directory, BaseStr, BaseUnicode)
+    import (HasTraits, Str, Int, Instance, List, Bool, Type,
+            on_trait_change, Unicode, Directory, BaseStr, BaseUnicode, Dict,
+            Any)
 from traits.api import self as trait_self
 from traitsui.api\
      import (View, ListInstanceEditor, VGroup, HGroup, UItem,
-             InstanceEditor, Group, Label)
+             InstanceEditor)
 
 from configobj import Section, ConfigObj
-from numpy import linspace
 import os
 
 from .tools.task_database import TaskDatabase
@@ -25,10 +25,11 @@ class AbstractTask(HasTraits):
     """
     task_class = Str(preference = True)
     task_name = Str(preference = True)
+    task_label = Str
     task_depth = Int
     task_preferences = Instance(Section)
     task_database = Instance(TaskDatabase)
-    task_database_entries = List(Str)
+    task_database_entries = Dict(Str, Any)
     task_path = Str
 
     #root_task = Instance(RootTask)
@@ -104,6 +105,23 @@ class AbstractTask(HasTraits):
         """
         return self.__class__.__name__
 
+    def _task_name_changed(self, new):
+        """
+        """
+        self.task_label = new + ' (' + self.task_class + ')'
+
+    @on_trait_change('task_database_entries[]')
+    def _update_database(self, obj, name, old, new):
+        """
+        """
+        added = set(new) - set(old)
+        removed = set(old) - set(new)
+        if self.task_database:
+            for entry in removed:
+                self.remove_from_database(self.task_name + '_' + entry)
+            for entry in added:
+                self.write_in_database(entry, self.task_database_entries[entry])
+
 
 class SimpleTask(AbstractTask):
     """Task with no child task, written in pure Python.
@@ -139,7 +157,8 @@ class SimpleTask(AbstractTask):
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 self.task_database.set_value(self.task_path,
-                                             self.task_name + '_' + entry, None)
+                                             self.task_name + '_' + entry,
+                                             self.task_database_entries[entry])
 
     def unregister_from_database(self):
         """
@@ -152,6 +171,7 @@ class SimpleTask(AbstractTask):
     def register_preferences(self):
         """
         """
+        self.task_preferences.clear()
         for name in self.traits(preference = True):
             self.task_preferences[name] = str(self.get(name).values()[0])
 
@@ -193,18 +213,6 @@ class SimpleTask(AbstractTask):
                 validated = value
 
             self.trait_set(**{name : validated})
-
-    @on_trait_change('task_database_entries')
-    def _update_database(self, obj, name, old, new):
-        """
-        """
-        added = set(new) - set(old)
-        removed = set(old) - set(new)
-        if self.task_database:
-            for entry in removed:
-                self.remove_from_database(self.task_name + '_' + entry)
-            for entry in added:
-                self.write_in_database(entry, None)
 
 class ComplexTask(AbstractTask):
     """Task composed of several subtasks.
@@ -265,13 +273,21 @@ class ComplexTask(AbstractTask):
         """
         return self.task_database.get_value(self.task_path, full_name)
 
+    def remove_from_database(self, full_name):
+        """This method deletes the database entry specified by
+        the full name (ie task_name + '_' + entry, where task_name is the name
+        of the task that wrote the value in the database).
+        """
+        return self.task_database.delete_value(self.task_path, full_name)
+
     def register_in_database(self):
         """
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 self.task_database.set_value(self.task_path,
-                                             self.task_name + '_' + entry, None)
+                                             self.task_name + '_' + entry,
+                                             self.task_database_entries[entry])
 
         self.task_database.create_node(self.task_path, self.task_name)
 
@@ -307,6 +323,7 @@ class ComplexTask(AbstractTask):
     def register_preferences(self):
         """
         """
+        self.task_preferences.clear()
         for name in self.traits(preference = True):
             self.task_preferences[name] = str(self.get(name).values()[0])
 
@@ -413,13 +430,14 @@ class ComplexTask(AbstractTask):
         source"""
         if self.has_root:
             if new and old:
-                inter = set(new).symmetric_difference(old)
-                if inter:
-                    for child in inter:
-                        if child in new:
-                            self._child_added(child)
-                        else:
-                            self._child_removed(child)
+                added = set(new) - set(old)
+                removed = set(old) - set(new)
+                if added:
+                    for child in added:
+                        self._child_added(child)
+                if removed:
+                    for child in removed:
+                        self._child_removed(child)
             elif new:
                 for child in new:
                     self._child_added(child)
@@ -486,7 +504,7 @@ class ComplexTask(AbstractTask):
         """Method updating the database and preference tree when a child is
         removed.
         """
-        self.update_preferences_from_traits()
+        self.register_preferences()
         child.unregister_from_database()
 
     @on_trait_change('root_task')
@@ -543,72 +561,6 @@ class ComplexTask(AbstractTask):
 
         self.trait_view('task_view', task_view)
 
-
-class LoopTask(ComplexTask):
-    """Complex task which, at each iteration, performs a task with a different
-    value and then call all its child tasks.
-    """
-    task = Instance(SimpleTask, child = True)
-    task_start = Float(0.0, preference = True)
-    task_stop = Float(1.0, preference = True)
-    task_step = Float(0.1, preference = True)
-    task_database_entries = ['point_number']
-
-    @make_stoppable
-    def process(self):
-        """
-        """
-        num = int((self.task_stop - self.task_start)/self.task_step) + 1
-        self.write_in_database('point_number', num)
-        for value in linspace(self.task_start, self.task_stop, num):
-            self.task.process(value)
-            for child in self.children_task:
-                child.process()
-
-    def check(self, *args, **kwargs):
-        """
-        """
-        test = True
-        traceback = {}
-        try:
-            num = int(abs((self.task_stop - self.task_start)/self.task_step))+ 1
-            self.write_in_database('point_number', num)
-        except:
-            test = False
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Loop task did not success to compute point number'
-        check = super(LoopTask, self).check( *args, **kwargs)
-        test = test and check[0]
-        traceback.update(check[1])
-        return test, traceback
-
-    def _define_task_view(self):
-        task_view = View(
-                    UItem('task_name', style = 'readonly'),
-                    VGroup(
-                        VGroup(
-                            Group(
-                                Label('Start'), Label('Stop'), Label('Step'),
-                                UItem('task_start'),UItem('task_stop'),
-                                UItem('task_step'),
-                                columns = 3,
-                                ),
-                            UItem('task', style = 'custom',
-                                  editor = InstanceEditor(view = 'loop_view')),
-                            show_border = True,
-                            ),
-                        UItem('children_task',
-                          editor = ListInstanceEditor(
-                              style = 'custom',
-                              editor = InstanceEditor(view = 'task_view'),
-                              item_factory = self.create_child)),
-                        show_border = True,
-                        ),
-                    title = 'Edit task',
-                    resizable = True,
-                    )
-        self.trait_view('task_view', task_view)
-
 from multiprocessing.synchronize import Event
 
 class RootTask(ComplexTask):
@@ -621,17 +573,19 @@ class RootTask(ComplexTask):
     has_root = True
     task_database = TaskDatabase
     task_name = 'Root'
+    task_label = 'Root'
     task_preferences = ConfigObj(indent_type = '    ')
     task_depth = 0
     task_path = 'root'
-    task_database_entries = ['threads', 'instrs', 'default_path']
+    task_database_entries = {'threads' : [], 'instrs' : {}, 'default_path' : ''}
     should_stop = Instance(Event)
 
     def __init__(self, *args, **kwargs):
         super(RootTask, self).__init__(*args, **kwargs)
         self.task_database = TaskDatabase()
         self.task_database.set_value('root', 'threads', [])
-        self.task_database.set_value('root', 'instrs', [])
+        self.task_database.set_value('root', 'instrs', {})
+        self.task_database.set_value('root', 'default_path', '')
 
     def check(self, *args, **kwargs):
         traceback = {}
@@ -653,8 +607,9 @@ class RootTask(ComplexTask):
             child.process()
         for thread in self.task_database.get_value('root','threads'):
             thread.join()
-        for instr in self.task_database.get_value('root','instrs'):
-            instr.close_connection()
+        instrs = self.task_database.get_value('root','instrs')
+        for instr_profile in instrs:
+            instrs[instr_profile].close_connection()
 
     def request_child(self, parent, ui):
         """

@@ -18,8 +18,7 @@ class LockInMeasureTask(InstrumentTask):
 
     driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830']
 
-    task_database_entries = ['x']
-    task_database_entries_default = [1]
+    task_database_entries = {'x' : 1.0}
 
     task_view = View(
                     VGroup(
@@ -49,7 +48,7 @@ class LockInMeasureTask(InstrumentTask):
                      )
 
     @make_stoppable
-    @make_wait
+    @make_wait()
     @smooth_instr_crash
     def process(self):
         """
@@ -85,20 +84,14 @@ class LockInMeasureTask(InstrumentTask):
         """
         """
         if self.selected_mode == 'X':
-            self.task_database_entries = ['x']
-            self.task_database_entries_default = [1]
+            self.task_database_entries = {'x' : 1.0}
         elif self.selected_mode == 'Y':
-            self.task_database_entries = ['y']
-            self.task_database_entries_default = [1]
+            self.task_database_entries = {'y' : 1.0}
         elif self.selected_mode == 'X&Y':
-            self.task_database_entries = ['x', 'y']
-            self.task_database_entries_default = [1,1]
+            self.task_database_entries = {'x' : 1.0, 'y' : 1.0}
         elif self.selected_mode == 'Amp':
-            self.task_database_entries = ['amplitude']
-            self.task_database_entries_default = [1]
+            self.task_database_entries = {'amplitude' : 1.0}
         elif self.selected_mode == 'Phase':
-            self.task_database_entries = ['phase']
-            self.task_database_entries_default = [1]
+            self.task_database_entries = {'phase' : 1.0}
         elif self.selected_mode == 'Amp&Phase':
-            self.task_database_entries = ['amplitude', 'phase']
-            self.task_database_entries_default = [1,1]
+            self.task_database_entries = {'amplitude' : 1.0, 'phase' : 1.0}
