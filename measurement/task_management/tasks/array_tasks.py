@@ -37,7 +37,7 @@ class ArrayExtremaTask(SimpleTask):
             val = array[ind]
             self.write_in_database('max_ind', ind)
             self.write_in_database('max_value', val)
-        elif  self.mode == 'Min' or self.mode == 'Max & min':
+        if  self.mode == 'Min' or self.mode == 'Max & min':
             ind = np.argmin(array)
             val = array[ind]
             self.write_in_database('min_ind', ind)

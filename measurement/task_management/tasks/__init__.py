@@ -18,7 +18,8 @@ from .rf_source_tasks import (RFSourceSetFrequencyTask, RFSourceSetPowerTask,
                               RFSourceSetOnOffTask)
 from .pna_tasks import (PNASinglePointMeasureTask, PNASweepTask,
                         PNASetFreqTask, PNASetPowerTask)
-from apply_mag_field_task import ApplyMagFieldTask
+from .apply_mag_field_task import ApplyMagFieldTask
+from array_tasks import ArrayExtremaTask
 
 KNOWN_PY_TASKS = [ComplexTask, SimpleLoopTask, LoopTask, PrintTask, SaveTask,
                   FormulaTask, SetDCVoltageTask, MeasDCVoltageTask,
@@ -26,4 +27,4 @@ KNOWN_PY_TASKS = [ComplexTask, SimpleLoopTask, LoopTask, PrintTask, SaveTask,
                   RFSourceSetPowerTask, RFSourceSetOnOffTask, SleepTask,
                   PNASinglePointMeasureTask, PNASweepTask,
                   PNASetFreqTask,  PNASetPowerTask,ApplyMagFieldTask,
-                  DefinitionTask, SaveArrayTask]
+                  DefinitionTask, SaveArrayTask, ArrayExtremaTask]
