@@ -287,6 +287,7 @@ class PNASinglePointMeasureTask(PNATasks):
                                 Label('Window'), UItem('window'),
                                 columns = 2),
                             ),
+                        show_border = True,
                         ),
                     )
 

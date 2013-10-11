@@ -179,7 +179,7 @@ class Yokogawa7651(VisaInstrument):
     def voltage(self, set_point):
         """Voltage setter method
         """
-        self.write("S{:+E};E".format(set_point))
+        self.write("S{:+E}E".format(set_point))
         data = self.ask("OD")
         value = float(data[4::])
         #to avoid floating point rouding
@@ -211,12 +211,12 @@ class Yokogawa7651(VisaInstrument):
             self.read()
             current_range = self.read()[2:4]
             self.read(); self.read(); self.read()
-            self.write('F1{};E'.format(current_range))
+            self.write('F1{}E'.format(current_range))
             value = self.ask('OD')
             if value[3] != 'V':
                 raise InstrIOError('Instrument did not set correctly the mode')
         elif curr.match(mode):
-            self.write('F5;E')
+            self.write('F5E')
             value = self.ask('OD')
             if value[3] != 'A':
                 raise InstrIOError('Instrument did not set correctly the mode')
@@ -246,12 +246,12 @@ class Yokogawa7651(VisaInstrument):
         on = re.compile('on', re.IGNORECASE)
         off = re.compile('off', re.IGNORECASE)
         if on.match(value) or value == 1:
-            self.write('O1;E')
+            self.write('O1E')
             if ('{0:08b}'.format(int(self.ask('OC'))))[3] != '1':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
         elif off.match(value) or value ==0:
-            self.write('O0;E')
+            self.write('O0E')
             if('{0:08b}'.format(int(self.ask('OC'))))[3] != '0':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
