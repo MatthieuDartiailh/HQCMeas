@@ -108,6 +108,7 @@ class ApplyMagFieldTask(InstrumentTask):
         line_completer = LineCompleterEditor(
                              entries_updater = self._list_database_entries)
         view = View(
+                    UItem('task_name', style = 'readonly'),
                     Group(
                     Label('Driver'), Label('Instr'),
                     Label('Target field (T)'), Label('Sweep rate (T/min)'),
@@ -126,6 +127,7 @@ class ApplyMagFieldTask(InstrumentTask):
                               each new value'''),80),
                         ),
                     columns = 5,
+                    show_border = True,
                     ),
                 )
         self.trait_view('task_view', view)

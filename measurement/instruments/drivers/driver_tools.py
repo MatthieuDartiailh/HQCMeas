@@ -88,6 +88,11 @@ class instrument_property(property):
         """Clear the cached value.
         """
         self._cache = None
+        
+    def check_cache(self):
+        """Return the cache value
+        """
+        return self._cache
 
     def set_caching_authorization(self, author):
         """Allow or disallow to cache the property.
@@ -238,8 +243,8 @@ class BaseInstrument(object):
             Name of the properties whose cache should be cleared. All caches
             will be cleared if not specified.
         """
-        test = lambda obj: isinstance(obj, instrument_property)
-        if properties is not None:
+        test = lambda obj: isinstance(obj, BypassDescriptor)
+        if properties is None:
             for name, instr_prop in inspect.getmembers(self.__class__, test):
                 if name.startswith('_'):
                     # Calling method only on bypassed descriptor
@@ -249,6 +254,22 @@ class BaseInstrument(object):
                 if name.startswith('_') and name[1:] in properties:
                     # Calling method only on bypassed descriptor
                     instr_prop.clear_cache()
+    
+    def check_instrument_cache(self, properties):
+        """Clear the cache of all the properties or only the one of specified
+        ones
+
+        Parameters
+        ----------
+        properties : iterable of str, optionnal
+            Name of the properties whose cache should be cleared. All caches
+            will be cleared if not specified.
+        """
+        test = lambda obj: isinstance(obj, BypassDescriptor)
+        for name, instr_prop in inspect.getmembers(self.__class__, test):
+                if name.startswith('_') and name[1:] == properties:
+                    # Calling method only on bypassed descriptor
+                    instr_prop.check_cache()
 
 class VisaInstrument(BaseInstrument):
     """Base class for drivers using the VISA library to communicate

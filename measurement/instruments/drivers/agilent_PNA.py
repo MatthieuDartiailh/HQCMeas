@@ -52,7 +52,7 @@ class AgilentPNAChannel(BaseInstrument):
         self._pna = pna
         self._channel = channel_num
 
-    @secure_communication
+    @secure_communication()
     def read_formatted_data(self, meas_name = ''):
         """
         """
@@ -62,15 +62,15 @@ class AgilentPNAChannel(BaseInstrument):
 
         if self._pna.data_format == 'REAL,32':
             data = self._pna.ask_for_values(
-                            'CALCulate{}:DATA? SDATA'.format(self._channel),
+                            'CALCulate{}:DATA? FDATA'.format(self._channel),
                             single)
         elif self._pna.data_format == 'REAL,64':
             data = self._pna.ask_for_values(
-                            'CALCulate{}:DATA? SDATA'.format(self._channel),
+                            'CALCulate{}:DATA? FDATA'.format(self._channel),
                             double)
         else:
             data = self._pna.ask_for_values(
-                            'CALCulate{}:DATA? SDATA'.format(self._channel),
+                            'CALCulate{}:DATA? FDATA'.format(self._channel),
                             ascii)
         if meas_name and selected_meas:
             self.selected_measure = selected_meas
@@ -84,7 +84,7 @@ class AgilentPNAChannel(BaseInstrument):
                 channel {} formatted data for meas {}'''.format(
                 self._channel, meas_name)))
 
-    @secure_communication
+    @secure_communication()
     def read_raw_data(self, meas_name = ''):
         """
         """
@@ -123,7 +123,7 @@ class AgilentPNAChannel(BaseInstrument):
         data = self.read_raw_data(meas_name)
         return FORMATTING_DICT[meas_format](data)
 
-    @secure_communication
+    @secure_communication()
     def list_existing_measures(self):
         """
         """
@@ -141,7 +141,7 @@ class AgilentPNAChannel(BaseInstrument):
             raise InstrIOError(cleandoc('''Agilent PNA did not return the
                     channel {} selected measure'''.format(self._channel)))
 
-    @secure_communication
+    @secure_communication()
     def create_meas(self, meas_name):
         """
         """
@@ -162,7 +162,7 @@ class AgilentPNAChannel(BaseInstrument):
                     raise InstrIOError(cleandoc('''The Pna did not create the
                     meas {} for channel {}'''.format(meas_name, self._channel)))
 
-    @secure_communication
+    @secure_communication()
     def delete_meas(self, meas_name):
         """
         """
@@ -176,7 +176,7 @@ class AgilentPNAChannel(BaseInstrument):
                 raise InstrIOError(cleandoc('''The Pna did not delete the meas
                 {} for channel {}'''.format(meas_name, self._channel)))
 
-    @secure_communication
+    @secure_communication()
     def delete_all_meas(self):
         """
         """
@@ -184,12 +184,12 @@ class AgilentPNAChannel(BaseInstrument):
             self._pna.write(
                 "CALCulate{}:PARameter:DELete '{}'".format(
                                     self._channel, meas['name']))
-
+        self.clear_instrument_cache(['selected_measure'])
         if self.list_existing_measures():
             raise InstrIOError(cleandoc('''The Pna did not delete all meas
                 for channel {}'''.format(self._channel)))
 
-    @secure_communication
+    @secure_communication()
     def format_meas(self, meas_format, meas_name = ''):
         """
         """
@@ -210,7 +210,7 @@ class AgilentPNAChannel(BaseInstrument):
             raise InstrIOError(cleandoc('''The Pna did not format the meas
                 for channel {}'''.format(self._channel)))
 
-    @secure_communication
+    @secure_communication()
     def bind_meas_to_window(self, meas_name, window_num, trace_num):
         """
         """
@@ -221,6 +221,7 @@ class AgilentPNAChannel(BaseInstrument):
                         trace_num, meas_name))
 
         traces = self._pna.ask('DISPlay:WINDow{}:CATalog?'.format(window_num))
+        print traces, trace_num  
         if str(trace_num) not in traces:
             raise InstrIOError(cleandoc('''The Pna did not bind the meas {}
                 to window {}'''.format(meas_name, window_num)))
@@ -233,12 +234,14 @@ class AgilentPNAChannel(BaseInstrument):
         self.create_meas(meas_name)
         if len(info) > 2:
             self.format_meas(info[2], meas_name)
+        else:
+            self.format_meas('MLIN', meas_name)
         if clear_window:
             if window_num in self._pna.windows:
                 self._pna.clear_traces_from_window(window_num)
         self.bind_meas_to_window(meas_name, window_num, trace_num)
 
-    @secure_communication
+    @secure_communication()
     def prepare_sweep(self, sweep_type, start, stop, sweep_points):
         """
         """
@@ -262,7 +265,7 @@ class AgilentPNAChannel(BaseInstrument):
                                                         self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def frequency(self):
         """Frequency getter method
         """
@@ -275,7 +278,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} frequency'''.format(self._channel)))
 
     @frequency.setter
-    @secure_communication
+    @secure_communication()
     def frequency(self, value):
         """Frequency setter method
         """
@@ -292,7 +295,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} frequency'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def power(self):
         """Power getter method
         """
@@ -307,7 +310,7 @@ class AgilentPNAChannel(BaseInstrument):
                                                             self.port)))
 
     @power.setter
-    @secure_communication
+    @secure_communication()
     def power(self, value):
         """Power setter method
         """
@@ -328,7 +331,7 @@ class AgilentPNAChannel(BaseInstrument):
                                                                 self.port)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def selected_measure(self):
         """
         """
@@ -341,7 +344,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} selected measure'''.format(self._channel)))
 
     @selected_measure.setter
-    @secure_communication
+    @secure_communication()
     def selected_measure(self, value):
         """
         """
@@ -354,7 +357,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} selected measure'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def if_bandwidth(self):
         """
         """
@@ -367,7 +370,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} IF bandwidth'''.format(self._channel)))
 
     @if_bandwidth.setter
-    @secure_communication
+    @secure_communication()
     def if_bandwidth(self, value):
         """
         """
@@ -383,7 +386,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} IF bandwidth'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def sweep_mode(self):
         """
         """
@@ -395,7 +398,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} sweep mode'''.format(self._channel)))
 
     @sweep_mode.setter
-    @secure_communication
+    @secure_communication()
     def sweep_mode(self, value):
         """
         """
@@ -407,7 +410,7 @@ class AgilentPNAChannel(BaseInstrument):
                 channel {} sweep mode'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def sweep_type(self):
         """
         """
@@ -419,7 +422,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} sweep type'''.format(self._channel)))
 
     @sweep_type.setter
-    @secure_communication
+    @secure_communication()
     def sweep_type(self, value):
         """
         """
@@ -431,7 +434,7 @@ class AgilentPNAChannel(BaseInstrument):
                 channel {} sweep type'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def sweep_points(self):
         """
         """
@@ -444,7 +447,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} sweep point number'''.format(self._channel)))
 
     @sweep_points.setter
-    @secure_communication
+    @secure_communication()
     def sweep_points(self, value):
         """
         """
@@ -460,7 +463,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} sweep point number'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def average_state(self):
         """
         """
@@ -472,7 +475,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} average state'''.format(self._channel)))
 
     @average_state.setter
-    @secure_communication
+    @secure_communication()
     def average_state(self, value):
         """
         """
@@ -484,7 +487,7 @@ class AgilentPNAChannel(BaseInstrument):
                 channel {} average state'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def average_count(self):
         """
         """
@@ -498,7 +501,7 @@ class AgilentPNAChannel(BaseInstrument):
 
 
     @average_count.setter
-    @secure_communication
+    @secure_communication()
     def average_count(self, value):
         """
         """
@@ -514,7 +517,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} average count'''.format(self._channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def average_mode(self):
         """
         """
@@ -526,7 +529,7 @@ class AgilentPNAChannel(BaseInstrument):
                     channel {} average mode'''.format(self._channel)))
 
     @average_mode.setter
-    @secure_communication
+    @secure_communication()
     def average_mode(self, value):
         """
         """
@@ -560,7 +563,7 @@ class AgilentPNA(VisaInstrument):
             self.channels[num] = channel
             return channel
 
-    @secure_communication
+    @secure_communication()
     def clear_traces_from_window(self, window_num):
         """
         """
@@ -575,7 +578,7 @@ class AgilentPNA(VisaInstrument):
                 raise InstrIOError(cleandoc('''Agilent PNA did not clear all
                     traces from window {}'''.format(window_num)))
 
-    @secure_communication
+    @secure_communication()
     def fire_trigger(self, channel = None):
         """
         """
@@ -585,7 +588,7 @@ class AgilentPNA(VisaInstrument):
             self.write('INITiate{}:IMMediate'.format(channel))
         self.write('*OPC')
 
-    @secure_communication
+    @secure_communication()
     def check_operation_completion(self):
         """
         """
@@ -593,7 +596,7 @@ class AgilentPNA(VisaInstrument):
         status_byte = ('{0:08b}'.format(int(bites)))[::-1]
         return bool(int(status_byte[0]))
 
-    @secure_communication
+    @secure_communication()
     def set_all_chanel_to_hold(self):
         """
         """
@@ -609,7 +612,7 @@ class AgilentPNA(VisaInstrument):
                     to HOLD'''.format(channel)))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def defined_channels(self):
         """
         """
@@ -623,7 +626,7 @@ class AgilentPNA(VisaInstrument):
                     defined channels'''))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def windows(self):
         """
         """
@@ -636,7 +639,7 @@ class AgilentPNA(VisaInstrument):
                     defined windows'''))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def trigger_scope(self):
         """
         """
@@ -648,7 +651,7 @@ class AgilentPNA(VisaInstrument):
                     trigger scope'''))
 
     @trigger_scope.setter
-    @secure_communication
+    @secure_communication()
     def trigger_scope(self, value):
         """
         """
@@ -660,7 +663,7 @@ class AgilentPNA(VisaInstrument):
                 trigger scope'''))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def trigger_source(self):
         """
         """
@@ -672,7 +675,7 @@ class AgilentPNA(VisaInstrument):
                     trigger source'''))
 
     @trigger_source.setter
-    @secure_communication
+    @secure_communication()
     def trigger_source(self, value):
         """
         """
@@ -684,7 +687,7 @@ class AgilentPNA(VisaInstrument):
                 trigger source'''))
 
     @instrument_property
-    @secure_communication
+    @secure_communication()
     def data_format(self):
         """
         """
@@ -696,7 +699,7 @@ class AgilentPNA(VisaInstrument):
                     data format'''))
 
     @data_format.setter
-    @secure_communication
+    @secure_communication()
     def data_format(self, value):
         """
         """

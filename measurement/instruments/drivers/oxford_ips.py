@@ -61,12 +61,17 @@ class IPS12010(VisaInstrument):
                            'target_field' : True,
                            'sweep_rate_field' : True,
                            }
+    def __init__(self, connection_info, caching_allowed = True, 
+                 caching_permissions = {}):
+        super(IPS12010, self).__init__(connection_info, caching_allowed,
+                                    caching_permissions)
+        self.term_chars = '\r'
 
     def make_ready(self):
         """
         """
         self.control = 'Remote & Unlocked'
-        self.set_communications_protocol(True, True)
+        self.set_communications_protocol(False, True)
         self.set_mode('TESLA')
 
     def go_to_field(self, value, rate, auto_stop_heater = True):
@@ -102,7 +107,7 @@ class IPS12010(VisaInstrument):
         """
         """
         status = self._get_status()
-        output = int(status[-1])
+        output = int(status[11])
         if not output:
             return 'Constant'
         else:
@@ -126,7 +131,7 @@ class IPS12010(VisaInstrument):
                 raise InstrIOError(cleandoc('''IPS120-10 did not set the
                     heater mode to {}'''.format(mode)))
         elif mode == 'TESLA':
-            result = self.ask('H9')
+            result = self.ask('M9')
             if result.startswith('?'):
                 raise InstrIOError(cleandoc('''IPS120-10 did not set the
                     heater mode to {}'''.format(mode)))
@@ -155,7 +160,7 @@ class IPS12010(VisaInstrument):
         """
         par = _PARAMETER_DICT.get(parameter, None)
         if par:
-            return self.ask('R{}'.format(par))[1::]
+            return self.ask('R{}'.format(par))[2:]
         else:
             raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
                 read_parameter method'''.format(parameter)))
@@ -316,7 +321,7 @@ class IPS12010(VisaInstrument):
     def field_sweep_rate(self):
         """
         """
-        return float(self.read_parameter('Current sweep rate'))
+        return float(self.read_parameter('Field sweep rate'))
 
     @field_sweep_rate.setter
     @secure_communication()
@@ -335,6 +340,6 @@ class IPS12010(VisaInstrument):
         """
         status = self.ask('X')
         if status:
-            return status
+            return status.strip()
         else:
             raise InstrIOError('''IPS120-10 did not return its status''')

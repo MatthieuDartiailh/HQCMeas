@@ -74,9 +74,6 @@ class PNATasks(InstrumentTask):
         if not channels_present:
             return False, traceback
 
-        for i, entry in enumerate(self.task_database_entries):
-            self.write_in_database(entry, self.task_database_entries_default[i])
-
         return True, traceback
 
 class PNASetFreqTask(PNATasks):
@@ -115,15 +112,15 @@ class PNASetFreqTask(PNATasks):
     def check(self, *args, **kwargs):
         """
         """
-        test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
+        test, traceback = super(PNASetFreqTask, self).check(*args, **kwargs)
         try:
-            format_and_eval_string(self.power, self.task_path,
+            format_and_eval_string(self.frequency, self.task_path,
                                          self.task_database)
         except:
             test = False
             traceback[self.task_path + '/' +self.task_name + '-freq'] = \
                 'Failed to eval the power formula {}'.format(
-                                                        self.power)
+                                                        self.frequecny)
         return test, traceback
 
     @on_trait_change('channel')
@@ -196,7 +193,7 @@ class PNASetPowerTask(PNATasks):
     def check(self, *args, **kwargs):
         """
         """
-        test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
+        test, traceback = super(PNASetPowerTask, self).check(*args, **kwargs)
         try:
             format_and_eval_string(self.power, self.task_path,
                                          self.task_database)
@@ -278,7 +275,7 @@ class PNASinglePointMeasureTask(PNATasks):
                                       the measurement will return the complex
                                       number. ex : 'S21:PHAS.'''), 80) + '\n' +\
                                       fill(cleandoc('''Available formats
-                                      are : MLIN, MLOG, PHAS, REA,
+                                      are : MLIN, MLOG, PHAS, REAL,
                                       IMAG'''),80),
                                       ),
                             label = 'Measures',
@@ -540,7 +537,7 @@ class PNASweepTask(PNATasks):
                                       the measurement will return the complex
                                       number. ex : 'S21:PHAS.'''), 80) + '\n' +\
                                       fill(cleandoc('''Available formats
-                                      are : MLIN, MLOG, PHAS, REA,
+                                      are : MLIN, MLOG, PHAS, REAL,
                                       IMAG'''),80),
                                   ),
                         label = 'Measures',
@@ -552,6 +549,7 @@ class PNASweepTask(PNATasks):
                             Label('Window'), UItem('window'),
                             columns = 2),
                         ),
+                    show_border = True,
                     ),
                 )
         self.trait_view('task_view', view)
