@@ -63,7 +63,7 @@ class YokogawaGS200(VisaInstrument):
         self.write(":SOURce:LEVel {}".format(set_point))
         value = self.ask_for_values('SOURce:LEVel?')[0]
         #to avoid floating point rouding
-        if abs(value - set_point) > 10**-12:
+        if abs(value - round(set_point, 9)) > 10**-9:
             raise InstrIOError('Instrument did not set correctly the voltage')
 
     @instrument_property
@@ -183,7 +183,7 @@ class Yokogawa7651(VisaInstrument):
         data = self.ask("OD")
         value = float(data[4::])
         #to avoid floating point rouding
-        if abs(value - set_point) > 10**-12:
+        if abs(value - round(set_point, 9)) > 10**-9:
             raise InstrIOError('Instrument did not set correctly the voltage')
 
     @instrument_property

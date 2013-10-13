@@ -88,7 +88,7 @@ class SetDCVoltageTask(InstrumentTask):
         else:
             last_value = self.last_value
 
-        if last_value == value:
+        if abs(last_value - value) < 1e-12:
             self.write_in_database('voltage', value)
             return
         elif self.back_step == 0:
@@ -102,7 +102,8 @@ class SetDCVoltageTask(InstrumentTask):
 
         if abs(value-last_value) > abs(step):
             while True:
-                last_value += step
+                # Avoid the accumuilation of rounding errors
+                last_value = round(last_value + step, 9)
                 self.driver.voltage = last_value
                 if abs(value-last_value) > abs(step):
                     time.sleep(self.delay)
