@@ -120,7 +120,7 @@ class PNASetFreqTask(PNATasks):
             test = False
             traceback[self.task_path + '/' +self.task_name + '-freq'] = \
                 'Failed to eval the power formula {}'.format(
-                                                        self.frequecny)
+                                                        self.frequency)
         return test, traceback
 
     @on_trait_change('channel')
@@ -314,14 +314,29 @@ class PNASinglePointMeasureTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
             self.channel_driver.if_bandwidth = self.if_bandwidth
+            # Avoid the PNA doing stupid things if it was doing a sweep previously
+            freq = self.channel_driver.frequency
+            power = self.channel_driver.power
+            self.channel_driver.sweep_type = 'LIN'
             self.channel_driver.sweep_points = 1
-            clear = True
-            self.channel_driver.delete_all_meas()
-            for i, measure in enumerate(self.measures):
-                meas_name = 'Ch{}:'.format(self.channel) + measure
-                self.channel_driver.prepare_measure(meas_name, self.window, i+1,
-                                                    clear)
-                clear = False
+            self.channel_driver.clear_instrument_cache(['frequency', 'power'])
+            self.channel_driver.frequency = freq
+            self.channel_driver.power = power
+            
+            # Check whether or not we are doing the same measures as the ones
+            # already defined (avoid losing display optimisation)
+            meas_names = ['Ch{}:'.format(self.channel) + measure 
+                            for measure in self.measures]
+            existing_meas = [meas['name'] 
+                    for meas in self.channel_driver.list_existing_measures()]
+            if not (all([meas in existing_meas for meas in meas_names]) 
+                    and all([meas in meas_names for meas in existing_meas])):
+                clear = True
+                self.channel_driver.delete_all_meas()
+                for i, meas_name in enumerate(meas_names):
+                    self.channel_driver.prepare_measure(meas_name, self.window,
+                                                        i+1, clear)
+                    clear = False
 
         if self.if_bandwidth < 5:
             self.driver.fire_trigger(self.channel)
@@ -403,13 +418,21 @@ class PNASweepTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
             self.channel_driver.if_bandwidth = self.if_bandwidth
-            clear = True
-            self.channel_driver.delete_all_meas()
-            for i, measure in enumerate(self.measures):
-                meas_name = 'Ch{}:'.format(self.channel) + measure
-                self.channel_driver.prepare_measure(meas_name,
-                                                    self.window, i+1, clear)
-                clear = False
+            
+            # Check whether or not we are doing the same measures as the ones
+            # already defined (avoid losing display optimisation)
+            meas_names = ['Ch{}:'.format(self.channel) + measure 
+                            for measure in self.measures]
+            existing_meas = [meas['name'] 
+                    for meas in self.channel_driver.list_existing_measures()]
+            if not (all([meas in existing_meas for meas in meas_names]) 
+                    and all([meas in meas_names for meas in existing_meas])):
+                clear = True
+                self.channel_driver.delete_all_meas()
+                for i, meas_name in enumerate(meas_names):
+                    self.channel_driver.prepare_measure(meas_name, self.window,
+                                                        i+1, clear)
+                    clear = False
 
         start = format_and_eval_string(self.start, self.task_path,
                                          self.task_database)
@@ -430,10 +453,8 @@ class PNASweepTask(PNATasks):
         for i, measure in enumerate(self.measures):
             meas_name = 'Ch{}:'.format(self.channel) + measure
             if measures_format[i]:
-                meas_format = meas_name.split(':')[2]
                 data.append(
-                    self.channel_driver.read_and_format_raw_data(meas_format,
-                                                                 meas_name))
+                    self.channel_driver.read_formatted_data(meas_name))
             else:
                 data.append(self.channel_driver.read_raw_data(meas_name))
         names = [self.sweep_type] + self.measures

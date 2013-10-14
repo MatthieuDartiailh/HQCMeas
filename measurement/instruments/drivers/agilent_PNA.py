@@ -133,7 +133,7 @@ class AgilentPNAChannel(BaseInstrument):
             if 'NO CATALOG' in meas:
                 return []
             meas_name = meas[1:-1].split(',')[::2]
-            param = meas.split(',')[1::20]
+            param = meas.split(',')[1::2]
             aux = [{'name' : meas_name[i-1], 'parameters' : param[i-1]}
                     for i in xrange(len(meas_name))]
             return aux
@@ -220,8 +220,7 @@ class AgilentPNAChannel(BaseInstrument):
         self._pna.write("DISPlay:WINDow{}:TRACe{}:FEED '{}'".format(window_num,
                         trace_num, meas_name))
 
-        traces = self._pna.ask('DISPlay:WINDow{}:CATalog?'.format(window_num))
-        print traces, trace_num  
+        traces = self._pna.ask('DISPlay:WINDow{}:CATalog?'.format(window_num))  
         if str(trace_num) not in traces:
             raise InstrIOError(cleandoc('''The Pna did not bind the meas {}
                 to window {}'''.format(meas_name, window_num)))
@@ -246,19 +245,19 @@ class AgilentPNAChannel(BaseInstrument):
         """
         """
         if sweep_type == 'FREQUENCY':
+            self.sweep_type = 'LIN'
+            self.sweep_points = sweep_points
             self._pna.write('SENSe{}:FREQuency:STARt {}'.format(self._channel,
                                                                 start))
             self._pna.write('SENSe{}:FREQuency:STOP {}'.format(self._channel,
                                                                 stop))
-            self.sweep_type = 'LIN'
-            self.sweep_points = sweep_points
         elif sweep_type == 'POWER':
+            self.sweep_type = 'POW'
+            self.sweep_points = sweep_points
             self._pna.write('SOURce{}:POWer:STARt {}'.format(self._channel,
                                                                 start))
             self._pna.write('SOURce{}:POWer:STOP {}'.format(self._channel,
                                                                 stop))
-            self.sweep_type = 'POW'
-            self.sweep_points = sweep_points
         else:
             raise AgilentPNAChannelError(cleandoc('''Unsupported type of sweep
             : {} was specified for channel'''.format(sweep_type,
