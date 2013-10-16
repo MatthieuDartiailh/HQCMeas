@@ -47,8 +47,8 @@ class MeasurementTreeViewHandler(Handler):
     model : instance(`MeasurementTreeView`)
         Convenience to access the `MeasurementTreeView` instance
 
-    Method
-    ------
+    Methods
+    -------
     append_task(info, task):
         Method allowing the user to append a task to the ones already attached
         to that node. Requires the node to accept children.
@@ -144,8 +144,8 @@ class MeasurementTreeView(HasTraits):
     editor : instance(`TreeEditor`)
         Tree editor used to build the ui.
 
-    Method
-    ------
+    Methods
+    -------
     default_traits_view():
         Method building automatically the view for this object.
 
@@ -208,8 +208,8 @@ class MeasurementTreeView(HasTraits):
 class MeasurementEditorHandler(Handler):
     """Handler for a MeasurementEditor handling the users pressing buttons.
 
-    Method
-    ------
+    Methods
+    -------
     object_save_template_button_changed(info):
         Method used to save the whole measurement as a template.
     object_save_button_changed(info):
@@ -302,8 +302,8 @@ class MeasurementEditor(HasTraits):
 class MeasurementBuilderHandler(MeasurementEditorHandler):
     """Handler for a MeasurementEditor handling the users pressing buttons.
 
-    Method
-    ------
+    Methods
+    -------
     object_new_button_changed(info):
         Method used to create a new blank measurement.
     object_load_button_changed(info):
@@ -385,10 +385,12 @@ class MeasurementBuilder(MeasurementEditor):
         (see `MeasurementBuilderHandler`)
     enqueue_button : instance(`Button`)
         Button to enqueue a measure.
-    Method
-    ------
+
+    Methods
+    -------
     new_root_task():
         Create a new blanck measure and make it the edited measure.
+
     """
     new_button = Button('New measure')
     load_button = Button('Load measure')

@@ -10,19 +10,25 @@ All instruments drivers must inherit from `BaseInstrument` which ensure they
 can use instrument properties (see below). Drivers should not directly subclass
 `BaseInstrument` but one of it subclass implementing a connection protocol
 (defining a kind of driver). For the time being the only supported protocol use
- the VISA library.
+the VISA library.
 
 :Contains:
-    InstrIOError : General exception for instrument communication error
-    BaseInstrument : Base class for all drivers
-    VisaInstrument : Base class for drivers using the VISA protocol
-    instrument_properties : subclass of property allowing to cache a property
-        on certain condition, and to reset the cache
-    secure_communication : decorator making sure that a communication error
-        cannot simply be resolved by attempting again to send a message
-
-    BypassDescriptor : Class allowing to acces to a descriptor instance
-    AllowBypassableDescriptors : Metaclass for using bypassable descriptors
+    InstrIOError :
+        General exception for instrument communication error
+    BaseInstrument :
+        Base class for all drivers
+    VisaInstrument : .
+        Base class for drivers using the VISA protocol
+    instrument_properties :
+        subclass of property allowing to cache a property on certain condition,
+        and to reset the cache
+    secure_communication :
+        decorator making sure that a communication error cannot simply be
+        resolved by attempting again to send a message
+    BypassDescriptor :
+        Class allowing to acces to a descriptor instance
+    AllowBypassableDescriptors :
+        Metaclass for using bypassable descriptors
 
 """
 from textwrap import fill
@@ -88,7 +94,7 @@ class instrument_property(property):
         """Clear the cached value.
         """
         self._cache = None
-        
+
     def check_cache(self):
         """Return the cache value
         """
@@ -254,7 +260,7 @@ class BaseInstrument(object):
                 if name.startswith('_') and name[1:] in properties:
                     # Calling method only on bypassed descriptor
                     instr_prop.clear_cache()
-    
+
     def check_instrument_cache(self, properties):
         """Clear the cache of all the properties or only the one of specified
         ones

@@ -426,23 +426,44 @@ class TaskExecutionControl(HasTraits):
     Attributes
     ----------
     start_button : button
+        Launch a new process in which the enqueued measures will be processed
     stop_button : button
+        Stop the current measurement and then the whole process. The other
+        enqueued measures are not processed.
     stop_task_button : button
+        Stop the current measurement. Due to how this is implemented you will
+        have to wait for the current running task to exit. The other
+        enqueued measures are processed.
     show_monitor : button
+        Display the monitor associated with the current measurement.
     running : bool
-    task_stop : bool
-    process_stop : bool
+        Bool indicating whether or not the measurement process is running.
+    task_stop : multiprocess.Event
+        Event used to signal that the current measure should be stopped.
+    process_stop : multiprocess.Event
+        Event used to signal that the measurement process should be stopped.
     task_holders : list(instance(TaskHolder))
+        List containing all the enqueued measure.
     process : instance(Process)
+        Measurement process.
     log_thread : instance(Thread)
+        Thread dedicated to handling the log records coming from the measurement
+        process
     log_queue : multiprocessing queue
+        Queue in which the log records of the measurement process are sent from
+        the measurement process to the main process.
     monitor_queue :  multiprocessing queue
+        Queue in which the value of the monitored parameters are sent from the
+        measurement process to the main process.
     current_monitor : instance(MeasureMonitor)
+        Monitor associated to the measurement being processed.
     pipe : multiprocessing double ended pipe
+        Pipe used for communication between the two processus.
 
     Methods
     -------
     append_task(new_task):
+        Method handlingthe enqueuing of a measurement in the queue.
 
     """
 
@@ -487,7 +508,25 @@ class TaskExecutionControl(HasTraits):
                     )
 
     def append_task(self, new_task):
-        """ff
+        """Put a measure in the queue if it pass the tests.
+
+        First the check method of the measure is called. If the tests pass,
+        the user is asked to give a name to its measure (by default the name is
+        'Meas"i"' where is the index of the measure in the queue), then he can
+        choose what entries he wants to monitor during the measure which is then
+        enqueued and finally saved in the default folder ('default_path'
+        attributes of the `RootTask` describing the measure). Otherwise the list
+        of the failed tests is displayed to the user.
+
+        Parameters
+        ----------
+        new_task : instance(`RootTask`)
+            Instance of `RootTask` representing the measure.
+
+        Returns
+        -------
+        bool :
+            True is the measure was successfully enqueued, False otherwise.
         """
         check = new_task.check(
                     test_instr = not self.running)
@@ -520,7 +559,13 @@ class TaskExecutionControl(HasTraits):
            return False
 
     def _start_button_changed(self):
-        """
+        """Handle the `start_button` being pressed.
+
+        Clear the event `task_stop` and `process_stop`, create the pipe and
+        the measurement process. Start then the log thread and then the process.
+        Finally start the thread handling the communication with the measurement
+        process.
+
         """
         print 'Starting process'
         self.task_stop.clear()
@@ -540,7 +585,12 @@ class TaskExecutionControl(HasTraits):
         Thread(group = None, target = self._process_listerner).start()
 
     def _stop_button_changed(self):
-        """
+        """Handle the `stop_button` being pressed.
+
+        Set the `process_stop` event and signal in the pipe that not more
+        measurement will be sent. Then wait for the process and the log thread
+        to terminate.
+
         """
         print 'Stopping process'
         self.process_stop.set()
@@ -551,18 +601,21 @@ class TaskExecutionControl(HasTraits):
         self.running = False
 
     def _stop_task_button_changed(self):
-        """
+        """Handle the `stop_task_button` being pressed by setting the
+        `task_stop` event.
         """
         print 'Stopping task'
         self.task_stop.set()
 
     def _show_monitor_changed(self):
-        """
+        """Display the current monitor.
         """
         self.current_monitor.open_window()
 
     def _process_listerner(self):
-        """
+        """Method called in a separated thread to handle communications with the
+        measurement process.
+
         """
         print 'Starting listener'
         while not self.process_stop.is_set():
@@ -572,6 +625,7 @@ class TaskExecutionControl(HasTraits):
             if mess == 'Need task':
                 if self.task_holders:
                     i = 0
+                    # Look for a measure not being currently edited.
                     while i < len(self.task_holders):
                         if self.task_holders[i].status == 'EDITING':
                             i += 1
@@ -581,6 +635,9 @@ class TaskExecutionControl(HasTraits):
                             task = task_holder.root_task
                             name = task_holder.name
                             break
+
+                    # If one is found, stop the old monitor, if necessary start
+                    # a new one and send the measur in the pipe.
                     if task is not None:
                         task.update_preferences_from_traits()
 
@@ -600,6 +657,9 @@ class TaskExecutionControl(HasTraits):
                             self.pipe.send((name, task.task_preferences,
                                         None))
                         print 'Measurement sent'
+
+                    # If there is no measurement which can be sent, stop the
+                    # measurement process.
                     else:
                         self.process_stop.set()
                         print 'The only task is the queue is being edited'
@@ -610,6 +670,8 @@ class TaskExecutionControl(HasTraits):
                         self.log_thread.join()
                         self.running = False
                         break
+                # If there is no measurement in the queue, stop the
+                # measurement process.
                 else:
                     if self.current_monitor:
                         self.current_monitor.status = 'Stopped'
@@ -622,11 +684,16 @@ class TaskExecutionControl(HasTraits):
                     self.log_thread.join()
                     self.running = False
                     break
+
+            # If the measurement process sent a message different from
+            # 'Need_task', it means it will stop so we can clean up.
             else:
                 self.pipe.close()
                 self.process.join()
                 self.log_thread.join()
                 self.running = False
                 break
+
+        # Upon exit close the monitor if it is still opened.
         if self.current_monitor:
             self.current_monitor.status = 'Stopped'
