@@ -162,6 +162,7 @@ class TaskProcess(Process):
                         print 'Check successful'
                         # Perform the measure
                         task.process()
+                        self.pipe.send('Task processed')
                         if self.task_stop.is_set():
                             print 'Task interrupted'
                         else:
@@ -390,6 +391,12 @@ class TaskHolder(HasTraits):
         super(TaskHolder, self).__init__(*args, **kwargs)
         self.monitor = MeasureMonitor(measure_name = kwargs.get('name',''))
 
+    def _is_running_changed(self, new):
+        """
+        """
+        if new:
+            self.status = 'RUNNING'
+
 class TaskHolderDialog(HasTraits):
     """Simple dialog asking the user ot provide a name for the measure he is
     enqueuing and whether or not a monitor should be used.
@@ -572,16 +579,18 @@ class TaskExecutionControl(HasTraits):
             if mess == 'Need task':
                 if self.task_holders:
                     i = 0
+                    task = None
                     while i < len(self.task_holders):
                         if self.task_holders[i].status == 'EDITING':
                             i += 1
                             continue
                         else:
-                            task_holder = self.task_holders.pop(i)
+                            task_holder = self.task_holders[i]
                             task = task_holder.root_task
                             name = task_holder.name
                             break
                     if task is not None:
+                        task_holder.is_running = True
                         task.update_preferences_from_traits()
 
                         if self.current_monitor:
@@ -622,6 +631,17 @@ class TaskExecutionControl(HasTraits):
                     self.log_thread.join()
                     self.running = False
                     break
+
+            elif mess == 'Task processed':
+                i = 0
+                while i < len(self.task_holders):
+                    if self.task_holders[i].status != 'RUNNING':
+                        i += 1
+                        continue
+                    else:
+                       del self.task_holders[i]
+                       break
+
             else:
                 self.pipe.close()
                 self.process.join()

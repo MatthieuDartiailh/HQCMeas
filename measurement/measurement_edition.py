@@ -21,12 +21,12 @@ set of task).
     MeasurementBuilder : View used to build a measurement from scratch.
 """
 
-from traits.api import (HasTraits, Instance, Button, Any, Property)
+from traits.api import (HasTraits, Instance, Button, Any, Property, Str)
 from traitsui.api import (View, HGroup, UItem, Handler, TreeEditor, Menu,
-                          TreeNode, Action, Separator, Spring, error, VGroup)
+                          TreeNode, Action, Separator, Spring, error, VGroup,
+                          Item)
 from traitsui.qt4.tree_editor\
-    import (CutAction, CopyAction, PasteAction, DeleteAction,
-            RenameAction)
+    import (CutAction, CopyAction, PasteAction, DeleteAction)
 from pyface.qt import QtGui
 
 from configobj import ConfigObj
@@ -38,6 +38,13 @@ from .task_management.tasks import (ComplexTask, SimpleTask, AbstractTask,
 from .task_management.template_task_saver import TemplateTaskSaver
 from.task_management.task_builder import TaskBuilder
 from.task_management.config.base_task_config import IniConfigTask
+
+class TaskNameDialog(HasTraits):
+    """
+    """
+    name = Str
+    view = View(Item('name'), title = 'Enter the new name of the task',
+                buttons = ['OK', 'Cancel'], kind = 'livemodal')
 
 class MeasurementTreeViewHandler(Handler):
     """Handler for a MeasurementTreeView defining custom context menu actions.
@@ -112,6 +119,17 @@ class MeasurementTreeViewHandler(Handler):
                                         new_task)
                 editor._tree.setCurrentItem(parent_nid.child(index))
 
+    def rename(self, info, task):
+        """Method allowing the user to rename a task.
+        """
+        if info.initialized:
+            editor = info.tree
+            node, task, nid = editor._data
+            dialog = TaskNameDialog()
+            ui = dialog.edit_traits(parent = info.ui.control)
+            if ui.result:
+                task.task_name = dialog.name
+
     def save_as_template(self, info, task):
         """Method used to create a template from a task. Requires the task to
         accept children.
@@ -133,6 +151,10 @@ add_after_action = Action(name = 'Add after',
 
 save_action = Action(name = 'Save as template',
                      action = 'save_as_template')
+
+rename_action = Action(name = 'Rename',
+                     action = 'rename',
+                     enabled_when = 'editor._is_renameable(object)' )
 
 class MeasurementTreeView(HasTraits):
     """View representing a measurement as a tree.
@@ -166,7 +188,7 @@ class MeasurementTreeView(HasTraits):
                                                     save_action,
                                                     DeleteAction,
                                                     Separator(),
-                                                    RenameAction,
+                                                    rename_action,
                                                     Separator(),
                                                     CopyAction,
                                                     CutAction,
@@ -184,7 +206,7 @@ class MeasurementTreeView(HasTraits):
 #                                                    save_action,
                                                     DeleteAction,
                                                     Separator(),
-                                                    RenameAction,
+                                                    rename_action,
                                                     Separator(),
                                                     CopyAction,
                                                     CutAction,
