@@ -21,7 +21,7 @@ from .tools.task_decorator import (make_stoppable, smooth_instr_crash,
 from .tools.database_string_formatter import format_and_eval_string
 
 class ApplyMagFieldTask(InstrumentTask):
-    """
+    """Use a supraconducting magnet to apply a magnetic field. Parallel task.
     """
     loopable = True
 

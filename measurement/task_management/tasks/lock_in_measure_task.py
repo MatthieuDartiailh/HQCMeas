@@ -11,7 +11,8 @@ from .instr_task import InstrumentTask
 from .tools.task_decorator import make_stoppable, make_wait, smooth_instr_crash
 
 class LockInMeasureTask(InstrumentTask):
-    """
+    """Ask a lock-in to perform a measure. Wait for any parallel operation
+    before execution.
     """
     selected_mode = Str(preference = True)
     waiting_time = Float(preference = True)

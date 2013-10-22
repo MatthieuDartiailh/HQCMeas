@@ -16,7 +16,8 @@ class FormulaObject(HasTraits):
     formula = Str
 
 class FormulaTask(SimpleTask):
-    """
+    """Compute values according to formulas. Any valid python expression can be
+    evaluated and replacement to access to the database data can be used.
     """
     labels = List(Str, preference = True)
     formulas = List(Str, preference = True)

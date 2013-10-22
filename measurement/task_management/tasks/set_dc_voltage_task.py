@@ -15,7 +15,9 @@ from .tools.task_decorator import (make_stoppable, make_parallel,
 from .tools.database_string_formatter import format_and_eval_string
 
 class SetDCVoltageTask(InstrumentTask):
-    """
+    """Set a DC voltage to the specified value. The user can choose to limit the
+    rate by choosing an appropriate back step (larger step allowed), and a
+    waiting time between each step.
     """
     target_value = Str(preference = True)
     back_step = Float(preference = True)
@@ -102,7 +104,7 @@ class SetDCVoltageTask(InstrumentTask):
 
         if abs(value-last_value) > abs(step):
             while True:
-                # Avoid the accumuilation of rounding errors
+                # Avoid the accumulation of rounding errors
                 last_value = round(last_value + step, 9)
                 self.driver.voltage = last_value
                 if abs(value-last_value) > abs(step):

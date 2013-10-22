@@ -77,7 +77,7 @@ class PNATasks(InstrumentTask):
         return True, traceback
 
 class PNASetFreqTask(PNATasks):
-    """
+    """Set the central frequecny to be used for the specified channel.
     """
     channel = Int(1, preference = True)
     frequency = Str(preference = True)
@@ -157,7 +157,7 @@ class PNASetFreqTask(PNATasks):
         self.trait_view('task_view', view)
 
 class PNASetPowerTask(PNATasks):
-    """
+    """Set the central power to be used for the specified channel.
     """
     channel = Int(1, preference = True)
     power = Str(preference = True)
@@ -239,7 +239,8 @@ class PNASetPowerTask(PNATasks):
 
 
 class PNASinglePointMeasureTask(PNATasks):
-    """
+    """Measure the specified parameters. Frequency and power can be set before.
+    Wait for any parallel operation before execution.
     """
     channel = Int(1, preference = True)
     measures = List(Str, preference = True)
@@ -322,14 +323,14 @@ class PNASinglePointMeasureTask(PNATasks):
             self.channel_driver.clear_instrument_cache(['frequency', 'power'])
             self.channel_driver.frequency = freq
             self.channel_driver.power = power
-            
+
             # Check whether or not we are doing the same measures as the ones
             # already defined (avoid losing display optimisation)
-            meas_names = ['Ch{}:'.format(self.channel) + measure 
+            meas_names = ['Ch{}:'.format(self.channel) + measure
                             for measure in self.measures]
-            existing_meas = [meas['name'] 
+            existing_meas = [meas['name']
                     for meas in self.channel_driver.list_existing_measures()]
-            if not (all([meas in existing_meas for meas in meas_names]) 
+            if not (all([meas in existing_meas for meas in meas_names])
                     and all([meas in meas_names for meas in existing_meas])):
                 clear = True
                 self.channel_driver.delete_all_meas()
@@ -382,7 +383,8 @@ class PNASinglePointMeasureTask(PNATasks):
         self.task_database_entries = entries
 
 class PNASweepTask(PNATasks):
-    """
+    """Measure the specified parameters while sweeping either the frequency or
+    the power. Wait for any parallel operation before execution.
     """
     channel = Int(1, preference = True)
     start = Str(preference = True)
@@ -421,14 +423,14 @@ class PNASweepTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
             self.channel_driver.if_bandwidth = self.if_bandwidth
-            
+
             # Check whether or not we are doing the same measures as the ones
             # already defined (avoid losing display optimisation)
-            meas_names = ['Ch{}:'.format(self.channel) + measure 
+            meas_names = ['Ch{}:'.format(self.channel) + measure
                             for measure in self.measures]
-            existing_meas = [meas['name'] 
+            existing_meas = [meas['name']
                     for meas in self.channel_driver.list_existing_measures()]
-            if not (all([meas in existing_meas for meas in meas_names]) 
+            if not (all([meas in existing_meas for meas in meas_names])
                     and all([meas in meas_names for meas in existing_meas])):
                 clear = True
                 self.channel_driver.delete_all_meas()

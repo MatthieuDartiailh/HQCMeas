@@ -10,7 +10,8 @@ from .instr_task import InstrumentTask
 from .tools.task_decorator import make_stoppable, make_wait, smooth_instr_crash
 
 class MeasDCVoltageTask(InstrumentTask):
-    """
+    """Measure a dc voltage. Wait for any parallel operation before execution
+    and then wait the specified time before perfoming the measure.
     """
     wait_time = Float(preference = True)
     wait_parallel = Bool(True)

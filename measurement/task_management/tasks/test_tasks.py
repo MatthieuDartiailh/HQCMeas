@@ -67,7 +67,8 @@ class PrintTask(SimpleTask):
         self.trait_view('task_view', task_view)
 
 class SleepTask(SimpleTask):
-    """
+    """Simply sleeps for the specified amount of time. Wait for any parallel
+    operation before execution.
     """
 
     time = Float(preference = True)
@@ -102,7 +103,7 @@ class DefinitionValueObject(HasTraits):
     value = Str
 
 class DefinitionTask(SimpleTask):
-    """
+    """Add static values in the database.
     """
 
     definition_labels = List(Str, preference = True)

@@ -98,7 +98,7 @@ class SimpleLoopTask(BaseLoopTask):
                                          self.task_database)
         step = format_and_eval_string(self.task_step, self.task_path,
                                          self.task_database)
-        num = round(abs(((stop - start)/step))) + 1
+        num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
             self.write_in_database('index', value)
@@ -115,7 +115,7 @@ class SimpleLoopTask(BaseLoopTask):
                                          self.task_database)
         step = format_and_eval_string(self.task_step, self.task_path,
                                          self.task_database)
-        num = round(abs(((stop - start)/step))) + 1
+        num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
             self.write_in_database('index', value)
@@ -180,7 +180,7 @@ class LoopTask(BaseLoopTask):
                                          self.task_database)
         step = format_and_eval_string(self.task_step, self.task_path,
                                          self.task_database)
-        num = round(abs(((stop - start)/step))) + 1
+        num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
             self.task.process(value)
@@ -197,7 +197,7 @@ class LoopTask(BaseLoopTask):
                                          self.task_database)
         step = format_and_eval_string(self.task_step, self.task_path,
                                          self.task_database)
-        num = round(abs(((stop - start)/step))) + 1
+        num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
             tic = default_timer()

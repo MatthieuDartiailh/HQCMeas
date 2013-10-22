@@ -16,5 +16,5 @@ from loop_task_config import LoopConfigTask
 
 #defining the special config dictionnary used by the builder to select the right
 #config task class.
-special_config = {SimpleTask : PyConfigTask, InstrumentTask : InstrConfigTask,
+SPECIAL_CONFIG = {SimpleTask : PyConfigTask, InstrumentTask : InstrConfigTask,
                   LoopTask : LoopConfigTask, ComplexTask : PyConfigTask}

@@ -144,7 +144,17 @@ class TaskManager(HasTraits):
         """
         task = self.tasks[new]
         if task in self.py_tasks:
-            self.selected_task_docstring = getdoc(task)
+            doc = ''
+            i = 0
+            lines = getdoc(task).split('\n')
+            while i < len(lines):
+                line = lines[i].strip()
+                if line:
+                    doc += line + ' '
+                else:
+                    break
+                i += 1
+            self.selected_task_docstring = doc.strip()
         else:
             path = os.path.join(self.template_folder, task)
             doc_list = ConfigObj(path).initial_comment

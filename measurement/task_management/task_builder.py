@@ -7,7 +7,7 @@ from traits.api import (HasTraits, Str, Instance, Type, Dict, Bool, Button,
 from traitsui.api import (View, HGroup, VGroup, UItem, InstanceEditor, Handler)
 
 from .tasks import AbstractTask, RootTask
-from .config import AbstractConfigTask, IniConfigTask, special_config
+from .config import AbstractConfigTask, IniConfigTask, SPECIAL_CONFIG
 from .task_manager import TaskManager
 
 class TaskBuilderHandler(Handler):
@@ -39,7 +39,7 @@ class TaskBuilder(HasTraits):
     # special config dict
     configurable_tasks = Dict(Type(AbstractTask),
                               Type(AbstractConfigTask),
-                              special_config)
+                              SPECIAL_CONFIG)
     task_config = Instance(AbstractConfigTask)
 
     #For the time useless trait storing the parent of the new task

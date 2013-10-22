@@ -58,7 +58,8 @@ class SaveTaskHandler(Handler):
                                 kind = 'livemodal')
 
 class SaveTask(SimpleTask):
-    """
+    """Save the specified entries either in a CSV file or an array. Wait for any
+    parallel operation before execution.
     """
     folder = Str('', preference = True)
     filename = Str('', preference = True)
@@ -129,7 +130,6 @@ class SaveTask(SimpleTask):
                 self.array_length = format_and_eval_string(self.array_size,
                                                            self.task_path,
                                                            self.task_database)
-                print [(name, 'f8') for name in self.saved_labels]
                 array_type = numpy.dtype([(str(name), 'f8')
                                             for name in self.saved_labels])
                 self.array = numpy.empty((self.array_length),
@@ -145,7 +145,7 @@ class SaveTask(SimpleTask):
         if self.saving_target != 'Array':
             self.file_object.write('\t'.join([str(val)
                                               for val in values]) + '\n')
-            self.file_object.flush()
+#            self.file_object.flush()
         if self.saving_target != 'File':
             self.array[self.line_index] = tuple(values)
 
@@ -337,7 +337,8 @@ class SaveTask(SimpleTask):
 
 
 class SaveArrayTask(SimpleTask):
-    """
+    """Save the specified array either in a CSV file or as a .npy binary file.
+    Wait for any parallel operation before execution.
     """
     folder = Str('', preference = True)
     explore_button = Button('Browse')

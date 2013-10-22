@@ -12,7 +12,7 @@ from .tools.task_decorator import (make_stoppable, smooth_instr_crash)
 from .tools.database_string_formatter import format_and_eval_string
 
 class RFSourceSetFrequencyTask(InstrumentTask):
-    """
+    """Set the frequency of the signal delivered by the source.
     """
 
     frequency = Str(preference = True)
@@ -130,7 +130,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
 
 
 class RFSourceSetPowerTask(InstrumentTask):
-    """
+    """Set the power of the signal delivered by the source.
     """
 
     power = Str(preference = True)
@@ -238,7 +238,7 @@ class RFSourceSetPowerTask(InstrumentTask):
 
 
 class RFSourceSetOnOffTask(InstrumentTask):
-    """
+    """Switch on/off the output of the source.
     """
 
     switch = Str(preference = True)

@@ -12,7 +12,8 @@ from .tools.task_decorator import (make_stoppable, make_wait)
 from .base_tasks import SimpleTask
 
 class ArrayExtremaTask(SimpleTask):
-    """
+    """Store in the database the pair(s) of index/value for the extrema(s) of an
+    array. Wait for any parallel operation before execution.
     """
     target_array = Str(preference = True)
     column_name = Str(preference = True)

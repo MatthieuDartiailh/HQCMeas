@@ -76,6 +76,7 @@ def make_wait(switch = None):
                     threads = obj.task_database.get_value('root', 'threads')
                     for thread in threads:
                         thread.join()
+                    obj.task_database.set_value('root', 'threads', [])
                 return method(*args, **kwargs)
         else:
             def wrapper(*args, **kwargs):
@@ -84,6 +85,7 @@ def make_wait(switch = None):
                 threads = obj.task_database.get_value('root', 'threads')
                 for thread in threads:
                     thread.join()
+                obj.task_database.set_value('root', 'threads', [])
                 return method(*args, **kwargs)
 
         wrapper.__name__ = method.__name__
