@@ -213,7 +213,7 @@ class SaveTask(SimpleTask):
             names = str(','.join(self.saved_labels))
             final_arr = numpy.rec.fromarrays(data, names = names)
 
-        self.write_in_database('array', final_arr)
+            self.write_in_database('array', final_arr)
 
         return test, traceback
 

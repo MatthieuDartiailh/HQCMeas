@@ -21,12 +21,12 @@ set of task).
     MeasurementBuilder : View used to build a measurement from scratch.
 """
 
-from traits.api import (HasTraits, Instance, Button, Any, Property)
+from traits.api import (HasTraits, Instance, Button, Any, Property, Str)
 from traitsui.api import (View, HGroup, UItem, Handler, TreeEditor, Menu,
-                          TreeNode, Action, Separator, Spring, error, VGroup)
+                          TreeNode, Action, Separator, Spring, error, VGroup,
+                          Item)
 from traitsui.qt4.tree_editor\
-    import (CutAction, CopyAction, PasteAction, DeleteAction,
-            RenameAction)
+    import (CutAction, CopyAction, PasteAction, DeleteAction)
 from pyface.qt import QtGui
 
 from configobj import ConfigObj
@@ -39,6 +39,13 @@ from .task_management.template_task_saver import TemplateTaskSaver
 from.task_management.task_builder import TaskBuilder
 from.task_management.config.base_task_config import IniConfigTask
 
+class TaskNameDialog(HasTraits):
+    """
+    """
+    name = Str
+    view = View(Item('name'), title = 'Enter the new name of the task',
+                buttons = ['OK', 'Cancel'], kind = 'livemodal')
+
 class MeasurementTreeViewHandler(Handler):
     """Handler for a MeasurementTreeView defining custom context menu actions.
 
@@ -47,8 +54,8 @@ class MeasurementTreeViewHandler(Handler):
     model : instance(`MeasurementTreeView`)
         Convenience to access the `MeasurementTreeView` instance
 
-    Method
-    ------
+    Methods
+    -------
     append_task(info, task):
         Method allowing the user to append a task to the ones already attached
         to that node. Requires the node to accept children.
@@ -112,6 +119,17 @@ class MeasurementTreeViewHandler(Handler):
                                         new_task)
                 editor._tree.setCurrentItem(parent_nid.child(index))
 
+    def rename(self, info, task):
+        """Method allowing the user to rename a task.
+        """
+        if info.initialized:
+            editor = info.tree
+            node, task, nid = editor._data
+            dialog = TaskNameDialog()
+            ui = dialog.edit_traits(parent = info.ui.control)
+            if ui.result:
+                task.task_name = dialog.name
+
     def save_as_template(self, info, task):
         """Method used to create a template from a task. Requires the task to
         accept children.
@@ -134,6 +152,10 @@ add_after_action = Action(name = 'Add after',
 save_action = Action(name = 'Save as template',
                      action = 'save_as_template')
 
+rename_action = Action(name = 'Rename',
+                     action = 'rename',
+                     enabled_when = 'editor._is_renameable(object)' )
+
 class MeasurementTreeView(HasTraits):
     """View representing a measurement as a tree.
 
@@ -144,8 +166,8 @@ class MeasurementTreeView(HasTraits):
     editor : instance(`TreeEditor`)
         Tree editor used to build the ui.
 
-    Method
-    ------
+    Methods
+    -------
     default_traits_view():
         Method building automatically the view for this object.
 
@@ -166,7 +188,7 @@ class MeasurementTreeView(HasTraits):
                                                     save_action,
                                                     DeleteAction,
                                                     Separator(),
-                                                    RenameAction,
+                                                    rename_action,
                                                     Separator(),
                                                     CopyAction,
                                                     CutAction,
@@ -184,7 +206,7 @@ class MeasurementTreeView(HasTraits):
 #                                                    save_action,
                                                     DeleteAction,
                                                     Separator(),
-                                                    RenameAction,
+                                                    rename_action,
                                                     Separator(),
                                                     CopyAction,
                                                     CutAction,
@@ -208,8 +230,8 @@ class MeasurementTreeView(HasTraits):
 class MeasurementEditorHandler(Handler):
     """Handler for a MeasurementEditor handling the users pressing buttons.
 
-    Method
-    ------
+    Methods
+    -------
     object_save_template_button_changed(info):
         Method used to save the whole measurement as a template.
     object_save_button_changed(info):
@@ -302,8 +324,8 @@ class MeasurementEditor(HasTraits):
 class MeasurementBuilderHandler(MeasurementEditorHandler):
     """Handler for a MeasurementEditor handling the users pressing buttons.
 
-    Method
-    ------
+    Methods
+    -------
     object_new_button_changed(info):
         Method used to create a new blank measurement.
     object_load_button_changed(info):
@@ -385,10 +407,12 @@ class MeasurementBuilder(MeasurementEditor):
         (see `MeasurementBuilderHandler`)
     enqueue_button : instance(`Button`)
         Button to enqueue a measure.
-    Method
-    ------
+
+    Methods
+    -------
     new_root_task():
         Create a new blanck measure and make it the edited measure.
+
     """
     new_button = Button('New measure')
     load_button = Button('Load measure')

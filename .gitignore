@@ -3,3 +3,5 @@
 *.dll
 *.ini
 *.log
+doc/build
+**/log/log_files/

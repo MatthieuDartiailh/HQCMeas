@@ -8,8 +8,7 @@ from traitsui.api import (View, Group, VGroup, UItem, Label, EnumEditor,
 from textwrap import fill
 
 from .instr_task import InstrumentTask
-from .tools.task_decorator import (make_stoppable, make_parallel,
-                                   smooth_instr_crash)
+from .tools.task_decorator import (make_stoppable, smooth_instr_crash)
 from .tools.database_string_formatter import format_and_eval_string
 
 class RFSourceSetFrequencyTask(InstrumentTask):
@@ -55,7 +54,6 @@ class RFSourceSetFrequencyTask(InstrumentTask):
         self._define_task_view()
 
     @make_stoppable
-    @make_parallel()
     @smooth_instr_crash
     def process(self, frequency = None):
         """
@@ -78,15 +76,17 @@ class RFSourceSetFrequencyTask(InstrumentTask):
         """
         test, traceback = super(RFSourceSetFrequencyTask, self).check(*args,
                                                                      **kwargs)
-        try:
-            freq = format_and_eval_string(self.frequency, self.task_path,
-                                               self.task_database)
-        except:
-            test = False
-            traceback[self.task_path + '/' +self.task_name + '-freq'] = \
-                'Failed to eval the frequency formula {}'.format(self.frequency)
-        self.write_in_database('unit', self.unit)
-        self.write_in_database('frequency', freq)
+        if self.frequency:
+            try:
+                freq = format_and_eval_string(self.frequency, self.task_path,
+                                                   self.task_database)
+            except:
+                test = False
+                traceback[self.task_path + '/' +self.task_name + '-freq'] = \
+                    'Failed to eval the frequency formula {}'.format(
+                                                                self.frequency)
+            self.write_in_database('unit', self.unit)
+            self.write_in_database('frequency', freq)
         return test, traceback
 
     def _list_database_entries(self):
@@ -167,7 +167,6 @@ class RFSourceSetPowerTask(InstrumentTask):
         self._define_task_view()
 
     @make_stoppable
-    @make_parallel()
     @smooth_instr_crash
     def process(self, power = None):
         """
@@ -189,15 +188,16 @@ class RFSourceSetPowerTask(InstrumentTask):
         """
         test, traceback = super(RFSourceSetPowerTask, self).check(*args,
                                                                      **kwargs)
-        try:
-            power = format_and_eval_string(self.power, self.task_path,
-                                               self.task_database)
-        except:
-            test = False
-            traceback[self.task_path + '/' +self.task_name + '-power'] = \
-                'Failed to eval the frequency power {}'.format(self.power)
+        if self.power:
+            try:
+                power = format_and_eval_string(self.power, self.task_path,
+                                                   self.task_database)
+            except:
+                test = False
+                traceback[self.task_path + '/' +self.task_name + '-power'] = \
+                    'Failed to eval the frequency power {}'.format(self.power)
 
-        self.write_in_database('power', power)
+            self.write_in_database('power', power)
         return test, traceback
 
     def _list_database_entries(self):
@@ -266,9 +266,24 @@ class RFSourceSetOnOffTask(InstrumentTask):
                             ),
                         ),
                      )
+    loop_view = View(
+                    VGroup(
+                        UItem('task_name', style = 'readonly'),
+                        Group(
+                            Label('Driver'), Label('Instr'), Label('Switch'),
+                            UItem('selected_driver',
+                                editor = EnumEditor(name = 'driver_list'),
+                                width = 100),
+                            UItem('selected_profile',
+                                editor = EnumEditor(name = 'profile_list'),
+                                width = 100),
+                            columns = 3,
+                            show_border = True,
+                            ),
+                        ),
+                     )
 
     @make_stoppable
-    @make_parallel()
     @smooth_instr_crash
     def process(self, switch = None):
         """
@@ -281,10 +296,10 @@ class RFSourceSetOnOffTask(InstrumentTask):
 
         if switch == 'On' or switch == 1:
             self.driver.output = 'On'
-            self.write_in_database('output', 'On')
+            self.write_in_database('output', 1)
         else:
             self.driver.output = 'Off'
-            self.write_in_database('output', 'Off')
+            self.write_in_database('output', 0)
 
     def check(self, *args, **kwargs):
         """
