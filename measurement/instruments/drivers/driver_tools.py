@@ -68,10 +68,13 @@ class instrument_property(property):
     def __get__(self, obj, objtype = None):
         """
         """
-        if self._cache is not None:
+        if self._allow_caching:
+            if self._cache is None:
+                self._cache = super(instrument_property, self).__get__(obj,
+                                                                     objtype)
             return self._cache
         else:
-            return super(instrument_property, self).__get__(obj, objtype)
+           return super(instrument_property, self).__get__(obj, objtype)
 
     def __set__(self, obj, value):
         """
@@ -336,7 +339,7 @@ class VisaInstrument(BaseInstrument):
 
     def __init__(self, connection_info, caching_allowed = True,
                  caching_permissions = {}):
-        super(VisaInstrument, self).__init__(caching_allowed,
+        super(VisaInstrument, self).__init__(connection_info, caching_allowed,
                                                 caching_permissions)
         if connection_info['additionnal_mode'] != '':
             self.connection_str = connection_info['connection_type']\

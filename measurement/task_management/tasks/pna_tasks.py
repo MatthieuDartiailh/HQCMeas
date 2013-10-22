@@ -337,6 +337,8 @@ class PNASinglePointMeasureTask(PNATasks):
                     self.channel_driver.prepare_measure(meas_name, self.window,
                                                         i+1, clear)
                     clear = False
+            if self.if_bandwidth > 5:
+                self.channel_driver.sweep_mode = 'CONTinuous'
 
         if self.if_bandwidth < 5:
             self.driver.fire_trigger(self.channel)
@@ -349,10 +351,11 @@ class PNASinglePointMeasureTask(PNATasks):
 
         for i, measure in enumerate(self.measures):
             meas_name = 'Ch{}:'.format(self.channel) + measure
+            self.channel_driver.selected_measure = meas_name
             if self.measure_format[i]:
-                data = self.channel_driver.read_formatted_data(meas_name)[0]
+                data = self.channel_driver.read_formatted_data()[0]
             else:
-                data = self.channel_driver.read_raw_data(meas_name)[0]
+                data = self.channel_driver.read_raw_data()[0]
             self.write_in_database(measure, data)
 
     @on_trait_change('channel')
