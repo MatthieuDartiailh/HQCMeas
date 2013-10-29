@@ -63,7 +63,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
             if self.auto_start:
                 self.driver.output = 'On'
 
-        if not frequency:
+        if frequency is None:
             frequency = format_and_eval_string(self.frequency, self.task_path,
                                                self.task_database)
 
@@ -176,7 +176,7 @@ class RFSourceSetPowerTask(InstrumentTask):
             if self.auto_start:
                 self.driver.output = 'On'
 
-        if not power:
+        if power is None:
             power = format_and_eval_string(self.power, self.task_path,
                                                self.task_database)
 
@@ -291,7 +291,7 @@ class RFSourceSetOnOffTask(InstrumentTask):
         if not self.driver:
             self.start_driver()
 
-        if not switch:
+        if switch is None:
             switch = self.switch
 
         if switch == 'On' or switch == 1:

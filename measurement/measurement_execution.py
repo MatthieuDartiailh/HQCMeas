@@ -562,8 +562,8 @@ class TaskExecutionControl(HasTraits):
             else:
                 return False
         else:
-           TaskCheckDisplay(check[1])
-           return False
+            TaskCheckDisplay(check[1])
+            return False
 
     def _start_button_changed(self):
         """Handle the `start_button` being pressed.
@@ -645,7 +645,7 @@ class TaskExecutionControl(HasTraits):
                             break
 
                     # If one is found, stop the old monitor, if necessary start
-                    # a new one and send the measur in the pipe.
+                    # a new one and send the measure in the pipe.
                     if task is not None:
                         task_holder.is_running = True
                         task.update_preferences_from_traits()
@@ -694,8 +694,6 @@ class TaskExecutionControl(HasTraits):
                     self.running = False
                     break
 
-            # If the measurement process sent a message different from
-            # 'Need_task', it means it will stop so we can clean up.
             elif mess == 'Task processed':
                 i = 0
                 while i < len(self.task_holders):
@@ -703,9 +701,11 @@ class TaskExecutionControl(HasTraits):
                         i += 1
                         continue
                     else:
-                       del self.task_holders[i]
-                       break
+                        del self.task_holders[i]
+                        break
 
+            # If the measurement process sent a message different from
+            # 'Need_task', it means it will stop so we can clean up.
             else:
                 self.pipe.close()
                 self.process.join()

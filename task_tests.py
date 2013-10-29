@@ -86,6 +86,7 @@ class Test(HasTraits):
                 resizable = True,
                 menubar = menubar,
                 handler = TestHandler(),
+                title = 'HQC Measurement',
                 )
 
     def __init__(self, *args, **kwargs):

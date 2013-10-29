@@ -101,6 +101,8 @@ class SimpleLoopTask(BaseLoopTask):
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
+            if self.root_task.should_stop.is_set():
+                break
             self.write_in_database('index', value)
             for child in self.children_task:
                 child.process()
@@ -118,6 +120,8 @@ class SimpleLoopTask(BaseLoopTask):
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
+            if self.root_task.should_stop.is_set():
+                break
             self.write_in_database('index', value)
             tic = default_timer()
             for child in self.children_task:
@@ -183,6 +187,8 @@ class LoopTask(BaseLoopTask):
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
+            if self.root_task.should_stop.is_set():
+                break
             self.task.process(value)
             for child in self.children_task:
                 child.process()
@@ -200,6 +206,8 @@ class LoopTask(BaseLoopTask):
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
         for value in linspace(start, stop, num):
+            if self.root_task.should_stop.is_set():
+                break
             tic = default_timer()
             self.task.process(value)
             for child in self.children_task:

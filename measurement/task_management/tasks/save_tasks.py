@@ -94,7 +94,7 @@ class SaveTask(SimpleTask):
     def __init__(self, *args, **kwargs):
         super(SaveTask, self).__init__(*args, **kwargs)
         self._define_task_view()
-        self.on_trait_change(name = 'saved_objects:[label, value]',
+        self.on_trait_change(name = 'saved_objects.[label, value]',
                              handler = self._saved_objects_modified)
 
     @make_stoppable
@@ -145,7 +145,7 @@ class SaveTask(SimpleTask):
         if self.saving_target != 'Array':
             self.file_object.write('\t'.join([str(val)
                                               for val in values]) + '\n')
-#            self.file_object.flush()
+            self.file_object.flush()
         if self.saving_target != 'File':
             self.array[self.line_index] = tuple(values)
 
@@ -228,14 +228,14 @@ class SaveTask(SimpleTask):
         """
         """
         super(SaveTask, self).update_traits_from_preferences(**parameters)
-        self.on_trait_change(name = 'saved_objects:[label, value]',
+        self.on_trait_change(name = 'saved_objects.[label, value]',
                              handler = self._saved_objects_modified,
                              remove = True)
         for i, label in enumerate(self.saved_labels):
             self.saved_objects.append(
                     SavedValueObject(label = label,
                                      value = self.saved_values[i]))
-        self.on_trait_change(name = 'saved_objects:[label, value]',
+        self.on_trait_change(name = 'saved_objects.[label, value]',
                              handler = self._saved_objects_modified)
 
     def _saved_objects_modified(self):

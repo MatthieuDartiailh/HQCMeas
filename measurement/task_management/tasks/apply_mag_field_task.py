@@ -73,7 +73,7 @@ class ApplyMagFieldTask(InstrumentTask):
             self.driver.owner = self.task_name
             self.driver.make_ready()
 
-        if not target_value:
+        if target_value is None:
             target_value = format_and_eval_string(self.target_field,
                                                      self.task_path,
                                                      self.task_database)

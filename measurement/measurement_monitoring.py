@@ -82,7 +82,7 @@ class MeasureMonitor(HasTraits):
                                                 drag_move = True),
                                 ),
                             ),
-                        title = 'Measurement monitor',
+                        title = 'Monitor',
                         resizable = True, width = 300,
                         )
 
