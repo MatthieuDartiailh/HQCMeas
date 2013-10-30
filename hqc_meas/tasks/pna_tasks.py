@@ -22,9 +22,9 @@ from .instr_task import InstrumentTask
 from .tools.task_decorator import (make_stoppable, smooth_instr_crash,
                                    make_wait)
 from .tools.database_string_formatter import (format_and_eval_string)
-from ...instruments.profiles import PROFILES_DIRECTORY_PATH
-from ...instruments.drivers import DRIVERS
-from ...instruments.drivers.driver_tools import InstrIOError
+from ..instruments.profiles import PROFILES_DIRECTORY_PATH
+from ..instruments.drivers import DRIVERS
+from ..instruments.drivers.driver_tools import InstrIOError
 
 class PNATasks(InstrumentTask):
     """

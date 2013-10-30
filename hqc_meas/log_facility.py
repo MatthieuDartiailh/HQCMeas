@@ -21,7 +21,7 @@ process log emitted in the measure process.
         Thread getting log record from a queue and asking logging to handle them
 """
 
-import logging
+import logging, Queue
 from inspect import cleandoc
 from threading import Thread
 
@@ -220,8 +220,11 @@ class QueueLoggerThread(Thread):
         """
         while True:
             #Collect all display output from process
-            record = self.queue.get()
-            if record is None:
-                break
-            logger = logging.getLogger(record.name)
-            logger.handle(record)
+            try:
+                record = self.queue.get()
+                if record is None:
+                    break
+                logger = logging.getLogger(record.name)
+                logger.handle(record)
+            except Queue.Empty:
+                continue

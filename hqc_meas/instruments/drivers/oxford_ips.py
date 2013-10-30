@@ -61,7 +61,7 @@ class IPS12010(VisaInstrument):
                            'target_field' : True,
                            'sweep_rate_field' : True,
                            }
-    def __init__(self, connection_info, caching_allowed = True, 
+    def __init__(self, connection_info, caching_allowed = True,
                  caching_permissions = {}):
         super(IPS12010, self).__init__(connection_info, caching_allowed,
                                     caching_permissions)
@@ -160,7 +160,7 @@ class IPS12010(VisaInstrument):
         """
         par = _PARAMETER_DICT.get(parameter, None)
         if par:
-            return self.ask('R{}'.format(par))[2:]
+            return self.ask('R{}'.format(par))[1:]
         else:
             raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
                 read_parameter method'''.format(parameter)))

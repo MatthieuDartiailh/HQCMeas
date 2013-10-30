@@ -7,10 +7,10 @@ import os
 from inspect import cleandoc
 
 from .base_tasks import SimpleTask
-from ...instruments.drivers import DRIVERS
-from ...instruments.profiles import PROFILES_DIRECTORY_PATH
-from ...instruments.instrument_manager import InstrumentManager
-from ...instruments.drivers.driver_tools import BaseInstrument, InstrIOError
+from ..instruments.drivers import DRIVERS
+from ..instruments.profiles import PROFILES_DIRECTORY_PATH
+from ..instruments.instrument_manager import InstrumentManager
+from ..instruments.drivers.driver_tools import BaseInstrument, InstrIOError
 
 class InstrumentTask(SimpleTask):
     """

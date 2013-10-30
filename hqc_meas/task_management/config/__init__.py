@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #Importing all known tasks
-from ..tasks import *
+from ...tasks import *
 
 #Importing the base task config
 from .base_task_config import (AbstractConfigTask, IniConfigTask, PyConfigTask,

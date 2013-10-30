@@ -7,8 +7,9 @@ from traitsui.api import (View, UItem, TabularEditor, SetEditor, HGroup, Label,
 from traitsui.tabular_adapter import TabularAdapter
 from pyface.api import GUI
 from time import sleep
+import Queue
 
-from .task_management.tasks.tools.task_database import TaskDatabase
+from ..tasks.tools.task_database import TaskDatabase
 
 class MeasureSpy(HasTraits):
     """
@@ -40,11 +41,14 @@ class ThreadMeasureMonitor(Thread):
 
     def run(self):
         while True:
-            news = self.queue.get()
-            if news != (None, None):
-                self.monitor.map_news(news)
-            else:
-                break
+            try:
+                news = self.queue.get()
+                if news != (None, None):
+                    self.monitor.map_news(news)
+                else:
+                    break
+            except Queue.Empty:
+                continue
 
 class MonitoredPairAdapter(TabularAdapter):
 

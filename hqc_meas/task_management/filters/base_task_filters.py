@@ -4,7 +4,7 @@
 
 from traits.api import (HasTraits, List, Type, File)
 
-from ..tasks import (AbstractTask, BaseLoopTask, ComplexTask, InstrumentTask)
+from ...tasks import (AbstractTask, BaseLoopTask, ComplexTask, InstrumentTask)
 
 class AbstractTaskFilter(HasTraits):
     """

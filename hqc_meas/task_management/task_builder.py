@@ -6,7 +6,7 @@ from traits.api import (HasTraits, Str, Instance, Type, Dict, Bool, Button,
                         on_trait_change)
 from traitsui.api import (View, HGroup, VGroup, UItem, InstanceEditor, Handler)
 
-from .tasks import AbstractTask, RootTask
+from ..tasks import AbstractTask, RootTask
 from .config import AbstractConfigTask, IniConfigTask, SPECIAL_CONFIG
 from .task_manager import TaskManager
 

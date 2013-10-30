@@ -33,11 +33,11 @@ from configobj import ConfigObj
 from inspect import cleandoc
 import textwrap
 
-from .task_management.tasks import (ComplexTask, SimpleTask, AbstractTask,
+from ..tasks import (ComplexTask, SimpleTask, AbstractTask,
                                     RootTask)
-from .task_management.template_task_saver import TemplateTaskSaver
-from.task_management.task_builder import TaskBuilder
-from.task_management.config.base_task_config import IniConfigTask
+from ..task_management.template_task_saver import TemplateTaskSaver
+from..task_management.task_builder import TaskBuilder
+from..task_management.config.base_task_config import IniConfigTask
 
 class TaskNameDialog(HasTraits):
     """

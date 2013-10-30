@@ -4,7 +4,7 @@
 
 from threading import Thread
 import logging
-from ....instruments.drivers.driver_tools import InstrIOError
+from ...instruments.drivers.driver_tools import InstrIOError
 
 def make_stoppable(function_to_decorate):
     """This decorator should be used on the process method of every task as it

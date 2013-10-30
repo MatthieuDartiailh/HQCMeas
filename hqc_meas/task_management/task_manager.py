@@ -15,8 +15,8 @@ from watchdog.observers.api import ObservedWatch
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                             FileDeletedEvent, FileMovedEvent)
 
-from .tasks import AbstractTask, KNOWN_PY_TASKS
-from ..task_management import tasks
+from ..tasks import AbstractTask, KNOWN_PY_TASKS
+from .. import tasks
 from .filters import task_filters, AbstractTaskFilter
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -48,7 +48,9 @@ class TaskManager(HasTraits):
 
     py_tasks = List(Type(AbstractTask), KNOWN_PY_TASKS)
 
-    template_folder = Directory(os.path.join(MODULE_PATH,'tasks/templates'))
+    template_folder = Directory(os.path.realpath(
+                                    os.path.join(MODULE_PATH,
+                                        '../tasks/templates')))
     template_tasks = List(File)
     observer = Instance(Observer,())
     event_handler = Instance(FileListUpdater)

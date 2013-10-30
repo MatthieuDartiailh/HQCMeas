@@ -9,8 +9,8 @@ from traitsui.api import (View, UItem, TextEditor, Handler, CodeEditor,
 from configobj import ConfigObj
 from inspect import getdoc
 
-from ...task_management import tasks
-from ..tasks import AbstractTask, ComplexTask, RootTask
+from ... import tasks
+from ...tasks import AbstractTask, ComplexTask, RootTask
 
 class AbstractConfigTask(HasTraits):
     """

@@ -10,8 +10,6 @@ import os, textwrap
 from inspect import cleandoc
 from configobj import ConfigObj
 
-MODULE_PATH = os.path.dirname(__file__)
-
 class TemplateTaskSaverHandler(Handler):
     """
     """
@@ -56,7 +54,8 @@ class TemplateTaskSaverHandler(Handler):
 class TemplateTaskSaver(HasTraits):
     """
     """
-    template_folder = Directory(os.path.join(MODULE_PATH, 'tasks/templates'))
+    template_folder = Directory(os.path.join(os.path.dirname(__file__),
+                                             'tasks/templates'))
     template_tasks = List(File)
 
     template_filename = Str()

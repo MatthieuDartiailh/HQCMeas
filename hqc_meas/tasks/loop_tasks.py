@@ -86,7 +86,7 @@ class BaseLoopTask(ComplexTask):
 class SimpleLoopTask(BaseLoopTask):
     """Complex task which, at each iteration, call all its child tasks.
     """
-    task_database_entries = {'point_number' : 11, 'index' : 0}
+    task_database_entries = {'point_number' : 11, 'index' : 1}
 
     @make_stoppable
     def process_no_timing(self):
@@ -119,6 +119,7 @@ class SimpleLoopTask(BaseLoopTask):
                                          self.task_database)
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
+        self.write_in_database('index', start)
         for value in linspace(start, stop, num):
             if self.root_task.should_stop.is_set():
                 break
