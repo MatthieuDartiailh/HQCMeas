@@ -168,8 +168,14 @@ class VisaForm(AbstractConnectionForm):
         return {'connection_type' : self.connection_type,
                 'address' : self.address,
                 'additionnal_mode' : self.additionnal_mode}
+class ZIForm(AbstractConnectionForm):
+    """
 
-FORMS = {'Visa' : VisaForm}
+    """
+
+    traits_view = View()
+
+FORMS = {'Visa' : VisaForm, 'ZurichI' : ZIForm}
 """Dictionnary mapping protocol names to their associated form. Used to
 determine the correct form to display once the user selected a driver type
 

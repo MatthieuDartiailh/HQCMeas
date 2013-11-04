@@ -17,7 +17,7 @@ class LockInMeasureTask(InstrumentTask):
     selected_mode = Str(preference = True)
     waiting_time = Float(preference = True)
 
-    driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830']
+    driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830', 'ZI_HF2LI']
 
     task_database_entries = {'x' : 1.0}
 

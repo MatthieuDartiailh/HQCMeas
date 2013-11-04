@@ -26,6 +26,7 @@ from .agilent_psg_signal_generators import AgilentPSGSignalGenerator
 from .agilent_pna import AgilentPNA
 from .oxford_ips import IPS12010
 from .anritsu_signal_source import AnritsuMG3694
+from .lock_in_zi_hf2li import LockInZI_HF2LI
 
 DRIVERS = {'YokogawaGS200' : YokogawaGS200,
            'Yokogawa7651' : Yokogawa7651,
@@ -37,6 +38,7 @@ DRIVERS = {'YokogawaGS200' : YokogawaGS200,
            'AgilentE8257D' : AgilentPSGSignalGenerator,
            'AgilentPNA' : AgilentPNA,
            'IPS12010' : IPS12010,
-           'AnritsuMG3694' : AnritsuMG3694}
+           'AnritsuMG3694' : AnritsuMG3694,
+           'ZI_HF2LI' : LockInZI_HF2LI}
 
-DRIVER_TYPES = {'Visa' : VisaInstrument}
+DRIVER_TYPES = {'Visa' : VisaInstrument, 'ZurichI' : LockInZI_HF2LI}
