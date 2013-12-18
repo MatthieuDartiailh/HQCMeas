@@ -1,0 +1,103 @@
+from enaml.core.api import Looper
+from enaml.layout.api import hbox, spacer, vbox, grid, align
+from enaml.widgets.api import (PushButton, Menu, Action, Container, Stack,
+                              StackItem, CheckBox, Border, DockPane, Dialog,
+                              Label, Form, Field, GroupBox, MultilineField)
+import os
+
+from ..enaml_util.list_editor import ListEditor
+from ..enaml_util.qt_list_str_widget import QtListStrWidget
+from .monitoring_views import EditMonitorView
+from .edition_view import MeasEditorDialog
+
+enamldef MeasView(GroupBox): widget:
+    attr model
+    constraints = [vbox(hbox(sta_lab, sta_val, spacer),
+                        hbox(edit, spacer, use_mon, edit_mon))]
+    Label: sta_lab:
+        text = 'Status :'
+    Label: sta_val:
+        text << model.monitor.status
+    PushButton: edit:
+        text = 'Edit measure'
+        clicked ::
+            meas_editor = MeasEditorDialog(parent = widget,
+                                            meas = model)
+            model.monitor.status = 'EDITING'
+            default_path = model.root_task.default_path
+            meas_editor.exec_()
+    
+            task = model.root_task
+            path = os.path.join(default_path,
+                            model.monitor.measure_name + '_last_run.ini')
+            if task.default_path == default_path:
+                model.save_measure(path)
+            else:
+                os.remove(path)
+                path = os.path.join(task.default_path,
+                            model.monitor.measure_name + '_last_run.ini')
+                model.save_measure(path)
+    
+            model.monitor.status = 'READY'
+    CheckBox: use_mon:
+        text = 'Use monitor'
+        checked := model.use_monitor
+    PushButton: edit_mon:
+        text = 'Edit monitor'
+        clicked ::
+            EditMonitorView(monitor = model.monitor).exec_()
+            path = os.path.join(default_path,
+                            model.monitor.measure_name + '_last_run.ini')
+            model.save_measure(path)
+
+enamldef ExecutionView(DockPane):
+    attr ex_model
+    closable = False
+    Container:
+        constraints << [vbox(ed,
+                            hbox(start, spacer, stop, stop_all),
+                            hbox(spacer, mon))]
+        ListEditor(MeasView): ed:
+            ed.model << ex_model
+            ed.iterable_name = 'meas_holder'
+            ed.operations = ['move', 'delete']
+        PushButton: start:
+            text = 'Start'
+            enabled << bool(ex_model.meas_holder) and not ex_model.running
+            clicked ::
+                ex_model._start_button_clicked()
+        PushButton: stop:
+            text = 'Stop task'
+            enabled << ex_model.running
+            clicked ::
+                ex_model._stop_button_clicked()
+        PushButton: stop_all:
+            text = 'Stop all'
+            enabled << ex_model.running
+            clicked :: 
+                ex_model._stop_all_button_clicked()
+        PushButton: mon:
+            text = 'Open monitor'
+            clicked::
+                ex_model.monitor_display.show()
+
+enamldef TaskCheckDisplay(Dialog): dial:
+    attr model
+    Container:
+        constraints = [vbox(grid([lis_lab, che_lab],[lis, che]),
+                            hbox(spacer,close)),
+                        align('left', lis_lab, lis),
+                        align('left', che_lab, che)]
+        Label: lis_lab:
+            text = 'Failed tests'
+        QtListStrWidget: lis:
+            items << model.name_to_path_dict.keys()
+            selected_item >> model.selected_check
+        Label: che_lab:
+            text << model.full_path
+        MultilineField: che:
+            text << model.message
+            read_only = True
+        PushButton: close:
+            text = 'Close'
+            clicked :: dial.accept()

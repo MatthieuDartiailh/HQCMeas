@@ -1,0 +1,125 @@
+from enaml.core.api import Looper, Conditional
+from enaml.layout.api import vbox, spacer, hbox, align
+from enaml.stdlib.mapped_view import MappedView
+from enaml.widgets.api import (PushButton, Menu, Action, Container, Stack,
+                              StackItem, Label, GroupBox, Form)
+
+from ..enaml_util.list_editor import PopupListMenu
+    
+
+enamldef TaskEditor(Container): view:
+    attr task
+    attr factory
+    attr mapping
+    attr operations = ['add', 'remove', 'move']
+    padding = (0,5,2,2)
+    Conditional:
+        condition << not bool(task.children_task)
+        PushButton:
+            text = 'Add first element'
+            clicked :: 
+                obj = factory(parent_ui = view)
+                if obj:
+                    task.children_task.append(obj)
+    Conditional:
+        condition << bool(task.children_task)
+        Container: box:
+            attr stack_index = 1
+            constraints = [vbox(hbox(folding, foldable_content),spacer),
+                           align('top', folding, foldable_content)]
+            padding = (0,5,2,2)
+            PushButton: folding:
+                text = '-'
+                constraints = [width == 15, height == 20]
+                clicked ::
+                    if folding.text == '-':
+                        box.stack_index = 0
+                        folding.text = '+'
+                    else:
+                       box.stack_index = 1
+                       folding.text = '-' 
+            GroupBox: foldable_content:
+                padding = (0,5,2,2)
+                Stack:
+                    size_hint_mode = 'current'
+                    hug_width = 'ignore'
+                    index << stack_index
+                    StackItem:
+                        Container:
+                            hug_height = 'strong'
+                            padding = 0
+                            Label:
+                                text = 'FOLDED ITEMS'
+                    StackItem:
+                        Container:
+                            padding = 0
+                            Looper:
+                                iterable << task.children_task[:]
+                                Container:
+                                    padding = (0,0,0,0) 
+                                    constraints = [hbox(button, *map.objects),
+                                            align('top', button, *map.objects)]
+                                    MappedView: map:
+                                        model << loop_item
+                                        typemap = mapping
+                                        modelkey  = 'task'
+                                        kwargs = {'mapping' : mapping}
+                                    PushButton: button:
+                                        constraints = [width == 15,
+                                                        height == 20]
+                                        hug_width = 'strong'
+                                        font = 'bold 12pt Consolas'
+                                        text = '>'
+                                        clicked ::
+                                            edited_list = task.children_task
+                                            menu = PopupListMenu(
+                                              model = edited_list,
+                                              index = edited_list.index(loop_item),
+                                              factory = factory,
+                                              operations = operations,
+                                              kwargs = {'parent_ui': view})
+                                            menu.popup()
+
+enamldef NonFoldingTaskEditor(Container): view:
+    attr task
+    attr factory
+    attr mapping
+    attr operations = ['add', 'remove', 'move']
+    Conditional:
+        condition << not bool(task.children_task)
+        PushButton:
+            text = 'Add first element'
+            clicked :: 
+                obj = factory(parent_ui = view)
+                if obj:
+                    task.children_task.append(obj)
+    Conditional:
+        condition << bool(task.children_task)
+        Container:
+            hug_height = 'strong'
+            padding = 0
+            Looper:
+                iterable << task.children_task[:]
+                Container:
+                    padding = 0
+                    constraints = [hbox(button, *map.objects),
+                            align('top', button, *map.objects)]
+                    PushButton: button:
+                        constraints = [width == 15,
+                                        height == 20]
+                        font = 'bold 12pt Consolas'
+                        text = '>'
+                        clicked ::
+                            edited_list = task.children_task
+                            menu = PopupListMenu(
+                              model = edited_list,
+                              index = edited_list.index(loop_item),
+                              factory = factory,
+                              operations = operations,
+                              kwargs = {'parent_ui': view})
+                            menu.popup()
+                    MappedView: map:
+                        model << loop_item
+                        typemap = mapping
+                        modelkey  = 'task'
+                        kwargs = {'mapping' : mapping}

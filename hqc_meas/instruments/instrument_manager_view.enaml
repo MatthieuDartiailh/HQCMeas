@@ -1,0 +1,43 @@
+from atom.api import Enum, set_default
+from enaml.widgets.api import (Window, Container, PushButton, Form, ObjectCombo,
+                            Label, Field)
+from enaml.stdlib.mapped_view import MappedView
+from enaml.layout.api import hbox, vbox
+from enaml.core.api import Conditional
+
+from hqc_meas.enaml_util.qt_list_str_widget import QtListStrWidget
+from .instrument_manager import InstrumentManagerHandler
+from .forms import FORMS_MAP_VIEWS
+from .drivers import DRIVER_TYPES
+from .instrument_form_view import InstrumentFormView
+
+enamldef InstrumentManagerView(Window): instr_manager_view:
+    attr manager
+    attr handler = InstrumentManagerHandler()
+    title = 'Instrument manager'
+    Container:
+        hug_height = 'strong'
+        constraints = [hbox(list_view, instr_form, button_box)]
+        QtListStrWidget: list_view:
+            hug_width = 'medium'
+            hug_height = 'medium'
+            items << sorted(manager.instrs.keys())
+            selected_item >> manager.selected_instr_name
+        InstrumentFormView: instr_form:
+            hug_width = 'weak'
+            hug_height = 'medium'
+            mode = 'static'
+            model << manager.selected_instr_form
+        Container: button_box:
+            hug_width = 'medium'
+            hug_height = 'medium'
+            constraints = [vbox(add, edit, delete)]
+            PushButton: add:
+                text = 'Add'
+                clicked :: handler.add_instr_clicked(instr_manager_view)
+            PushButton: edit:
+                text = 'Edit'
+                clicked :: handler.edit_instr_clicked(instr_manager_view)
+            PushButton: delete:
+                text = 'Delete'
+                clicked :: handler.delete_instr_clicked(instr_manager_view)

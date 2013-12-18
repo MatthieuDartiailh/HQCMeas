@@ -1,0 +1,7 @@
+*.pyc
+*.spyderproject
+*.enamlc
+*.log
+*.log.*
+hqc_meas/instruments/profiles/
+hqc_meas/tasks/templates/

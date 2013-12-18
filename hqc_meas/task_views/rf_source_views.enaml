@@ -1,0 +1,97 @@
+from enaml.core.api import Conditional
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
+from enaml.stdlib.fields import FloatField
+
+from inspect import cleandoc
+from textwrap import fill
+
+from ..enaml_util.qt_line_completer import QtLineCompleter
+from ..enaml_util.forms import HGroup
+
+enamldef RFSourceFrequencyView(HGroup): view:
+    attr task
+    attr mapping
+    attr in_loop : bool = False
+    title << task.task_name
+    Label:
+        text = 'Driver'
+    ObjectCombo:
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(task.profile_dict.keys())
+        selected := task.selected_profile
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Frequency'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.frequency
+            entries_updater << task._list_database_entries
+    Label:
+        text = 'Unit'
+    ObjectCombo:
+        items << list(task.get_member('unit').items)
+        selected := task.selected_profile
+    Label: auto_lab:
+        text = 'Autostart'
+    CheckBox: auto_val:
+        checked := task.auto_start
+        tool_tip = fill(cleandoc('''Should the source be turned on
+                         automatically before the measurement starts ?'''),60)
+
+enamldef RFSourcePowerView(HGroup): view:
+    attr task
+    attr mapping
+    attr in_loop : bool = False
+    title << task.task_name
+    Label:
+        text = 'Driver'
+    ObjectCombo:
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(task.profile_dict.keys())
+        selected := task.selected_profile
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Power (dBm)'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.power
+            entries_updater << task._list_database_entries
+    Label: auto_lab:
+        text = 'Autostart'
+    CheckBox: auto_val:
+        checked := task.auto_start
+        tool_tip = fill(cleandoc('''Should the source be turned on
+                         automatically before the measurement starts ?'''),60)
+
+enamldef RFSourceSetOnOffView(HGroup): view:
+    attr task
+    attr mapping
+    attr in_loop : bool = False
+    title << task.task_name
+    Label:
+        text = 'Driver'
+    ObjectCombo:
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(task.profile_dict.keys())
+        selected := task.selected_profile
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Output'
+        ObjectCombo:
+            items = ['On', 'Off']
+            selected := task.selected_profile

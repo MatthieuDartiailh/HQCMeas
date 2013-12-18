@@ -1,0 +1,29 @@
+from enaml.layout.api import grid
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo)
+
+from ..enaml_util.qt_line_completer import QtLineCompleter
+
+enamldef ArrayExtremaView(GroupBox): view:
+    attr task
+    attr mapping
+    title << task.task_name
+    padding = (0,5,5,5)
+    constraints << [grid([arr_lab, col_lab, mod_lab],
+                         [arr_val, col_val, mod_val]),
+                    arr_val.width == 2*col_val.width]
+    Label: arr_lab:
+        text = 'Target array'
+    QtLineCompleter: arr_val:
+        hug_width = 'ignore'
+        text >> task.target_array
+        entries_updater << task._list_database_entries
+    Label: col_lab:
+        text = 'Column name'
+    Field: col_val:
+        hug_width = 'ignore'
+        text >> task.column_name
+    Label: mod_lab:
+        text = 'Mode'
+    ObjectCombo: mod_val:
+        items = list(task.get_member('mode').items)
+        selected >> mode

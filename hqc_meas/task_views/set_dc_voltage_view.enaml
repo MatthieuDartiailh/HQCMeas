@@ -1,0 +1,51 @@
+from enaml.core.api import Conditional
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
+from enaml.stdlib.fields import FloatField
+
+from inspect import cleandoc
+from textwrap import fill
+
+from ..enaml_util.qt_line_completer import QtLineCompleter
+from ..enaml_util.forms import HGroup
+
+enamldef SetDcVoltageView(HGroup): view:
+    attr task
+    attr mapping
+    attr in_loop : bool = False
+    padding = (0,0,5,5)
+    title << task.task_name
+    constraints = auto_grid_layout(view)
+    Label:
+        text = 'Driver'
+    ObjectCombo:
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(task.profile_dict.keys())
+        selected := task.selected_profile
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Voltage (V)'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.target_value
+            entries_updater << task._list_database_entries
+    Label:
+        text = 'Back step (V)'
+    FloatField:
+        value := task.back_step
+    Label:
+        text = 'Delay (s)'
+    FloatField:
+        value := task.delay
+    Label:
+        text = 'Check Value'
+    CheckBox:
+        checked := task.check_value
+        tool_tip = fill(cleandoc(
+                            '''Should the program ask the instrument the value
+                            of the applied voltage each time it is about to set
+                            it'''), 60)

@@ -1,0 +1,58 @@
+from enaml.layout.api import hbox, spacer, align
+from enaml.widgets.api import (Container, GroupBox, Label, Form, Field)
+from enaml.stdlib.fields import FloatField
+
+from ..tasks.test_tasks import Definition
+from ..enaml_util.qt_line_completer import QtLineCompleter
+from ..enaml_util.list_editor import ListEditor
+
+enamldef PrintView(GroupBox):
+    attr task
+    attr mapping
+    attr in_loop : bool = False
+    title << task.task_name
+    padding = (0,0,5,5)
+    Form:
+        Label:
+            text = 'Message'
+        QtLineCompleter:
+            text := task.message
+            entries_updater << task._list_database_entries
+
+enamldef SleepView(GroupBox):
+    attr task
+    attr mapping
+    title << task.task_name
+    padding = (0,0,5,5)
+    Container:
+        constraints = [hbox(lab, time, unit),
+                        align('v_center', lab, time),
+                        align('v_center', time, unit)]
+        Label: lab:
+            text = 'Time to sleep'
+        FloatField: time:
+            value := task.time
+        Label: unit:
+            text = 's'
+
+enamldef Def(Container):
+    attr model
+    constraints = [hbox(lab, defi)]
+    padding = (0,2,0,0)
+    Field: lab:
+        hug_width = 'strong'
+        text := model.label
+    Field: defi:
+        hug_width = 'ignore'
+        text := model.definition
+
+enamldef DefinitionView(GroupBox):
+    attr task
+    attr mapping
+    title << task.task_name
+    padding = (0,0,5,5)
+    ListEditor(Def): definitions:
+        definitions.title = 'Label : Value'
+        definitions.model := task
+        definitions.iterable_name = 'definitions'
+        definitions.factory = Definition

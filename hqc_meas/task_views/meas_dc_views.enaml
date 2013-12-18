@@ -1,0 +1,29 @@
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo)
+from enaml.stdlib.fields import FloatField
+
+from inspect import cleandoc
+from textwrap import fill
+
+from ..enaml_util.forms import HGroup
+
+enamldef DCVoltMeasView(HGroup): view:
+    attr task
+    attr mapping
+    padding = (0,0,5,5)
+    title << task.task_name
+    Label:  
+        text = 'Driver'
+    ObjectCombo: 
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(task.profile_dict.keys())
+        selected := task.selected_profile
+    Label:
+        text = 'Wait (s)'
+    FloatField:
+        value := task.wait_time
+        tool_tip = fill(cleandoc('''Time to wait before querying values from the
+                     voltmeter'''), 60)

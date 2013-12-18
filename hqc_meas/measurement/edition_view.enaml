@@ -1,0 +1,190 @@
+from enaml.stdlib.mapped_view import MappedView
+from enaml.layout.api import hbox, spacer, vbox, align
+from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
+                               Label, Field, CheckBox, GroupBox)
+from enaml.core.api import Conditional
+
+from ..enaml_util.qt_tree_widget import QtTreeWidget
+from ..enaml_util.tree_nodes import TreeNode
+from ..enaml_util.qt_tree_menu import (CopyAction, CutAction, PasteAction,
+                                        NewAction, RenameAction, DeleteAction)
+
+from ..tasks import (BaseTask, SimpleTask, ComplexTask)
+from ..task_views import TASK_VIEW_MAPPING
+#from ..task_management.task_saving import save_task
+from ..task_management.task_building import build_task
+
+from .edition_handling import EditorHandler
+from .monitoring_views import EditMonitorView
+
+enamldef SaveAction(Action):
+    text = 'Save template'
+    attr action_context
+    triggered ::
+        widget, node, obj, nid = action_context['data']
+        save_task(obj, mode = 'template')
+
+enamldef SimpleMenu(Menu): menu:
+    attr context
+    NewAction:
+        action_context << context
+        factory = build_task
+        mode = 'Add before'
+        kwargs = {'parent_ui' : menu}
+    NewAction:
+        action_context << context
+        factory = build_task
+        mode = 'Add after'
+        kwargs = {'parent_ui' : menu}
+    Action:
+        separator = True
+    CutAction:
+        action_context << context
+    CopyAction:
+        action_context << context
+    PasteAction:
+        action_context << context
+    Action:
+        separator = True
+    DeleteAction:
+        action_context << context
+    Action:
+        separator = True
+    RenameAction:
+        action_context << context
+
+enamldef ComplexMenu(Menu): menu:
+    attr context
+    NewAction:
+        action_context << context
+        factory = build_task
+        kwargs = {'parent_ui' : menu}
+    Action:
+        separator = True
+    SaveAction:
+        action_context << context
+    Action:
+        separator = True
+    CutAction:
+        action_context << context
+    CopyAction:
+        action_context << context
+    PasteAction:
+        action_context << context
+    Action:
+        separator = True
+    DeleteAction:
+        action_context << context
+    Action:
+        separator = True
+    RenameAction:
+        action_context << context
+
+enamldef MeasView(GroupBox):
+    title = 'Measure'
+    attr meas
+    attr selected_task << meas.root_task
+    constraints << [vbox(
+                        hbox(lab, name, use_mon, *ed_mon.items),
+                        hbox(tree, task_view)),
+                    align('v_center', lab, name),
+                    align('v_center', name, use_mon)]
+    Label: lab:
+        text = 'Name'
+    Field: name:
+        hug_width = 'ignore'
+        text := meas.monitor.measure_name
+    CheckBox: use_mon:
+        text = 'Use monitor'
+        checked := meas.use_monitor
+    Conditional: ed_mon:
+        condition << meas.use_monitor
+        PushButton:
+            text = 'Edit monitor'
+            clicked ::
+                EditMonitorView(monitor = meas.monitor).exec_()
+    QtTreeWidget: tree:
+        hug_height = 'ignore'
+        root_node << meas.root_task
+        selected >> selected_task
+        nodes = [TreeNode(
+                    node_for  = [ComplexTask],
+                    auto_open = True,
+                    children  = 'children_task',
+                    label     = 'task_label',
+                    add = [BaseTask],
+                    menu = ComplexMenu()),
+                TreeNode(
+                    node_for  = [SimpleTask],
+                    auto_open = True,
+                    children  = '',
+                    label     = 'task_label',
+                    menu      =  SimpleMenu()),
+                    ]
+    Container: task_view:
+        MappedView:
+            model << selected_task
+            typemap = TASK_VIEW_MAPPING
+            modelkey = 'task'
+            kwargs = {'mapping' : TASK_VIEW_MAPPING}
+
+enamldef MeasEditorContainer(Container): widget:
+    alias meas : view.meas
+    alias selected : view.selected_task
+    attr handler = EditorHandler()
+    alias enqueue_clicked : enqueue_button.clicked
+    constraints = [vbox(view, 
+                        hbox(new, save, save_template, load, load_template,
+                            spacer, enqueue_button))]
+    MeasView: view:
+        pass
+    PushButton: new:
+        text = 'New'
+        hug_width  = 'strong'
+        hug_height = 'strong'
+        clicked :: handler.new_clicked(widget)
+    PushButton: save:
+        text = 'Save'
+        hug_width  = 'strong'
+        hug_height = 'strong'
+        clicked :: handler.save_clicked(widget)
+    PushButton: save_template:
+        text = 'Save as template'
+        hug_width  = 'strong'
+        hug_height = 'strong'
+        clicked :: handler.save_template_clicked(widget)
+    PushButton: load:
+        text = 'Load'
+        hug_width  = 'strong'
+        hug_height = 'strong'
+        clicked :: handler.load_clicked(widget)
+    PushButton: load_template:
+        text = 'Load template'
+        hug_width  = 'strong'
+        hug_height = 'strong'
+        clicked :: handler.load_template_clicked(widget)
+    PushButton: enqueue_button:
+        text = 'Enqueue'
+        hug_width  = 'strong'
+        hug_height = 'strong'
+
+enamldef MeasEditorDialog(Dialog): widget:
+    alias meas : view.meas
+    attr handler = EditorHandler()
+    always_on_top = True
+    Container:
+        constraints = [vbox(view, hbox(save, save_template, spacer))]
+        MeasView: view:
+            meas << widget.meas
+        PushButton: save:
+            text = 'Save'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked ::
+                handler.save_clicked(widget)
+        PushButton: save_template:
+            text = 'Save as template'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked ::
+                handler.save_template_clicked(widget)   

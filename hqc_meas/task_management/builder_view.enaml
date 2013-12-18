@@ -1,0 +1,67 @@
+from enaml.layout.api import hbox, spacer, vbox
+from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
+                                Label, MultilineField)
+from enaml.stdlib.mapped_view import MappedView
+from configobj import ConfigObj
+
+from .config import CONFIG_MAP_VIEW
+from .manager_view import TaskSelector
+
+enamldef BuilderView(Dialog): dial:
+    attr model
+    Container:
+        constraints = [hbox(selector, map, vbox(ok, cancel, spacer))]
+        TaskSelector: selector:
+            hug_width = 'strong'
+            model << dial.model.task_manager
+        Container: map:
+            MappedView:
+                model << dial.model.task_config
+                typemap = CONFIG_MAP_VIEW
+        PushButton: ok:
+            text = 'Ok'
+            enabled << model.ok_ready
+            clicked ::
+                dial.accept()
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()
+
+def get_template_doc(task_desc):
+    if task_desc:
+        template_path = task_desc['template_path']
+        doc_list = [com[1:].strip() 
+                    for com in ConfigObj(template_path).initial_comment]
+        return ' '.join(doc_list)
+    else:
+        return ''
+
+enamldef TemplateSelectorView(Dialog): dial:
+    attr model
+    attr path
+    Container:
+        constraints = [hbox(selector, 
+                            vbox(name, doc),
+                            vbox(ok, cancel, spacer))]
+        TaskSelector: selector:
+            display_filters = False
+            hug_width = 'strong'
+            hug_height = 'ignore'
+            model << dial.model
+        Label: name:
+            text << model.selected_task_name
+            text ::
+                doc.text = get_template_doc(model.task)
+        MultilineField: doc:
+            read_only = True
+        PushButton: ok:
+            text = 'Ok'
+            enabled << bool(name.text)
+            clicked ::
+                dial.path = model.task['template_path']
+                dial.accept()
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()

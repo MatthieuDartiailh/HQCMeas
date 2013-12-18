@@ -1,0 +1,29 @@
+from enaml.layout.api import hbox, spacer
+from enaml.widgets.api import (Container, GroupBox, Label, Field)
+from enaml.stdlib.fields import FloatField
+
+from ..tasks.formula_task import Formula
+from ..enaml_util.qt_line_completer import QtLineCompleter
+from ..enaml_util.list_editor import ListEditor
+
+enamldef For(Container):
+    attr model
+    padding = (0,0,0,0)
+    constraints = [hbox(lab, defi)]
+    Field: lab:
+        hug_width = 'strong'
+        text := model.label
+    QtLineCompleter: defi:
+        text := model.formula
+        entries_updater << task._list_database_entries
+
+enamldef FormulaView(GroupBox):
+    attr task
+    attr mapping
+    title << task.task_name
+    padding = (0,5,5,5)
+    ListEditor(For): formulas:
+        formulas.title = 'Label : Value'
+        formulas.model := task
+        formulas.iterable_name = 'formulas'
+        formulas.factory = Formula

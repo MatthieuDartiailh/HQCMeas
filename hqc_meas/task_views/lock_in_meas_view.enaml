@@ -1,0 +1,34 @@
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo)
+from enaml.stdlib.fields import FloatField
+
+from inspect import cleandoc
+from textwrap import fill
+
+from ..enaml_util.forms import HGroup
+
+enamldef LockInMeasView(HGroup): view:
+    attr task
+    attr mapping
+    padding = (0,0,5,5)
+    title << task.task_name
+    Label:  
+        text = 'Driver'
+    ObjectCombo: 
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(task.profile_dict.keys())
+        selected := task.selected_profile
+    Label:
+        text = 'Mode'
+    ObjectCombo:
+        items << list(task.get_member('mode').items)
+        selected := task.mode
+    Label:
+        text = 'Wait (s)'
+    FloatField:
+        value := task.waiting_time
+        tool_tip = fill('Time to wait before querying values from the lock-in',
+                        60)

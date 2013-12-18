@@ -1,0 +1,94 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 03 18:18:39 2013
+
+@author: hqc
+"""
+
+from atom.api import Enum, set_default
+from enaml.widgets.api import (Dialog, Container, PushButton, Form, ComboBox,
+                            Label, Field)
+from enaml.stdlib.mapped_view import MappedView
+from enaml.layout.api import vertical, horizontal, hbox, spacer, align, vbox
+from enaml.core.api import Conditional
+
+from .instrument_form import InstrumentFormDialogHandler
+from .forms import FORMS_MAP_VIEWS
+from .drivers import DRIVER_TYPES
+
+enamldef InstrumentFormView(Form): instr_form_view:
+    attr model
+    attr mode = Enum('static', 'new', 'edit')
+
+    Label:
+        text = 'Name'
+    Field:
+        text := model.name
+        read_only = bool(mode != 'new')
+
+    Label:
+        text = 'Driver type'
+    Conditional:
+        condition = bool(mode == 'static')
+        Field:
+            text << model.driver_type
+            read_only = True
+    Conditional:
+        condition = bool(mode != 'static')
+        ComboBox:
+            items = DRIVER_TYPES.keys()
+            selected_item >> model.driver_type
+
+    Label:
+        text = 'Driver'
+    Conditional:
+        condition = bool(mode == 'static')
+        Field:
+            text << model.driver
+            read_only = True
+    Conditional:
+        condition = bool(mode != 'static')
+        ComboBox:
+            items << model.driver_list
+            selected_item >> model.driver
+
+    MappedView:
+        model << instr_form_view.model.connection_form
+        typemap = FORMS_MAP_VIEWS
+        kwargs = {'mode' : mode}
+
+enamldef InstrumentFormDialog(Dialog): instr_dialog:
+    attr model
+    attr mode = Enum('new', 'edit')
+    attr handler = InstrumentFormDialogHandler()
+    title = 'Instrument form'
+    Container:
+        hug_width = 'medium'
+        hug_height = 'strong'
+        constraints = [
+            vertical( top, form, buttons, bottom),
+            horizontal(left, spacer.flex(), form, spacer.flex(), right),
+            horizontal(left, spacer, buttons, right),
+            align('midline', form),
+        ]
+        InstrumentFormView: form:
+            hug_width = 'weak'
+            hug_height = 'medium'
+            mode = instr_dialog.mode
+            model << instr_dialog.model
+        Container: buttons:
+            hug_width = 'medium'
+            hug_height = 'medium'
+            constraints = [hbox(spacer, cancel, ok)]
+            PushButton: cancel:
+                text = 'Cancel'
+                hug_width = 'strong'
+                clicked :: 
+                    if handler.close(instr_dialog, False):
+                        instr_dialog.reject()
+            PushButton: ok:
+                text = 'Ok'
+                hug_width = 'strong'
+                clicked :: 
+                    if handler.close(instr_dialog, True):
+                        instr_dialog.accept()
