@@ -104,7 +104,7 @@ class QtTreeWidget(RawWidget):
         else:
             tree.setHeaderHidden(True)
         if self.selection_mode == 'extended':
-            self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+            tree.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         
         #Create the NodeController
         node_control = TreeNodeController(_tree = tree,
@@ -113,7 +113,8 @@ class QtTreeWidget(RawWidget):
                                           show_icons = self.show_icons,
                                           auto_expand = self.auto_expand,
                                           nodes = self.nodes)
-             
+        self._node_control = node_control
+        
         tree.itemExpanded.connect(node_control._on_item_expanded)
         tree.itemCollapsed.connect(node_control._on_item_collapsed)
         tree.itemSelectionChanged.connect(node_control._on_tree_sel_changed)
@@ -122,7 +123,6 @@ class QtTreeWidget(RawWidget):
         tree._controller = node_control
 
         node_control.set_root_node(self.root_node)
-        self._node_control = node_control
         return tree
         
     def destroy(self):
@@ -138,7 +138,7 @@ class QtTreeWidget(RawWidget):
 
         super( QtTreeWidget, self ).destroy()
         
-    @observe('_node_control.selection')
+    @observe('selection')
     def _observe_selection(self, change):
         """ Handles the **selection** event.
         """

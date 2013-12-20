@@ -26,7 +26,7 @@ enamldef LoopView(Container): view:
         constraints = [hbox(selector, map)]
         TaskSelector: selector:
             hug_width = 'strong'
-            model = TaskManager(selected_task_filter_name = 'Loopable')
+            model = view.model.task_manager
             display_filters = False
         Container: map:
             MappedView:

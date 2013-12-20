@@ -62,6 +62,7 @@ enamldef SaveView(GroupBox):
         text := task.array_size
         entries_updater << task._list_database_entries
     Container: file_cont:
+        hug_height = 'strong'
         enabled << bool(task.saving_target != 'Array')
         GroupBox: folder:
             constraints = [hbox(path, explore),

@@ -74,6 +74,7 @@ enamldef LoopView(GroupBox): view:
     Container: cont:
         padding = (0,0,0,0)
         hug_width = 'strong'
+        hug_height = 'strong'
         MappedView:
             model << task.task
             typemap = mapping
