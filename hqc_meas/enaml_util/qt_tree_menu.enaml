@@ -72,9 +72,9 @@ enamldef DeleteAction(Action):
                 # Ask user to confirm the delete:
                 label = node.get_label(obj)
                 confirm = question(
-                            widget,
+                            None,
                             "Confirm Deletion",
-                            "Are you sure you want to delete {}?".format(label),
+                            "Are you sure you want to delete {}?".format(label)
                             )
                 if confirm is not None and confirm.action == 'accept':
                     widget._undoable_delete( *widget._node_index( nid ) )

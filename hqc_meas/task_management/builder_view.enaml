@@ -9,6 +9,7 @@ from .manager_view import TaskSelector
 
 enamldef BuilderView(Dialog): dial:
     attr model
+    title = 'Select the task you want to add'
     Container:
         constraints = [hbox(selector, map, vbox(ok, cancel, spacer))]
         TaskSelector: selector:

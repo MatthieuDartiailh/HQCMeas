@@ -55,9 +55,9 @@ class BaseLoopTask(ComplexTask):
                 'Loop task did not success to compute the point number'
 
         if self.timing:
-            self.process = self.process_with_timing
+            self.process_ = self.process_with_timing
         else:
-            self.process = self.process_no_timing
+            self.process_ = self.process_no_timing
 
         check = super(BaseLoopTask, self).check( *args, **kwargs)
         test = test and check[0]
