@@ -1,0 +1,55 @@
+from enaml.widgets.api import (MainWindow, DockArea, DockItem, Container,
+                            MenuBar, Menu, Action)
+
+from .builders.single_instr_builder import SingleInstrBuilder
+from .builders.single_builder_view import SingleBuilderView
+
+enamldef MainPanelView(MainWindow): main:
+    """
+    """
+    attr model
+    closed ::
+        model.save_panel_state(dock_area)
+    MenuBar:
+        Menu:
+            title = 'Panels'
+            Menu:
+                title = 'Add'
+                Action:
+                    title = 'Single instr'
+                    triggered ::
+                        builder = SingleInstrBuilder(main_panel = model,
+                                                     area = dock_area)
+                        SingleBuilderView(parent = main,
+                                          model = builder).exec_()
+                Action:
+                    title = 'Macro'
+                    enabled = False
+                Action:
+                    title = 'From template'
+                    enabled = False
+        Menu:
+            title = 'Preferences'
+            Menu:
+                title = 'Save'
+                Action:
+                    title = 'Default'
+                    triggered ::
+                        pass
+                Action:
+                    title = 'New'
+                    triggered ::
+                        pass
+            Menu:
+                title = 'Load'
+                Action:
+                    title = 'Default'
+                    triggered ::
+                        pass
+                Action:
+                    title = 'Custom'
+                    triggered ::
+                        pass
+    DockArea: dock_area:
+        dock_event >> model.dock_event
+            

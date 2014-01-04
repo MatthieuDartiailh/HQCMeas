@@ -1,0 +1,282 @@
+from atom.api import Atom, Bool, Str, Value
+from inspect import cleandoc
+from textwrap import fill
+from time import sleep
+from enaml.colors import ColorMember
+from enaml.application import deferred_call
+from enaml.core.api import Conditional
+from enaml.widgets.api import (Container, ObjectCombo, GroupBox, DockItem,
+                            PushButton)
+from enaml.stdlib.fields import (FloatField, IntField)
+from enaml.stdlib.message_box import question
+
+from .sinfle_instr_panel import SingleInstrPanel
+
+STATE_COLOR_MAP = {'normal'  : 'white',
+                   'edition' : 'turquoise',
+                   'error'   : 'red'}
+
+class ValidatorModel(Atom):
+    """
+    """
+    dual_display = Bool()
+    model        = Value()
+    name         = Str()
+    ui_val       = Value()
+    state        = Str('normal')
+    err_message  = Str()
+    _safe        = Bool()
+    _prop        = Int()
+
+    def __init__(self, model, name):
+        super(ValidatorModel, self).__init__(model = model, name = name)
+        model.observe(name, self.post_model_update)
+        model.observe('validate_all', self.update_model)
+        model.observe('cancel_all', self.cancel_edition)
+        model.observe('propose_val', self.catch_val_proposition)
+        if name in model.ui_validators:
+            model.ui_validators[name].append(self)
+        else:
+            model.ui_validators[name] = [self]
+
+    def __del__(self):
+        model.unobserve(name, self.post_model_update)
+        model.unobserve('validate_all', self.update_model)
+        model.unobserve('cancel_all', self.cancel_edition)
+        model.unobserve('propose_val', self.catch_val_proposition)
+
+    def post_model_update(self, change):
+        """
+        """
+        if self._safe and self.state == 'normal':
+            deferred_call(setattr, self, 'ui_val', change['value'])
+
+    def update_model(self, change):
+        """
+        """
+        self._safe = False
+        self.state = 'normal'
+        self.err_message = ''
+        self.dual_display = False
+        setattr(self.model, self.name, self.ui_val)
+        # Gice a chance to the worker thread of the model to attempt to set the
+        # driver value
+        sleep(0.01)
+        if self._prop:
+            self._prop = 1
+            self._proposed_val_counter -= 1
+        self._safe = True
+
+    def cancel_edition(self):
+        """
+        """
+        self._ui_val_edited({'value' : ''})
+        if self._prop:
+            self._prop = 1
+            self._proposed_val_counter -= 1
+
+    def catch_dset_error(self, mess):
+        """
+        """
+        self.state = 'error'
+        gen_mess = cleandoc('''An error occured when attempting to set the
+                    instrument attribute {} to {}, the driver error message
+                    is : {}'''.format(self.name, self.ui_val))
+        self.err_message = fill(' '.join([gen_mess, mess]))
+        self.dual_display = True
+        if self._prop:
+            self.model._proposed_val_counter += 1
+
+    def catch_val_proposition(self, change):
+        """
+        """
+        new = change['value']
+        if isinstance(new, dict) and self.name in new:
+            self._prop = 2
+            self.dual_display = True
+            self.ui_val = change['value'][self.name]
+            self.state = 'edition'
+            self.err_message = ''
+        else:
+            self._prop = 0
+        
+    @observe('ui_val')
+    def _ui_val_edited(self, change):
+        """
+        """
+        if change['value'] == self.model:
+            self.state = 'normal'
+        elif change['value'] == '':
+            self.ui_val = getattr(self.model, self.name)
+            self.state = 'normal'
+        else:
+            self.state = 'edited'            
+
+enamldef FloatValidator(GroupBox):
+    attr model
+    attr name
+    alias minimum : field.minimum
+    alias maximum : field.maximum
+    attr _internal = ValidatorModel(model, name)
+    padding = 0
+    constraints = [hbox(hbox(*cond.objects), field, button)]
+    title << name
+    Conditional: cond:
+        condition << _internal.dual_display
+        Field:
+            read_only = True
+            text << str(getattr(model, name))
+    FloatField: field:
+        value := _internal.ui_val
+        background << STATE_COLOR_MAP[_internal.state]
+        tool_tip << _internal.err_message
+    PushButton: button:
+        constraints = [width == 15, height == 20]
+        font = 'bold 12pt Consolas'
+        text = '>'
+        clicked::
+            _internal.update_model()
+
+enamldef IntValidator(Container):
+    attr model
+    attr name
+    alias minimum : field.minimum
+    alias maximum : field.maximum
+    attr _internal = ValidatorModel(model, name)
+    padding = 0
+    constraints = [hbox(hbox(*cond.objects), field, button)]
+    title << name
+    Conditional: cond:
+        condition << _internal.dual_display
+        Field:
+            read_only = True
+            text << str(getattr(model, name))
+    IntField: field:
+        value := _internal.ui_val
+        background << STATE_COLOR_MAP[_internal.state]
+        tool_tip << _internal.err_message
+    PushButton: button:
+        constraints = [width == 15, height == 20]
+        font = 'bold 12pt Consolas'
+        text = '>'
+        clicked::
+            _internal.update_model()
+
+enamldef EnumValidator(Container):
+    attr model
+    attr name
+    attr _internal = ValidatorModel(model, name)
+    padding = 0
+    constraints = [hbox(hbox(*cond.objects), field, button)]
+    title << name
+    Conditional: cond:
+        condition << _internal.dual_display
+        Field:
+            read_only = True
+            text << str(getattr(model, name))
+    ObjectCombo: field:
+        selected := _internal.ui_val
+        items << sorted(model.get_member(name).items)
+        background << STATE_COLOR_MAP[_internal.state]
+        tool_tip << _internal.err_message
+    PushButton: button:
+        constraints = [width == 15, height == 20]
+        font = 'bold 12pt Consolas'
+        text = '>'
+        clicked::
+            _internal.update_model()
+
+# TODO add header dialog
+
+enamldef SingleInstrDial(Dialog):
+    attr model
+    attr ui
+    Container:
+
+        Conditional: corrupt:
+            condition << bool(model._check_driver_state.__func__ is not
+                                 SingleInstrPanel._check_driver_state.__func__)  
+            CheckBox:
+                text = 'Check for corruption'
+                checked := model.check_corrupt
+            IntField:
+                value := model.corrupt_time
+                tool_tip = 'Time to wait before checking for instr corruption'
+            Label:
+                text = 's'
+
+        Conditional: fast:
+            condition << model.fast_refresh_members 
+            CheckBox:
+                text = 'Fast refresh'
+                checked := model.fast_refresh
+            IntField:
+                value := model.fast_refresh_time
+                tool_tip << 'Time to wait before refreshing the \
+                                values : {}'.format(model.fast_refresh_members)
+            Label:
+                text = 's'
+
+        Label: refresh_lab:
+            text = 'Refresh time'
+        IntField: refresh_time:
+            value := model.corrupt_time
+            tool_tip = 'Time to wait before refreshing all the instrument \
+                        values'
+        Label: refresh_unit:
+            text = 's'
+        
+        CheckBox: header:
+            text = 'Use for header'
+            checked := model.use_for_header
+        PushButton: header_ed:
+            text : 'Edit header'
+
+        Include:
+            objects << [ui(model = model)] if ui else []           
+
+enamldef SingleInstrDock(DockItem):
+    attr model
+    attr main_ui
+    attr second_ui
+    attr prop_ui = second_ui
+    title << model.title
+    Container:
+        enabled << model.profile_available
+        ToolBar: tools:
+            Action:
+                text = 'R'
+                tool_tip = 'Refresh entries'
+                trigerred ::
+                    model.refresh_driver_info()
+            Action:
+                text = 'V'
+                tool_tip = 'Validate all'
+                visible << model.display_additional
+                trigerred ::
+                    result = question(tools, 'Confirm validation',
+                                   cleandoc('''Confirm that you want all 
+                                    pending infos to be sent to the instr 
+                                    !'''))
+                    if result is not None and result.action == 'accept':
+                        model.validate_all = True
+            Action:
+                text = 'C'
+                tool_tip = 'Cancel all'
+                visible << model.display_additional
+                trigerred ::
+                    model.cancel_all = True
+            Action:
+                text = 'P'
+                tool_tip = 'Edit properties'
+                triggered ::
+                    SingleInstrDial(model = model, ui = prop_ui).exec_()    
+        Include:
+            objects << [main_ui(model = model)] if main_ui else []
+        Conditional:
+            condition << model.display_additional
+            Container:
+                padding = 0
+                Include:
+                    objects << [second_ui(model = model)] if second_ui else []
+    
