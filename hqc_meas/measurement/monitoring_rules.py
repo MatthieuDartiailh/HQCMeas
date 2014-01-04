@@ -54,8 +54,10 @@ class FormatRule(AbstractMonitorRule):
                     name = name_prefix + '_' + self.new_entry_suffix
                     
                     formatting = self.new_entry_formatting
+
                     for suffix in self.suffixes:
-                        formatting.replace(suffix, prefix + '_' + suffix)
+                        formatting = formatting.replace(suffix,
+                                                        prefix + '_' + suffix)
                         
                     depend = [prefix + '_' + suffix
                                         for suffix in self.suffixes]

@@ -6,9 +6,9 @@ from enaml.stdlib.fields import IntField, FloatField
 from inspect import cleandoc
 from textwrap import fill
 
-from ..enaml_util.forms import HGroup
-from ..enaml_util.qt_line_completer import QtLineCompleter
-from ..enaml_util.list_editor import ListEditor
+from hqc_meas.enaml_util.forms import HGroup
+from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
+from hqc_meas.enaml_util.list_editor import ListEditor
 
 enamldef PNASetFreqView(HGroup): view:
     attr task
@@ -189,3 +189,10 @@ enamldef PNASweepMeasView(GroupBox): view:
             ed.model = task
             ed.iterable_name = 'measures'
             ed.factory = lambda : ''
+
+from ..pna_tasks import (PNASetFreqTask, PNASetPowerTask, 
+                        PNASinglePointMeasureTask, PNASweepTask)
+TASK_VIEW_MAPPING = {PNASetFreqTask : PNASetFreqView,
+                     PNASetPowerTask : PNASetPowerView,
+                     PNASinglePointMeasureTask : PNASinglePointView,
+                     PNASweepTask : PNASweepMeasView}

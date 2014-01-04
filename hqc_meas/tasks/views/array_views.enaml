@@ -1,7 +1,7 @@
 from enaml.layout.api import grid
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo)
 
-from ..enaml_util.qt_line_completer import QtLineCompleter
+from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
 
 enamldef ArrayExtremaView(GroupBox): view:
     attr task
@@ -27,3 +27,6 @@ enamldef ArrayExtremaView(GroupBox): view:
     ObjectCombo: mod_val:
         items = list(task.get_member('mode').items)
         selected >> mode
+
+from ..array_tasks import ArrayExtremaTask
+TASK_VIEW_MAPPING = {ArrayExtremaTask : ArrayExtremaView}

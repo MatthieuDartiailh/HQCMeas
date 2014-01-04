@@ -5,8 +5,8 @@ from enaml.stdlib.fields import FloatField
 from inspect import cleandoc
 from textwrap import fill
 
-from ..enaml_util.qt_line_completer import QtLineCompleter
-from ..enaml_util.forms import HGroup
+from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
+from hqc_meas.enaml_util.forms import HGroup
 
 enamldef SetDcVoltageView(HGroup): view:
     attr task
@@ -49,3 +49,6 @@ enamldef SetDcVoltageView(HGroup): view:
                             '''Should the program ask the instrument the value
                             of the applied voltage each time it is about to set
                             it'''), 60)
+
+from ..set_dc_voltage_task import SetDCVoltageTask
+TASK_VIEW_MAPPING = {SetDCVoltageTask : SetDcVoltageView}

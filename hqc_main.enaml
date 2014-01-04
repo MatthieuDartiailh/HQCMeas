@@ -1,9 +1,11 @@
 from enaml.layout.api import hbox
-from enaml.widgets.api import (MainWindow, Container, DockPane,
-                            MultilineField, PushButton)
+from enaml.widgets.api import (MainWindow, Container, DockPane, MenuBar, Menu,
+                            MultilineField, PushButton, Action)
 
 from hqc_meas.measurement.execution_view import ExecutionView
 from hqc_meas.measurement.edition_view import MeasEditorContainer
+from hqc_meas.instruments.instrument_manager import InstrumentManager
+from hqc_meas.instruments.instrument_manager_view import InstrumentManagerView
 
 enamldef MessagePanel(DockPane):
     attr model
@@ -20,9 +22,19 @@ enamldef MessagePanel(DockPane):
             clicked ::
                 model.string = ''
             
-enamldef HqcMainWindow(MainWindow):
+enamldef HqcMainWindow(MainWindow): main:
     attr main_model
     title = 'HQC Measurement'
+    MenuBar:
+        Menu:
+            title = 'Instr'
+            Action:
+                title = 'Manager'
+                triggered ::
+                    manager = InstrumentManager()
+                    view = InstrumentManagerView(parent = main, 
+                                                 manager = manager)
+                    view.show()
     MeasEditorContainer:
         meas := main_model.meas
         hug_height = 'weak'
@@ -38,5 +50,4 @@ enamldef HqcMainWindow(MainWindow):
     MessagePanel:
         model << main_model.meas_log
         dock_area = 'bottom'
-        title = 'Measure process'
-    
+        title = 'Measure process' 

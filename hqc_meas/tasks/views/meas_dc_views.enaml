@@ -4,9 +4,9 @@ from enaml.stdlib.fields import FloatField
 from inspect import cleandoc
 from textwrap import fill
 
-from ..enaml_util.forms import HGroup
+from hqc_meas.enaml_util.forms import HGroup
 
-enamldef LockInMeasView(HGroup): view:
+enamldef DCVoltMeasView(HGroup): view:
     attr task
     attr mapping
     padding = (0,0,5,5)
@@ -22,13 +22,11 @@ enamldef LockInMeasView(HGroup): view:
         items << sorted(task.profile_dict.keys())
         selected := task.selected_profile
     Label:
-        text = 'Mode'
-    ObjectCombo:
-        items << list(task.get_member('mode').items)
-        selected := task.mode
-    Label:
         text = 'Wait (s)'
     FloatField:
-        value := task.waiting_time
-        tool_tip = fill('Time to wait before querying values from the lock-in',
-                        60)
+        value := task.wait_time
+        tool_tip = fill(cleandoc('''Time to wait before querying values from the
+                     voltmeter'''), 60)
+
+from ..meas_dc_tasks import MeasDCVoltageTask
+TASK_VIEW_MAPPING = {MeasDCVoltageTask : DCVoltMeasView}

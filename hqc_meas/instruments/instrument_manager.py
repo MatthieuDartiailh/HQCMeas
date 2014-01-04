@@ -71,9 +71,6 @@ class InstrumentManager(Atom):
     """
     Main object used to manage the instrument profile and filter them
 
-    This class can be used either to create/edit/delete instrument profiles
-    using a GUI or to get a list of profiles according to a specified driver.
-
     Attributes
     ----------
     instr_folder : directory path
@@ -86,11 +83,6 @@ class InstrumentManager(Atom):
         `InstrumentForm` instance associated to the selected profile
     observer, event_handler, watch
         `watchdog` objects ensuring that the list of profiles stays up to date
-
-    Method
-    ------
-    matching_instr_list(driver_key)
-        Return a list of instrument whose driver match the argument
 
     """
 

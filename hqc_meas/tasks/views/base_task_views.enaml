@@ -3,7 +3,7 @@ from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, ScrollArea)
 
 from .task_editor import (TaskEditor, NonFoldingTaskEditor)
-from ..task_management.task_building import build_task
+from hqc_meas.task_management.task_building import build_task
 
 enamldef NoneView(Container):
     attr task

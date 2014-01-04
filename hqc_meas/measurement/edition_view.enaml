@@ -10,7 +10,7 @@ from ..enaml_util.qt_tree_menu import (CopyAction, CutAction, PasteAction,
                                         NewAction, RenameAction, DeleteAction)
 
 from ..tasks import (BaseTask, SimpleTask, ComplexTask)
-from ..task_views import TASK_VIEW_MAPPING
+from ..tasks.views import TASK_VIEW_MAPPING
 #from ..task_management.task_saving import save_task
 from ..task_management.task_building import build_task
 

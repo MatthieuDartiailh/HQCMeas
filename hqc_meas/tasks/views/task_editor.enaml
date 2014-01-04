@@ -4,7 +4,7 @@ from enaml.stdlib.mapped_view import MappedView
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Stack,
                               StackItem, Label, GroupBox, Form)
 
-from ..enaml_util.list_editor import PopupListMenu
+from hqc_meas.enaml_util.list_editor import PopupListMenu
     
 
 enamldef TaskEditor(Container): view:

@@ -2,9 +2,9 @@ from enaml.layout.api import hbox, spacer, align
 from enaml.widgets.api import (Container, GroupBox, Label, Form, Field)
 from enaml.stdlib.fields import FloatField
 
-from ..tasks.test_tasks import Definition
-from ..enaml_util.qt_line_completer import QtLineCompleter
-from ..enaml_util.list_editor import ListEditor
+from ..test_tasks import Definition
+from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
+from hqc_meas.enaml_util.list_editor import ListEditor
 
 enamldef PrintView(GroupBox):
     attr task
@@ -56,3 +56,8 @@ enamldef DefinitionView(GroupBox):
         definitions.model := task
         definitions.iterable_name = 'definitions'
         definitions.factory = Definition
+
+from ..test_tasks import (PrintTask, SleepTask, DefinitionTask)
+TASK_VIEW_MAPPING = {PrintTask : PrintView,
+                     SleepTask : SleepView,
+                     DefinitionTask : DefinitionView}

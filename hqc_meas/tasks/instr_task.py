@@ -66,8 +66,7 @@ class InstrumentTask(SimpleTask):
         if self.selected_profile in instrs:
             self.driver = instrs[self.selected_profile]
         else:
-            profile = self.profile_dict[self.selected_profile]
-            full_path = os.path.join(PROFILES_DIRECTORY_PATH, profile)
+            full_path = self.build_profile_path()
             driver_class = DRIVERS[self.selected_driver]
             config = ConfigObj(full_path)
             self.driver = driver_class(config)
@@ -78,6 +77,12 @@ class InstrumentTask(SimpleTask):
         """
         """
         self.driver.close_connection()
+        
+    def build_profile_path(self):
+        """
+        """
+        profile = self.profile_dict[self.selected_profile]
+        return  os.path.join(PROFILES_DIRECTORY_PATH, profile)
 
     def _selected_driver_changed(self, change):
         """

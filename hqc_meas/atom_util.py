@@ -82,7 +82,6 @@ class Subclass(Member):
    
     __slots__ = 'subtype'
 
-
     def __init__(self, subtype):
         self.subtype = subtype
         self.set_validate_mode(Validate.MemberMethod_ObjectOldNew, 'validate')

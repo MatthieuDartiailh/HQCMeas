@@ -3,9 +3,9 @@ from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, ObjectCombo, Dialog, MultilineField,
                                 Form)
 
-from ..enaml_util.list_editor import ListEditor
-from ..enaml_util.qt_line_completer import QtLineCompleter
-from ..tasks.save_tasks import SavedValue
+from hqc_meas.enaml_util.list_editor import ListEditor
+from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
+from ..save_tasks import SavedValue
 
 enamldef HeaderDialog(Dialog): dial:
     attr model
@@ -149,3 +149,7 @@ enamldef SaveArrayView(GroupBox):
         hug_width = 'ignore'
         text := task.target_array
         entries_updater << task._list_database_entries
+
+from ..save_tasks import (SaveTask, SaveArrayTask)
+TASK_VIEW_MAPPING = {SaveTask : SaveView,
+                     SaveArrayTask : SaveArrayView}

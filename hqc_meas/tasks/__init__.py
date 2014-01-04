@@ -6,26 +6,21 @@ to be used as is by the user (no absract class)
 """
 from .base_tasks import (BaseTask, SimpleTask, ComplexTask, RootTask)
 from .loop_tasks import (LoopTask, SimpleLoopTask, BaseLoopTask)
+from .instr_task import (InstrumentTask)
 
-from .test_tasks import (PrintTask, SleepTask, DefinitionTask)
-from .save_tasks import (SaveTask, SaveArrayTask)
-from .formula_task import FormulaTask
-from .instr_task import InstrumentTask
-from .set_dc_voltage_task import SetDCVoltageTask
-from .meas_dc_tasks import MeasDCVoltageTask
-from .lock_in_measure_task import LockInMeasureTask
-from .rf_source_tasks import (RFSourceSetFrequencyTask, RFSourceSetPowerTask,
-                              RFSourceSetOnOffTask)
-from .pna_tasks import (PNASinglePointMeasureTask, PNASweepTask,
-                        PNASetFreqTask, PNASetPowerTask)
-from .apply_mag_field_task import ApplyMagFieldTask
-from .array_tasks import ArrayExtremaTask
-
-
-KNOWN_PY_TASKS = [ComplexTask, SimpleLoopTask, LoopTask, PrintTask, SaveTask,
-                  FormulaTask, SetDCVoltageTask, MeasDCVoltageTask,
-                  LockInMeasureTask, RFSourceSetFrequencyTask,
-                  RFSourceSetPowerTask, RFSourceSetOnOffTask, SleepTask,
-                  PNASinglePointMeasureTask, PNASweepTask,
-                  PNASetFreqTask,  PNASetPowerTask,ApplyMagFieldTask,
-                  DefinitionTask, SaveArrayTask, ArrayExtremaTask]
+if 'KNOWN_PY_TASKS' not in globals():
+    import os.path, importlib, inspect
+    KNOWN_PY_TASKS = [ComplexTask, SimpleLoopTask, LoopTask]
+    dir_path = os.path.dirname(__file__)
+    modules = ['.' + os.path.split(path)[1][:-3] 
+                for path in os.listdir(dir_path)
+                    if path.endswith('.py')]
+    modules.remove('.__init__')
+    modules.remove('.base_tasks')
+    modules.remove('.loop_tasks')
+    modules.remove('.instr_task')
+    task_test = lambda obj: inspect.isclass(obj) and issubclass(obj, BaseTask)
+    for module in modules:
+        mod = importlib.import_module(module, __name__)
+        tasks = inspect.getmembers(mod, task_test)
+        KNOWN_PY_TASKS.extend([task[1] for task in tasks])
