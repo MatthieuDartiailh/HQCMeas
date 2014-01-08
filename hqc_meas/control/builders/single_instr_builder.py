@@ -12,7 +12,7 @@ from ...instruments.instr_manager import matching_instr_list
 
 from ..panels import SINGLE_INSTR_PANELS
 from ..panels.views import SINGLE_INSTR_VIEWS
-from .single_instr_pref import SingleInstrPref, PREF_MAPPING
+from .pref_building import SingleInstrPref, PREF_MAPPING
 
 with enaml.imports():
     from ..single_instr_view import SingleInstrDock
@@ -44,13 +44,24 @@ class SingleInstrBuilder(Atom):
         """
         profile_available = self.profile in self.main_panel.available_profiles
         if profile_available:
-            self.main_panel.available_profiles.remove(self.profile)
+            with self.suppress_notifications:
+                self.main_panel.available_profiles.remove(self.profile)
+                
         pref = {'pref' : {'profile' : self.profile},
                 'profile_available' : profile_available}
         pref['pref'].update(self.pref_model.preferences)
+        
         model = self.model_type(pref = pref)
         self.main_panel.used_profiles[self.profile] = model
-        SingleInstrDock(model = model, name = model.title, area = self.area,
+        
+        dock_numbers = sorted([pane.name[5] for pane in self.area.children])
+        if dock_numbers[-1] > len(dock_numbers):
+            first_free = min(set(xrange(len(dock_numbers))) - dock_numbers)
+            name = 'item_{}'.format(first_free)
+        else:
+            name = 'item_{}'.format(len(dock_numbers) + 1)
+            
+        SingleInstrDock(model = model, name = name, area = self.area,
                         main_ui = self.main_ui, second_ui = self.second_ui,
                         prop_ui = self.prop_ui)
     

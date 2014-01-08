@@ -240,9 +240,12 @@ enamldef SingleInstrDock(DockItem):
     attr main_ui
     attr second_ui
     attr prop_ui = second_ui
-    title << model.title
+    
+    title := model.title
+    title_editable = True
+    enabled << model.profile_in_use
+    
     Container:
-        enabled << model.profile_available
         ToolBar: tools:
             Action:
                 text = 'R'
@@ -279,4 +282,6 @@ enamldef SingleInstrDock(DockItem):
                 padding = 0
                 Include:
                     objects << [second_ui(model = model)] if second_ui else []
-    
+                    
+    closed ::
+        model.release_driver()

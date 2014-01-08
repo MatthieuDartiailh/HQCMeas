@@ -71,7 +71,7 @@ class SingleInstrPanel(PrefAtom):
     title = Str().tag(pref = True)
     driver = Instance(BaseInstrument)
     profile = Str().tag(pref = True)
-    profile_available = Bool()
+    profile_in_use = Bool()
     validate_all = Event()
     cancel_all = Event()
     propose_val = Event()
@@ -152,7 +152,7 @@ class SingleInstrPanel(PrefAtom):
     def restart_driver(self):
         """
         """
-        self.profile_available = True
+        self.profile_in_use = True
         self.driver.open_connection()
         self._process_thread = Thread(target = self._process_pending_op)
         self._process_thread.start()
@@ -170,13 +170,13 @@ class SingleInstrPanel(PrefAtom):
     def release_driver(self):
         """
         """
-        self.profile_available = False
         self._corrupt_timer.cancel()
         self._refresh_timer.cancel()
         self._op_queue.put(None)
         self._process_thread.join()
         self._process_thread = None
         self.driver.close_connection()
+        self.profile_in_use = False
         
     def format_header(self):
         # TODO

@@ -8,48 +8,65 @@ enamldef MainPanelView(MainWindow): main:
     """
     """
     attr model
+    
     closed ::
         model.save_panel_state(dock_area)
+        
     MenuBar:
         Menu:
             title = 'Panels'
             Menu:
                 title = 'Add'
                 Action:
-                    title = 'Single instr'
+                    text = 'Single instr'
                     triggered ::
                         builder = SingleInstrBuilder(main_panel = model,
                                                      area = dock_area)
                         SingleBuilderView(parent = main,
                                           model = builder).exec_()
                 Action:
-                    title = 'Macro'
+                    text = 'Macro'
                     enabled = False
+                    triggered ::
+                        pass
                 Action:
-                    title = 'From template'
+                    text = 'From template'
                     enabled = False
+                    triggered ::
+                        pass
         Menu:
             title = 'Preferences'
             Menu:
                 title = 'Save'
                 Action:
-                    title = 'Default'
+                    text = 'Default'
                     triggered ::
                         pass
                 Action:
-                    title = 'New'
+                    text = 'New'
                     triggered ::
                         pass
             Menu:
                 title = 'Load'
                 Action:
-                    title = 'Default'
+                    text = 'Default'
                     triggered ::
                         pass
                 Action:
-                    title = 'Custom'
+                    text = 'Custom'
                     triggered ::
                         pass
+                    
     DockArea: dock_area:
-        dock_event >> model.dock_event
+        dock_events_enabled = model.enable_dock_events
+        dock_event ::
+            if dock_event.type == dock_event.Closed:
+                panel_model = [panel for panel in dock_area.children 
+                                if panel.name == dock_event.name]:
+                try:
+                    model.control_panel_closed(panel_model[0])
+                except IndexError:
+                    pass
+                    # TODO do something meaningful here
+            
             
