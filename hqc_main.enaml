@@ -29,7 +29,7 @@ enamldef HqcMainWindow(MainWindow): main:
         Menu:
             title = 'Instr'
             Action:
-                title = 'Manager'
+                text = 'Manager'
                 triggered ::
                     manager = InstrumentManager()
                     view = InstrumentManagerView(parent = main, 
