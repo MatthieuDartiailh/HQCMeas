@@ -24,9 +24,16 @@ class MainPanelModel(PrefAtom):
         super(MainPanelModel, self).__init__()
         
     def save_panel_state(self, dock_area):
+        # here need to get all panels in terms of enaml widgets to extract from
+        # them the model type and state but also the ui types
+        # must also dump the layout
         pass
     
     def load_panel_state(self):
+        # Here must build all the panels according to their types and then load
+        # the layout
+        # must disable dock events as each insertion and layout applying will 
+        # generate a lot of them
         pass
     
     def drivers_request(self, profiles, target = 'measure'):

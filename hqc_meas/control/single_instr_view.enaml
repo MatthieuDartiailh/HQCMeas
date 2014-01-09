@@ -1,16 +1,17 @@
-from atom.api import Atom, Bool, Str, Value
+from atom.api import Atom, Bool, Str, Value, Int, observe
 from inspect import cleandoc
 from textwrap import fill
 from time import sleep
 from enaml.colors import ColorMember
 from enaml.application import deferred_call
-from enaml.core.api import Conditional
+from enaml.core.api import Conditional, Include
 from enaml.widgets.api import (Container, ObjectCombo, GroupBox, DockItem,
-                            PushButton)
+                            PushButton, Field, Dialog, CheckBox, Label, ToolBar,
+                            Action)
 from enaml.stdlib.fields import (FloatField, IntField)
 from enaml.stdlib.message_box import question
 
-from .sinfle_instr_panel import SingleInstrPanel
+from .single_instr_panel import SingleInstrPanel
 
 STATE_COLOR_MAP = {'normal'  : 'white',
                    'edition' : 'turquoise',
@@ -34,10 +35,10 @@ class ValidatorModel(Atom):
         model.observe('validate_all', self.update_model)
         model.observe('cancel_all', self.cancel_edition)
         model.observe('propose_val', self.catch_val_proposition)
-        if name in model.ui_validators:
-            model.ui_validators[name].append(self)
-        else:
-            model.ui_validators[name] = [self]
+#        if name in model.ui_validators:
+#            model.ui_validators[name].append(self)
+#        else:
+#            model.ui_validators[name] = [self]
 
     def __del__(self):
         model.unobserve(name, self.post_model_update)
@@ -64,7 +65,7 @@ class ValidatorModel(Atom):
         sleep(0.01)
         if self._prop:
             self._prop = 1
-            self._proposed_val_counter -= 1
+            self.model._proposed_val_counter -= 1
         self._safe = True
 
     def cancel_edition(self):
@@ -92,11 +93,14 @@ class ValidatorModel(Atom):
         """
         new = change['value']
         if isinstance(new, dict) and self.name in new:
-            self._prop = 2
-            self.dual_display = True
-            self.ui_val = change['value'][self.name]
-            self.state = 'edition'
-            self.err_message = ''
+            proposed_val = change['value'][self.name]
+            if proposed_val != getattr(self.model, self.name):
+                self._prop = 2
+                self.model._proposed_val_counter += 1
+                self.dual_display = True
+                self.ui_val = change['value'][self.name]
+                self.state = 'edition'
+                self.err_message = ''
         else:
             self._prop = 0
         
@@ -114,18 +118,18 @@ class ValidatorModel(Atom):
 
 enamldef FloatValidator(GroupBox):
     attr model
-    attr name
+    attr member
     alias minimum : field.minimum
     alias maximum : field.maximum
-    attr _internal = ValidatorModel(model, name)
+    attr _internal = ValidatorModel(model, member)
     padding = 0
     constraints = [hbox(hbox(*cond.objects), field, button)]
-    title << name
+    title << member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
         Field:
             read_only = True
-            text << str(getattr(model, name))
+            text << str(getattr(model, member))
     FloatField: field:
         value := _internal.ui_val
         background << STATE_COLOR_MAP[_internal.state]
@@ -137,20 +141,20 @@ enamldef FloatValidator(GroupBox):
         clicked::
             _internal.update_model()
 
-enamldef IntValidator(Container):
+enamldef IntValidator(GroupBox):
     attr model
-    attr name
+    attr member
     alias minimum : field.minimum
     alias maximum : field.maximum
-    attr _internal = ValidatorModel(model, name)
+    attr _internal = ValidatorModel(model, member)
     padding = 0
     constraints = [hbox(hbox(*cond.objects), field, button)]
-    title << name
+    title << member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
         Field:
             read_only = True
-            text << str(getattr(model, name))
+            text << str(getattr(model, member))
     IntField: field:
         value := _internal.ui_val
         background << STATE_COLOR_MAP[_internal.state]
@@ -161,19 +165,42 @@ enamldef IntValidator(Container):
         text = '>'
         clicked::
             _internal.update_model()
-
-enamldef EnumValidator(Container):
+        
+enamldef BoolValidator(GroupBox):
     attr model
-    attr name
-    attr _internal = ValidatorModel(model, name)
+    attr member
+    attr _internal = ValidatorModel(model, member)
     padding = 0
-    constraints = [hbox(hbox(*cond.objects), field, button)]
-    title << name
+    constraints = [hbox(hbox(*cond.objects), box, button)]
+    title << member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
         Field:
             read_only = True
-            text << str(getattr(model, name))
+            text << str(getattr(model, member))
+    CheckBox: box:
+        checked := _internal.ui_val
+        background << STATE_COLOR_MAP[_internal.state]
+        tool_tip << _internal.err_message
+    PushButton: button:
+        constraints = [width == 15, height == 20]
+        font = 'bold 12pt Consolas'
+        text = '>'
+        clicked::
+            _internal.update_model()
+
+enamldef EnumValidator(GroupBox):
+    attr model
+    attr member
+    attr _internal = ValidatorModel(model, member)
+    padding = 0
+    constraints = [hbox(hbox(*cond.objects), field, button)]
+    title << member.capitalize()
+    Conditional: cond:
+        condition << _internal.dual_display
+        Field:
+            read_only = True
+            text << str(getattr(model, member))
     ObjectCombo: field:
         selected := _internal.ui_val
         items << sorted(model.get_member(name).items)
@@ -230,7 +257,7 @@ enamldef SingleInstrDial(Dialog):
             text = 'Use for header'
             checked := model.use_for_header
         PushButton: header_ed:
-            text : 'Edit header'
+            text = 'Edit header'
 
         Include:
             objects << [ui(model = model)] if ui else []           
@@ -250,13 +277,13 @@ enamldef SingleInstrDock(DockItem):
             Action:
                 text = 'R'
                 tool_tip = 'Refresh entries'
-                trigerred ::
+                triggered ::
                     model.refresh_driver_info()
             Action:
                 text = 'V'
                 tool_tip = 'Validate all'
                 visible << model.display_additional
-                trigerred ::
+                triggered ::
                     result = question(tools, 'Confirm validation',
                                    cleandoc('''Confirm that you want all 
                                     pending infos to be sent to the instr 
@@ -267,7 +294,7 @@ enamldef SingleInstrDock(DockItem):
                 text = 'C'
                 tool_tip = 'Cancel all'
                 visible << model.display_additional
-                trigerred ::
+                triggered ::
                     model.cancel_all = True
             Action:
                 text = 'P'

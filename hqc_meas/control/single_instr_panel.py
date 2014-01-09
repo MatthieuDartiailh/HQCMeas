@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from threading import Thread, Queue, Timer
+from threading import Thread, Timer
+from Queue import Queue
 from atom.api import (Atom, Typed, Bool, Str, Instance, Float, Callable, Tuple,
-                      Dict, List, Event, Int)
+                      Dict, List, Event, Int, Value)
 from inspect import getmembers, ismethod
 from configobj import ConfigObj
 from ..instruments.drivers import BaseInstrument, InstrIOError
@@ -17,7 +18,7 @@ class RepeatedTimer(Atom):
     args = Tuple()
     kwargs = Dict()
     is_running = Bool()
-    _timer = Typed(Timer)
+    _timer = Typed(Thread) # the Timer class is not supposed to be accessed to
     
     def __init__(self, interval, function, *args, **kwargs):
         super(RepeatedTimer, self).__init__()
@@ -88,7 +89,7 @@ class SingleInstrPanel(PrefAtom):
     accesible_members = List(Str())
     header = Str().tag(pref = True)
     
-    _op_queue = Typed(Queue, ())
+    _op_queue = Value(factory = Queue)
     _process_thread = Typed(Thread)
     _corrup_timer = Typed(RepeatedTimer)
     _fast_refresh_timer = Typed(RepeatedTimer)
@@ -98,7 +99,7 @@ class SingleInstrPanel(PrefAtom):
     _dsetters = Dict(Str(), Callable())
     _proposed_val_counter = Int()
     
-    def __init__(self, pref):
+    def __init__(self, state):
         super(SingleInstrPanel, self).__init__()
 
         # Collect dgetter and dsetters here, and start observing members
@@ -110,16 +111,16 @@ class SingleInstrPanel(PrefAtom):
         for member in self._dsetters:
             self.observe(member, self._update_driver)
 
-        self.update_members_from_preferences(**pref['pref'])
-        if pref['profile_available']:
+        self.update_members_from_preferences(**state['pref'])
+        if state['profile_available']:
             self.profile_available = True
         config = ConfigObj(self.profile)
         driver_class = DRIVERS[config['driver']]
         self.driver = driver_class(config,
                                    caching_allowed = False,
                                    auto_open = self.profile_available)
-        if 'dstate' in pref:
-            self.propose_val = pref['dstate']
+        if 'dstate' in state:
+            self.propose_val = state['dstate']
             
         if self.profile_available:
             # Start worker thread and timers

@@ -12,7 +12,7 @@ enamldef SingleBuilderView(Dialog): dial:
     """
     attr model
     Container:
-        constraints << [vbox(hbox(form, *pref.items), hbox(spacer, cancel, ok))]
+        constraints << [vbox(hbox(form, *pref.objects), hbox(spacer, cancel, ok))]
         Form: form:
             Label:
                 text = 'Select driver'
@@ -48,10 +48,10 @@ enamldef SingleBuilderView(Dialog): dial:
                 selected >> model.second_ui
             Label:
                 text = 'Use custom property ui'
-            CheckBox:
-                enabled << bool(len(model.available_uis['pref']) > 1)
-                tooltip = cleandoc('''By default, the ui provided as auxiliary is
-                        used for the property ui too''')
+            CheckBox: prop:
+                enabled << bool(len(model.available_uis['prop']) > 1)
+                tool_tip = cleandoc('''By default, the ui provided as auxiliary 
+                                is used for the property ui too''')
             Conditional:
                 condition << prop.checked
                 Label:

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
+"""
 
-import enaml
-
-if 'SINGLE_INSTR_VIEWS' not in globals():
+"""
+if 'SINGLE_INSTR_PANELS' not in globals():
     import os.path, importlib
+    SINGLE_INSTR_PANELS = {}
     dir_path = os.path.dirname(__file__)
-    SINGLE_INSTR_VIEWS = {}
-    modules = ['.' + os.path.split(path)[1][:-6] 
+    modules = ['.' + os.path.split(path)[1][:-3] 
                 for path in os.listdir(dir_path)
-                    if path.endswith('.enaml')]
-    with enaml.imports():
-        for module in modules:
-            mod = importlib.import_module(module, __name__)
-            SINGLE_INSTR_VIEWS.update(getattr(mod, 'SINGLE_INSTR_VIEWS'))
+                    if path.endswith('.py')]
+    modules.remove('.__init__')
+    for module in modules:
+        mod = importlib.import_module(module, __name__)
+        SINGLE_INSTR_PANELS.update(getattr(mod, 'SINGLE_INSTR_PANELS'))

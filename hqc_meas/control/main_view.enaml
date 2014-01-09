@@ -8,7 +8,7 @@ enamldef MainPanelView(MainWindow): main:
     """
     """
     attr model
-    
+    title = 'Control panel'
     closed ::
         model.save_panel_state(dock_area)
         
@@ -56,17 +56,16 @@ enamldef MainPanelView(MainWindow): main:
                     text = 'Custom'
                     triggered ::
                         pass
-                    
-    DockArea: dock_area:
-        dock_events_enabled = model.enable_dock_events
-        dock_event ::
-            if dock_event.type == dock_event.Closed:
-                panel_model = [panel for panel in dock_area.children 
-                                if panel.name == dock_event.name]:
-                try:
-                    model.control_panel_closed(panel_model[0])
-                except IndexError:
-                    pass
-                    # TODO do something meaningful here
-            
-            
+    Container:
+        padding = 0
+        DockArea: dock_area:
+            dock_events_enabled = model.enable_dock_events
+            dock_event ::
+                if dock_event.type == dock_event.Closed:
+                    panel_model = [panel for panel in dock_area.children 
+                                    if panel.name == dock_event.name]
+                    try:
+                        model.control_panel_closed(panel_model[0])
+                    except IndexError:
+                        pass
+                        # TODO do something meaningful here

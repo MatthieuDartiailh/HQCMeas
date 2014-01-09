@@ -1,13 +1,21 @@
-from enaml.widgets.api import Form, GroupBox, Label, Field, CheckBox
-from enaml.stdlid.fields import FloatFields
-from .single_instr_pref import SingleInstrPref
+from enaml.widgets.api import Form, GroupBox, Label, Field, CheckBox, Container
+from enaml.stdlib.fields import FloatField
 
-enamldef SinglePrefView(CheckBox):
+from .pref_building import SingleInstrPref
+
+enamldef EmptyView(Container):
     """
     """
     attr model
+
+enamldef SinglePrefView(GroupBox):
+    """
+    """
+    attr model
+    
     title = 'Parameters'
     padding = 0
+    
     Form:
         Label:
             text = 'Title'
@@ -30,12 +38,12 @@ enamldef SinglePrefView(CheckBox):
         Label:
             text = 'Use fast refresh'
         CheckBox:
-            checked := model.fast-refresh
+            checked := model.fast_refresh
         Label:
             text = 'Time (s)'
         FloatField:
-            value := model.fast-refresh_time
+            value := model.fast_refresh_time
             minimum = 0.1
 
-PREF_VIEW_MAP = {type(None) : Container,
-                 SingleInstrPref : SinglePrefView}
+PREF_VIEW_MAP = {type(None) : EmptyView}
+PREF_VIEW_MAP[SingleInstrPref] = SinglePrefView
