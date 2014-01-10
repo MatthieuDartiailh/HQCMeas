@@ -8,8 +8,8 @@
 
 """
 
-from atom.api import (Str, Int, List, observe, Enum, set_default, Bool,
-                        ContainerList)
+from atom.api import (Atom, Str, Int, List, observe, Enum, set_default, Bool,
+                        Typed, ContainerList)
 
 import time, os
 from inspect import cleandoc
@@ -165,13 +165,18 @@ class PNASetPowerTask(PNATasks):
     @observe('channel')
     def _update_channels(self, change):
         self.channels = [change['value']]
+        
+class PNAMeasure(Atom):
+    """
+    """
+    measure = Str()
 
 class PNASinglePointMeasureTask(PNATasks):
     """Measure the specified parameters. Frequency and power can be set before.
     Wait for any parallel operation before execution.
     """
     channel = Int(1).tag(pref = True)
-    measures = ContainerList(Str()).tag(pref = True)
+    measures = ContainerList(Typed(PNAMeasure)).tag(pref = True)
     measure_format = List(Bool()).tag(pref = True)
 
     if_bandwidth = Int(2).tag(pref = True)
@@ -201,6 +206,9 @@ class PNASinglePointMeasureTask(PNATasks):
             else:
                 self.driver.trigger_source = 'MANual'
 
+        meas_names = ['Ch{}:'.format(self.channel) + measure.measure
+                            for measure in self.measures]
+
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
             self.channel_driver.if_bandwidth = self.if_bandwidth
@@ -214,11 +222,10 @@ class PNASinglePointMeasureTask(PNATasks):
             self.channel_driver.power = power
 
             # Check whether or not we are doing the same measures as the ones
-            # already defined (avoid losing display optimisation)
-            meas_names = ['Ch{}:'.format(self.channel) + measure
-                            for measure in self.measures]
+            # already defined (avoid losing display optimisation)                                
             existing_meas = [meas['name']
                     for meas in self.channel_driver.list_existing_measures()]
+                        
             if not (all([meas in existing_meas for meas in meas_names])
                     and all([meas in meas_names for meas in existing_meas])):
                 clear = True
@@ -239,8 +246,7 @@ class PNASinglePointMeasureTask(PNATasks):
             time.sleep(waiting_time)
 
 
-        for i, measure in enumerate(self.measures):
-            meas_name = 'Ch{}:'.format(self.channel) + measure
+        for i, meas_name in enumerate(meas_names):
             self.channel_driver.selected_measure = meas_name
             if self.measure_format[i]:
                 data = self.channel_driver.read_formatted_data()[0]
@@ -262,10 +268,10 @@ class PNASinglePointMeasureTask(PNATasks):
         meas_for = []
         for measure in change['value']:
             if len(measure.split(':')) > 1:
-                entries[measure] = 1.0
+                entries[measure.measure] = 1.0
                 meas_for.append(True)
             else:
-                entries[measure] = 1.0 + 1j
+                entries[measure.measure] = 1.0 + 1j
                 meas_for.append(False)
 
         self.measure_format = meas_for
@@ -307,16 +313,18 @@ class PNASweepTask(PNATasks):
             self.driver.trigger_scope = 'CURRent'
             self.driver.trigger_source = 'MANual'
 
+        meas_names = ['Ch{}:'.format(self.channel) + measure.measure
+                            for measure in self.measures]
+                                
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
             self.channel_driver.if_bandwidth = self.if_bandwidth
 
             # Check whether or not we are doing the same measures as the ones
             # already defined (avoid losing display optimisation)
-            meas_names = ['Ch{}:'.format(self.channel) + measure
-                            for measure in self.measures]
             existing_meas = [meas['name']
                     for meas in self.channel_driver.list_existing_measures()]
+                        
             if not (all([meas in existing_meas for meas in meas_names])
                     and all([meas in meas_names for meas in existing_meas])):
                 clear = True
@@ -342,14 +350,13 @@ class PNASweepTask(PNATasks):
             time.sleep(0.1*waiting_time)
 
         data = [np.linspace(start, stop, points)]
-        for i, measure in enumerate(self.measures):
-            meas_name = 'Ch{}:'.format(self.channel) + measure
+        for i, meas_name in enumerate(meas_names):
             if measures_format[i]:
                 data.append(
                     self.channel_driver.read_formatted_data(meas_name))
             else:
                 data.append(self.channel_driver.read_raw_data(meas_name))
-        names = [self.sweep_type] + self.measures
+        names = [self.sweep_type] + meas_names
         final_arr = np.rec.fromarrays(data, names = names)
         self.write_in_database('sweep_data', final_arr)
 
