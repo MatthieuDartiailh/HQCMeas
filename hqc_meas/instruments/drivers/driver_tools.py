@@ -255,6 +255,15 @@ class BaseInstrument(object):
                         has been corrupted by a local user.'''),
                     80)
         raise NotImplementedError(message)
+        
+    def connected(self):
+        """Return whether or not command can be sent to the instrument
+        """
+        message = fill(cleandoc(
+                        '''This method returns whether or not command can be
+                        sent to the instrument'''),
+                    80)
+        raise NotImplementedError(message)
 
     def clear_instrument_cache(self, properties = None):
         """Clear the cache of all the properties or only the one of specified
