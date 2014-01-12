@@ -24,7 +24,7 @@ def build_single_instr_panel(panel_class, state, main_ui, second_ui, prop_ui,
     """
     profile = state['pref']['profile']
     if state['profile_available']:
-        with main_panel.suppress_notifications:
+        with main_panel.suppress_notifications():
             main_panel.available_profiles.remove(profile)
     model = panel_class(state = state)
     main_panel.used_profiles[profile] = model
@@ -97,7 +97,7 @@ class SingleInstrBuilder(Atom):
             self.model_type = model_type
             self.profile_map = matching_instr_list(key)
             
-            uis = SINGLE_INSTR_VIEWS[model_type]
+            uis = SINGLE_INSTR_VIEWS[model_type].copy()
             uis['prop'] = uis['aux'] + uis['prop']
             self.available_uis = uis
             for m_class in type.mro(model_type):

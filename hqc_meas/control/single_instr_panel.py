@@ -4,7 +4,7 @@ from threading import Thread, Timer
 from Queue import Queue
 from atom.api import (Atom, Typed, Bool, Str, Instance, Float, Callable, Tuple,
                       Dict, List, Event, Int, Value)
-from inspect import getmembers, ismethod
+from inspect import getmembers, ismethod, cleandoc
 from configobj import ConfigObj
 from ..instruments.drivers import BaseInstrument, InstrError
 from ..atom_util import PrefAtom, tagged_members
@@ -70,6 +70,7 @@ class SingleInstrPanel(PrefAtom):
     
     # Members
     title = Str().tag(pref = True)
+    error = Str()
     driver = Instance(BaseInstrument)
     profile = Str().tag(pref = True)
     profile_in_use = Bool()
@@ -118,9 +119,18 @@ class SingleInstrPanel(PrefAtom):
         config = ConfigObj(self.profile)
 
         driver_class = DRIVERS[config['driver']]
-        self.driver = driver_class(config,
+        try:
+            self.driver = driver_class(config,
                                    caching_allowed = False,
                                    auto_open = self.profile_in_use)
+        except InstrError:
+            self.driver = driver_class(config,
+                                   caching_allowed = False,
+                                   auto_open = False)
+            self.profile_in_use = False
+            self.error = cleandoc('''Connection to the instrument failed, please
+                    check that the instrument is connected and try again''')            
+            
         if 'dstate' in state:
             self.propose_val = state['dstate']
             
@@ -156,7 +166,15 @@ class SingleInstrPanel(PrefAtom):
         """
         """
         self.profile_in_use = True
-        self.driver.open_connection()
+        try:
+            self.driver.open_connection()
+        except InstrError:
+            self.profile_in_use = False
+            self.error = cleandoc('''Connection to the instrument failed, please
+                    check that the instrument is connected and try again.''')
+            return
+            
+        self.error = ''
         self._process_thread = Thread(target = self._process_pending_op)
         self._process_thread.start()
         self.refresh_driver_info()
@@ -173,8 +191,10 @@ class SingleInstrPanel(PrefAtom):
     def release_driver(self):
         """
         """
-        self._corrupt_timer.cancel()
-        self._refresh_timer.cancel()
+        if self._corrup_timer:
+            self._corrupt_timer.cancel()
+        if self._refresh_timer:
+            self._refresh_timer.cancel()
         self._op_queue.put(None)
         self._process_thread.join()
         self._process_thread = None

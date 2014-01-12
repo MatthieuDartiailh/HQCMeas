@@ -7,7 +7,7 @@ from enaml.application import deferred_call
 from enaml.core.api import Conditional, Include
 from enaml.widgets.api import (Container, ObjectCombo, GroupBox, DockItem,
                             PushButton, Field, Dialog, CheckBox, Label, ToolBar,
-                            Action)
+                            Action, MultilineField)
 from enaml.stdlib.fields import (FloatField, IntField)
 from enaml.stdlib.message_box import question
 from enaml.layout.api import hbox
@@ -40,7 +40,7 @@ class ValidatorModel(Atom):
 
     def __del__(self):
         model = self.model
-        model.unobserve(name, self.post_model_update)
+        model.unobserve(self.name, self.post_model_update)
         model.unobserve('validate_all', self.update_model)
         model.unobserve('cancel_all', self.cancel_edition)
         model.unobserve('propose_val', self.catch_val_proposition)
@@ -272,45 +272,60 @@ enamldef SingleInstrDock(DockItem):
     
     title := model.title
     title_editable = True
-    enabled << model.profile_in_use
     
     Container:
-        ToolBar: tools:
-            Action:
-                text = 'R'
-                tool_tip = 'Refresh entries'
-                triggered ::
-                    model.refresh_driver_info()
-            Action:
-                text = 'V'
-                tool_tip = 'Validate all'
-                visible << model.display_additional
-                triggered ::
-                    result = question(tools, 'Confirm validation',
-                                   cleandoc('''Confirm that you want all 
-                                    pending infos to be sent to the instr 
-                                    !'''))
-                    if result is not None and result.action == 'accept':
-                        model.validate_all = True
-            Action:
-                text = 'C'
-                tool_tip = 'Cancel all'
-                visible << model.display_additional
-                triggered ::
-                    model.cancel_all = True
-            Action:
-                text = 'P'
-                tool_tip = 'Edit properties'
-                triggered ::
-                    SingleInstrDial(model = model, ui = prop_ui).exec_()    
-        Include:
-            objects << [main_ui(model = model)] if main_ui else []
+        Container:
+            padding = 0
+            enabled << model.profile_in_use
+            ToolBar: tools:
+                Action:
+                    text = 'R'
+                    tool_tip = 'Refresh entries'
+                    triggered ::
+                        model.refresh_driver_info()
+                Action:
+                    text = 'V'
+                    tool_tip = 'Validate all'
+                    visible << model.display_additional
+                    triggered ::
+                        result = question(tools, 'Confirm validation',
+                                       cleandoc('''Confirm that you want all 
+                                        pending infos to be sent to the instr 
+                                        !'''))
+                        if result is not None and result.action == 'accept':
+                            model.validate_all = True
+                Action:
+                    text = 'C'
+                    tool_tip = 'Cancel all'
+                    visible << model.display_additional
+                    triggered ::
+                        model.cancel_all = True
+                Action:
+                    text = 'P'
+                    tool_tip = 'Edit properties'
+                    triggered ::
+                        SingleInstrDial(model = model, ui = prop_ui).exec_()    
+            Include:
+                objects << [main_ui(model = model)] if main_ui else []
+            Conditional:
+                condition << model.display_additional
+                Container:
+                    padding = 0
+                    Include:
+                        objects << [second_ui(model = model)]\
+                                                if second_ui else []
         Conditional:
-            condition << model.display_additional
+            condition << bool(model.error)
             Container:
                 padding = 0
-                Include:
-                    objects << [second_ui(model = model)] if second_ui else []
+                MultilineField:
+                    text << model.error
+                    read_only = True
+                    maximum_size = (-1,50)
+                PushButton:
+                    text = 'Attempt to reconnect to instr'
+                    clicked ::
+                        model.restart_driver()
                     
     closed ::
         model.release_driver()

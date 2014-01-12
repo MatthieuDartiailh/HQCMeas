@@ -22,6 +22,7 @@ class MainPanelModel(PrefAtom):
     
     def __init__(self):
         super(MainPanelModel, self).__init__()
+        self._profiles_updated({'value' : self.instr_manager.instrs})
         
     def save_panel_state(self, dock_area):
         # here need to get all panels in terms of enaml widgets to extract from
@@ -83,7 +84,7 @@ class MainPanelModel(PrefAtom):
         """
         """
         instrs = change['value']
-        used = set(self.used_profiles.keys() + self.measure_profile)
+        used = set(self.used_profiles.keys() + self.measure_profiles)
         self.available_profiles = [instrs[p] for p in instrs
                                     if instrs[p] not in used]   
                                     
