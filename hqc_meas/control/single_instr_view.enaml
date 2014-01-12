@@ -10,11 +10,12 @@ from enaml.widgets.api import (Container, ObjectCombo, GroupBox, DockItem,
                             Action)
 from enaml.stdlib.fields import (FloatField, IntField)
 from enaml.stdlib.message_box import question
+from enaml.layout.api import hbox
 
 from .single_instr_panel import SingleInstrPanel
 
 STATE_COLOR_MAP = {'normal'  : 'white',
-                   'edition' : 'turquoise',
+                   'edited' : 'turquoise',
                    'error'   : 'red'}
 
 class ValidatorModel(Atom):
@@ -35,16 +36,15 @@ class ValidatorModel(Atom):
         model.observe('validate_all', self.update_model)
         model.observe('cancel_all', self.cancel_edition)
         model.observe('propose_val', self.catch_val_proposition)
-#        if name in model.ui_validators:
-#            model.ui_validators[name].append(self)
-#        else:
-#            model.ui_validators[name] = [self]
+        model.observe('dsetter_report', self.catch_dset_report)
 
     def __del__(self):
+        model = self.model
         model.unobserve(name, self.post_model_update)
         model.unobserve('validate_all', self.update_model)
         model.unobserve('cancel_all', self.cancel_edition)
         model.unobserve('propose_val', self.catch_val_proposition)
+        model.unobserve('dsetter_report', self.catch_dset_report)
 
     def post_model_update(self, change):
         """
@@ -76,17 +76,19 @@ class ValidatorModel(Atom):
             self._prop = 1
             self._proposed_val_counter -= 1
 
-    def catch_dset_error(self, mess):
+    def catch_dset_report(self, change):
         """
         """
-        self.state = 'error'
-        gen_mess = cleandoc('''An error occured when attempting to set the
-                    instrument attribute {} to {}, the driver error message
-                    is : {}'''.format(self.name, self.ui_val))
-        self.err_message = fill(' '.join([gen_mess, mess]))
-        self.dual_display = True
-        if self._prop:
-            self.model._proposed_val_counter += 1
+        report = change['value']
+        if report[0] == self.name and isinstance(report[1], Exception):
+            self.state = 'error'
+            gen_mess = cleandoc('''An error occured when attempting to set the
+                        instrument attribute {} to {}, the driver error message
+                        is : {}'''.format(self.name, self.ui_val))
+            self.err_message = fill(' '.join([gen_mess, mess]))
+            self.dual_display = True
+            if self._prop:
+                self.model._proposed_val_counter += 1
 
     def catch_val_proposition(self, change):
         """
@@ -123,7 +125,7 @@ enamldef FloatValidator(GroupBox):
     alias maximum : field.maximum
     attr _internal = ValidatorModel(model, member)
     padding = 0
-    constraints = [hbox(hbox(*cond.objects), field, button)]
+    constraints = [hbox(hbox(*cond.items), field, button)]
     title << member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
@@ -148,7 +150,7 @@ enamldef IntValidator(GroupBox):
     alias maximum : field.maximum
     attr _internal = ValidatorModel(model, member)
     padding = 0
-    constraints = [hbox(hbox(*cond.objects), field, button)]
+    constraints = [hbox(hbox(*cond.items), field, button)]
     title << member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
@@ -171,7 +173,7 @@ enamldef BoolValidator(GroupBox):
     attr member
     attr _internal = ValidatorModel(model, member)
     padding = 0
-    constraints = [hbox(hbox(*cond.objects), box, button)]
+    constraints = [hbox(hbox(*cond.items), box, button)]
     title << member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
@@ -194,7 +196,7 @@ enamldef EnumValidator(GroupBox):
     attr member
     attr _internal = ValidatorModel(model, member)
     padding = 0
-    constraints = [hbox(hbox(*cond.objects), field, button)]
+    constraints = [hbox(hbox(*cond.items), field, button)]
     title << member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display

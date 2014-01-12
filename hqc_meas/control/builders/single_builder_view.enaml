@@ -12,16 +12,19 @@ enamldef SingleBuilderView(Dialog): dial:
     """
     attr model
     Container:
-        constraints << [vbox(hbox(form, *pref.objects), hbox(spacer, cancel, ok))]
+        constraints << [vbox(
+                            hbox(vbox(form, spacer), *pref.objects),
+                            hbox(spacer, cancel, ok),)
+                        ]
         Form: form:
             Label:
                 text = 'Select driver'
-            ObjectCombo: 
+            ObjectCombo: driver:
+                selected = None
                 items << model.driver_map.keys()
                 items ::
-                    selected = None
-                selected ::
-                    model.driver_type = model.driver_map[selected]
+                    driver.selected = None
+                selected := model.driver_key
             Label:
                 text = 'Select profile'
             ObjectCombo:
@@ -71,6 +74,7 @@ enamldef SingleBuilderView(Dialog): dial:
                 dial.reject()
         PushButton: ok:
             text = 'Ok'
+            enabled << model.ready_to_build
             clicked ::
                 model.build_panel()
                 dial.accept()

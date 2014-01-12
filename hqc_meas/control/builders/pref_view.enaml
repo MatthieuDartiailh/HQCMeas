@@ -1,5 +1,6 @@
 from enaml.widgets.api import Form, GroupBox, Label, Field, CheckBox, Container
 from enaml.stdlib.fields import FloatField
+from enaml.core.api import Conditional
 
 from .pref_building import SingleInstrPref
 
@@ -21,29 +22,34 @@ enamldef SinglePrefView(GroupBox):
             text = 'Title'
         Field:
             text := model.title
+            submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
         Label:
             text = 'Refresh time'
         FloatField:
             value := model.refresh_time
             minimum = 0.1
-        Label:
-            text = 'Check for corruption'
-        CheckBox:
-            checked := model.check_corrupt
-        Label:
-            text = 'Time (s)'
-        FloatField:
-            value := model.corrupt_time
-            minimum = 0.1
-        Label:
-            text = 'Use fast refresh'
-        CheckBox:
-            checked := model.fast_refresh
-        Label:
-            text = 'Time (s)'
-        FloatField:
-            value := model.fast_refresh_time
-            minimum = 0.1
+        Conditional:
+            condition = model._can_check_corrupt
+            Label:
+                text = 'Check for corruption'
+            CheckBox:
+                checked := model.check_corrupt
+            Label:
+                text = 'Time (s)'
+            FloatField:
+                value := model.corrupt_time
+                minimum = 0.1
+        Conditional:
+            condition = model._has_fast_refresh
+            Label:
+                text = 'Use fast refresh'
+            CheckBox:
+                checked := model.fast_refresh
+            Label:
+                text = 'Time (s)'
+            FloatField:
+                value := model.fast_refresh_time
+                minimum = 0.1
 
 PREF_VIEW_MAP = {type(None) : EmptyView}
 PREF_VIEW_MAP[SingleInstrPref] = SinglePrefView

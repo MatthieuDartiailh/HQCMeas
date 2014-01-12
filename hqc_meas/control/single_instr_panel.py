@@ -6,7 +6,7 @@ from atom.api import (Atom, Typed, Bool, Str, Instance, Float, Callable, Tuple,
                       Dict, List, Event, Int, Value)
 from inspect import getmembers, ismethod
 from configobj import ConfigObj
-from ..instruments.drivers import BaseInstrument, InstrIOError
+from ..instruments.drivers import BaseInstrument, InstrError
 from ..atom_util import PrefAtom, tagged_members
 from ..instruments.drivers import DRIVERS
 
@@ -54,8 +54,8 @@ def dsetter(method):
             self._propagate_notif = False
             try:
                 method(change['value'])
-            except InstrIOError as e:
-                self.ui_validators[change['name']].catch_dset_error(e.message)
+            except InstrError as e:
+                self.dsetter_report = (change['name'], e)
             self._propagate_notif = True
             
     wrapper.__name__ = method.__name__
@@ -76,6 +76,7 @@ class SingleInstrPanel(PrefAtom):
     validate_all = Event()
     cancel_all = Event()
     propose_val = Event()
+    dsetter_report = Event()
     display_additional = Bool()
     
     check_corrupt = Bool().tag(pref = True)
@@ -104,25 +105,26 @@ class SingleInstrPanel(PrefAtom):
 
         # Collect dgetter and dsetters here, and start observing members
         methods = getmembers(self, ismethod)
-        self._dgetters = {meth.__name__[5:] : meth for meth in methods
-                            if meth.__name__.startswith('dget_')}
-        self._dsetters = {meth.__name__[5:] : meth for meth in methods
-                            if meth.__name__.startswith('dset_')}
+        self._dgetters = {meth_name[5:] : meth for meth_name, meth in methods
+                            if meth_name.startswith('dget_')}
+        self._dsetters = {meth_name[5:] : meth for meth_name, meth in methods
+                            if meth_name.startswith('dset_')}
         for member in self._dsetters:
             self.observe(member, self._update_driver)
 
         self.update_members_from_preferences(**state['pref'])
         if state['profile_available']:
-            self.profile_available = True
+            self.profile_in_use = True
         config = ConfigObj(self.profile)
+
         driver_class = DRIVERS[config['driver']]
         self.driver = driver_class(config,
                                    caching_allowed = False,
-                                   auto_open = self.profile_available)
+                                   auto_open = self.profile_in_use)
         if 'dstate' in state:
             self.propose_val = state['dstate']
             
-        if self.profile_available:
+        if self.profile_in_use:
             # Start worker thread and timers
             self._process_thread = Thread(target = self._process_pending_op)
             self._process_thread.start()
@@ -201,17 +203,17 @@ class SingleInstrPanel(PrefAtom):
         """
         self._propagate_notif = False
         if args:
-            for mem in args:
-                setattr(self, mem, self._dgetters[mem]())
+            for member in args:
+                setattr(self, member, self._dgetters[member]())
         else:
-            for mem in self._dgetters:
-                setattr(self, mem, self._dgetters[mem]())
+            for member in self._dgetters:
+                setattr(self, member, self._dgetters[member]())
         self._propagate_notif = True
         
     def _update_driver(self, change):
         """
         """
-        if self._propagate_notif and change['name'] in self._dsetters:
+        if self._propagate_notif:
             self._op_queue.put((self._dsetters[change['name']],
                                 (change,), {}))
                                             

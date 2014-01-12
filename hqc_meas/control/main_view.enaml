@@ -61,9 +61,10 @@ enamldef MainPanelView(MainWindow): main:
         DockArea: dock_area:
             dock_events_enabled = model.enable_dock_events
             dock_event ::
-                if dock_event.type == dock_event.Closed:
+                d_event = change['value']
+                if d_event.type == d_event.Closed:
                     panel_model = [panel for panel in dock_area.children 
-                                    if panel.name == dock_event.name]
+                                    if panel.name == d_event.name]
                     try:
                         model.control_panel_closed(panel_model[0])
                     except IndexError:

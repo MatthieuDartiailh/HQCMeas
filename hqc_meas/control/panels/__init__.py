@@ -12,4 +12,11 @@ if 'SINGLE_INSTR_PANELS' not in globals():
     modules.remove('.__init__')
     for module in modules:
         mod = importlib.import_module(module, __name__)
-        SINGLE_INSTR_PANELS.update(getattr(mod, 'SINGLE_INSTR_PANELS'))
+        aux = getattr(mod, 'SINGLE_INSTR_PANELS')
+        
+        for key in aux:
+            
+            if key not in SINGLE_INSTR_PANELS:
+                SINGLE_INSTR_PANELS[key] = []
+                
+            SINGLE_INSTR_PANELS[key].extend(aux[key])
