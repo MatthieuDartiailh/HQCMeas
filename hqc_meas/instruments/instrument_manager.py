@@ -242,6 +242,6 @@ def matching_instr_list(driver_key):
     for profile in manager.instrs:
         path = os.path.join(manager.instr_folder, manager.instrs[profile])
         if driver_key == ConfigObj(path)['driver']:
-            profile_dict[profile] = manager.instrs[profile]
+            profile_dict[profile] = path
 
     return profile_dict

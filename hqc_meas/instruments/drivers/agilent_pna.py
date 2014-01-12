@@ -16,8 +16,9 @@ This module defines drivers for agilent PNA.
 from inspect import cleandoc
 import numpy as np
 from visa import ascii, single, double
-from .driver_tools import (BaseInstrument, VisaInstrument, InstrIOError,
+from .driver_tools import (BaseInstrument, InstrIOError,
                            secure_communication, instrument_property)
+from .visa_tools import VisaInstrument
 
 FORMATTING_DICT = {'PHAS' : lambda x: np.angle(x, deg=True),
                    'MLIN' : np.abs,
@@ -708,3 +709,5 @@ class AgilentPNA(VisaInstrument):
         if result.lower() != value.lower()[:len(result)]:
             raise InstrIOError(cleandoc('''PNA did not set correctly the
                 data format'''))
+
+DRIVERS = {'AgilentPNA' : AgilentPNA}

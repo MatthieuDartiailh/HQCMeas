@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
 """
 """
-from atom.api import (Str, Instance, Dict)
+from atom.api import (Unicode, Str, Instance, Dict)
 from configobj import ConfigObj
 import os
 from inspect import cleandoc
 
 from .base_tasks import SimpleTask
 from ..instruments.drivers import DRIVERS
-from ..instruments.profiles import PROFILES_DIRECTORY_PATH
 from ..instruments.instrument_manager import matching_instr_list
 from ..instruments.drivers.driver_tools import BaseInstrument, InstrIOError
 
 class InstrumentTask(SimpleTask):
     """
     """
-    profile_dict = Dict(Str, Str).tag(pref = True)
-    selected_profile = Str().tag(pref = True)
+    profile_dict = Dict(Unicode(), Unicode()).tag(pref = True)
+    selected_profile = Unicode().tag(pref = True)
     driver_list = []
     selected_driver = Str().tag(pref = True)
     driver = Instance(BaseInstrument)
@@ -26,14 +25,12 @@ class InstrumentTask(SimpleTask):
         """
         traceback = {}
         if self.selected_profile:
-            profile = self.profile_dict[self.selected_profile]
+            full_path = self.profile_dict[self.selected_profile]
         else:
             traceback[self.task_path + '/' +self.task_name] = cleandoc(
                 '''You must provide an instrument profile''')
             return False, traceback
-
-        full_path = os.path.join(PROFILES_DIRECTORY_PATH,
-                                    profile)
+        
         if not os.path.isfile(full_path):
             traceback[self.task_path + '/' +self.task_name] =\
                 'Failed to get the specified instr profile'''
@@ -77,14 +74,8 @@ class InstrumentTask(SimpleTask):
         """
         """
         self.driver.close_connection()
-        
-    def build_profile_path(self):
-        """
-        """
-        profile = self.profile_dict[self.selected_profile]
-        return  os.path.join(PROFILES_DIRECTORY_PATH, profile)
 
-    def _selected_driver_changed(self, change):
+    def _observe_selected_driver(self, change):
         """
         """
         self.profile_dict = matching_instr_list(change['value'])

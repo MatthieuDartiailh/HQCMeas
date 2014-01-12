@@ -87,7 +87,9 @@ class Subclass(Member):
         self.set_validate_mode(Validate.MemberMethod_ObjectOldNew, 'validate')
 
 
-    def validate(self, obj, old, new):
+    def validate(self, obj, old, new): 
+        if new is None:
+            return new
         assert isinstance(new, type)
         assert issubclass(new, self.subtype)
         return new

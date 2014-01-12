@@ -13,8 +13,9 @@ This module defines drivers for oxford ips magnet supply
 """
 from inspect import cleandoc
 from time import sleep
-from .driver_tools import (VisaInstrument, InstrIOError,
-                           secure_communication, instrument_property)
+from .driver_tools import (InstrIOError, secure_communication,
+                           instrument_property)
+from .visa_tools import VisaInstrument
 
 _PARAMETER_DICT = {'Demand current' : 0,
                    'Supply voltage' : 1,
@@ -343,3 +344,5 @@ class IPS12010(VisaInstrument):
             return status.strip()
         else:
             raise InstrIOError('''IPS120-10 did not return its status''')
+
+DRIVERS = {'IPS12010' : IPS12010}

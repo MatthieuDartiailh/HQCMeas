@@ -11,8 +11,9 @@ This module defines drivers for keithley multimeters using VISA library.
 
 """
 
-from .driver_tools import (VisaInstrument, InstrIOError, secure_communication,
+from .driver_tools import (InstrIOError, secure_communication,
                            instrument_property)
+from .visa_tools import VisaInstrument
 
 class Keithley2000(VisaInstrument):
     """Driver for Keithley 2000 using the VISA library
@@ -180,3 +181,5 @@ class Keithley2000(VisaInstrument):
         val = ('{0:08b}'.format(int(self.ask('*ESR'))))[::-1]
         if val:
             return val[6]
+
+DRIVERS = {'Keithley2000' : Keithley2000}
