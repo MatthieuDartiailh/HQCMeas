@@ -12,8 +12,8 @@ This module defines a driver for the Stanford instrument lock-in SR830
 
 """
 
-from .driver_tools import (VisaInstrument, InstrIOError,
-                          secure_communication)
+from .driver_tools import (InstrIOError, secure_communication)
+from .visa_tools import VisaInstrument
 
 class LockInSR830(VisaInstrument):
     """Driver for a SR830 lock-in, using the VISA library.
@@ -143,3 +143,5 @@ class LockInSR830(VisaInstrument):
             raise InstrIOError('The command did not complete correctly')
         else:
             return values
+            
+DRIVERS = {'SR830' : LockInSR830}

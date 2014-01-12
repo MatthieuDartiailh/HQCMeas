@@ -12,13 +12,14 @@ This module defines drivers for yokogawa sources using VISA library.
     Yokogawa7651 : Driver for the Yokogawa7651 using VISA
 
 """
-
-from .driver_tools import (VisaInstrument, InstrIOError, instrument_property,
-                          secure_communication)
 import re
 from visa import VisaTypeError
 from textwrap import fill
 from inspect import cleandoc
+
+from .driver_tools import (InstrIOError, instrument_property,
+                          secure_communication)
+from .visa_tools import VisaInstrument
 
 class YokogawaGS200(VisaInstrument):
     """
@@ -65,6 +66,49 @@ class YokogawaGS200(VisaInstrument):
         #to avoid floating point rouding
         if abs(value - round(set_point, 9)) > 10**-9:
             raise InstrIOError('Instrument did not set correctly the voltage')
+            
+    @instrument_property
+    @secure_communication()
+    def voltage_range(self):
+        """Voltage range getter method. NB: does not check the current function.
+        """
+        v_range = self.ask(":SOURce:RANGe?")
+        if v_range is not None:
+            if v_range == '10E-3':
+                return '10 mV'
+            elif v_range == '100E-3':
+                return '100 mV'
+            elif v_range == '1E+0':
+                return '1 V'
+            elif v_range == '10E+0':
+                return '10 V'
+            elif v_range == '30E+0':
+                return '30 V'
+        else:
+            raise InstrIOError('Instrument did not return the range')
+            
+    @voltage_range.setter
+    @secure_communication()
+    def voltage_range(self, v_range):
+        """Voltage range getter method. NB: does not check the current function.
+        """
+        visa_range = ''
+        if v_range == '10 mV':
+            visa_range = '10E-3'
+        elif v_range == '100 mV':
+            visa_range = '100E-3'
+        elif v_range == '1 V':
+            visa_range = '1E+0'
+        elif v_range == '10 V':
+            visa_range = '10E+0'
+        elif v_range == '30 V':
+            visa_range = '30E+0'
+            
+        if visa_range:
+            self.write(":SOURce:RANGe {}".format(visa_range))
+            check = self.ask(":SOURce:RANGe?")
+            if check != visa_range:
+                raise InstrIOError('Instrument did not set correctly the range')
 
     @instrument_property
     @secure_communication()
@@ -74,7 +118,7 @@ class YokogawaGS200(VisaInstrument):
         value = self.ask('SOURce:FUNCtion?')
         if value is not None:
             #Stripping leading and trailing '
-            return value
+            return value[1:-1]
         else:
             raise InstrIOError('Instrument did not return the function')
 
@@ -133,10 +177,10 @@ class YokogawaGS200(VisaInstrument):
                     output state of the Yokogawa driver''').format(value), 80)
             raise VisaTypeError(mess)
 
-    def check_connection(self):
-        """Found no way to check whether or not the cache can be corrupted
-        """
-        return False
+#    def check_connection(self):
+#        """Found no way to check whether or not the cache can be corrupted
+#        """
+#        return False
 
 class Yokogawa7651(VisaInstrument):
     """
@@ -264,3 +308,6 @@ class Yokogawa7651(VisaInstrument):
         """
         """
         return False
+
+DRIVERS = {'YokogawaGS200' : YokogawaGS200,
+           'Yokogawa7651' : Yokogawa7651}

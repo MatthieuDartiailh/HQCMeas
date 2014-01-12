@@ -15,28 +15,34 @@ modules constants :
             classes implementing them.
 
 """
+import os.path, importlib
+from .driver_tools import (BaseInstrument,
+                           InstrError, InstrIOError)
 
-from .driver_tools import (VisaInstrument, InstrIOError)
-from .yokogawa import YokogawaGS200, Yokogawa7651
-from .agilent_multimeters import Agilent34410A
-from .keithley_multimeters import Keithley2000
-from .lock_in_sr72_series import LockInSR7270, LockInSR7265
-from .lock_in_sr830 import LockInSR830
-from .agilent_psg_signal_generators import AgilentPSGSignalGenerator
-from .agilent_pna import AgilentPNA
-from .oxford_ips import IPS12010
-from .anritsu_signal_source import AnritsuMG3694
+if 'DRIVER_TYPES' not in globals():
+    DRIVER_TYPES = {}
+    dir_path = os.path.dirname(__file__)
+    modules = ['.' + os.path.split(path)[1][:-3] 
+                for path in os.listdir(dir_path)
+                    if path.endswith('.py')]
+                        
+    modules.remove('.__init__')
+    modules.remove('.driver_tools')
+    for module in modules:
+        mod = importlib.import_module(module, __name__)
+        if hasattr(mod, 'DRIVER_TYPES'):
+            DRIVER_TYPES.update(mod.DRIVER_TYPES)
+   
+if 'DRIVERS' not in globals():
 
-DRIVERS = {'YokogawaGS200' : YokogawaGS200,
-           'Yokogawa7651' : Yokogawa7651,
-           'SR7265-LI' : LockInSR7265,
-           'SR7270-LI' : LockInSR7270,
-           'SR830' : LockInSR830,
-           'Agilent34410A' : Agilent34410A,
-           'Keithley2000' : Keithley2000,
-           'AgilentE8257D' : AgilentPSGSignalGenerator,
-           'AgilentPNA' : AgilentPNA,
-           'IPS12010' : IPS12010,
-           'AnritsuMG3694' : AnritsuMG3694}
-
-DRIVER_TYPES = {'Visa' : VisaInstrument}
+    DRIVERS = {}
+    dir_path = os.path.dirname(__file__)
+    modules = ['.' + os.path.split(path)[1][:-3] 
+                for path in os.listdir(dir_path)
+                    if path.endswith('.py')]
+    modules.remove('.__init__')
+    modules.remove('.driver_tools')
+    for module in modules:
+        mod = importlib.import_module(module, __name__)
+        if hasattr(mod, 'DRIVERS'):
+            DRIVERS.update(mod.DRIVERS)

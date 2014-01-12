@@ -76,7 +76,7 @@ enamldef PNASetPowerView(HGroup): view:
 enamldef MeasField(Container):
     attr model
     Field: field:
-        text := model
+        text := model.measure
         tool_tip =  fill(cleandoc(
                         '''Measure should be described by the parameter to 
                           measure and followed by ':' and then the format in 

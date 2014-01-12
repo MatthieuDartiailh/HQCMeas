@@ -22,5 +22,8 @@ if 'KNOWN_PY_TASKS' not in globals():
     task_test = lambda obj: inspect.isclass(obj) and issubclass(obj, BaseTask)
     for module in modules:
         mod = importlib.import_module(module, __name__)
-        tasks = inspect.getmembers(mod, task_test)
-        KNOWN_PY_TASKS.extend([task[1] for task in tasks])
+        if hasattr(mod, 'KNOWN_PY_TASKS'):
+            KNOWN_PY_TASKS.extend(mod.KNOWN_PY_TASKS)
+        else:
+            tasks = inspect.getmembers(mod, task_test)
+            KNOWN_PY_TASKS.extend([task[1] for task in tasks])
