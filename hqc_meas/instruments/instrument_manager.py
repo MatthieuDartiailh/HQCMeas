@@ -109,9 +109,7 @@ class InstrumentManager(Atom):
     def _new_selected_instr(self, change):
         """Create a form for the selected instrument
         """
-        path = self.instr_folder
-        instr_file = self.instrs[change['value']]
-        fullpath = os.path.join(path, instr_file)
+        fullpath = self.instrs[change['value']]
         instr_dict = ConfigObj(fullpath).dict()
         instr_dict['name'] = change['value']
         self.selected_instr_form = InstrumentForm(**instr_dict)
@@ -127,7 +125,8 @@ class InstrumentManager(Atom):
         instrs = {}
         for instr_filename in instrs_filename:
             instr_name = self._normalise_name(instr_filename)
-            instrs[instr_name] = instr_filename
+            path = os.path.join(self.instr_folder, instr_filename)
+            instrs[instr_name] = path
 
         self.instrs = instrs
 
@@ -239,8 +238,7 @@ def matching_instr_list(driver_key):
     """
     manager = InstrumentManager()
     profile_dict = {}
-    for profile in manager.instrs:
-        path = os.path.join(manager.instr_folder, manager.instrs[profile])
+    for profile, path in manager.instrs.iteritems():
         if driver_key == ConfigObj(path)['driver']:
             profile_dict[profile] = path
 

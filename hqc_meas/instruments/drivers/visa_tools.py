@@ -87,6 +87,7 @@ class VisaInstrument(BaseInstrument):
         try:
             self._driver = Instrument(self.connection_str, **para)
         except VisaIOError as er:
+            self._driver = None
             raise InstrIOError(str(er))
 
     def close_connection(self):
@@ -110,6 +111,11 @@ class VisaInstrument(BaseInstrument):
                 }
         self._driver.close()
         self.open_connection(**para)
+    
+    def connected(self):
+        """Returns whether commands can be sent to the instrument
+        """
+        return bool(self._driver)
 
     def write(self, message):
         """Send the specified message to the instrument.
