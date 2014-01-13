@@ -73,6 +73,7 @@ class SingleInstrPanel(PrefAtom):
     error = Str()
     driver = Instance(BaseInstrument)
     profile = Str().tag(pref = True)
+    profile_available = Bool()
     profile_in_use = Bool()
     validate_all = Event()
     cancel_all = Event()
@@ -115,19 +116,19 @@ class SingleInstrPanel(PrefAtom):
 
         self.update_members_from_preferences(**state['pref'])
         if state['profile_available']:
-            self.profile_in_use = True
+            self.profile_available = True
         config = ConfigObj(self.profile)
 
         driver_class = DRIVERS[config['driver']]
         try:
             self.driver = driver_class(config,
                                    caching_allowed = False,
-                                   auto_open = self.profile_in_use)
+                                   auto_open = self.profile_available)
+            self.profile_in_use = True
         except InstrError:
             self.driver = driver_class(config,
                                    caching_allowed = False,
                                    auto_open = False)
-            self.profile_in_use = False
             self.error = cleandoc('''Connection to the instrument failed, please
                     check that the instrument is connected and try again''')            
             
@@ -165,7 +166,7 @@ class SingleInstrPanel(PrefAtom):
     def restart_driver(self):
         """
         """
-        self.profile_in_use = True
+        self.profile_available = True
         try:
             self.driver.open_connection()
         except InstrError:
@@ -174,6 +175,7 @@ class SingleInstrPanel(PrefAtom):
                     check that the instrument is connected and try again.''')
             return
             
+        self.profile_in_use = True
         self.error = ''
         self._process_thread = Thread(target = self._process_pending_op)
         self._process_thread.start()
@@ -200,6 +202,7 @@ class SingleInstrPanel(PrefAtom):
         self._process_thread = None
         self.driver.close_connection()
         self.profile_in_use = False
+        self.profile_available = False
         
     def format_header(self):
         # TODO

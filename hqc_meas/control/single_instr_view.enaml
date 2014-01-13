@@ -274,6 +274,7 @@ enamldef SingleInstrDock(DockItem):
     title_editable = True
     
     Container:
+        enabled << model.profile_available
         Container:
             padding = 0
             enabled << model.profile_in_use
