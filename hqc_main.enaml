@@ -1,21 +1,23 @@
 from enaml.layout.api import hbox
 from enaml.widgets.api import (MainWindow, Container, DockPane, MenuBar, Menu,
-                            MultilineField, PushButton, Action)
+                            PushButton, Action)
 
 from hqc_meas.measurement.execution_view import ExecutionView
 from hqc_meas.measurement.edition_view import MeasEditorContainer
 from hqc_meas.instruments.instrument_manager import InstrumentManager
 from hqc_meas.instruments.instrument_manager_view import InstrumentManagerView
+from hqc_meas.enaml_util.qt_autoscrollmultilinedisplay\
+    import QtAutoScrollMultilineDisplay
 
 enamldef MessagePanel(DockPane):
     attr model
     closable = False
     Container:
-        MultilineField:
-            resist_height = 'weak'
+        QtAutoScrollMultilineDisplay:
+            hug_height = 'ignore'
+            resist_height = 'ignore'
             constraints = [height >= 50]
             text << model.string
-            read_only = True
         PushButton:
             text = 'Clear'
             hug_width = 'weak'            
