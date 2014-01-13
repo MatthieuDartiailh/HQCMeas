@@ -14,7 +14,7 @@ enamldef MessagePanel(DockPane):
         MultilineField:
             resist_height = 'weak'
             constraints = [height >= 50]
-            text := model.string
+            text << model.string
             read_only = True
         PushButton:
             text = 'Clear'
