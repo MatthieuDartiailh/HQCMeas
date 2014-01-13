@@ -19,7 +19,6 @@ import numpy as np
 from .instr_task import InstrumentTask
 from .tools.task_decorator import (smooth_instr_crash)
 from .tools.database_string_formatter import (format_and_eval_string)
-from ..instruments.profiles import PROFILES_DIRECTORY_PATH
 from ..instruments.drivers import DRIVERS
 from ..instruments.drivers.driver_tools import InstrIOError
 
@@ -32,9 +31,8 @@ class PNATasks(InstrumentTask):
         """
         """
         traceback = {}
-        profile = self.profile_dict[self.selected_profile]
-        full_path = os.path.join(PROFILES_DIRECTORY_PATH,
-                                    profile)
+        full_path = self.profile_dict[self.selected_profile]
+
         if not os.path.isfile(full_path):
             traceback[self.task_path + '/' +self.task_name] =\
                 'Failed to get the specified instr profile'''
