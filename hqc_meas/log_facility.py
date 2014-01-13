@@ -21,10 +21,15 @@ process log emitted in the measure process.
         Thread getting log record from a queue and asking logging to handle them
 """
 
-import logging, Queue
+import logging, Queue, time, os, datetime
+from logging.handlers import TimedRotatingFileHandler
 from inspect import cleandoc
 from threading import Thread
 from enaml.application import deferred_call
+try:
+    import codecs
+except ImportError:
+    codecs = None
 
 class StreamToLogRedirector(object):
     """Simple class to redirect a stream to a logger.
@@ -230,3 +235,65 @@ class QueueLoggerThread(Thread):
                 logger.handle(record)
             except Queue.Empty:
                 continue
+
+class DayRotatingTimeHandler(TimedRotatingFileHandler):
+    """
+    """
+    def __init__(self, filename, when = 'midnight', **kwargs):
+        self.when = when.upper()
+        super(DayRotatingTimeHandler, self).__init__(filename, when = when,
+                                                                     **kwargs)
+        
+    def _open(self):
+        """
+        Open the a file named accordingly to the base name and the time of
+        creation of the file with the (original) mode and encoding.
+        Return the resulting stream.
+        """
+        if (self.when == 'MIDNIGHT' or self.when.startswith('W')):
+            today = str(datetime.datetime.today()).split(' ')[0]
+        else:
+            today = str(datetime.datetime.today()).split('.')[0]
+        
+        base_dir, base_filename = os.path.split(self.baseFilename)
+        aux = base_filename.split('.')
+        filename = aux[0] + today + '.' + aux[1]
+        path = os.path.join(base_dir, filename)
+        
+        if self.encoding is None:
+            stream = open(path, self.mode)
+        else:
+            stream = codecs.open(path, self.mode, self.encoding)
+        return stream
+        
+    
+    def doRollover(self):
+        """Do a rollover. Close old file and open a new one, no renaming is
+        performed to avoid issues on window.
+        """
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+        # get the time that this sequence started at and make it a TimeTuple
+        currentTime = int(time.time())
+        dstNow = time.localtime(currentTime)[-1]
+
+        for s in self.getFilesToDelete():
+            os.remove(s)
+
+        self.stream = self._open()
+        
+        newRolloverAt = self.computeRollover(currentTime)
+        while newRolloverAt <= currentTime:
+            newRolloverAt = newRolloverAt + self.interval
+        #If DST changes and midnight or weekly rollover, adjust for this.
+        if ((self.when == 'MIDNIGHT' or self.when.startswith('W'))
+                                                            and not self.utc):
+            dstAtRollover = time.localtime(newRolloverAt)[-1]
+            if dstNow != dstAtRollover:
+                if not dstNow:  # DST kicks in before next rollover, so we need to deduct an hour
+                    addend = -3600
+                else:           # DST bows out before next rollover, so we need to add an hour
+                    addend = 3600
+                newRolloverAt += addend
+        self.rolloverAt = newRolloverAt
