@@ -21,7 +21,7 @@ process log emitted in the measure process.
         Thread getting log record from a queue and asking logging to handle them
 """
 
-import logging, Queue, time, os, datetime
+import logging, Queue, time, os, datetime, sys
 from logging.handlers import TimedRotatingFileHandler
 from inspect import cleandoc
 from threading import Thread
@@ -194,20 +194,28 @@ class GuiConsoleHandler(logging.Handler):
 
         """
         panel = self.process_panel_dict[record.processName]
+        
         try:
             if record.levelname == 'INFO':
-                deferred_call(panel.string.__add__, record.message + '\n')
+                 deferred_call(self._write_in_panel, panel,
+                               record.message + '\n')
             elif record.levelname == 'CRITICAL':
-                deferred_call(panel.string.__add__,
+                deferred_call(self._write_in_panel, panel,
                               cleandoc('''An error occured please check the
                                 log file for more details.''') + '\n')
             else:
-                deferred_call(panel.string.__add__, record.levelname + ':' + \
-                                                record.message + '\n')
+                deferred_call(self._write_in_panel, panel,
+                              record.levelname + ':' + record.message + '\n')
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
             self.handleError(record)
+            
+    @staticmethod        
+    def _write_in_panel(panel, string):
+        """
+        """
+        panel.string += string
 
 
 class QueueLoggerThread(Thread):

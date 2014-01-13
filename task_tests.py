@@ -46,10 +46,10 @@ class Main(Atom):
         logger.addHandler(file_logger)
         logger.addHandler(gui_logger)
 
-#        redir_stdout = StreamToLogRedirector(logger)
-#        redir_stderr = StreamToLogRedirector(logger, stream_type = 'stderr')
-#        sys.stdout = redir_stdout
-#        sys.stderr = redir_stderr
+        redir_stdout = StreamToLogRedirector(logger)
+        redir_stderr = StreamToLogRedirector(logger, stream_type = 'stderr')
+        sys.stdout = redir_stdout
+        sys.stderr = redir_stderr
 
     def enqueue_measurement(self):
         self.exe_control.append_meas(self.meas)
