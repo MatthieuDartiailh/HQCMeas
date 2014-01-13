@@ -105,7 +105,7 @@ class SimpleLoopTask(BaseLoopTask):
             self.write_in_database('index', i+1)
             self.write_in_database('value', value)
             for child in self.children_task:
-                child.process_()
+                child.process_(child)
 
     @make_stoppable
     def process_with_timing(self):
@@ -126,7 +126,7 @@ class SimpleLoopTask(BaseLoopTask):
             self.write_in_database('value', value)
             tic = default_timer()
             for child in self.children_task:
-                child.process_()
+                child.process_(child)
             self.write_in_database('elapsed_time', default_timer()-tic)
 
 class LoopTask(BaseLoopTask):
@@ -152,9 +152,9 @@ class LoopTask(BaseLoopTask):
             if self.root_task.should_stop.is_set():
                 break
             self.write_in_database('index', i+1)
-            self.task.process_(value)
+            self.task.process_(self.task, value)
             for child in self.children_task:
-                child.process_()
+                child.process_(child)
 
     @make_stoppable
     def process_with_timing(self):
@@ -173,9 +173,9 @@ class LoopTask(BaseLoopTask):
                 break
             self.write_in_database('index', i+1)
             tic = default_timer()
-            self.task.process_(value)
+            self.task.process_(self.task, value)
             for child in self.children_task:
-                child.process_()
+                child.process_(child)
             self.write_in_database('elapsed_time', default_timer()-tic)
 
     def walk(self, members, callables):

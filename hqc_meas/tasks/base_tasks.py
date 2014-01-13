@@ -106,7 +106,7 @@ class BaseTask(Atom):
     def _default_process_(self):
         """
         """
-        return self.process
+        return self.process.__func__
 
     def _observe_task_name(self, change):
         """
@@ -229,7 +229,7 @@ class SimpleTask(BaseTask):
         """
         if change:
             self._parallel['activated'] = change['value']
-        process = self.process
+        process = self.process.__func__
         parallel = self._parallel
         if parallel['activated'] and parallel['pool']:
             process = self._make_parallel_process_(process, parallel['pool'])
@@ -333,7 +333,7 @@ class ComplexTask(BaseTask):
         """
         """
         for child in self.children_task:
-            child.process_()
+            child.process_(child)
 
     def check(self, *args, **kwargs):
         """Implementation of the test method of AbstractTask
@@ -689,7 +689,7 @@ class RootTask(ComplexTask):
         """
         """
         for child in self.children_task:
-            child.process_()
+            child.process_(child)
         pools = self.task_database.get_value('root','threads')
         for pool in pools.items():
             for thread in pool:

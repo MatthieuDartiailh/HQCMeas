@@ -8,10 +8,10 @@ with enaml.imports():
 
 from hqc_meas.measurement.measure import Measure
 from hqc_meas.measurement.measurement_execution import TaskExecutionControl
-from hqc_meas.log_facility import (StreamToLogRedirector,
-                                             GuiConsoleHandler)
+from hqc_meas.log_facility import (StreamToLogRedirector, GuiConsoleHandler,
+                                   DayRotatingTimeHandler)
 import os, sys, logging
-from logging.handlers import TimedRotatingFileHandler
+#from logging.handlers import TimedRotatingFileHandler
 
 logging.captureWarnings(True)
 
@@ -38,7 +38,7 @@ class Main(Atom):
         if not os.path.isdir('log_files'):
             os.mkdir('log_files')
         log_path = 'log_files/measure.log'
-        file_logger = TimedRotatingFileHandler(log_path, when = 'midnight')
+        file_logger = DayRotatingTimeHandler(log_path, when = 'midnight')
 
         aux = '%(asctime)s | %(processName)s | %(levelname)s | %(message)s'
         formatter = logging.Formatter(aux)

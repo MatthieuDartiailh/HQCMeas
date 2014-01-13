@@ -7,8 +7,7 @@ from atom.api import (Atom, Str, Bool, Unicode, observe)
 from configobj import ConfigObj
 from inspect import getdoc
 
-from ... import tasks
-from ...tasks import BaseTask, RootTask
+from ...tasks import BaseTask, RootTask, KNOWN_PY_TASKS
 from ...atom_util import Subclass
 
 class AbstractConfigTask(Atom):
@@ -77,7 +76,7 @@ class IniConfigTask(AbstractConfigTask):
         if self.task_class == RootTask and\
                                     config['task_class'] != 'ComplexTask':
             built_task = RootTask()
-            task = getattr(tasks, config['task_class'])(task_name =
+            task = self._get_task(config['task_class'])(task_name =
                                                             config['task_name'])
             built_task.children.append(task)
         else:
@@ -102,7 +101,7 @@ class IniConfigTask(AbstractConfigTask):
     def _build_child(cls, section):
         """
         """
-        task = getattr(tasks, section['task_class'])(task_name =
+        task = cls._get_task(section['task_class'])(task_name =
                                                     section['task_name'])
         parameters = cls._prepare_parameters(section)
         task.update_members_from_preferences(**parameters)
@@ -144,6 +143,11 @@ class IniConfigTask(AbstractConfigTask):
 
         return parameters
 
+    @staticmethod
+    def _get_task(name):
+        for task in KNOWN_PY_TASKS:
+            if task.__name__ == name:
+                return task
 
 class PyConfigTask(AbstractConfigTask):
     """
