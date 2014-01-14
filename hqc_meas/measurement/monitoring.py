@@ -220,7 +220,6 @@ class MeasureMonitor(Atom):
         hidden = [e for e in entries if e.path in pref_hidden]
         entries -= set(hidden) 
         if entries:
-            print [e.path for e in entries]
             information(parent = None,
                         title = 'Unhandled entries',
                         text = cleandoc('''The application of new rules lead

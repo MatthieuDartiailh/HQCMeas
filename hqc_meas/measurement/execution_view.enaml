@@ -65,7 +65,7 @@ enamldef ExecutionView(DockPane):
             text = 'Start'
             enabled << bool(ex_model.meas_holder) and not ex_model.running
             clicked ::
-                ex_model._start_button_clicked()
+                ex_model._start_button_clicked(start)
         PushButton: stop:
             text = 'Stop task'
             enabled << ex_model.running
@@ -78,6 +78,8 @@ enamldef ExecutionView(DockPane):
                 ex_model._stop_all_button_clicked()
         PushButton: mon:
             text = 'Open monitor'
+            enabled << bool(ex_model.running and ex_model.monitor_display 
+                                and not ex_model.monitor_display.visible)
             clicked::
                 ex_model.monitor_display.show()
 
