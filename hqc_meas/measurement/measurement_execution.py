@@ -38,14 +38,15 @@ from threading import Thread
 from time import sleep
 
 from atom.api import (Atom, Instance, Bool, Str, Value, ContainerList,
-                      Dict, observe)
+                      Dict, List, Unicode, observe)
 import enaml
 from enaml.application import deferred_call
 
-from.measure import Measure
+from .measure import Measure
 from .monitoring import MeasureSpy, MeasureMonitor
 from ..task_management.config import IniConfigTask
 from ..log_facility import (StreamToLogRedirector, QueueLoggerThread)
+from ..instruments.drivers import DRIVERS
 with enaml.imports():
     from .monitoring_views import MonitorView
     from .execution_view import TaskCheckDisplay
@@ -269,6 +270,19 @@ class TaskCheckModel(Atom):
         new = change['value']
         self.full_path = self.name_to_path_dict[new]
         self.message = self.check_dict_result[self.full_path]
+        
+def extract_profiles(walk):
+    """
+    """
+    profiles = []
+    for w in walk:
+        if isinstance(w, list):
+            profiles.extend(extract_profiles(w))
+        else:
+            if hasattr(w, 'selected_profiles'):
+                profiles.append(DRIVERS[w['selected_profile']])
+                
+    return set(profiles)
 
 class TaskExecutionControl(Atom):
     """Store measurement in a queue of measures to be processed, take care of
@@ -299,7 +313,7 @@ class TaskExecutionControl(Atom):
     current_monitor : instance(MeasureMonitor)
         Monitor associated to the measurement being processed.
     pipe : multiprocessing double ended pipe
-        Pipe used for communication between the two processus.
+        Pipe used for communication between thetask.walk(['selected_profile']) two processus.
 
     Methods
     -------
@@ -313,6 +327,7 @@ class TaskExecutionControl(Atom):
     process_stop = Instance(Event, ())
 
     meas_holder = ContainerList(Instance(Measure), [])
+    requested_instrs = List(Unicode())
 
     process = Instance(Process)
     log_thread = Instance(Thread)
@@ -456,7 +471,16 @@ class TaskExecutionControl(Atom):
                     # a new one and send the measure in the pipe.
                     if task is not None:
                         meas.is_running = True
+                        # TODO here should get default header from panel                        
+                        
                         task.update_preferences_from_members()
+                        
+                        #Here must walk the task tree to find the used profile
+                        #and ask a potential control panel to release the instrs
+                        #it is currently holding
+                        aux = task.walk(['selected_profile'])
+                        profiles = extract_profiles(aux)
+                        # TODO pass this to the control panel
 
                         if self.current_monitor:
                             self.current_monitor.stop()
@@ -465,7 +489,7 @@ class TaskExecutionControl(Atom):
                         self.current_monitor = monitor
                         deferred_call(setattr, monitor, 'status','RUNNING')
                         # Leave a chance to the system to update the display
-                        sleep(0.1)
+                        sleep(0.05)
                             
                         if meas.use_monitor:
                             monitor.start(self.monitor_queue)
@@ -492,6 +516,7 @@ class TaskExecutionControl(Atom):
                         self.log_thread.join()
                         self.running = False
                         break
+                    
                 # If there is no measurement in the queue, stop the
                 # measurement process.
                 else:
