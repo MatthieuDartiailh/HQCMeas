@@ -63,7 +63,7 @@ class InstrumentTask(SimpleTask):
         if self.selected_profile in instrs:
             self.driver = instrs[self.selected_profile]
         else:
-            full_path = self.build_profile_path()
+            full_path = self.profile_dict[self.selected_profile]
             driver_class = DRIVERS[self.selected_driver]
             config = ConfigObj(full_path)
             self.driver = driver_class(config)

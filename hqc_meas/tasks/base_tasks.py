@@ -488,7 +488,7 @@ class ComplexTask(BaseTask):
     
                 setattr(self, name, validated)
                 
-    def walk(self, members, callables):
+    def walk(self, members = [], callables = {}):
         """
         """
         answer = [self._answer(self, members, callables)]
