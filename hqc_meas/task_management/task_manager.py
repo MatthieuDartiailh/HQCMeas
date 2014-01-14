@@ -66,6 +66,8 @@ class TaskManager(Atom):
 
     def __init__(self, *args, **kwargs):
         super(TaskManager, self).__init__(*args, **kwargs)
+        if not os.path.isdir(self.template_folder):
+            os.mkdir(self.template_folder)
         self.event_handler = FileListUpdater(self._update_list_file)
         self.watch = self.observer.schedule(self.event_handler,
                                             self.template_folder)
