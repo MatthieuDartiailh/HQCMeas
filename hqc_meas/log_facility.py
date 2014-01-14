@@ -261,7 +261,9 @@ class DayRotatingTimeHandler(TimedRotatingFileHandler):
         if (self.when == 'MIDNIGHT' or self.when.startswith('W')):
             today = str(datetime.datetime.today()).split(' ')[0]
         else:
-            today = str(datetime.datetime.today()).split('.')[0]
+            aux = str(datetime.datetime.today()).split('.')[0]
+            aux = aux.replace(' ','_')
+            today = aux.replace(':', '-')
         
         base_dir, base_filename = os.path.split(self.baseFilename)
         aux = base_filename.split('.')

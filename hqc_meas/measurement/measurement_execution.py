@@ -321,7 +321,8 @@ class TaskExecutionControl(Atom):
     
     monitor_queue = Instance(Queue, ())
     current_monitor = Instance(MeasureMonitor)
-    monitor_display = Instance(MonitorView, ())
+    monitor_display = Instance(MonitorView)
+    parent_widget = Instance(enaml.widgets.widget.Widget)
     
 
     def append_meas(self, new_meas):
@@ -360,7 +361,7 @@ class TaskExecutionControl(Atom):
             TaskCheckDisplay(model = TaskCheckModel(check[1])).exec_()
             return False
 
-    def _start_button_clicked(self):
+    def _start_button_clicked(self, widget):
         """Handle the `start_button` being pressed.
 
         Clear the event `task_stop` and `process_stop`, create the pipe and
@@ -369,6 +370,8 @@ class TaskExecutionControl(Atom):
         process.
 
         """
+        if not self.parent_widget:
+            self.parent_widget = widget
         print 'Starting process'
         self.task_stop.clear()
         self.process_stop.clear()
@@ -412,7 +415,12 @@ class TaskExecutionControl(Atom):
     def _update_monitor_display_model(self, monitor):
         """
         """
-        self.monitor_display.monitor = monitor
+        if not self.monitor_display:
+            self.monitor_display = MonitorView(self.parent_widget,
+                                               monitor = monitor)
+        else:
+            self.monitor_display.monitor = monitor
+            
         if not self.monitor_display.visible:
             self.monitor_display.show()
 
