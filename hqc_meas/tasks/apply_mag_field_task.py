@@ -65,3 +65,5 @@ class ApplyMagFieldTask(InstrumentTask):
                                                             self.target_field)
             self.write_in_database('Bfield', val)
         return test, traceback
+        
+KNOWN_PY_TASKS = [ApplyMagFieldTask]

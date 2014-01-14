@@ -107,3 +107,5 @@ class SetDCVoltageTask(InstrumentTask):
                                                             self.target_value)
         self.write_in_database('voltage', val)
         return test, traceback
+        
+KNOWN_PY_TASKS = [SetDCVoltageTask]

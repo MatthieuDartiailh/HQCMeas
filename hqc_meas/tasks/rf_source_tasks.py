@@ -130,3 +130,6 @@ class RFSourceSetOnOffTask(InstrumentTask):
         """
         self.write_in_database('output', self.switch)
         return super(RFSourceSetOnOffTask, self).check(*args, **kwargs)
+
+KNOWN_PY_TASKS = [RFSourceSetFrequencyTask, RFSourceSetPowerTask,
+                  RFSourceSetOnOffTask]

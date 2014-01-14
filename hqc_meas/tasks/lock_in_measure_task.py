@@ -71,3 +71,5 @@ class LockInMeasureTask(InstrumentTask):
             self.task_database_entries = {'phase' : 1.0}
         elif new == 'Amp&Phase':
             self.task_database_entries = {'amplitude' : 1.0, 'phase' : 1.0}
+            
+KNOWN_PY_TASKS = [LockInMeasureTask]
