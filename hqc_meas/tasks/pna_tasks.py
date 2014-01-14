@@ -411,3 +411,6 @@ class PNASweepTask(PNATasks):
                 meas_for.append(False)
 
         return meas_for
+        
+KNOWN_PY_TASKS = [PNASetFreqTask, PNASetPowerTask, PNASinglePointMeasureTask,
+                  PNASweepTask]

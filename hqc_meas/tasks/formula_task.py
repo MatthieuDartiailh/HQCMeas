@@ -73,3 +73,5 @@ class FormulaTask(SimpleTask):
         if 'formulas' in parameters:
             self.definitions = [Formula(label = f[0], formula = f[1])
                                 for f in parameters['formulas']]
+                                    
+KNOWN_PY_TASKS = [FormulaTask]

@@ -301,3 +301,5 @@ class SaveArrayTask(SimpleTask):
             return False, traceback
 
         return True, traceback
+        
+KNOWN_PY_TASKS = [SaveTask, SaveArrayTask]

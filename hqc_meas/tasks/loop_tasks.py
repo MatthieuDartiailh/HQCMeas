@@ -184,3 +184,5 @@ class LoopTask(BaseLoopTask):
         answer = super(LoopTask, self).walk(members, callables)
         answer.insert(1, self._answer(self.task, members, callables))
         return answer
+        
+KNOWN_PY_TASKS = [LoopTask, SimpleLoopTask]

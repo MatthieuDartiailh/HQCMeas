@@ -78,3 +78,5 @@ class ArrayExtremaTask(SimpleTask):
         else:
             self.task_database_entries = {'max_ind' : 0, 'max_value' : 1.0,
                                           'min_ind' : 0, 'min_value' : -1.0}
+                                          
+KNOWN_PY_TASKS = [ArrayExtremaTask]

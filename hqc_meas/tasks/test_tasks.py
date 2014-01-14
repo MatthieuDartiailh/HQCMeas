@@ -111,3 +111,5 @@ class DefinitionTask(SimpleTask):
         if 'definitions' in parameters:
             self.definitions = [Definition(label = d[0], definition = d[1])
                                 for d in parameters['definitions']]
+                            
+KNOWN_PY_TASKS = [PrintTask, SleepTask, DefinitionTask]
