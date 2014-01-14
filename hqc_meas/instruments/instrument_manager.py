@@ -97,6 +97,8 @@ class InstrumentManager(Atom):
 
     def __init__(self, *args, **kwargs):
         super(InstrumentManager, self).__init__(*args, **kwargs)
+        if not os.path.isdir(self.instr_folder):
+            os.mkdir(self.instr_folder)
         self.event_handler = FileListUpdater(self._update_instr_list)
         self.watch = self.observer.schedule(self.event_handler,
                                             self.instr_folder)
