@@ -27,7 +27,7 @@ class ValidatorModel(Atom):
     ui_val       = Value()
     state        = Str('normal')
     err_message  = Str()
-    _safe        = Bool()
+    _safe        = Bool(True)
     _prop        = Int()
 
     def __init__(self, model, name):
@@ -48,30 +48,28 @@ class ValidatorModel(Atom):
 
     def post_model_update(self, change):
         """
-        """
+        """ 
         if self._safe and self.state == 'normal':
             deferred_call(setattr, self, 'ui_val', change['value'])
 
-    def update_model(self, change):
+    def update_model(self, change = {}):
         """
         """
         self._safe = False
-        self.state = 'normal'
-        self.err_message = ''
         self.dual_display = False
-        setattr(self.model, self.name, self.ui_val)
+        self.model.update_driver(self.name, self.ui_val)
         # Gice a chance to the worker thread of the model to attempt to set the
         # driver value
-        sleep(0.01)
+        sleep(0.05)
         if self._prop:
             self._prop = 1
             self.model._proposed_val_counter -= 1
         self._safe = True
 
-    def cancel_edition(self):
+    def cancel_edition(self, change = {}):
         """
         """
-        self._ui_val_edited({'value' : ''})
+        self.ui_val = getattr(self.model, self.name)
         if self._prop:
             self._prop = 1
             self._proposed_val_counter -= 1
@@ -79,6 +77,7 @@ class ValidatorModel(Atom):
     def catch_dset_report(self, change):
         """
         """
+#TODO make this validate the setting
         report = change['value']
         if report[0] == self.name and isinstance(report[1], Exception):
             self.state = 'error'
@@ -106,17 +105,13 @@ class ValidatorModel(Atom):
         else:
             self._prop = 0
         
-    @observe('ui_val')
-    def _ui_val_edited(self, change):
+    def _observe_ui_val(self, change):
         """
         """
-        if change['value'] == self.model:
-            self.state = 'normal'
-        elif change['value'] == '':
-            self.ui_val = getattr(self.model, self.name)
+        if change['value'] == getattr(self.model, self.name):
             self.state = 'normal'
         else:
-            self.state = 'edited'            
+            self.state = 'edited'
 
 enamldef FloatValidator(GroupBox):
     attr model
@@ -124,9 +119,12 @@ enamldef FloatValidator(GroupBox):
     alias minimum : field.minimum
     alias maximum : field.maximum
     attr _internal = ValidatorModel(model, member)
-    padding = 0
-    constraints = [hbox(hbox(*cond.items), field, button)]
+
+    padding = 2
+    constraints << [hbox(hbox(*cond.items), field, cancel, button)]
     title << member.capitalize()
+    hug_height = 'strong'
+
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -136,6 +134,14 @@ enamldef FloatValidator(GroupBox):
         value := _internal.ui_val
         background << STATE_COLOR_MAP[_internal.state]
         tool_tip << _internal.err_message
+        hug_width = 'ignore'
+        submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+    PushButton: cancel:
+        constraints = [width == 15, height == 20]
+        font = 'bold 12pt Consolas'
+        text = 'C'
+        clicked::
+            _internal.cancel_edition()
     PushButton: button:
         constraints = [width == 15, height == 20]
         font = 'bold 12pt Consolas'
@@ -149,9 +155,12 @@ enamldef IntValidator(GroupBox):
     alias minimum : field.minimum
     alias maximum : field.maximum
     attr _internal = ValidatorModel(model, member)
-    padding = 0
+
+    padding = 2
     constraints = [hbox(hbox(*cond.items), field, button)]
     title << member.capitalize()
+    hug_height = 'strong'
+
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -172,9 +181,12 @@ enamldef BoolValidator(GroupBox):
     attr model
     attr member
     attr _internal = ValidatorModel(model, member)
-    padding = 0
+
+    padding = 2
     constraints = [hbox(hbox(*cond.items), box, button)]
     title << member.capitalize()
+    hug_height = 'strong'
+
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -195,9 +207,12 @@ enamldef EnumValidator(GroupBox):
     attr model
     attr member
     attr _internal = ValidatorModel(model, member)
-    padding = 0
+
+    padding = 2
     constraints = [hbox(hbox(*cond.items), field, button)]
     title << member.capitalize()
+    hug_height = 'strong'
+
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -228,18 +243,18 @@ enamldef SingleInstrDial(Dialog):
             CheckBox:
                 text = 'Check for corruption'
                 checked := model.check_corrupt
-            IntField:
+            FloatField:
                 value := model.corrupt_time
                 tool_tip = 'Time to wait before checking for instr corruption'
             Label:
                 text = 's'
 
         Conditional: fast:
-            condition << model.fast_refresh_members 
+            condition << bool(model.fast_refresh_members)
             CheckBox:
                 text = 'Fast refresh'
                 checked := model.fast_refresh
-            IntField:
+            FloatField:
                 value := model.fast_refresh_time
                 tool_tip << 'Time to wait before refreshing the \
                                 values : {}'.format(model.fast_refresh_members)
@@ -248,7 +263,7 @@ enamldef SingleInstrDial(Dialog):
 
         Label: refresh_lab:
             text = 'Refresh time'
-        IntField: refresh_time:
+        FloatField: refresh_time:
             value := model.corrupt_time
             tool_tip = 'Time to wait before refreshing all the instrument \
                         values'

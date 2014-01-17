@@ -49,14 +49,15 @@ class RepeatedTimer(Atom):
 
 def dsetter(method):
     
-    def wrapper(self, change):
-        if self._propagate_notif:
-            self._propagate_notif = False
-            try:
-                method(change['value'])
-            except InstrError as e:
-                self.dsetter_report = (change['name'], e)
-            self._propagate_notif = True
+    def wrapper(self, name, new_val):
+#        if self._propagate_notif:
+#            self._propagate_notif = False
+        try:
+            method(self, new_val)
+        except InstrError as e:
+            self.dsetter_report = (name, e)
+        setattr(self, name, new_val)
+#            self._propagate_notif = True
             
     wrapper.__name__ = method.__name__
     wrapper.__doc__ = method.__doc__
@@ -97,7 +98,7 @@ class SingleInstrPanel(PrefAtom):
     _corrup_timer = Typed(RepeatedTimer)
     _fast_refresh_timer = Typed(RepeatedTimer)
     _refresh_timer = Typed(RepeatedTimer)
-    _propagate_notif = Bool(True)
+#    _propagate_notif = Bool(True)
     _dgetters = Dict(Str(), Callable())
     _dsetters = Dict(Str(), Callable())
     _proposed_val_counter = Int()
@@ -111,8 +112,8 @@ class SingleInstrPanel(PrefAtom):
                             if meth_name.startswith('dget_')}
         self._dsetters = {meth_name[5:] : meth for meth_name, meth in methods
                             if meth_name.startswith('dset_')}
-        for member in self._dsetters:
-            self.observe(member, self._update_driver)
+#        for member in self._dsetters:
+#            self.observe(member, self._update_driver)
 
         self.update_members_from_preferences(**state['pref'])
         if state['profile_available']:
@@ -139,7 +140,7 @@ class SingleInstrPanel(PrefAtom):
             # Start worker thread and timers
             self._process_thread = Thread(target = self._process_pending_op)
             self._process_thread.start()
-            self.refresh_driver_info()
+            self.refresh_driver_info(force_notification = True)
             if self.check_corrupt:
                 self._corrupt_timer = RepeatedTimer(self.corrupt_time,
                                                     self.check_driver_state)
@@ -158,10 +159,11 @@ class SingleInstrPanel(PrefAtom):
         """
         self._op_queue.put((self._check_driver_state, (), {}))
         
-    def refresh_driver_info(self, *args):
+    def refresh_driver_info(self, *args, **kwargs):
         """
         """
-        self._op_queue.put((self._refresh_driver_info, (), {}))
+        self._op_queue.put((self._refresh_driver_info, args,
+                            kwargs))
                             
     def restart_driver(self):
         """
@@ -179,7 +181,7 @@ class SingleInstrPanel(PrefAtom):
         self.error = ''
         self._process_thread = Thread(target = self._process_pending_op)
         self._process_thread.start()
-        self.refresh_driver_info()
+        self.refresh_driver_info(force_notification = True)
         if self.check_corrupt:
             self._corrupt_timer = RepeatedTimer(self.corrupt_time,
                                                 self.check_driver_state)
@@ -204,6 +206,12 @@ class SingleInstrPanel(PrefAtom):
         self.profile_in_use = False
         self.profile_available = False
         
+    def update_driver(self, name, new_val):
+        """
+        """
+        self._op_queue.put((self._dsetters[name],
+                                (name, new_val), {}))
+        
     def format_header(self):
         # TODO
         pass
@@ -216,29 +224,41 @@ class SingleInstrPanel(PrefAtom):
         driver_state = {d : getattr(self, d) for d in self._dsetters}
         return {'pref' : pref, 'dstate' : driver_state}
             
-    def _check_driver_state(self):
+    def _check_driver_state(self, *args, **kwargs):
         """
         """
         raise NotImplementedError('''''')
         
-    def _refresh_driver_info(self, *args):
+    def _refresh_driver_info(self, *args, **kwargs):
         """
         """
-        self._propagate_notif = False
+        print 'refreshing', kwargs
+#        self._propagate_notif = False
+        notify = False
+        if 'force_notification' in kwargs:
+            print 'forcing notifications', kwargs['force_notification']
+            notify = kwargs['force_notification']
         if args:
             for member in args:
-                setattr(self, member, self._dgetters[member]())
+                val = self._dgetters[member]()
+                setattr(self, member, val)
+                if notify:
+                    self.notify(member, {'name' : member,'value' : val})
         else:
             for member in self._dgetters:
-                setattr(self, member, self._dgetters[member]())
-        self._propagate_notif = True
+                val = self._dgetters[member]()
+                setattr(self, member, val)
+                if notify:
+                    self.notify(member, {'name' : member,'value' : val})
+                    
+#        self._propagate_notif = True
         
-    def _update_driver(self, change):
-        """
-        """
-        if self._propagate_notif:
-            self._op_queue.put((self._dsetters[change['name']],
-                                (change,), {}))
+#    def _update_driver(self, change):
+#        """
+#        """
+#        if self._propagate_notif:
+#            self._op_queue.put((self._dsetters[change['name']],
+#                                (change,), {}))
                                             
     def _process_pending_op(self):
         """
