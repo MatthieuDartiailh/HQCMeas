@@ -82,7 +82,7 @@ class InstrumentFormDialogHandler(Atom):
     """
     
     def close(self, view, is_ok):
-        model = view.instr
+        model = view.model
         connection_form = model.connection_form
         if is_ok:
             if (model.name != '' and model.driver_type and model.driver != ''
@@ -100,9 +100,9 @@ class InstrumentFormDialogHandler(Atom):
                     critical(parent = view,
                              text = fill(message, 80),
                              title = 'Connection failure')
+                    return False
 
-                view.result = True
-                view.close()
+                return True
 
             else:
                 message = cleandoc(u"""You must fill the fields : name,
@@ -113,4 +113,4 @@ class InstrumentFormDialogHandler(Atom):
                           title = 'Missing information')
 
         else:
-            view.close()
+            return False
