@@ -6,7 +6,7 @@ Created on Sun Nov 03 18:18:39 2013
 """
 
 from atom.api import Enum, set_default
-from enaml.widgets.api import (Dialog, Container, PushButton, Form, ComboBox,
+from enaml.widgets.api import (Dialog, Container, PushButton, Form, ObjectCombo,
                             Label, Field)
 from enaml.stdlib.mapped_view import MappedView
 from enaml.layout.api import vertical, horizontal, hbox, spacer, align, vbox
@@ -35,9 +35,9 @@ enamldef InstrumentFormView(Form): instr_form_view:
             read_only = True
     Conditional:
         condition = bool(mode != 'static')
-        ComboBox:
+        ObjectCombo:
             items = DRIVER_TYPES.keys()
-            selected_item >> model.driver_type
+            selected := model.driver_type
 
     Label:
         text = 'Driver'
@@ -48,9 +48,9 @@ enamldef InstrumentFormView(Form): instr_form_view:
             read_only = True
     Conditional:
         condition = bool(mode != 'static')
-        ComboBox:
+        ObjectCombo:
             items << model.driver_list
-            selected_item >> model.driver
+            selected := model.driver
 
     MappedView:
         model << instr_form_view.model.connection_form

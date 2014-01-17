@@ -187,7 +187,7 @@ class InstrumentManagerHandler(Atom):
 
         """
         instr_form = InstrumentForm()
-        result = InstrumentFormDialog(instr_form = instr_form,
+        result = InstrumentFormDialog(model = instr_form,
                                       mode = 'new').exec_()
         manager = view.manager
         if result:
@@ -208,7 +208,7 @@ class InstrumentManagerHandler(Atom):
         """
         manager = view.manager
         instr_form = manager.selected_instr_form
-        result = InstrumentFormDialog(instr_form = instr_form,
+        result = InstrumentFormDialog(model = instr_form,
                                       mode = 'edit').exec_()
         if result:
             instr_file = manager.instrs[manager.selected_instr_name]

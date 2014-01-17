@@ -41,7 +41,7 @@ enamldef HqcMainWindow(MainWindow): main:
         meas := main_model.meas
         hug_height = 'weak'
         enqueue_clicked:: main_model.enqueue_measurement()
-    ExecutionView:
+    ExecutionView: ex:
         ex_model = main_model.exe_control
         dock_area = 'right'
         title = 'Enqueued measure'
