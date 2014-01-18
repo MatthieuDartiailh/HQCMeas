@@ -50,14 +50,14 @@ class RepeatedTimer(Atom):
 def dsetter(method):
     
     def wrapper(self, name, new_val):
-#        if self._propagate_notif:
-#            self._propagate_notif = False
         try:
             method(self, new_val)
         except InstrError as e:
             self.dsetter_report = (name, e)
+            return
+            
         setattr(self, name, new_val)
-#            self._propagate_notif = True
+        self.dsetter_report = (name, new_val)
             
     wrapper.__name__ = method.__name__
     wrapper.__doc__ = method.__doc__
@@ -98,7 +98,6 @@ class SingleInstrPanel(PrefAtom):
     _corrup_timer = Typed(RepeatedTimer)
     _fast_refresh_timer = Typed(RepeatedTimer)
     _refresh_timer = Typed(RepeatedTimer)
-#    _propagate_notif = Bool(True)
     _dgetters = Dict(Str(), Callable())
     _dsetters = Dict(Str(), Callable())
     _proposed_val_counter = Int()
@@ -106,14 +105,12 @@ class SingleInstrPanel(PrefAtom):
     def __init__(self, state):
         super(SingleInstrPanel, self).__init__()
 
-        # Collect dgetter and dsetters here, and start observing members
+        # Collect dgetter and dsetters here
         methods = getmembers(self, ismethod)
         self._dgetters = {meth_name[5:] : meth for meth_name, meth in methods
                             if meth_name.startswith('dget_')}
         self._dsetters = {meth_name[5:] : meth for meth_name, meth in methods
                             if meth_name.startswith('dset_')}
-#        for member in self._dsetters:
-#            self.observe(member, self._update_driver)
 
         self.update_members_from_preferences(**state['pref'])
         if state['profile_available']:
@@ -232,11 +229,9 @@ class SingleInstrPanel(PrefAtom):
     def _refresh_driver_info(self, *args, **kwargs):
         """
         """
-        print 'refreshing', kwargs
-#        self._propagate_notif = False
+
         notify = False
         if 'force_notification' in kwargs:
-            print 'forcing notifications', kwargs['force_notification']
             notify = kwargs['force_notification']
         if args:
             for member in args:
@@ -247,18 +242,10 @@ class SingleInstrPanel(PrefAtom):
         else:
             for member in self._dgetters:
                 val = self._dgetters[member]()
+                print member, val
                 setattr(self, member, val)
                 if notify:
                     self.notify(member, {'name' : member,'value' : val})
-                    
-#        self._propagate_notif = True
-        
-#    def _update_driver(self, change):
-#        """
-#        """
-#        if self._propagate_notif:
-#            self._op_queue.put((self._dsetters[change['name']],
-#                                (change,), {}))
                                             
     def _process_pending_op(self):
         """

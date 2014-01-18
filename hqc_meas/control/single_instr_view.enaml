@@ -10,12 +10,13 @@ from enaml.widgets.api import (Container, ObjectCombo, GroupBox, DockItem,
                             Action, MultilineField)
 from enaml.stdlib.fields import (FloatField, IntField)
 from enaml.stdlib.message_box import question
-from enaml.layout.api import hbox
+from enaml.layout.api import hbox, align
 
 from .single_instr_panel import SingleInstrPanel
 
 STATE_COLOR_MAP = {'normal'  : 'white',
                    'edited' : 'turquoise',
+                   'processing' : 'blue',
                    'error'   : 'red'}
 
 class ValidatorModel(Atom):
@@ -32,6 +33,7 @@ class ValidatorModel(Atom):
 
     def __init__(self, model, name):
         super(ValidatorModel, self).__init__(model = model, name = name)
+        self.ui_val = getattr(model, name)
         model.observe(name, self.post_model_update)
         model.observe('validate_all', self.update_model)
         model.observe('cancel_all', self.cancel_edition)
@@ -56,20 +58,14 @@ class ValidatorModel(Atom):
         """
         """
         self._safe = False
-        self.dual_display = False
-        self.model.update_driver(self.name, self.ui_val)
-        # Gice a chance to the worker thread of the model to attempt to set the
-        # driver value
-        sleep(0.05)
-        if self._prop:
-            self._prop = 1
-            self.model._proposed_val_counter -= 1
-        self._safe = True
+        self.state = 'processing'
+        self.model.update_driver(self.name, self.ui_val)    
 
     def cancel_edition(self, change = {}):
         """
         """
         self.ui_val = getattr(self.model, self.name)
+        self.dual_display = False
         if self._prop:
             self._prop = 1
             self._proposed_val_counter -= 1
@@ -77,17 +73,9 @@ class ValidatorModel(Atom):
     def catch_dset_report(self, change):
         """
         """
-#TODO make this validate the setting
         report = change['value']
-        if report[0] == self.name and isinstance(report[1], Exception):
-            self.state = 'error'
-            gen_mess = cleandoc('''An error occured when attempting to set the
-                        instrument attribute {} to {}, the driver error message
-                        is : {}'''.format(self.name, self.ui_val))
-            self.err_message = fill(' '.join([gen_mess, mess]))
-            self.dual_display = True
-            if self._prop:
-                self.model._proposed_val_counter += 1
+        if report[0] == self.name :
+            deferred_call(self._process_dset_report, report[1])
 
     def catch_val_proposition(self, change):
         """
@@ -104,6 +92,25 @@ class ValidatorModel(Atom):
                 self.err_message = ''
         else:
             self._prop = 0
+            
+    def _process_dset_report(self, report):
+        """
+        """
+        if isinstance(report, Exception):
+            self.state = 'error'
+            gen_mess = cleandoc('''An error occured when attempting to set
+                        the instrument attribute {} to {}, the driver error
+                        message is :'''.format(self.name, self.ui_val))
+            mess = report.message
+            self.err_message = fill(' '.join([gen_mess, mess]))
+            self.dual_display = True
+        else:
+            self.state = 'normal'
+            self._safe = True
+            self.dual_display = False
+            if self._prop:
+                self._prop = 1
+                self.model._proposed_val_counter -= 1        
         
     def _observe_ui_val(self, change):
         """
@@ -113,6 +120,20 @@ class ValidatorModel(Atom):
         else:
             self.state = 'edited'
 
+def validator_layout(field, cancel, ok, cond_items):
+    """
+    """
+    if cond_items:
+        return [hbox(cond_items[0], field, cancel, ok),
+                cond_items[0].width == field.width,
+                align('v_center', field, cancel),
+                align('v_center', field, button)]
+    else:
+        return [hbox(field, cancel, ok),
+                align('v_center', field, cancel),
+                align('v_center', field, button)]
+    
+
 enamldef FloatValidator(GroupBox):
     attr model
     attr member
@@ -121,7 +142,7 @@ enamldef FloatValidator(GroupBox):
     attr _internal = ValidatorModel(model, member)
 
     padding = 2
-    constraints << [hbox(hbox(*cond.items), field, cancel, button)]
+    constraints << validator_layout(field, cancel, ok, cond.items)
     title << member.capitalize()
     hug_height = 'strong'
 
@@ -142,7 +163,7 @@ enamldef FloatValidator(GroupBox):
         text = 'C'
         clicked::
             _internal.cancel_edition()
-    PushButton: button:
+    PushButton: ok:
         constraints = [width == 15, height == 20]
         font = 'bold 12pt Consolas'
         text = '>'
@@ -157,7 +178,7 @@ enamldef IntValidator(GroupBox):
     attr _internal = ValidatorModel(model, member)
 
     padding = 2
-    constraints = [hbox(hbox(*cond.items), field, button)]
+    constraints = validator_layout(field, cancel, button, cond.items)
     title << member.capitalize()
     hug_height = 'strong'
 
@@ -170,7 +191,13 @@ enamldef IntValidator(GroupBox):
         value := _internal.ui_val
         background << STATE_COLOR_MAP[_internal.state]
         tool_tip << _internal.err_message
-    PushButton: button:
+    PushButton: cancel:
+        constraints = [width == 15, height == 20]
+        font = 'bold 12pt Consolas'
+        text = 'C'
+        clicked::
+            _internal.cancel_edition()
+    PushButton: ok:
         constraints = [width == 15, height == 20]
         font = 'bold 12pt Consolas'
         text = '>'
@@ -209,7 +236,7 @@ enamldef EnumValidator(GroupBox):
     attr _internal = ValidatorModel(model, member)
 
     padding = 2
-    constraints = [hbox(hbox(*cond.items), field, button)]
+    constraints = validator_layout(field, cancel, button, cond.items)
     title << member.capitalize()
     hug_height = 'strong'
 
@@ -223,7 +250,13 @@ enamldef EnumValidator(GroupBox):
         items << sorted(model.get_member(name).items)
         background << STATE_COLOR_MAP[_internal.state]
         tool_tip << _internal.err_message
-    PushButton: button:
+    PushButton: cancel:
+        constraints = [width == 15, height == 20]
+        font = 'bold 12pt Consolas'
+        text = 'C'
+        clicked::
+            _internal.cancel_edition()
+    PushButton: ok:
         constraints = [width == 15, height == 20]
         font = 'bold 12pt Consolas'
         text = '>'
@@ -235,6 +268,9 @@ enamldef EnumValidator(GroupBox):
 enamldef SingleInstrDial(Dialog):
     attr model
     attr ui
+
+    title = 'Panel properties'    
+    
     Container:
 
         Conditional: corrupt:
