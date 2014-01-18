@@ -209,11 +209,13 @@ class BaseInstrument(object):
                  caching_permissions = {}, auto_open = True):
         super(BaseInstrument, self).__init__()
         if caching_allowed:
-            self.caching_permissions.update(caching_permissions)
-            for prop_name in self.caching_permissions:
+            # Avoid overriding class attribute
+            perms = self.caching_permissions.copy()
+            perms.update(caching_permissions)
+            for prop_name in perms:
                 #Accessing bypass descriptor to call their methods
                 prop = getattr(self, '_' + prop_name)
-                author  = self.caching_permissions[prop_name]
+                author  = perms[prop_name]
                 prop.set_caching_authorization(author)
 
     def open_connection(self):
@@ -257,7 +259,7 @@ class BaseInstrument(object):
         raise NotImplementedError(message)
         
     def connected(self):
-        """Return whether or not command can be sent to the instrument
+        """Return whether or not commands can be sent to the instrument
         """
         message = fill(cleandoc(
                         '''This method returns whether or not command can be

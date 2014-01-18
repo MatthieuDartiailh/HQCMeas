@@ -1,6 +1,5 @@
-from enaml.layout.api import (hbox, spacer)
+from enaml.layout.api import hbox, spacer
 from enaml.widgets.api import (Container, GroupBox, Label, Field)
-from enaml.stdlib.fields import FloatField
 
 from ..formula_task import (Formula, FormulaTask)
 from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
@@ -28,4 +27,4 @@ enamldef FormulaView(GroupBox):
         formulas.iterable_name = 'formulas'
         formulas.factory = Formula
 
-TASK_VIEW_MAPPING = {}
+TASK_VIEW_MAPPING = {FormulaTask : FormulaView}
