@@ -127,7 +127,6 @@ class QtListStrWidget(RawWidget):
         # The superclass handler implementation is sufficient.
         name = change['name']
         if self.get_widget():
-            print name, change
             if name == 'items':
                 self.set_items(change['value'])
             elif name == 'multiselect':
