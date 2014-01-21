@@ -66,29 +66,23 @@ enamldef InstrumentFormDialog(Dialog): instr_dialog:
         hug_width = 'medium'
         hug_height = 'strong'
         constraints = [
-            vertical( top, form, buttons, bottom),
-            horizontal(left, spacer.flex(), form, spacer.flex(), right),
-            horizontal(left, spacer, buttons, right),
+            vbox(form, hbox(cancel, ok)),
             align('midline', form),
-        ]
+            ]
         InstrumentFormView: form:
             hug_width = 'weak'
             hug_height = 'medium'
             mode = instr_dialog.mode
             model << instr_dialog.model
-        Container: buttons:
-            hug_width = 'medium'
-            hug_height = 'medium'
-            constraints = [hbox(spacer, cancel, ok)]
-            PushButton: cancel:
-                text = 'Cancel'
-                hug_width = 'strong'
-                clicked :: 
-                    if handler.close(instr_dialog, False):
-                        instr_dialog.reject()
-            PushButton: ok:
-                text = 'Ok'
-                hug_width = 'strong'
-                clicked :: 
-                    if handler.close(instr_dialog, True):
-                        instr_dialog.accept()
+        PushButton: cancel:
+            text = 'Cancel'
+            hug_width = 'strong'
+            clicked :: 
+                if handler.close(instr_dialog, False):
+                    instr_dialog.reject()
+        PushButton: ok:
+            text = 'Ok'
+            hug_width = 'strong'
+            clicked :: 
+                if handler.close(instr_dialog, True):
+                    instr_dialog.accept()
