@@ -1,0 +1,188 @@
+# -*- coding: utf-8 -*-
+
+from enaml.widgets.api import (DockItem, Container, ObjectCombo, Label,
+                               GroupBox, Notebook, Page, PushButton, 
+                               MultilineField)
+from enaml.core.api import (Looper, Conditional)
+from enaml.layout.api import grid
+from inspect import cleandoc
+
+from ..instruments.instrument_form_view import InstrumentFormView
+
+enamldef DriverDebugView(DockItem): main:
+    attr model
+    Container:
+        constraints << [vbox(
+                            grid([dr_type_lab, dr_type],
+                                 [dr_lab, dr]),
+                            prof,
+                            hbox(dr_start, conn_o, conn_c, conn_r, dr_reload),
+                            *cond.objects)
+                        ]        
+        
+        Label: dr_type_lab:
+            text = 'Driver type'
+        ObjectCombo: dr_type:
+            enabled << not model.connected
+            items << model.driver_types.keys()
+            selected ::
+                model.driver_type = model.driver_types[selected]
+        Label: dr_lab:
+            text = 'Driver'
+        ObjectCombo: de:
+            enabled << not model.connected
+            items << model.drivers
+            selected ::
+                model.driver = model.drivers[selected]
+        GroupBox: prof:
+            enabled << not model.connected
+            title = 'Instrument profile'
+            Notebook:
+                tabs_closable = False
+                tabs_movable = False
+                size_hint_mode = 'current'
+                selected_tab >> model.mode
+                Page:
+                    title = 'Predifined'
+                    Container:
+                        ObjectCombo:
+                            items << model.profiles
+                            selected ::
+                                model.profile = model.profiles[selected]
+                Page:
+                    title = 'Custom'
+                    InstrumentFormView:
+                        mode = 'new'
+                        model << main.model.custom_form
+        PushButton: dr_start:
+            text = 'Start driver'
+            enabled << not model.connected and model.driver_ready
+            clicked ::
+                model.start_driver()
+        PushButton: conn_o:
+            text = 'Open connection'
+            enabled << not model.connected and model.driver_ready
+            clicked ::
+                model.open_connection()
+        PushButton: conn_c:
+            text = 'Close connection'
+            enabled << model.connected
+            clicked ::
+                model.close_connection()
+        PushButton: conn_r:
+            text = 'Reopen connection'
+            enabled << model.connected
+            clicked ::
+                model.reopen_connection()
+        PushButton: dr_reload:
+            text = 'Reload driver'
+            enabled << not model.connected and model.driver_ready
+            clicked :
+                model.reload_driver()
+        Conditional: cond:
+            condition << model.connected
+            Container:
+                constraints << [grid(loop.items)]
+                padding = 2
+                Looper: loop:
+                    iterable << model.driver_properties
+                    Label:
+                        text << loop_item
+                    Field: getter:
+                        read_only = True
+                    PushButton:
+                        text = '<'
+                        clicked ::
+                            aux = model.attempt_get(loop_item)
+                            if isinstance(aux, Exception):
+                                getter.background = 'red'
+                                getter.tool_tip = aux.message
+                            else:
+                                getter.background = 'white'
+                                if isinstance(aux, basestring):
+                                    getter.text = '"' + aux + '"'
+                                else:
+                                    getter.text = aux
+                    Field: setter:
+                        submit_triggers = ['lost_focus', 'return_pressed',
+                                           'auto_sync']
+                        tool_tip = cleandoc('''Enter the value to send to 
+                            the driver as in a python interpreter''')
+                        text ::
+                            setter.background = 'white'
+                    PushButton:
+                        text = '>'
+                        clicked ::
+                            setter.background = 'turquoise'
+                            aux = model.attempt_set(loop_item, setter.text)
+                            if isinstance(aux, Exception):
+                                setter.background = 'red'
+                                setter.tooltip = cleandoc('''The last attempt 
+                                    to set the driver value failed with the
+                                    exception : {}'''.format(aux.message))
+                            else:
+                                setter.background = 'green'
+                                setter.tool_tip = cleandoc('''Enter the value 
+                                    to send to the driver as in a python 
+                                    interpreter''')
+            Container:
+                padding = 2
+                constraints << [vbox(
+                                    hbox(
+                                        vbox(hbox(meth, doc),
+                                             f_args,
+                                             f_kwargs),
+                                         vbox(spacer, call_button)),
+                                    errors,
+                                    clear)]
+                ObjectCombo: meth:
+                    items << model.driver_methods
+                    to_string = lambda x : x.__name__
+                    text ::
+                        f_args.text = ''
+                        f_kwargs.text = ''
+                PushButton: doc:
+                    text = 'Doc'
+                    clicked ::
+                        pass
+                Field: f_args:
+                    tool_tip = cleandoc('''Enter the positional arguments of 
+                        the selected method''')
+                Field: f_kwargs:
+                    tool_tip = cleandoc('''Enter the keyword arguments of 
+                        the selected method''')
+                PushButton: call_button:
+                    text = 'Call'
+                    clicked ::
+                        try:
+                            args = eval('(' + f_args.text + ',)')
+                        except:
+                            errors.text += '\n Failed to evaluate args'
+                            return
+                            
+                        try:
+                            aux = f_kwargs.text.replace('=', ':')
+                            kwargs = eval('{' + aux + '}')
+                        except:
+                            errors.text += '\n Failed to evaluate kwargs'
+                            return
+                            
+                        call = model.attempt_call(meth.selected)
+                        mess = ''                        
+                        
+                        if isinstance(call, Exception):
+                            mess = cleandoc('''\n Call to {} failed 
+                                with error {}'''.format(meth.selected.__name__,
+                                                        call.message)
+                        else:
+                            mess = cleandoc('''\n Call to {} succeeded and
+                                returned {}'''.format(meth.selected.__name__,
+                                                    call)
+                
+                MultilineField: errors:
+                    read_only = True
+                PushButton: clear:
+                    text = 'Clear'
+                    clicked ::
+                        errors.text = ''
+                        
