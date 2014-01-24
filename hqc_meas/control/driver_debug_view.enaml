@@ -5,7 +5,7 @@ from enaml.widgets.api import (DockItem, Container, ObjectCombo, Label,
                                MultilineField)
 from enaml.core.api import (Looper, Conditional)
 from enaml.layout.api import grid
-from inspect import cleandoc
+from inspect import cleandoc, getdoc
 
 from ..instruments.instrument_form_view import InstrumentFormView
 
@@ -13,25 +13,19 @@ enamldef DriverDebugView(DockItem): main:
     attr model
     Container:
         constraints << [vbox(
-                            grid([dr_type_lab, dr_type],
-                                 [dr_lab, dr]),
+                            hbox(dr_lab, dr]),
                             prof,
                             hbox(dr_start, conn_o, conn_c, conn_r, dr_reload),
-                            *cond.objects)
+                            vbox(*cond.objects),
+                            err, clear)
                         ]        
         
-        Label: dr_type_lab:
-            text = 'Driver type'
-        ObjectCombo: dr_type:
-            enabled << not model.connected
-            items << model.driver_types.keys()
-            selected ::
-                model.driver_type = model.driver_types[selected]
         Label: dr_lab:
             text = 'Driver'
         ObjectCombo: de:
             enabled << not model.connected
             items << model.drivers
+            selected = None
             selected ::
                 model.driver = model.drivers[selected]
         GroupBox: prof:
@@ -46,19 +40,37 @@ enamldef DriverDebugView(DockItem): main:
                     title = 'Predifined'
                     Container:
                         ObjectCombo:
-                            items << model.profiles
+                            items << model.profiles.keys()
+                            items ::
+                                selected = None
                             selected ::
-                                model.profile = model.profiles[selected]
+                                model.profile = model.profiles.get(selected,
+                                                                   None)
                 Page:
                     title = 'Custom'
-                    InstrumentFormView:
-                        mode = 'new'
-                        model << main.model.custom_form
+                    Container:
+                        constraints << [vbox(form, hbox(spacer, form_val))]
+                        InstrumentFormView: form:
+                            mode = 'new'
+                            model << main.model.custom_form
+                        PushButton: form_val:
+                            text = 'Validate form'
+                            background << 'green' if\
+                                            isinstance(main.model.profile,
+                                                       dict) else 'red'
+                            clicked::
+                                mod = form.model
+                                if (mod.name != '' and mod.driver_type
+                                    and mod.driver != ''
+                                    and mod.connection_form.check()):
+                                    aux = mod.connection_form.connection_dict()
+                                    main.model.profile = aux
         PushButton: dr_start:
             text = 'Start driver'
             enabled << not model.connected and model.driver_ready
             clicked ::
-                model.start_driver()
+                if not model.start_driver():
+                    pass # Show popup 
         PushButton: conn_o:
             text = 'Open connection'
             enabled << not model.connected and model.driver_ready
@@ -127,14 +139,12 @@ enamldef DriverDebugView(DockItem): main:
                                     interpreter''')
             Container:
                 padding = 2
-                constraints << [vbox(
-                                    hbox(
-                                        vbox(hbox(meth, doc),
-                                             f_args,
-                                             f_kwargs),
-                                         vbox(spacer, call_button)),
-                                    errors,
-                                    clear)]
+                constraints << [hbox(
+                                    vbox(hbox(meth, doc),
+                                         f_args,
+                                         f_kwargs),
+                                     vbox(spacer, call_button)),
+                                    ]
                 ObjectCombo: meth:
                     items << model.driver_methods
                     to_string = lambda x : x.__name__
@@ -167,7 +177,7 @@ enamldef DriverDebugView(DockItem): main:
                             errors.text += '\n Failed to evaluate kwargs'
                             return
                             
-                        call = model.attempt_call(meth.selected)
+                        call = model.attempt_call(meth.selected, args, kwargs)
                         mess = ''                        
                         
                         if isinstance(call, Exception):
@@ -178,11 +188,13 @@ enamldef DriverDebugView(DockItem): main:
                             mess = cleandoc('''\n Call to {} succeeded and
                                 returned {}'''.format(meth.selected.__name__,
                                                     call)
+                        model.error += mess
                 
-                MultilineField: errors:
-                    read_only = True
-                PushButton: clear:
-                    text = 'Clear'
-                    clicked ::
-                        errors.text = ''
+            MultilineField: err:
+                text = model.errors
+                read_only = True
+            PushButton: clear:
+                text = 'Clear'
+                clicked ::
+                    model.errors = ''
                         
