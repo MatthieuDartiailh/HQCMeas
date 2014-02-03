@@ -27,6 +27,7 @@ def build_single_instr_panel(panel_class, state, main_ui, second_ui, prop_ui,
         with main_panel.suppress_notifications():
             main_panel.available_profiles.remove(profile)
     model = panel_class(state = state)
+    main_panels.panels.append(model)
     main_panel.used_profiles[profile] = model
     
     dock_numbers = sorted([pane.name[5] for pane in area.dock_items()])

@@ -78,3 +78,11 @@ enamldef SingleBuilderView(Dialog): dial:
             clicked ::
                 model.build_panel()
                 dial.accept()
+                
+def open_single_builder_dialog(main_panel, area):
+    """
+    """
+    builder = SingleInstrBuilder(main_panel = model,
+                                                     area = dock_area)
+    SingleBuilderView(parent = main,
+                      model = builder).exec_()

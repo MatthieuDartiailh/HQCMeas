@@ -2,29 +2,59 @@
 
 from enaml.widgets.api import (DockItem, Container, ObjectCombo, Label,
                                GroupBox, Notebook, Page, PushButton, 
-                               MultilineField)
+                               MultilineField, Field)
 from enaml.core.api import (Looper, Conditional)
-from enaml.layout.api import grid
+from enaml.layout.api import grid, vbox, hbox, spacer
+from enaml.stdlib.mapped_view import MappedView
 from inspect import cleandoc, getdoc
 
-from ..instruments.instrument_form_view import InstrumentFormView
+from ..instruments.forms import FORMS_MAP_VIEWS
+
+def _method_call(model, meth, f_args, f_kwargs):
+    """
+    """
+    try:
+        args = eval('(' + f_args.text + ',)')
+    except:
+        model.errors += 'Failed to evaluate args'
+        return
+        
+    try:
+        aux = f_kwargs.text.replace('=', ':')
+        kwargs = eval('{' + aux + '}')
+    except:
+        errors.text += 'Failed to evaluate kwargs'
+        return
+        
+    call = model.attempt_call(meth.selected, args, kwargs)
+    mess = ''                        
+    
+    if isinstance(call, Exception):
+        mess = cleandoc('''Call to {} failed with error
+                    {}.'''.format(meth.selected.__name__,
+                                    call.message))
+    else:
+        mess = cleandoc('''Call to {} succeeded and
+            returned {}.'''.format(meth.selected.__name__,
+                                call))
+    model.errors += mess + '\n'
 
 enamldef DriverDebugView(DockItem): main:
     attr model
     Container:
         constraints << [vbox(
-                            hbox(dr_lab, dr]),
+                            hbox(dr_lab, dr, spacer),
                             prof,
                             hbox(dr_start, conn_o, conn_c, conn_r, dr_reload),
-                            vbox(*cond.objects),
+                            vbox(*cond.items),
                             err, clear)
-                        ]        
+                        ]    
         
         Label: dr_lab:
             text = 'Driver'
-        ObjectCombo: de:
+        ObjectCombo: dr:
             enabled << not model.connected
-            items << model.drivers
+            items << model.drivers.keys()
             selected = None
             selected ::
                 model.driver = model.drivers[selected]
@@ -35,7 +65,6 @@ enamldef DriverDebugView(DockItem): main:
                 tabs_closable = False
                 tabs_movable = False
                 size_hint_mode = 'current'
-                selected_tab >> model.mode
                 Page:
                     title = 'Predifined'
                     Container:
@@ -49,31 +78,28 @@ enamldef DriverDebugView(DockItem): main:
                 Page:
                     title = 'Custom'
                     Container:
-                        constraints << [vbox(form, hbox(spacer, form_val))]
-                        InstrumentFormView: form:
-                            mode = 'new'
+#                        constraints << [vbox(form, hbox(spacer, form_val))]
+                        MappedView: form:
+                            typemap = FORMS_MAP_VIEWS
                             model << main.model.custom_form
                         PushButton: form_val:
                             text = 'Validate form'
                             background << 'green' if\
                                             isinstance(main.model.profile,
                                                        dict) else 'red'
-                            clicked::
-                                mod = form.model
-                                if (mod.name != '' and mod.driver_type
-                                    and mod.driver != ''
-                                    and mod.connection_form.check()):
-                                    aux = mod.connection_form.connection_dict()
-                                    main.model.profile = aux
+                            clicked ::
+                                aux = model.custom_form
+                                if aux.check():
+                                    main.model.profile = aux.connection_dict()
         PushButton: dr_start:
             text = 'Start driver'
             enabled << not model.connected and model.driver_ready
             clicked ::
-                if not model.start_driver():
-                    pass # Show popup 
+                model.start_driver()
         PushButton: conn_o:
             text = 'Open connection'
-            enabled << not model.connected and model.driver_ready
+            enabled << bool(not model.connected and model.driver_ready
+                            and model.driver_instance)
             clicked ::
                 model.open_connection()
         PushButton: conn_c:
@@ -88,8 +114,8 @@ enamldef DriverDebugView(DockItem): main:
                 model.reopen_connection()
         PushButton: dr_reload:
             text = 'Reload driver'
-            enabled << not model.connected and model.driver_ready
-            clicked :
+            enabled << not model.connected
+            clicked ::
                 model.reload_driver()
         Conditional: cond:
             condition << model.connected
@@ -97,7 +123,7 @@ enamldef DriverDebugView(DockItem): main:
                 constraints << [grid(loop.items)]
                 padding = 2
                 Looper: loop:
-                    iterable << model.driver_properties
+                    iterable << model.driver_attr + model.driver_properties
                     Label:
                         text << loop_item
                     Field: getter:
@@ -148,7 +174,7 @@ enamldef DriverDebugView(DockItem): main:
                 ObjectCombo: meth:
                     items << model.driver_methods
                     to_string = lambda x : x.__name__
-                    text ::
+                    selected ::
                         f_args.text = ''
                         f_kwargs.text = ''
                 PushButton: doc:
@@ -164,37 +190,13 @@ enamldef DriverDebugView(DockItem): main:
                 PushButton: call_button:
                     text = 'Call'
                     clicked ::
-                        try:
-                            args = eval('(' + f_args.text + ',)')
-                        except:
-                            errors.text += '\n Failed to evaluate args'
-                            return
-                            
-                        try:
-                            aux = f_kwargs.text.replace('=', ':')
-                            kwargs = eval('{' + aux + '}')
-                        except:
-                            errors.text += '\n Failed to evaluate kwargs'
-                            return
-                            
-                        call = model.attempt_call(meth.selected, args, kwargs)
-                        mess = ''                        
-                        
-                        if isinstance(call, Exception):
-                            mess = cleandoc('''\n Call to {} failed 
-                                with error {}'''.format(meth.selected.__name__,
-                                                        call.message)
-                        else:
-                            mess = cleandoc('''\n Call to {} succeeded and
-                                returned {}'''.format(meth.selected.__name__,
-                                                    call)
-                        model.error += mess
+                        _method_call(model, meth, f_args, f_kwargs)
                 
-            MultilineField: err:
-                text = model.errors
-                read_only = True
-            PushButton: clear:
-                text = 'Clear'
-                clicked ::
-                    model.errors = ''
+        MultilineField: err:
+            text = model.errors
+            read_only = True
+        PushButton: clear:
+            text = 'Clear'
+            clicked ::
+                model.errors = ''
                         

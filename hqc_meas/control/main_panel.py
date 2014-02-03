@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from atom.api import (ContainerList, Unicode, List, Dict, Typed, Instance, 
+from atom.api import (Atom, ContainerList, Unicode, List, Dict, Typed, Instance, 
                       Bool, observe)
 import os
 
@@ -16,7 +16,7 @@ class MainPanelModel(PrefAtom):
     available_profiles = ContainerList(Unicode())
     used_profiles = Dict(Unicode())
     measure_profiles = List(Unicode())
-    panels = List(Instance(PrefAtom))
+    panels = List(Instance(Atom))
     
     enable_dock_events = Bool(True)
     
