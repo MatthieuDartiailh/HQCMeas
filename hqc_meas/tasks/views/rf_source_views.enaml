@@ -35,7 +35,7 @@ enamldef RFSourceFrequencyView(HGroup): view:
         text = 'Unit'
     ObjectCombo:
         items << list(task.get_member('unit').items)
-        selected := task.selected_profile
+        selected := task.unit
     Label: auto_lab:
         text = 'Autostart'
     CheckBox: auto_val:
