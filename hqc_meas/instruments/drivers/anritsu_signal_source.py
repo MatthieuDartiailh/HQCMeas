@@ -19,11 +19,11 @@ from .visa_tools import VisaInstrument
 class AnritsuMG3694(VisaInstrument):
     """
     """
-    frequency_unit = 'GHz'
 
     def __init__(self, connection_info, caching_allowed = True,
                  caching_permissions = {}):
 
+        self.frequency_unit = 'GHz'
         self.write("DSPL 4")
         self.write("EBW3") #'si la reference externe est très stable en phase, il faut choisir la plus grande EBW'
         self.write("LO0") #'no offset on the power

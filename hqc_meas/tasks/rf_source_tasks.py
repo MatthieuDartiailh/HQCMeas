@@ -7,16 +7,17 @@ from .instr_task import InstrumentTask
 from .tools.task_decorator import (smooth_instr_crash)
 from .tools.database_string_formatter import format_and_eval_string
 
+
 class RFSourceSetFrequencyTask(InstrumentTask):
     """Set the frequency of the signal delivered by the source.
     """
 
     frequency = Str().tag(pref = True)
-    unit = Enum('GHz', 'MHz', 'KHz', 'Hz').tag(pref = True)
+    unit = Enum('GHz', 'MHz', 'kHz', 'Hz').tag(pref = True)
     auto_start = Bool(False).tag(pref = True)
 
     driver_list = ['AgilentE8257D']
-    task_database_entries = set_default({'frequency' : 1.0, 'unit' : 'GHZ'})
+    task_database_entries = set_default({'frequency': 1.0, 'unit': 'GHz'})
     loopable = True
 
     @smooth_instr_crash
@@ -40,19 +41,20 @@ class RFSourceSetFrequencyTask(InstrumentTask):
         """
         """
         test, traceback = super(RFSourceSetFrequencyTask, self).check(*args,
-                                                                     **kwargs)
+                                                                      **kwargs)
         if self.frequency:
             try:
                 freq = format_and_eval_string(self.frequency, self.task_path,
-                                                   self.task_database)
+                                              self.task_database)
             except:
                 test = False
-                traceback[self.task_path + '/' +self.task_name + '-freq'] = \
+                traceback[self.task_path + '/' + self.task_name + '-freq'] = \
                     'Failed to eval the frequency formula {}'.format(
                                                                 self.frequency)
             self.write_in_database('unit', self.unit)
             self.write_in_database('frequency', freq)
         return test, traceback
+
 
 class RFSourceSetPowerTask(InstrumentTask):
     """Set the power of the signal delivered by the source.
@@ -76,7 +78,7 @@ class RFSourceSetPowerTask(InstrumentTask):
 
         if power is None:
             power = format_and_eval_string(self.power, self.task_path,
-                                               self.task_database)
+                                           self.task_database)
 
         self.driver.power = power
         self.write_in_database('power', power)
@@ -85,18 +87,19 @@ class RFSourceSetPowerTask(InstrumentTask):
         """
         """
         test, traceback = super(RFSourceSetPowerTask, self).check(*args,
-                                                                     **kwargs)
+                                                                  **kwargs)
         if self.power:
             try:
                 power = format_and_eval_string(self.power, self.task_path,
-                                                   self.task_database)
+                                               self.task_database)
             except:
                 test = False
-                traceback[self.task_path + '/' +self.task_name + '-power'] = \
+                traceback[self.task_path + '/' + self.task_name + '-power'] = \
                     'Failed to eval the frequency power {}'.format(self.power)
 
             self.write_in_database('power', power)
         return test, traceback
+
 
 class RFSourceSetOnOffTask(InstrumentTask):
     """Switch on/off the output of the source.
@@ -105,7 +108,7 @@ class RFSourceSetOnOffTask(InstrumentTask):
     switch = Str('Off').tag(pref = True)
 
     driver_list = ['AgilentE8257D']
-    task_database_entries = {'output' : 0}
+    task_database_entries = {'output': 0}
     loopable = True
 
     @smooth_instr_crash
