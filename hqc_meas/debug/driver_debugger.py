@@ -2,26 +2,27 @@
 
 from atom.api import (Atom, List, Dict, Str, Callable, Bool, Unicode,
                       Instance, Value)
-from inspect import getmembers, getabsfile, ismethod
-from configobj import ConfigObj              
-                      
+from inspect import getmembers, ismethod
+from configobj import ConfigObj
+
 from ..atom_util import Subclass
 from ..instruments.drivers import BaseInstrument, DRIVERS, DRIVER_TYPES
 from ..instruments.drivers.driver_tools import instrument_property
 from ..instruments.forms import AbstractConnectionForm, FORMS
 from ..instruments.instrument_manager import matching_instr_list
 
-class DriverDebugPanel(Atom):
 
-    main_panel = Value()#Instance of the main panel
+class DriverDebugger(Atom):
+    """
+    """
 
     drivers = Dict(Str(), Subclass(BaseInstrument), DRIVERS)
     driver = Subclass(BaseInstrument)
-    
+
     driver_attributes = List(Str())
     driver_properties = List(Str())
     driver_methods = List(Callable())
-    
+
     profiles = Dict(Str(), Unicode())
     profile = Value()
     custom_form = Instance(AbstractConnectionForm)
@@ -29,30 +30,26 @@ class DriverDebugPanel(Atom):
     connected = Bool()
     driver_ready = Bool()
     errors = Str()
-    
+
     driver_instance = Instance(BaseInstrument)
-        
+
     def start_driver(self):
         """
         """
         prof = self.profile
         if not isinstance(prof, dict):
             prof = ConfigObj(prof).dict()
-            #TODO request the profile so that the main panels knows who is 
-            # using it, must provide a way for the main panel to get the driver
-            # back (ie implement release driver)
-            
         try:
             driver_instance = self.driver(prof)
             # Listing drivers attributes
             parent = [m[0] for m in getmembers(self.driver)]
             self.driver_attributes = [m for m in getmembers(driver_instance)
-                                        if m[0] not in parent]
+                                      if m[0] not in parent]
             self.driver_instance = driver_instance
             self.connected = True
         except Exception as e:
             self.errors += e.message + '\n'
-    
+
     def open_connection(self):
         """
         """
@@ -61,7 +58,7 @@ class DriverDebugPanel(Atom):
             self.connected = True
         except Exception as e:
             self.errors += e.message + '\n'
-    
+
     def close_connection(self):
         """
         """
@@ -70,7 +67,7 @@ class DriverDebugPanel(Atom):
             self.connected = False
         except Exception as e:
             self.errors += e.message + '\n'
-    
+
     def reopen_connetion(self):
         """
         """
@@ -79,12 +76,12 @@ class DriverDebugPanel(Atom):
             self.connected = False
         except Exception as e:
             self.errors += e.message + '\n'
-    
+
     def reload_driver(self):
         """
         """
         pass
-    
+
     def attempt_get(self, prop):
         """
         """
@@ -93,7 +90,7 @@ class DriverDebugPanel(Atom):
             return val
         except Exception as e:
             return e
-    
+
     def attempt_set(self, prop, val):
         """
         """
@@ -102,7 +99,7 @@ class DriverDebugPanel(Atom):
             return True
         except Exception as e:
             return e
-    
+
     def attempt_call(self, meth, args, kwargs):
         """
         """
@@ -111,31 +108,29 @@ class DriverDebugPanel(Atom):
             return res
         except Exception as e:
             return e
-    
+
     def _observe_driver(self, change):
         """
         """
         driver = change['value']
         self.driver_instance = None
-        #TODO notify the main panel that the profile has been released
-        
-        #TODO needs to filter according to availability (simply reject measure)
         self.profiles = matching_instr_list(driver)
-        
+
         # Updating the custom form
         for d_name, d_type in DRIVER_TYPES.iteritems():
             if issubclass(driver, d_type):
                 self.custom_form = FORMS[d_name]
                 break
-        
+
         # Listing driver properties
         self.driver_properties = [m.__name__ for m in getmembers(driver,
-                             lambda x : isinstance(x, instrument_property))]
-        
+                                  lambda x: isinstance(x,
+                                                       instrument_property))]
+
         # Listing driver method
         self.driver_methods = [meth for meth in getmembers(driver, ismethod)
-                                if meth.__name__ not in self.driver_properties
-                                or meth.__name__.startswith('_')]
-                                
+                               if meth.__name__ not in self.driver_properties
+                               or meth.__name__.startswith('_')]
+
     def _observe_profile(self, change):
         self.driver_ready = bool(change['value'])

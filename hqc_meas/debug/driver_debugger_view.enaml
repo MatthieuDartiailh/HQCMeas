@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from enaml.widgets.api import (DockItem, Container, ObjectCombo, Label,
-                               GroupBox, Notebook, Page, PushButton, 
+from enaml.widgets.api import (Window, Container, ObjectCombo, Label,
+                               GroupBox, Notebook, Page, PushButton,
                                MultilineField, Field)
 from enaml.core.api import (Looper, Conditional)
 from enaml.layout.api import grid, vbox, hbox, spacer
@@ -18,17 +18,17 @@ def _method_call(model, meth, f_args, f_kwargs):
     except:
         model.errors += 'Failed to evaluate args'
         return
-        
+
     try:
         aux = f_kwargs.text.replace('=', ':')
         kwargs = eval('{' + aux + '}')
     except:
         errors.text += 'Failed to evaluate kwargs'
         return
-        
+
     call = model.attempt_call(meth.selected, args, kwargs)
-    mess = ''                        
-    
+    mess = ''
+
     if isinstance(call, Exception):
         mess = cleandoc('''Call to {} failed with error
                     {}.'''.format(meth.selected.__name__,
@@ -39,8 +39,12 @@ def _method_call(model, meth, f_args, f_kwargs):
                                 call))
     model.errors += mess + '\n'
 
-enamldef DriverDebugView(DockItem): main:
+enamldef DriverDebuggerView(Window): main:
+
     attr model
+
+    title = 'Driver debugger'
+
     Container:
         constraints << [vbox(
                             hbox(dr_lab, dr, spacer),
@@ -48,8 +52,8 @@ enamldef DriverDebugView(DockItem): main:
                             hbox(dr_start, conn_o, conn_c, conn_r, dr_reload),
                             vbox(*cond.items),
                             err, clear)
-                        ]    
-        
+                        ]
+
         Label: dr_lab:
             text = 'Driver'
         ObjectCombo: dr:
@@ -144,7 +148,7 @@ enamldef DriverDebugView(DockItem): main:
                     Field: setter:
                         submit_triggers = ['lost_focus', 'return_pressed',
                                            'auto_sync']
-                        tool_tip = cleandoc('''Enter the value to send to 
+                        tool_tip = cleandoc('''Enter the value to send to
                             the driver as in a python interpreter''')
                         text ::
                             setter.background = 'white'
@@ -155,13 +159,13 @@ enamldef DriverDebugView(DockItem): main:
                             aux = model.attempt_set(loop_item, setter.text)
                             if isinstance(aux, Exception):
                                 setter.background = 'red'
-                                setter.tooltip = cleandoc('''The last attempt 
+                                setter.tooltip = cleandoc('''The last attempt
                                     to set the driver value failed with the
                                     exception : {}'''.format(aux.message))
                             else:
                                 setter.background = 'green'
-                                setter.tool_tip = cleandoc('''Enter the value 
-                                    to send to the driver as in a python 
+                                setter.tool_tip = cleandoc('''Enter the value
+                                    to send to the driver as in a python
                                     interpreter''')
             Container:
                 padding = 2
@@ -182,16 +186,16 @@ enamldef DriverDebugView(DockItem): main:
                     clicked ::
                         pass
                 Field: f_args:
-                    tool_tip = cleandoc('''Enter the positional arguments of 
+                    tool_tip = cleandoc('''Enter the positional arguments of
                         the selected method''')
                 Field: f_kwargs:
-                    tool_tip = cleandoc('''Enter the keyword arguments of 
+                    tool_tip = cleandoc('''Enter the keyword arguments of
                         the selected method''')
                 PushButton: call_button:
                     text = 'Call'
                     clicked ::
                         _method_call(model, meth, f_args, f_kwargs)
-                
+
         MultilineField: err:
             text = model.errors
             read_only = True
@@ -199,4 +203,3 @@ enamldef DriverDebugView(DockItem): main:
             text = 'Clear'
             clicked ::
                 model.errors = ''
-                        

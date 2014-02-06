@@ -2,7 +2,6 @@ from enaml.widgets.api import (MainWindow, DockArea, DockItem, Container,
                             MenuBar, Menu, Action)
 
 from .builders.single_builder_view import open_single_builder_dialog
-from .builders.debug_builder import (build_debug_panel, is_debug_active)
 
 enamldef MainPanelView(MainWindow): main:
     """
@@ -11,7 +10,7 @@ enamldef MainPanelView(MainWindow): main:
     title = 'Control panel'
     closed ::
         model.save_panel_state(dock_area)
-        
+
     MenuBar:
         Menu:
             title = 'Panels'
@@ -20,7 +19,7 @@ enamldef MainPanelView(MainWindow): main:
                 Action:
                     text = 'Single instr'
                     triggered ::
-                        open_single_builder_dialog(model, dock_area)                        
+                        open_single_builder_dialog(model, dock_area)
                 Action:
                     text = 'Macro'
                     enabled = False
@@ -31,11 +30,7 @@ enamldef MainPanelView(MainWindow): main:
                     enabled = False
                     triggered ::
                         pass
-                Action:
-                    text = 'Debug panel'
-                    enabled << not is_debug_active(model.panels)
-                    triggered ::
-                        build_debug_panel(model, dock_area)
+
         Menu:
             title = 'Preferences'
             Menu:
@@ -65,7 +60,7 @@ enamldef MainPanelView(MainWindow): main:
             dock_event ::
                 d_event = change['value']
                 if d_event.type == d_event.Closed:
-                    panel_model = [panel for panel in dock_area.children 
+                    panel_model = [panel for panel in dock_area.children
                                     if panel.name == d_event.name]
                     try:
                         model.control_panel_closed(panel_model[0])
