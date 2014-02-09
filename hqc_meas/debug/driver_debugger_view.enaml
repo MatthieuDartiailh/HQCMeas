@@ -2,13 +2,14 @@
 
 from enaml.widgets.api import (Window, Container, ObjectCombo, Label,
                                GroupBox, Notebook, Page, PushButton,
-                               MultilineField, Field)
+                               MultilineField, Field, ScrollArea)
 from enaml.core.api import (Looper, Conditional)
 from enaml.layout.api import grid, vbox, hbox, spacer
 from enaml.stdlib.mapped_view import MappedView
 from inspect import cleandoc, getdoc
 
 from ..instruments.forms import FORMS_MAP_VIEWS
+
 
 def _method_call(model, meth, f_args, f_kwargs):
     """
@@ -32,12 +33,13 @@ def _method_call(model, meth, f_args, f_kwargs):
     if isinstance(call, Exception):
         mess = cleandoc('''Call to {} failed with error
                     {}.'''.format(meth.selected.__name__,
-                                    call.message))
+                                  call.message))
     else:
         mess = cleandoc('''Call to {} succeeded and
             returned {}.'''.format(meth.selected.__name__,
-                                call))
+                                   call))
     model.errors += mess + '\n'
+
 
 enamldef DriverDebuggerView(Window): main:
 
@@ -50,8 +52,12 @@ enamldef DriverDebuggerView(Window): main:
                             hbox(dr_lab, dr, spacer),
                             prof,
                             hbox(dr_start, conn_o, conn_c, conn_r, dr_reload),
-                            vbox(*cond.items),
-                            err, clear)
+                            *tuple(cond.items + [err, clear])
+                            ),
+                        dr_start.width == conn_o.width,
+                        conn_o.width == conn_c.width,
+                        conn_c.width == conn_r.width,
+                        conn_r.width == dr_reload.width
                         ]
 
         Label: dr_lab:
@@ -64,6 +70,7 @@ enamldef DriverDebuggerView(Window): main:
                 model.driver = model.drivers[selected]
         GroupBox: prof:
             enabled << not model.connected
+            hug_height = 'strong'
             title = 'Instrument profile'
             Notebook:
                 tabs_closable = False
@@ -82,7 +89,6 @@ enamldef DriverDebuggerView(Window): main:
                 Page:
                     title = 'Custom'
                     Container:
-#                        constraints << [vbox(form, hbox(spacer, form_val))]
                         MappedView: form:
                             typemap = FORMS_MAP_VIEWS
                             model << main.model.custom_form
@@ -92,9 +98,10 @@ enamldef DriverDebuggerView(Window): main:
                                             isinstance(main.model.profile,
                                                        dict) else 'red'
                             clicked ::
-                                aux = model.custom_form
+                                aux = main.model.custom_form
                                 if aux.check():
                                     main.model.profile = aux.connection_dict()
+
         PushButton: dr_start:
             text = 'Start driver'
             enabled << not model.connected and model.driver_ready
@@ -118,61 +125,71 @@ enamldef DriverDebuggerView(Window): main:
                 model.reopen_connection()
         PushButton: dr_reload:
             text = 'Reload driver'
-            enabled << not model.connected
+            enabled << bool(model.driver and not model.connected)
             clicked ::
                 model.reload_driver()
+
         Conditional: cond:
             condition << model.connected
-            Container:
-                constraints << [grid(loop.items)]
-                padding = 2
-                Looper: loop:
-                    iterable << model.driver_attr + model.driver_properties
-                    Label:
-                        text << loop_item
-                    Field: getter:
-                        read_only = True
-                    PushButton:
-                        text = '<'
-                        clicked ::
-                            aux = model.attempt_get(loop_item)
-                            if isinstance(aux, Exception):
-                                getter.background = 'red'
-                                getter.tool_tip = aux.message
-                            else:
-                                getter.background = 'white'
-                                if isinstance(aux, basestring):
-                                    getter.text = '"' + aux + '"'
+            ScrollArea:
+                Container:
+                    constraints << [grid(*loop.items)] +\
+                                   [line[1].width == line[3].width
+                                   for line in loop.items] +\
+                                   [line[2].width == 20
+                                   for line in loop.items] +\
+                                   [line[4].width == 20
+                                   for line in loop.items]
+                    padding = 2
+                    Looper: loop:
+                        iterable << model.driver_attributes +\
+                                    model.driver_properties
+                        Label:
+                            text << loop_item
+                        Field: getter:
+                            read_only = True
+                        PushButton:
+                            text = '<'
+                            clicked ::
+                                aux = model.attempt_get(loop_item)
+                                if isinstance(aux, Exception):
+                                    getter.background = 'red'
+                                    getter.tool_tip = aux.message
                                 else:
-                                    getter.text = aux
-                    Field: setter:
-                        submit_triggers = ['lost_focus', 'return_pressed',
-                                           'auto_sync']
-                        tool_tip = cleandoc('''Enter the value to send to
-                            the driver as in a python interpreter''')
-                        text ::
-                            setter.background = 'white'
-                    PushButton:
-                        text = '>'
-                        clicked ::
-                            setter.background = 'turquoise'
-                            aux = model.attempt_set(loop_item, setter.text)
-                            if isinstance(aux, Exception):
-                                setter.background = 'red'
-                                setter.tooltip = cleandoc('''The last attempt
-                                    to set the driver value failed with the
-                                    exception : {}'''.format(aux.message))
-                            else:
-                                setter.background = 'green'
-                                setter.tool_tip = cleandoc('''Enter the value
-                                    to send to the driver as in a python
-                                    interpreter''')
+                                    getter.background = 'white'
+                                    if isinstance(aux, basestring):
+                                        getter.text = '"' + aux + '"'
+                                    else:
+                                        getter.text = str(aux)
+                        Field: setter:
+                            submit_triggers = ['lost_focus', 'return_pressed',
+                                               'auto_sync']
+                            tool_tip = cleandoc('''Enter the value to send to
+                                the driver as in a python interpreter''')
+                            text ::
+                                setter.background = 'white'
+                        PushButton:
+                            text = '>'
+                            clicked ::
+                                setter.background = 'turquoise'
+                                aux = model.attempt_set(loop_item, setter.text)
+                                if isinstance(aux, Exception):
+                                    setter.background = 'red'
+                                    setter.tool_tip = cleandoc('''The last
+                                        attempt to set the driver value failed
+                                        with the exception :
+                                        {}'''.format(aux.message))
+                                else:
+                                    setter.background = 'green'
+                                    setter.tool_tip = cleandoc('''Enter the
+                                        value to send to the driver as in a
+                                        python interpreter''')
             Container:
                 padding = 2
                 constraints << [hbox(
                                     vbox(hbox(meth, doc),
-                                         f_args,
-                                         f_kwargs),
+                                         g_args,
+                                         g_kwargs),
                                      vbox(spacer, call_button)),
                                     ]
                 ObjectCombo: meth:
@@ -185,19 +202,23 @@ enamldef DriverDebuggerView(Window): main:
                     text = 'Doc'
                     clicked ::
                         pass
-                Field: f_args:
-                    tool_tip = cleandoc('''Enter the positional arguments of
-                        the selected method''')
-                Field: f_kwargs:
-                    tool_tip = cleandoc('''Enter the keyword arguments of
-                        the selected method''')
+                GroupBox: g_args:
+                    title = 'Args'
+                    Field: f_args:
+                        tool_tip = cleandoc('''Enter the positional arguments
+                            of the selected method''')
+                GroupBox: g_kwargs:
+                    title = 'Kwargs'
+                    Field: f_kwargs:
+                        tool_tip = cleandoc('''Enter the keyword arguments of
+                            the selected method''')
                 PushButton: call_button:
                     text = 'Call'
                     clicked ::
                         _method_call(model, meth, f_args, f_kwargs)
 
         MultilineField: err:
-            text = model.errors
+            text << model.errors
             read_only = True
         PushButton: clear:
             text = 'Clear'

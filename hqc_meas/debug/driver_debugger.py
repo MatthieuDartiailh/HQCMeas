@@ -39,12 +39,14 @@ class DriverDebugger(Atom):
         prof = self.profile
         if not isinstance(prof, dict):
             prof = ConfigObj(prof).dict()
+
         try:
             driver_instance = self.driver(prof)
             # Listing drivers attributes
             parent = [m[0] for m in getmembers(self.driver)]
-            self.driver_attributes = [m for m in getmembers(driver_instance)
-                                      if m[0] not in parent]
+            self.driver_attributes = [m[0] for m in getmembers(driver_instance)
+                                      if m[0] not in parent
+                                      and not m[0].startswith('_')]
             self.driver_instance = driver_instance
             self.connected = True
         except Exception as e:
@@ -95,7 +97,8 @@ class DriverDebugger(Atom):
         """
         """
         try:
-            setattr(self.driver_instance, prop, val)
+            aux = eval(val)
+            setattr(self.driver_instance, prop, aux)
             return True
         except Exception as e:
             return e
@@ -113,24 +116,33 @@ class DriverDebugger(Atom):
         """
         """
         driver = change['value']
+        if driver is None:
+            return
+
+        driver_id = [k for k, v in self.drivers.iteritems()
+                     if v == driver][0]
         self.driver_instance = None
-        self.profiles = matching_instr_list(driver)
+        self.profiles = matching_instr_list(driver_id)
 
         # Updating the custom form
         for d_name, d_type in DRIVER_TYPES.iteritems():
             if issubclass(driver, d_type):
-                self.custom_form = FORMS[d_name]
+                self.custom_form = FORMS[d_name]()
                 break
 
         # Listing driver properties
-        self.driver_properties = [m.__name__ for m in getmembers(driver,
+        self.driver_properties = [m[0] for m in getmembers(driver,
                                   lambda x: isinstance(x,
                                                        instrument_property))]
 
+        parent = set([m[0] for m in getmembers(self.driver)])
         # Listing driver method
-        self.driver_methods = [meth for meth in getmembers(driver, ismethod)
-                               if meth.__name__ not in self.driver_properties
-                               or meth.__name__.startswith('_')]
+        self.driver_methods = [meth[1] for meth in getmembers(driver, ismethod)
+                               if meth[0] not in self.driver_properties
+                               and not meth[0].startswith('_')
+                               and meth[0] not in parent]
+        self.driver_methods.append(driver.check_instrument_cache)
+        self.driver_methods.append(driver.clear_instrument_cache)
 
     def _observe_profile(self, change):
-        self.driver_ready = bool(change['value'])
+        self.driver_ready = bool(change['value'] is not None)
