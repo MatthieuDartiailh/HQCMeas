@@ -7,6 +7,10 @@ from enaml.core.api import (Looper, Conditional)
 from enaml.layout.api import grid, vbox, hbox, spacer
 from enaml.stdlib.mapped_view import MappedView
 from inspect import cleandoc, getdoc
+from textwrap import fill
+
+def f_c(str, length = 80):
+    return fill(cleandoc(str), 80)
 
 from ..instruments.forms import FORMS_MAP_VIEWS
 
@@ -31,11 +35,11 @@ def _method_call(model, meth, f_args, f_kwargs):
     mess = ''
 
     if isinstance(call, Exception):
-        mess = cleandoc('''Call to {} failed with error
+        mess = f_c('''Call to {} failed with error
                     {}.'''.format(meth.selected.__name__,
                                   call.message))
     else:
-        mess = cleandoc('''Call to {} succeeded and
+        mess = f_c('''Call to {} succeeded and
             returned {}.'''.format(meth.selected.__name__,
                                    call))
     model.errors += mess + '\n'
@@ -68,6 +72,7 @@ enamldef DriverDebuggerView(Window): main:
             selected = None
             selected ::
                 model.driver = model.drivers[selected]
+                clear.clicked()
         GroupBox: prof:
             enabled << not model.connected
             hug_height = 'strong'
@@ -164,7 +169,7 @@ enamldef DriverDebuggerView(Window): main:
                         Field: setter:
                             submit_triggers = ['lost_focus', 'return_pressed',
                                                'auto_sync']
-                            tool_tip = cleandoc('''Enter the value to send to
+                            tool_tip = f_c('''Enter the value to send to
                                 the driver as in a python interpreter''')
                             text ::
                                 setter.background = 'white'
@@ -175,13 +180,14 @@ enamldef DriverDebuggerView(Window): main:
                                 aux = model.attempt_set(loop_item, setter.text)
                                 if isinstance(aux, Exception):
                                     setter.background = 'red'
-                                    setter.tool_tip = cleandoc('''The last
+                                    setter.tool_tip = f_c('''The last
                                         attempt to set the driver value failed
                                         with the exception :
                                         {}'''.format(aux.message))
+                                    print setter.tool_tip
                                 else:
                                     setter.background = 'green'
-                                    setter.tool_tip = cleandoc('''Enter the
+                                    setter.tool_tip = f_c('''Enter the
                                         value to send to the driver as in a
                                         python interpreter''')
             Container:
@@ -205,12 +211,12 @@ enamldef DriverDebuggerView(Window): main:
                 GroupBox: g_args:
                     title = 'Args'
                     Field: f_args:
-                        tool_tip = cleandoc('''Enter the positional arguments
+                        tool_tip = f_c('''Enter the positional arguments
                             of the selected method''')
                 GroupBox: g_kwargs:
                     title = 'Kwargs'
                     Field: f_kwargs:
-                        tool_tip = cleandoc('''Enter the keyword arguments of
+                        tool_tip = f_c('''Enter the keyword arguments of
                             the selected method''')
                 PushButton: call_button:
                     text = 'Call'

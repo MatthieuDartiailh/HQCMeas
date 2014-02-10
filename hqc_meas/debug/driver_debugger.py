@@ -70,13 +70,13 @@ class DriverDebugger(Atom):
         except Exception as e:
             self.errors += e.message + '\n'
 
-    def reopen_connetion(self):
+    def reopen_connection(self):
         """
         """
         try:
             self.driver_instance.reopen_connection()
-            self.connected = False
         except Exception as e:
+            self.connected = False
             self.errors += e.message + '\n'
 
     def reload_driver(self):
