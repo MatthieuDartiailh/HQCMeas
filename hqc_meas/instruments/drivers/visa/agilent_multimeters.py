@@ -12,8 +12,8 @@ This module defines drivers for agilent multimeters using VISA library.
 
 """
 
-from .driver_tools import (InstrIOError, secure_communication)
-from .visa_tools import VisaInstrument
+from ..driver_tools import (InstrIOError, secure_communication)
+from ..visa_tools import VisaInstrument
 
 class Agilent34410A(VisaInstrument):
     """
@@ -104,5 +104,5 @@ class Agilent34410A(VisaInstrument):
             return value[0]
         else:
             raise InstrIOError('AC current measure failed')
-            
+
 DRIVERS = {'Agilent34410A' : Agilent34410A}

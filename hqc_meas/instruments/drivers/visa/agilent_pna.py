@@ -16,9 +16,9 @@ This module defines drivers for agilent PNA.
 from inspect import cleandoc
 import numpy as np
 from visa import ascii, single, double
-from .driver_tools import (BaseInstrument, InstrIOError,
+from ..driver_tools import (BaseInstrument, InstrIOError,
                            secure_communication, instrument_property)
-from .visa_tools import VisaInstrument
+from ..visa_tools import VisaInstrument
 
 FORMATTING_DICT = {'PHAS' : lambda x: np.angle(x, deg=True),
                    'MLIN' : np.abs,
@@ -221,7 +221,7 @@ class AgilentPNAChannel(BaseInstrument):
         self._pna.write("DISPlay:WINDow{}:TRACe{}:FEED '{}'".format(window_num,
                         trace_num, meas_name))
 
-        traces = self._pna.ask('DISPlay:WINDow{}:CATalog?'.format(window_num))  
+        traces = self._pna.ask('DISPlay:WINDow{}:CATalog?'.format(window_num))
         if str(trace_num) not in traces:
             raise InstrIOError(cleandoc('''The Pna did not bind the meas {}
                 to window {}'''.format(meas_name, window_num)))
