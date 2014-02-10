@@ -21,27 +21,38 @@ from .driver_tools import (BaseInstrument,
 
 if 'DRIVER_TYPES' not in globals():
     DRIVER_TYPES = {}
+    DRIVER_PACKAGES = []
     dir_path = os.path.dirname(__file__)
-    modules = ['.' + os.path.split(path)[1][:-3] 
-                for path in os.listdir(dir_path)
-                    if path.endswith('.py')]
-                        
+    modules = ['.' + os.path.split(path)[1][:-3]
+               for path in os.listdir(dir_path)
+               if path.endswith('.py')]
+
     modules.remove('.__init__')
     modules.remove('.driver_tools')
     for module in modules:
-        mod = importlib.import_module(module, __name__)
+        try:
+            mod = importlib.import_module(module, __name__)
+        except ImportError:
+            continue
         if hasattr(mod, 'DRIVER_TYPES'):
             DRIVER_TYPES.update(mod.DRIVER_TYPES)
-   
+        if hasattr(mod, 'DRIVER_PACKAGE'):
+            DRIVER_PACKAGES.append(mod.DRIVER_PACKAGE)
+
 if 'DRIVERS' not in globals():
 
     DRIVERS = {}
     dir_path = os.path.dirname(__file__)
-    modules = ['.' + os.path.split(path)[1][:-3] 
-                for path in os.listdir(dir_path)
-                    if path.endswith('.py')]
-    modules.remove('.__init__')
-    modules.remove('.driver_tools')
+    modules = []
+
+    for pack in DRIVER_PACKAGES:
+        add_dir = os.path.join(dir_path, pack)
+        modules += ['.' + pack + '.' + os.path.split(path)[1][:-3]
+                    for path in os.listdir(add_dir)
+                    if path.endswith('.py')
+                    and not path.endswith('__init__.py')]
+
+    modules.append('.dummy')
     for module in modules:
         mod = importlib.import_module(module, __name__)
         if hasattr(mod, 'DRIVERS'):

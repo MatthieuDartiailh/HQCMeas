@@ -14,7 +14,7 @@ from textwrap import fill
 from inspect import cleandoc
 
 from .drivers import DRIVERS, DRIVER_TYPES, InstrIOError
-from .forms import AbstractConnectionForm, FORMS, VisaForm
+from .forms import AbstractConnectionForm, FORMS
 
 class InstrumentForm(Atom):
     """
@@ -55,7 +55,9 @@ class InstrumentForm(Atom):
             self.driver_type = kwargs.pop('driver_type')
         if 'driver' in kwargs:
             self.driver = kwargs.pop('driver') 
-        self.connection_form = FORMS.get(self.driver_type, VisaForm)(**kwargs)
+        form_class = FORMS.get(self.driver_type, None)
+        if form_class:
+            self.connection_form = form_class(**kwargs)
 
     @observe('driver_type')
     def _new_driver_type(self, change):
@@ -71,7 +73,9 @@ class InstrumentForm(Atom):
                 if issubclass(driver_class, driver_base_class):
                     driver_list.append(driver_name)
             self.driver_list = sorted(driver_list)
-            self.connection_form = FORMS.get(change['value'], VisaForm)()
+            form_class = FORMS.get(change['value'], None)
+            if form_class:
+                self.connection_form = form_class()
             
 class InstrumentFormDialogHandler(Atom):
     """Handler for the UI of an `InstrumentForm` instance

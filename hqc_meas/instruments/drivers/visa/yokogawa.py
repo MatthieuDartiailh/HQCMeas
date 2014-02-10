@@ -17,9 +17,9 @@ from visa import VisaTypeError
 from textwrap import fill
 from inspect import cleandoc
 
-from .driver_tools import (InstrIOError, instrument_property,
+from ..driver_tools import (InstrIOError, instrument_property,
                           secure_communication)
-from .visa_tools import VisaInstrument
+from ..visa_tools import VisaInstrument
 
 class YokogawaGS200(VisaInstrument):
     """
@@ -66,7 +66,7 @@ class YokogawaGS200(VisaInstrument):
         #to avoid floating point rouding
         if abs(value - round(set_point, 9)) > 10**-9:
             raise InstrIOError('Instrument did not set correctly the voltage')
-            
+
     @instrument_property
     @secure_communication()
     def voltage_range(self):
@@ -86,7 +86,7 @@ class YokogawaGS200(VisaInstrument):
                 return '30 V'
         else:
             raise InstrIOError('Instrument did not return the range')
-            
+
     @voltage_range.setter
     @secure_communication()
     def voltage_range(self, v_range):
@@ -103,7 +103,7 @@ class YokogawaGS200(VisaInstrument):
             visa_range = '10E+0'
         elif v_range == '30 V':
             visa_range = '30E+0'
-            
+
         if visa_range:
             self.write(":SOURce:RANGe {}".format(visa_range))
             check = self.ask(":SOURce:RANGe?")

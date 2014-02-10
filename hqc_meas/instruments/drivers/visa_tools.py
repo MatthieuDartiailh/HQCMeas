@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+try:
+    from visa import Instrument, VisaIOError
+except ImportError:
+    raise
 
-from visa import Instrument, VisaIOError
 from .driver_tools import BaseInstrument, InstrIOError
+
 
 class VisaInstrument(BaseInstrument):
     """Base class for drivers using the VISA library to communicate
@@ -69,7 +73,7 @@ class VisaInstrument(BaseInstrument):
     def __init__(self, connection_info, caching_allowed = True,
                  caching_permissions = {}, auto_open = True):
         super(VisaInstrument, self).__init__(connection_info, caching_allowed,
-                                                caching_permissions)
+                                             caching_permissions)
         if connection_info['additionnal_mode'] != '':
             self.connection_str = connection_info['connection_type']\
                                 + '::' + connection_info['address']\
@@ -99,19 +103,19 @@ class VisaInstrument(BaseInstrument):
         return True
 
     def reopen_connection(self):
-        """Reopen the connection with the instrument with the same parameters as
-        previously
+        """Reopen the connection with the instrument with the same parameters
+        as previously
         """
-        para = {'timeout' : self._driver.timeout,
-                'send_end' : self._driver.send_end,
-                'delay' : self._driver.delay,
-                'term_chars' : self._driver.term_chars,
-                'values_format' : self._driver.values_format,
-                'chunk_size' : self._driver.chunk_size,
+        para = {'timeout': self._driver.timeout,
+                'send_end': self._driver.send_end,
+                'delay': self._driver.delay,
+                'term_chars': self._driver.term_chars,
+                'values_format': self._driver.values_format,
+                'chunk_size': self._driver.chunk_size,
                 }
         self._driver.close()
         self.open_connection(**para)
-    
+
     def connected(self):
         """Returns whether commands can be sent to the instrument
         """
@@ -230,8 +234,8 @@ class VisaInstrument(BaseInstrument):
         self._driver.values_format = value
 
     values_format = property(_values_format, _set_values_format)
-    """Conveninence to set/get the `values_format` attribute of the `Instrument`
-    object"""
+    """Conveninence to set/get the `values_format` attribute of the
+    `Instrument` object"""
 
     def _chunk_size(self):
         return self._driver.chunk_size
@@ -242,5 +246,6 @@ class VisaInstrument(BaseInstrument):
     chunk_size = property(_chunk_size, _set_chunk_size)
     """Conveninence to set/get the `chunk_size` attribute of the `Instrument`
     object"""
-    
-DRIVER_TYPES = {'Visa' : VisaInstrument}
+
+DRIVER_PACKAGE = 'visa'
+DRIVER_TYPES = {'Visa': VisaInstrument}

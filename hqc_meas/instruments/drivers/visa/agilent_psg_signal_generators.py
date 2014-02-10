@@ -12,9 +12,9 @@ This module defines drivers for agilent PSG SignalGenerator using VISA library.
 
 """
 
-from driver_tools import (InstrIOError, instrument_property,
+from ..driver_tools import (InstrIOError, instrument_property,
                           secure_communication)
-from visa_tools import VisaInstrument
+from ..visa_tools import VisaInstrument
 from visa import VisaTypeError
 from textwrap import fill
 from inspect import cleandoc

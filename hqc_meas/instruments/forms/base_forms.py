@@ -17,10 +17,8 @@ connection to an instrument according to the type of connection used.
 from textwrap import fill
 from inspect import cleandoc
 from atom.api import Atom, Unicode
-import enaml
-with enaml.imports():
-    from .connection_forms_view import VisaFormView
-    
+
+
 class AbstractConnectionForm(Atom):
     """
     Abstract class defining what is expected from a form
@@ -73,6 +71,7 @@ class AbstractConnectionForm(Atom):
             """), 80)
         raise NotImplementedError(msg)
 
+
 class VisaForm(AbstractConnectionForm):
     """
     Form for instrument using the VISA standard for communication.
@@ -122,13 +121,33 @@ class VisaForm(AbstractConnectionForm):
         """Return the connection dictionnary which will be used by the
         `VisaInstrument` class to open a connection.
         """
-        return {'connection_type' : self.connection_type,
-                'address' : self.address,
-                'additionnal_mode' : self.additionnal_mode}
+        return {'connection_type': self.connection_type,
+                'address': self.address,
+                'additionnal_mode': self.additionnal_mode}
 
-FORMS = {'Visa' : VisaForm}
+
+class DummyForm(AbstractConnectionForm):
+    """
+    """
+
+    def check(self):
+        """Check whether or not the user provided a type and an address.
+        """
+        return True
+
+    def required_fields(self):
+        """Return the mandatory fields for a Visa instrument
+        """
+        return ''
+
+    def connection_dict(self):
+        """Return the connection dictionnary which will be used by the
+        `VisaInstrument` class to open a connection.
+        """
+        return {}
+
+FORMS = {'Dummy': DummyForm, 'Visa': VisaForm}
 """Dictionnary mapping protocol names to their associated form. Used to
 determine the correct form to display once the user selected a driver type
 
 """
-FORMS_MAP_VIEWS = {VisaForm : VisaFormView}

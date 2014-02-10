@@ -13,9 +13,9 @@ This module defines drivers for oxford ips magnet supply
 """
 from inspect import cleandoc
 from time import sleep
-from .driver_tools import (InstrIOError, secure_communication,
+from ..driver_tools import (InstrIOError, secure_communication,
                            instrument_property)
-from .visa_tools import VisaInstrument
+from ..visa_tools import VisaInstrument
 
 _PARAMETER_DICT = {'Demand current' : 0,
                    'Supply voltage' : 1,

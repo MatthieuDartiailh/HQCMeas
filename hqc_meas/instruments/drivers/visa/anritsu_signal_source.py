@@ -12,9 +12,9 @@ This module defines drivers for agilent multimeters using VISA library.
 
 """
 
-from .driver_tools import (InstrIOError, secure_communication,
+from ..driver_tools import (InstrIOError, secure_communication,
                            instrument_property)
-from .visa_tools import VisaInstrument
+from ..visa_tools import VisaInstrument
 
 class AnritsuMG3694(VisaInstrument):
     """
@@ -72,5 +72,5 @@ class AnritsuMG3694(VisaInstrument):
                 return 0
         else:
             raise InstrIOError(''' ''')
-            
+
 DRIVERS = {'AnritsuMG3694' : AnritsuMG3694}

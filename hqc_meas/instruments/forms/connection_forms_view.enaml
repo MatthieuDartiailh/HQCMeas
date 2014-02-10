@@ -1,6 +1,11 @@
 from atom.api import Enum
 from enaml.widgets.api import (Container, Form, ObjectCombo, Field, Label)
 from enaml.core.api import Conditional
+from .base_forms import (VisaForm, DummyForm)
+
+enamldef NoneFormView(Form):
+    attr model
+    attr mode = Enum('static', 'new', 'edit')
 
 enamldef VisaFormView(Form):
     attr model
@@ -27,3 +32,7 @@ enamldef VisaFormView(Form):
     Field:
         text := model.additionnal_mode
         read_only = bool(mode == 'static')
+
+FORMS_MAP_VIEWS = {type(None) : NoneFormView,
+                   DummyForm : NoneFormView,
+                   VisaForm : VisaFormView}

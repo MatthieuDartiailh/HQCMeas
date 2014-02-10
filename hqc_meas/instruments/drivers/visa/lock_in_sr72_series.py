@@ -13,8 +13,8 @@ This module defines drivers for lock-in from Signal Recoveries
 
 """
 
-from .driver_tools import (InstrIOError, secure_communication)
-from .visa_tools import VisaInstrument
+from ..driver_tools import (InstrIOError, secure_communication)
+from ..visa_tools import VisaInstrument
 
 class LockInSR7265(VisaInstrument):
     """Driver for a SR7265 lock-in, using the VISA library.
@@ -212,6 +212,6 @@ class LockInSR7270(LockInSR7265):
             return 'Command went wrong'
         else:
             return 'OK'
-            
+
 DRIVERS = {'SR7265-LI' : LockInSR7265,
            'SR7270-LI' : LockInSR7270}
