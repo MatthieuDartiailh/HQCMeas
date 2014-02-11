@@ -35,25 +35,17 @@ from textwrap import fill
 from inspect import cleandoc
 import inspect
 
-class Instrument(object):
-    """Generic error raised when an instrument does not behave as expected
-    """
-    pass
-
-class VisaIOError(Exception):
-    """Generic error raised when an instrument does not behave as expected
-    """
-    pass
-
 class InstrError(Exception):
     """Generic error raised when an instrument does not behave as expected
     """
     pass
 
+
 class InstrIOError(InstrError):
     """Generic error raised when an instrument does not behave as expected
     """
     pass
+
 
 class BypassDescriptor(object):
     """Class allowing to acces to a descriptor instance"""
@@ -71,15 +63,16 @@ class AllowBypassableDescriptors(type):
     """
     def __new__(mcs, name, bases, members):
         new_members = {}
-        for name, value in members.iteritems():
+        for n, value in members.iteritems():
             if isinstance(value, instrument_property):
-                new_members['_' + name] = BypassDescriptor(value)
+                new_members['_' + n] = BypassDescriptor(value)
         members.update(new_members)
         return type.__new__(mcs, name, bases, members)
 
+
 class instrument_property(property):
-    """Property allowing to cache the result of a get operation and return it on
-    the next get. The cache can be cleared.
+    """Property allowing to cache the result of a get operation and return it
+    on the next get. The cache can be cleared.
 
     """
     _cache = None
@@ -156,6 +149,7 @@ def secure_communication(max_iter = 10):
 
     return decorator
 
+
 class BaseInstrument(object):
     """Base class for all drivers
 
@@ -215,7 +209,7 @@ class BaseInstrument(object):
             for prop_name in perms:
                 #Accessing bypass descriptor to call their methods
                 prop = getattr(self, '_' + prop_name)
-                author  = perms[prop_name]
+                author = perms[prop_name]
                 prop.set_caching_authorization(author)
 
     def open_connection(self):
@@ -257,7 +251,7 @@ class BaseInstrument(object):
                         has been corrupted by a local user.'''),
                     80)
         raise NotImplementedError(message)
-        
+
     def connected(self):
         """Return whether or not commands can be sent to the instrument
         """
