@@ -37,13 +37,14 @@ class DummyInstrument(BaseInstrument):
         """
         return self._connected
 
+
 class PanelTestDummy(DummyInstrument):
     """
     """
     def  __init__(self,  connection_info, caching_allowed = True,
-                 caching_permissions = {}, auto_open = True):
+                  caching_permissions = {}, auto_open = True):
         super(PanelTestDummy, self).__init__(connection_info, caching_allowed,
-              caching_permissions, auto_open)
+                                             caching_permissions, auto_open)
         self._float = 0.0
         self._int = 0
         self._enum = ['ON', 'OFF']

@@ -50,7 +50,7 @@ class ValidatorModel(Atom):
 
     def post_model_update(self, change):
         """
-        """ 
+        """
         if self._safe and self.state == 'normal':
             deferred_call(setattr, self, 'ui_val', change['value'])
 
@@ -59,7 +59,7 @@ class ValidatorModel(Atom):
         """
         self._safe = False
         self.state = 'processing'
-        self.model.update_driver(self.name, self.ui_val)    
+        self.model.update_driver(self.name, self.ui_val)
 
     def cancel_edition(self, change = {}):
         """
@@ -92,7 +92,7 @@ class ValidatorModel(Atom):
                 self.err_message = ''
         else:
             self._prop = 0
-            
+
     def _process_dset_report(self, report):
         """
         """
@@ -110,8 +110,8 @@ class ValidatorModel(Atom):
             self.dual_display = False
             if self._prop:
                 self._prop = 1
-                self.model._proposed_val_counter -= 1        
-        
+                self.model._proposed_val_counter -= 1
+
     def _observe_ui_val(self, change):
         """
         """
@@ -127,12 +127,12 @@ def validator_layout(field, cancel, ok, cond_items):
         return [hbox(cond_items[0], field, cancel, ok),
                 cond_items[0].width == field.width,
                 align('v_center', field, cancel),
-                align('v_center', field, button)]
+                align('v_center', field, ok)]
     else:
         return [hbox(field, cancel, ok),
                 align('v_center', field, cancel),
-                align('v_center', field, button)]
-    
+                align('v_center', field, ok)]
+
 
 enamldef FloatValidator(GroupBox):
     attr model
@@ -203,7 +203,7 @@ enamldef IntValidator(GroupBox):
         text = '>'
         clicked::
             _internal.update_model()
-        
+
 enamldef BoolValidator(GroupBox):
     attr model
     attr member
@@ -269,13 +269,13 @@ enamldef SingleInstrDial(Dialog):
     attr model
     attr ui
 
-    title = 'Panel properties'    
-    
+    title = 'Panel properties'
+
     Container:
 
         Conditional: corrupt:
             condition << bool(model._check_driver_state.__func__ is not
-                                 SingleInstrPanel._check_driver_state.__func__)  
+                                 SingleInstrPanel._check_driver_state.__func__)
             CheckBox:
                 text = 'Check for corruption'
                 checked := model.check_corrupt
@@ -305,7 +305,7 @@ enamldef SingleInstrDial(Dialog):
                         values'
         Label: refresh_unit:
             text = 's'
-        
+
         CheckBox: header:
             text = 'Use for header'
             checked := model.use_for_header
@@ -313,17 +313,17 @@ enamldef SingleInstrDial(Dialog):
             text = 'Edit header'
 
         Include:
-            objects << [ui(model = model)] if ui else []           
+            objects << [ui(model = model)] if ui else []
 
 enamldef SingleInstrDock(DockItem):
     attr model
     attr main_ui
     attr second_ui
     attr prop_ui = second_ui
-    
+
     title := model.title
     title_editable = True
-    
+
     Container:
         enabled << model.profile_available
         Container:
@@ -341,8 +341,8 @@ enamldef SingleInstrDock(DockItem):
                     visible << model.display_additional
                     triggered ::
                         result = question(tools, 'Confirm validation',
-                                       cleandoc('''Confirm that you want all 
-                                        pending infos to be sent to the instr 
+                                       cleandoc('''Confirm that you want all
+                                        pending infos to be sent to the instr
                                         !'''))
                         if result is not None and result.action == 'accept':
                             model.validate_all = True
@@ -356,7 +356,7 @@ enamldef SingleInstrDock(DockItem):
                     text = 'P'
                     tool_tip = 'Edit properties'
                     triggered ::
-                        SingleInstrDial(model = model, ui = prop_ui).exec_()    
+                        SingleInstrDial(model = model, ui = prop_ui).exec_()
             Include:
                 objects << [main_ui(model = model)] if main_ui else []
             Conditional:
@@ -378,6 +378,10 @@ enamldef SingleInstrDock(DockItem):
                     text = 'Attempt to reconnect to instr'
                     clicked ::
                         model.restart_driver()
-                    
+
     closed ::
-        model.release_driver()
+        try:
+            model.release_driver()
+        except:
+            pass
+

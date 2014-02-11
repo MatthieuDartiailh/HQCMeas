@@ -2,7 +2,7 @@
 
 from atom.api import (Atom, List, Dict, Str, Callable, Bool, Unicode,
                       Instance, Value)
-from inspect import getmembers, ismethod
+from inspect import getmembers, ismethod, getmodule, isclass
 from configobj import ConfigObj
 
 from ..atom_util import Subclass
@@ -82,7 +82,23 @@ class DriverDebugger(Atom):
     def reload_driver(self):
         """
         """
-        pass
+        try:
+            mod = getmodule(self.driver)
+            mod = reload(mod)
+            mem = getmembers(mod, isclass)
+            name = self.driver.__name__
+
+            with self.suppress_notifications():
+                self.driver = [m[1] for m in mem if m[0] == name][0]
+
+            self.driver_instance = None
+
+            for i, driver in enumerate(DRIVERS.values()):
+                if driver.__name__ == self.driver.__name__:
+                    DRIVERS[i] = self.driver
+
+        except TypeError:
+            self.errors += 'Failed to reload driver\n'
 
     def attempt_get(self, prop):
         """

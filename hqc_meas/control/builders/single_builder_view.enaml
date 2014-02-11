@@ -1,11 +1,12 @@
 from enaml.widgets.api import (Dialog, Container, ObjectCombo, Label, CheckBox,
-                            PushButton, Form)
+                               PushButton, Form)
 from enaml.core.api import Conditional
 from enaml.layout.api import hbox, vbox, grid, spacer
 from enaml.stdlib.mapped_view import MappedView
 from inspect import cleandoc
 
 from .pref_view import PREF_VIEW_MAP
+from .single_instr_builder import SingleInstrBuilder
 
 enamldef SingleBuilderView(Dialog): dial:
     """
@@ -53,7 +54,7 @@ enamldef SingleBuilderView(Dialog): dial:
                 text = 'Use custom property ui'
             CheckBox: prop:
                 enabled << bool(len(model.available_uis['prop']) > 1)
-                tool_tip = cleandoc('''By default, the ui provided as auxiliary 
+                tool_tip = cleandoc('''By default, the ui provided as auxiliary
                                 is used for the property ui too''')
             Conditional:
                 condition << prop.checked
@@ -78,11 +79,11 @@ enamldef SingleBuilderView(Dialog): dial:
             clicked ::
                 model.build_panel()
                 dial.accept()
-                
+
 def open_single_builder_dialog(main_panel, area):
     """
     """
-    builder = SingleInstrBuilder(main_panel = model,
-                                                     area = dock_area)
-    SingleBuilderView(parent = main,
+    builder = SingleInstrBuilder(main_panel = main_panel,
+                                 area = area)
+    SingleBuilderView(parent = area,
                       model = builder).exec_()
