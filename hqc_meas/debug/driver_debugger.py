@@ -16,6 +16,8 @@ class DriverDebugger(Atom):
     """
     """
 
+    #--- Members --------------------------------------------------------------
+
     drivers = Dict(Str(), Subclass(BaseInstrument), DRIVERS)
     driver = Subclass(BaseInstrument)
 
@@ -32,6 +34,8 @@ class DriverDebugger(Atom):
     errors = Str()
 
     driver_instance = Instance(BaseInstrument)
+
+    #--- Puclic methods -------------------------------------------------------
 
     def start_driver(self):
         """
@@ -127,6 +131,8 @@ class DriverDebugger(Atom):
             return res
         except Exception as e:
             return e
+
+    #--- Observers ------------------------------------------------------------
 
     def _observe_driver(self, change):
         """
