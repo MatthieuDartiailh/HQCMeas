@@ -26,36 +26,41 @@ enamldef SingleBuilderView(Dialog): dial:
                 items ::
                     driver.selected = None
                 selected := model.driver_key
+
             Label:
                 text = 'Select profile'
-            ObjectCombo:
+            ObjectCombo: prof:
                 items << model.profile_map.keys()
                 items ::
-                    selected = None
+                    prof.selected = items[0] if items else None
                 selected ::
                     model.profile = model.profile_map[selected]
+
             Label:
                 text = 'Select main ui'
-            ObjectCombo:
+            ObjectCombo: m_ui:
                 items << model.available_uis['main']
                 items ::
-                    selected = None
+                    m_ui.selected = items[0] if items else None
                 to_string = lambda x : x.__name__
                 selected >> model.main_ui
+
             Label:
                 text = 'Select auxiliary ui'
-            ObjectCombo:
+            ObjectCombo: a_ui:
                 items << model.available_uis['aux']
                 items ::
-                    selected = None
+                    a_ui.selected = items[0] if items else None
                 to_string = lambda x : x.__name__
                 selected >> model.second_ui
+
             Label:
                 text = 'Use custom property ui'
             CheckBox: prop:
                 enabled << bool(len(model.available_uis['prop']) > 1)
                 tool_tip = cleandoc('''By default, the ui provided as auxiliary
                                 is used for the property ui too''')
+
             Conditional:
                 condition << prop.checked
                 Label:
@@ -66,6 +71,7 @@ enamldef SingleBuilderView(Dialog): dial:
                         selected = None
                     to_string = lambda x : x.__name__
                     selected >> model.prop_ui
+
         MappedView: pref:
             typemap = PREF_VIEW_MAP
             model << dial.model.pref_model

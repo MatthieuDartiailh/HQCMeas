@@ -8,7 +8,7 @@ with enaml.imports():
 app = QtApplication()
 # Create a view and show it.
 manager = MainPanelModel()
-view = MainPanelView(model = manager)
+view = MainPanelView(model=manager)
 view.show()
 
 app.start()

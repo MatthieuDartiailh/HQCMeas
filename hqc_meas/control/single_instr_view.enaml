@@ -1,23 +1,25 @@
-from atom.api import Atom, Bool, Str, Value, Int, observe
+import logging
+from atom.api import Atom, Bool, Str, Value, Int, Typed, observe
 from inspect import cleandoc
 from textwrap import fill
 from time import sleep
 from enaml.colors import ColorMember
 from enaml.application import deferred_call
 from enaml.core.api import Conditional, Include
+from enaml.core.declarative import d_
 from enaml.widgets.api import (Container, ObjectCombo, GroupBox, DockItem,
-                            PushButton, Field, Dialog, CheckBox, Label, ToolBar,
-                            Action, MultilineField)
+                               PushButton, Field, Dialog, CheckBox, Label,
+                               ToolBar, Action, MultilineField)
 from enaml.stdlib.fields import (FloatField, IntField)
 from enaml.stdlib.message_box import question
-from enaml.layout.api import hbox, align
+from enaml.layout.api import hbox, align, vbox
 
 from .single_instr_panel import SingleInstrPanel
 
-STATE_COLOR_MAP = {'normal'  : 'white',
-                   'edited' : 'turquoise',
-                   'processing' : 'blue',
-                   'error'   : 'red'}
+STATE_COLOR_MAP = {'normal': 'white',
+                   'edited': 'turquoise',
+                   'processing': 'blue',
+                   'error': 'red'}
 
 class ValidatorModel(Atom):
     """
@@ -28,40 +30,66 @@ class ValidatorModel(Atom):
     ui_val       = Value()
     state        = Str('normal')
     err_message  = Str()
-    _safe        = Bool(True)
+
     _prop        = Int()
 
     def __init__(self, model, name):
-        super(ValidatorModel, self).__init__(model = model, name = name)
+        super(ValidatorModel, self).__init__(model=model, name=name)
         self.ui_val = getattr(model, name)
-        model.observe(name, self.post_model_update)
+        self.register()
+
+    #--- Public methods -------------------------------------------------------
+
+    def register(self):
+        """
+        """
+        model = self.model
         model.observe('validate_all', self.update_model)
         model.observe('cancel_all', self.cancel_edition)
         model.observe('propose_val', self.catch_val_proposition)
-        model.observe('dsetter_report', self.catch_dset_report)
 
-    def __del__(self):
+        validators = model.registered_validators.get(self.name, [])
+        if validators:
+            validators.append(self)
+        else:
+            model.registered_validators[self.name] = [self]
+
+    def unregister(self):
+        """
+        """
+        print 'Unregistering validator'
         model = self.model
-        model.unobserve(self.name, self.post_model_update)
         model.unobserve('validate_all', self.update_model)
         model.unobserve('cancel_all', self.cancel_edition)
         model.unobserve('propose_val', self.catch_val_proposition)
-        model.unobserve('dsetter_report', self.catch_dset_report)
 
-    def post_model_update(self, change):
-        """
-        """
-        if self._safe and self.state == 'normal':
-            deferred_call(setattr, self, 'ui_val', change['value'])
+        validators = model.registered_validators.get(self.name, [])
+        try:
+            validators.remove(self)
+        except ValueError:
+            log = logging.getLogger()
+            log.critical(cleandoc("""Missing validator for member {}
+                in panel {}""".format(self.name, self.model.titlte)))
 
-    def update_model(self, change = {}):
+    def handle_dget_report(self, val):
         """
         """
-        self._safe = False
+        deferred_call(self._process_dget_report, val)
+
+    # Optionnal change kw to use as an observer callback
+    def update_model(self, change={}):
+        """
+        """
         self.state = 'processing'
         self.model.update_driver(self.name, self.ui_val)
 
-    def cancel_edition(self, change = {}):
+    def handle_dset_report(self, val):
+        """
+        """
+        deferred_call(self._process_dset_report, val)
+
+    # Optionnal change kw to use as an observer callback
+    def cancel_edition(self, change={}):
         """
         """
         self.ui_val = getattr(self.model, self.name)
@@ -69,13 +97,6 @@ class ValidatorModel(Atom):
         if self._prop:
             self._prop = 1
             self._proposed_val_counter -= 1
-
-    def catch_dset_report(self, change):
-        """
-        """
-        report = change['value']
-        if report[0] == self.name :
-            deferred_call(self._process_dset_report, report[1])
 
     def catch_val_proposition(self, change):
         """
@@ -93,6 +114,22 @@ class ValidatorModel(Atom):
         else:
             self._prop = 0
 
+    #--- Private methods ------------------------------------------------------
+
+    def _process_dget_report(self, report):
+        """
+        """
+        if isinstance(report, Exception):
+            self.state = 'error'
+            gen_mess = cleandoc('''An error occured when attempting to get
+                        the instrument attribute {}, the driver error
+                        message is :'''.format(self.name))
+            mess = report.message
+            self.err_message = fill(' '.join([gen_mess, mess]))
+        else:
+            if self.state == 'normal':
+                self.ui_val = report
+
     def _process_dset_report(self, report):
         """
         """
@@ -106,11 +143,12 @@ class ValidatorModel(Atom):
             self.dual_display = True
         else:
             self.state = 'normal'
-            self._safe = True
             self.dual_display = False
             if self._prop:
                 self._prop = 1
                 self.model._proposed_val_counter -= 1
+
+    #--- Observers ------------------------------------------------------------
 
     def _observe_ui_val(self, change):
         """
@@ -120,32 +158,46 @@ class ValidatorModel(Atom):
         else:
             self.state = 'edited'
 
-def validator_layout(field, cancel, ok, cond_items):
+
+class ValidatorContainer(Container):
+    """
+    """
+    model = d_(Value())
+    member = d_(Str())
+    _internal = d_(Typed(ValidatorModel))
+
+    def destroy(self):
+        self._internal.unregister()
+        super(ValidatorContainer, self).destroy()
+
+
+def validator_layout(lab, cond_items, field, cancel, ok):
     """
     """
     if cond_items:
-        return [hbox(cond_items[0], field, cancel, ok),
+        return [hbox(lab, cond_items[0], field, cancel, ok),
                 cond_items[0].width == field.width,
+                align('v_center', lab, field),
                 align('v_center', field, cancel),
                 align('v_center', field, ok)]
     else:
-        return [hbox(field, cancel, ok),
+        return [hbox(lab, field, cancel, ok),
+                align('v_center', lab, field),
                 align('v_center', field, cancel),
                 align('v_center', field, ok)]
 
 
-enamldef FloatValidator(GroupBox):
-    attr model
-    attr member
+enamldef FloatValidator(ValidatorContainer):
     alias minimum : field.minimum
     alias maximum : field.maximum
-    attr _internal = ValidatorModel(model, member)
 
-    padding = 2
-    constraints << validator_layout(field, cancel, ok, cond.items)
-    title << member.capitalize()
+    _internal = ValidatorModel(model, member)
+    padding = 0
+    constraints << validator_layout(lab, cond.items, field, cancel, ok)
     hug_height = 'strong'
 
+    Label: lab:
+        text = member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -158,30 +210,29 @@ enamldef FloatValidator(GroupBox):
         hug_width = 'ignore'
         submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
     PushButton: cancel:
-        constraints = [width == 15, height == 20]
+        constraints = [width == 15]
         font = 'bold 12pt Consolas'
         text = 'C'
         clicked::
             _internal.cancel_edition()
     PushButton: ok:
-        constraints = [width == 15, height == 20]
+        constraints = [width == 15]
         font = 'bold 12pt Consolas'
         text = '>'
         clicked::
             _internal.update_model()
 
-enamldef IntValidator(GroupBox):
-    attr model
-    attr member
+enamldef IntValidator(ValidatorContainer):
     alias minimum : field.minimum
     alias maximum : field.maximum
-    attr _internal = ValidatorModel(model, member)
 
-    padding = 2
-    constraints = validator_layout(field, cancel, button, cond.items)
-    title << member.capitalize()
+    _internal = ValidatorModel(model, member)
+    padding = 0
+    constraints << validator_layout(lab, cond.items, field, cancel, ok)
     hug_height = 'strong'
 
+    Label: lab:
+        text = member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -192,28 +243,28 @@ enamldef IntValidator(GroupBox):
         background << STATE_COLOR_MAP[_internal.state]
         tool_tip << _internal.err_message
     PushButton: cancel:
-        constraints = [width == 15, height == 20]
+        constraints = [width == 15]
         font = 'bold 12pt Consolas'
         text = 'C'
         clicked::
             _internal.cancel_edition()
     PushButton: ok:
-        constraints = [width == 15, height == 20]
+        constraints = [width == 15]
         font = 'bold 12pt Consolas'
         text = '>'
         clicked::
             _internal.update_model()
 
-enamldef BoolValidator(GroupBox):
-    attr model
-    attr member
-    attr _internal = ValidatorModel(model, member)
-
-    padding = 2
-    constraints = [hbox(hbox(*cond.items), box, button)]
-    title << member.capitalize()
+enamldef BoolValidator(ValidatorContainer):
+    """
+    """
+    _internal = ValidatorModel(model, member)
+    padding = 0
+    constraints << [hbox(lab, *tuple(cond.items + [box, button]))]
     hug_height = 'strong'
 
+    Label: lab:
+        text = member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -224,22 +275,22 @@ enamldef BoolValidator(GroupBox):
         background << STATE_COLOR_MAP[_internal.state]
         tool_tip << _internal.err_message
     PushButton: button:
-        constraints = [width == 15, height == 20]
+        constraints = [width == 15]
         font = 'bold 12pt Consolas'
         text = '>'
         clicked::
             _internal.update_model()
 
-enamldef EnumValidator(GroupBox):
-    attr model
-    attr member
-    attr _internal = ValidatorModel(model, member)
-
-    padding = 2
-    constraints = validator_layout(field, cancel, button, cond.items)
-    title << member.capitalize()
+enamldef EnumValidator(ValidatorContainer):
+    """
+    """
+    _internal = ValidatorModel(model, member)
+    padding = 0
+    constraints << validator_layout(lab, cond.items, field, cancel, ok)
     hug_height = 'strong'
 
+    Label: lab:
+        text = member.capitalize()
     Conditional: cond:
         condition << _internal.dual_display
         Field:
@@ -247,23 +298,42 @@ enamldef EnumValidator(GroupBox):
             text << str(getattr(model, member))
     ObjectCombo: field:
         selected := _internal.ui_val
-        items << sorted(model.get_member(name).items)
+        items << sorted(model.get_member(member).items)
         background << STATE_COLOR_MAP[_internal.state]
         tool_tip << _internal.err_message
+        hug_width = 'ignore'
     PushButton: cancel:
-        constraints = [width == 15, height == 20]
+        constraints = [width == 15]
         font = 'bold 12pt Consolas'
         text = 'C'
         clicked::
             _internal.cancel_edition()
     PushButton: ok:
-        constraints = [width == 15, height == 20]
+        constraints = [width == 15]
         font = 'bold 12pt Consolas'
         text = '>'
         clicked::
             _internal.update_model()
 
 # TODO add header dialog
+
+
+def instr_dial_layout(corrupt, fast, refresh_lab, refresh_time, refresh_unit,
+                      header, header_ed, incl):
+    """
+    """
+    v_args = []
+    if corrupt.items:
+        v_args.append(hbox(corrupt.items))
+    if fast.items:
+        v_args.append(hbox(fast.items))
+
+    v_args.append(hbox(refresh_lab, refresh_time, refresh_unit))
+    v_args.append(hbox(header, header_ed))
+    v_args += incl.objects
+
+    return [vbox(*v_args)]
+
 
 enamldef SingleInstrDial(Dialog):
     attr model
@@ -272,6 +342,9 @@ enamldef SingleInstrDial(Dialog):
     title = 'Panel properties'
 
     Container:
+        constraints << instr_dial_layout(corrupt, fast, refresh_lab,
+                                         refresh_time, refresh_unit,
+                                         header, header_ed, incl)
 
         Conditional: corrupt:
             condition << bool(model._check_driver_state.__func__ is not
@@ -312,8 +385,8 @@ enamldef SingleInstrDial(Dialog):
         PushButton: header_ed:
             text = 'Edit header'
 
-        Include:
-            objects << [ui(model = model)] if ui else []
+        Include: incl:
+            objects << [ui(model=model)] if ui else []
 
 enamldef SingleInstrDock(DockItem):
     attr model
@@ -356,32 +429,28 @@ enamldef SingleInstrDock(DockItem):
                     text = 'P'
                     tool_tip = 'Edit properties'
                     triggered ::
-                        SingleInstrDial(model = model, ui = prop_ui).exec_()
+                        SingleInstrDial(model=model, ui=prop_ui).exec_()
+
             Include:
-                objects << [main_ui(model = model)] if main_ui else []
+                objects << [main_ui(model=model)] if main_ui else []
             Conditional:
                 condition << model.display_additional
-                Container:
-                    padding = 0
-                    Include:
-                        objects << [second_ui(model = model)]\
-                                                if second_ui else []
+                Include:
+                    objects << [second_ui(model=model)] if second_ui else []
+
         Conditional:
             condition << bool(model.error)
-            Container:
-                padding = 0
-                MultilineField:
-                    text << model.error
-                    read_only = True
-                    maximum_size = (-1,50)
-                PushButton:
-                    text = 'Attempt to reconnect to instr'
-                    clicked ::
-                        model.restart_driver()
+            MultilineField:
+                text << model.error
+                read_only = True
+                maximum_size = (-1, 50)
+            PushButton:
+                text = 'Attempt to reconnect to instr'
+                clicked ::
+                    model.restart_driver()
 
     closed ::
         try:
             model.release_driver()
         except:
             pass
-
