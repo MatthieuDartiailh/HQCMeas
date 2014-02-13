@@ -9,8 +9,9 @@ from enaml.stdlib.mapped_view import MappedView
 from inspect import cleandoc, getdoc
 from textwrap import fill
 
-def f_c(str, length = 80):
-    return fill(cleandoc(str), 80)
+
+def f_c(str, length=80):
+    return fill(cleandoc(str), length)
 
 from ..instruments.forms import FORMS_MAP_VIEWS
 
