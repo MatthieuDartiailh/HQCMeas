@@ -1,0 +1,58 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : manager_manifest.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
+from enaml.workbench.core.api import Command
+from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
+from enaml.widgets.api import FileDialogEx
+
+from .manager_view import InstrManagerView
+
+
+def preference_plugin_factory():
+    """ Factory function for the PrefPlugin
+    """
+    from .pref_plugin import PrefPlugin
+    return PrefPlugin()
+
+
+def save_preferences(event):
+    """ Save preferences command handler
+    """
+    pref = event.workbench.get_plugin('hqc_meas.preferences')
+    if 'path' in event.parameters:
+        path = FileDialogEx.get_save_file_name(name_filters=['*.ini'])
+        if dial_path:
+            pref.save_preferences(path=path)
+    else:
+        pref.save_preferences()
+
+PREF_PLUGINS_DESCRIPTION = \
+"""Plugins which uses the built in preferences system should provide ... to
+this extensions so that they are hooked up in the automatic saving of
+preferences
+"""
+
+enamldef PreferencesManifest(PluginManifest):
+    """
+    """
+    attr default_folder : str
+
+    id = 'hqc_meas.preferences'
+    factory = preference_plugin_factory
+
+    ExtensionPoint:
+        id = 'pref_plugins'
+        description = PREF_PLUGINS_DESCRIPTION
+    Extension:
+        id = 'commands'
+        point = 'enaml.workbench.core.commands'
+        Command:
+            id = 'hqc_meas.preferences.save'
+            description = SAVE_PREF_DESCRIPTION
+            handler = save_preferences

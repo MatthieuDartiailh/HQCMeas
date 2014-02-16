@@ -21,13 +21,15 @@ also capabilities to filter through the available profiles.
     InstrumentFormHandler
         Handler for the UI of the `InstrumentForm`
     FileListUpdater
-        `watchdog` handler subclass to automatically update the list of profiles
+        `watchdog` handler subclass to automatically update the list of
+        profiles
     MODULE_PATH
         Path to this module
 
 """
 from atom.api import (Atom, Dict, Unicode, Instance, Typed, observe)
 import enaml
+from enaml.workbench.api import Plugin
 with enaml.imports():
     from enaml.stdlib.message_box import question
     from .instrument_form_view import InstrumentFormDialog
@@ -40,7 +42,7 @@ from inspect import cleandoc
 from watchdog.observers import Observer
 from watchdog.observers.api import ObservedWatch
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
-                            FileDeletedEvent, FileMovedEvent)
+                             FileDeletedEvent, FileMovedEvent)
 
 from .instrument_form import InstrumentForm
 
