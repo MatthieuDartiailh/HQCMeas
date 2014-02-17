@@ -11,6 +11,8 @@ from enaml.workbench.core.api import Command
 from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 
 from .manager_view import InstrManagerView
+from ..utils.pref_plugin import Preferences
+from ..utils.state_plugin import State
 
 
 def manager_plugin_factory():
@@ -26,16 +28,34 @@ def show_manager(event):
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     InstrManagerView(manager=manager).show()
 
+
 def list_drivers(event):
-    """Hanler for the 'hqc_meas.instr_manager.list_driver' command
+    """ Hanler for the 'hqc_meas.instr_manager.list_driver' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     return manager.drivers
 
+
 def list_profiles(event):
-    """Handler for the 'hqc_meas.instr_manager.list_profiles"""
+    """ Handler for the 'hqc_meas.instr_manager.list_profiles
+    """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     return manager.profiles
+
+
+def drivers_request(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.drivers_request(event.trigger, **event.parameters)
+
+
+def drivers_released(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_released' command
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.drivers_released(event.trigger, **event.parameters)
+
 
 INSTR_USERS_DESCRIPTION = \
 """ Extensions to this point can be used to provide the id of a plugin
@@ -54,6 +74,16 @@ LIST_DRIVERS_DESCRIPTON = \
 LIST_PROFILES_DESCRIPTION = \
 """ Return a list of all profiles"""
 
+DRIVERS_REQUEST_DESCRIPTION = \
+""" Request the privilege to use the specified profiles. No profile should be
+used without first asking for this privilege, if necessary and possible
+currently used profiles will released"""
+
+DRIVERS_RELEASED_DESCRIPTION = \
+""" Inform the manager that the specified profiles are no longer in use by the
+caller"""
+
+
 enamldef InstrManagerManifest(PluginManifest):
     """
     """
@@ -62,6 +92,18 @@ enamldef InstrManagerManifest(PluginManifest):
     ExtensionPoint:
         id = 'users'
         description = INSTR_USERS_DESCRIPTION
+    Extension:
+        id = 'prefs'
+        point = 'hqc_meas.preferences.pref_plugins'
+        Preferences:
+            saving_method = 'pref_from_members'
+            loading_method = 'members_from_preferences'
+            auto_save = []
+    Extension:
+        id = 'state"
+        point = 'hqc_meas.state.states
+        State:
+            values = ['drivers', 'all_profiles']
     Extension:
         id = 'commands'
         point = 'enaml.workbench.core.commands'

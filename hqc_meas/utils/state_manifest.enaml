@@ -1,0 +1,51 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : state_manifest.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
+from enaml.workbench.core.api import Command
+from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
+
+
+def state_plugin_factory():
+    """ Factory function for the PrefPlugin
+    """
+    from .state_plugin import StatePlugin
+    return StatePlugin()
+
+
+def get_state(event):
+    """Handler for the get_state description"""
+    plugin = event.workbench.get_plugin('hqc_meas.state')
+    return plugin.get_state(**event.parameters)
+
+STATES_DESCRIPTION = \
+"""Plugins which needs to store application wide available objects should
+provide an extension to this point in the form of a State object.
+"""
+
+GET_STATE_DESCRIPTION = \
+""" Function to retrieve a reference to a state object given the plugin id
+of the plugin contributing the state"""
+
+
+enamldef PreferencesManifest(PluginManifest):
+    """
+    """
+    id = 'hqc_meas.state'
+    factory = state_plugin_factory
+
+    ExtensionPoint:
+        id = 'states'
+        description = STATES_DESCRIPTION
+    Extension:
+        id = 'commands'
+        point = 'enaml.workbench.core.commands'
+        Command:
+            id = 'hqc_meas.state.get'
+            description = SAVE_PREF_DESCRIPTION
+            handler = get_state

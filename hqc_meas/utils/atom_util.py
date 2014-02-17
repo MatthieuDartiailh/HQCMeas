@@ -9,11 +9,11 @@ def tagged_members(obj, meta = None, meta_value = None):
     if meta is None and meta_value is None:
         return members
     elif meta_value is None:
-        return {key : member for key, member in members.iteritems() 
+        return {key : member for key, member in members.iteritems()
                 if member.metadata is not None and meta in member.metadata}
     else:
-        return {key : member for key, member in members.iteritems() 
-                if member.metadata is not None 
+        return {key : member for key, member in members.iteritems()
+                if member.metadata is not None
                 and meta in member.metadata
                 and member.metadata[meta] == meta_value}
 
@@ -48,24 +48,24 @@ def member_from_str(member, value):
                                                 for val in value]
         else:
             validated = value
-            
+
     if isinstance(value, dict):
         validation_mode = member.validate_mode
         if len(validation_mode) > 2:
             key_member = validation_mode[1]
             value_member = validation_mode[2]
-            validated = {member_from_str(key_member, key) : 
+            validated = {member_from_str(key_member, key) :
                         member_from_str(value_member, val)
                         for key, val in value.iteritems}
         else:
             validated = value
     else:
         validated = simple_member_from_str(member, value)
-        
+
     return validated
-    
+
 class PrefAtom(Atom):
-    
+
     def update_members_from_preferences(self, **parameters):
         """
         """
@@ -77,9 +77,9 @@ class PrefAtom(Atom):
             value = parameters[name]
             converted = member_from_str(member, value)
             setattr(self, name, converted)
-            
+
 class Subclass(Member):
-   
+
     __slots__ = 'subtype'
 
     def __init__(self, subtype):
@@ -87,7 +87,7 @@ class Subclass(Member):
         self.set_validate_mode(Validate.MemberMethod_ObjectOldNew, 'validate')
 
 
-    def validate(self, obj, old, new): 
+    def validate(self, obj, old, new):
         if new is None:
             return new
         assert isinstance(new, type)

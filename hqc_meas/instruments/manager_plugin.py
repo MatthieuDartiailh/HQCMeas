@@ -14,10 +14,10 @@ from watchdog.observers.api import ObservedWatch
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                              FileDeletedEvent, FileMovedEvent)
 
-from ..enaml_util.pref_plugin import PrefPlugin
+from ..enaml_util.pref_plugin import HasPrefPlugin
 
 
-class InstrManagerPlugin(PrefPlugin):
+class InstrManagerPlugin(HasPrefPlugin):
     """
     """
 
@@ -48,7 +48,7 @@ class InstrUser(Declarative):
 
     default_policy = d_(Str())
 
-
+# use Forward Typed to keep file more readable
 class _FileListUpdater(FileSystemEventHandler):
     """Simple `watchdog` handler used for auto-updating the profiles list
     """
