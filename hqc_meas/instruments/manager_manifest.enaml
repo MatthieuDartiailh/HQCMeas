@@ -103,7 +103,8 @@ enamldef InstrManagerManifest(PluginManifest):
         id = 'state"
         point = 'hqc_meas.state.states
         State:
-            values = ['drivers', 'all_profiles']
+            id = 'hqc_meas.states.instr_manager'
+            sync_members = ['drivers', 'all_profiles']
     Extension:
         id = 'commands'
         point = 'enaml.workbench.core.commands'

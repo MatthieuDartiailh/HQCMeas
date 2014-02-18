@@ -5,9 +5,11 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import List, Str
+from atom.api import List, Str, Subclass
 from enaml.workbench.api import Plugin
 from enaml.core.declarative import Declarative, d_
+from enaml.core.enamldef_meta import EnamlDefMeta
+
 
 class Preferences(Declarative):
     """
@@ -18,7 +20,9 @@ class Preferences(Declarative):
 
     auto_save = d_(List(Str()))
 
+    edit_view = d_(Subclass(EnamlDefMeta))
+
+
 class PrefPlugin(Plugin):
     """
     """
-

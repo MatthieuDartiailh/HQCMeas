@@ -29,6 +29,8 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         """
 
+    def
+
 
 class InstrUser(Declarative):
     """Extension to the 'instr_users' extensions point of the ManagerPlugin.
