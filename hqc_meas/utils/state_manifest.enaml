@@ -23,6 +23,7 @@ def get_state(event):
     plugin = event.workbench.get_plugin('hqc_meas.state')
     return plugin.get_state(**event.parameters)
 
+
 STATES_DESCRIPTION = \
 """Plugins which needs to store application wide available objects should
 provide an extension to this point in the form of a State object.

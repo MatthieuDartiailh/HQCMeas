@@ -17,6 +17,9 @@ class State(Declarative):
     id : str
         The globally unique identifier for the state
 
+    description : str
+        An optional description of what the state provides.
+
     sync_members : list(str)
         The list of plugin members whose values should be reflrected in the
         state object
@@ -26,6 +29,8 @@ class State(Declarative):
         the method on the plugin which can be used as the property getter.
     """
     id = d_(Str())
+
+    description = d_(Str())
 
     # Will be used to dynamically create an atom class with value members,
     # and observe plugin to update state object in consequence

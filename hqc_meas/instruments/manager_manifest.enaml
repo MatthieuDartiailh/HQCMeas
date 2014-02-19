@@ -17,6 +17,7 @@ from ..utils.state_plugin import State
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
+
     """
     from .manager_plugin import ManagerPlugin
     return ManagerPlugin()
@@ -24,34 +25,29 @@ def manager_plugin_factory():
 
 def show_manager(event):
     """ Handler for the 'hqc_meas.instr_manager.show_manager' command
+
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     InstrManagerView(manager=manager).show()
 
 
-def list_drivers(event):
-    """ Hanler for the 'hqc_meas.instr_manager.list_driver' command
+def matching_profiles(event):
+    """ Handler for the 'hqc_meas.instr_manager.matching_profiles' command
+
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    return manager.drivers
+    return manager.matching_profiles(**event.parameters)
 
 
-def list_profiles(event):
-    """ Handler for the 'hqc_meas.instr_manager.list_profiles
-    """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    return manager.profiles
-
-
-def drivers_request(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command
+def profiles_request(event):
+    """ Handler for the 'hqc_meas.instr_manager.profiles_request' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     return manager.drivers_request(event.trigger, **event.parameters)
 
 
-def drivers_released(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_released' command
+def profiles_released(event):
+    """ Handler for the 'hqc_meas.instr_manager.profiles_released' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     return manager.drivers_released(event.trigger, **event.parameters)
@@ -68,20 +64,24 @@ instrument back."""
 SHOW_MANAGER_DESCRIPTION = \
 """ Show the instrument manager window."""
 
-LIST_DRIVERS_DESCRIPTON = \
-""" Return a list of all drivers"""
+MATCHING_PROFILES_DESCRIPTION = \
+""" Return a dict of profiles (name : path) whose driver is in the provided
+ list (w = drivers)"""
 
-LIST_PROFILES_DESCRIPTION = \
-""" Return a list of all profiles"""
-
-DRIVERS_REQUEST_DESCRIPTION = \
+PROFILES_REQUEST_DESCRIPTION = \
 """ Request the privilege to use the specified profiles. No profile should be
 used without first asking for this privilege, if necessary and possible
 currently used profiles will released"""
 
-DRIVERS_RELEASED_DESCRIPTION = \
+PROFILES_RELEASED_DESCRIPTION = \
 """ Inform the manager that the specified profiles are no longer in use by the
 caller"""
+
+MANAGER_STATE_DESCRIPTION = \
+""" The instrument manager gives access to the known drivers
+('drivers', dict(name: class)), profiles ('all_profiles', dict(name: path))
+defined for the current session, and to the currently available profiles
+(available_profiles', dict(name: path)). """
 
 
 enamldef InstrManagerManifest(PluginManifest):
@@ -104,7 +104,8 @@ enamldef InstrManagerManifest(PluginManifest):
         point = 'hqc_meas.state.states
         State:
             id = 'hqc_meas.states.instr_manager'
-            sync_members = ['drivers', 'all_profiles']
+            description = MANAGER_STATE_DESCRIPTION
+            sync_members = ['drivers', 'all_profiles', 'available_profiles']
     Extension:
         id = 'commands'
         point = 'enaml.workbench.core.commands'
@@ -113,21 +114,17 @@ enamldef InstrManagerManifest(PluginManifest):
             description = SHOW_MANAGER_DESCRIPTION
             handler = show_manager
         Command:
-            id = 'hqc_meas.instr_manager.list_drivers'
-            description = LIST_DRIVERS_DESCRIPTON
-            handler = list_drivers
+            id = 'hqc_meas.instr_manager.matching_profiles'
+            description = MATCHING_PROFILES_DECRIPTION
+            handler = matching_profiles
         Command:
-            id = 'hqc_meas.instr_manager.list_profiles'
-            description = LIST_PROFILES_DECRIPTION
-            handler = list_profiles
+            id = 'hqc_meas.instr_manager.profiles_released'
+            description = PROFILES_RELEASED_DESCRIPTION
+            handler = profiles_released
         Command:
-            id = 'hqc_meas.instr_manager.drivers_released'
-            description = DRIVERS_RELEASED_DESCRIPTION
-            handler = drivers_released
-        Command:
-            id = 'hqc_meas.instr_manager.drivers_request'
-            description = DRIVERS_REQUEST_DESCRIPTION
-            handler = drivers_request
+            id = 'hqc_meas.instr_manager.profiles_request'
+            description = PROFILES_REQUEST_DESCRIPTION
+            handler = profiles_request
     Extension:
         id = 'menu'
         point = 'enaml.workbench.ui.actions'
