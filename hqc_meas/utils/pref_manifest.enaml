@@ -27,10 +27,12 @@ def save_preferences(event):
 
     """
     pref = event.workbench.get_plugin('hqc_meas.preferences')
-    if 'path' in event.parameters:
+    if 'ask_user' in event.parameters:
         path = FileDialogEx.get_save_file_name(name_filters=['*.ini'])
         if path:
             pref.save_preferences(path=path)
+    elif 'path' in event.parameters:
+        pref.save_preferences(path=event.parameters['path'])
     else:
         pref.save_preferences()
 
@@ -40,26 +42,66 @@ def load_preferences(event):
 
     """
     pref = event.workbench.get_plugin('hqc_meas.preferences')
-    if 'path' in event.parameters:
-        path = FileDialogEx.get_open_file_name(name_filters=['*.ini'])
+    if 'ask_user' in event.parameters:
+        ini_path = event.parameters.get('path')
+        path = FileDialogEx.get_open_file_name(current_path=ini_path,
+                                               name_filters=['*.ini'])
         if path:
             pref.load_preferences(path=path)
+    elif 'path' in event.parameters:
+        pref.load_preferences(path=event.parameters['path'])
     else:
         pref.load_preferences()
+
+
+def plugin_init_complete(event):
+    """
+    """
+    #needed to avoid overwriting loaded prefs for sync members
+
+
+def get_plugin_preferences(event):
+    """ Handler for the 'hqc_meas.preferences.get_plugin_pref' command
+
+    """
+    pref = event.workbench.get_plugin('hqc_meas.preferences')
+    return pref.plugin_preferences(event.parameters['plugin_id'])
+
+
+def update_plugin_preferences(event):
+    """ Handler for the 'hqc_meas.preferences.update_plugin_pref' command
+
+    """
+    pref = event.workbench.get_plugin('hqc_meas.preferences')
+    pref.update_plugin_preferences(event.parameters['prefs'])
+
 
 PREF_PLUGINS_DESCRIPTION = \
 """Plugins which uses the built in preferences system should provide an
 extension to this point in the form of a Preferences object so that they are
-hooked up in the automatic saving of preferences
-"""
+hooked up in the automatic saving of preferences."""
 
 SAVE_PREFERENCES_DESCRIPTION = \
-"""
-"""
+""" This command will save the current preferences. If a 'ask_user' keyword is
+provided it will ask the user to give the path to which the preferences should
+be saved. If a 'path' keyword is provided the preferencs will be saved to the
+file towards which the path points. If both keywords are provided the 'path'
+will be used as a starting point for the file dialog. In the absence of
+keywords preferences will be saved to the default location."""
 
 LOAD_PREFERENCES_DESCRIPTION = \
-"""
-"""
+""" This command will load the preferences. If a 'ask_user' keyword is
+provided it will ask the user to give the path of the file in which the
+preferences are stored. If a 'path' keyword is provided the preferencs will be
+loaded from the file towards which the path points. If both keywords are
+provided the 'path' will be used as a starting point for the file dialog.
+In the absence of keywords preferences will be loaded from the default
+location."""
+
+GET_PLUGIN_PREF_DESCRIPTION = \
+""" Return the preferences stored for a given plugin as a dict composed only
+of strings."""
+
 
 enamldef PreferencesManifest(PluginManifest):
     """
@@ -83,3 +125,7 @@ enamldef PreferencesManifest(PluginManifest):
             id = 'hqc_meas.preferences.load'
             description = LOAD_PREF_DESCRIPTION
             handler = load_preferences
+        Command:
+            id = 'hqc_meas.preferences.get_plugin_pref'
+            description = GET_PLUGIN_PREF_DESCRIPTION
+            handler = get_plugin_preferences

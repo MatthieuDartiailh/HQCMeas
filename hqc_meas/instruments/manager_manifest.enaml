@@ -39,11 +39,25 @@ def matching_profiles(event):
     return manager.matching_profiles(**event.parameters)
 
 
+def driver_type_request(event):
+    """ Handler for the 'hqc_meas.instr_manager.driver_types_request' command
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.driver_types_request(**event.parameters)
+
+
+def driver_type_request(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.drivers_request(**event.parameters)
+
+
 def profiles_request(event):
     """ Handler for the 'hqc_meas.instr_manager.profiles_request' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    return manager.drivers_request(event.trigger, **event.parameters)
+    return manager.profiles_request(event.trigger, **event.parameters)
 
 
 def profiles_released(event):
@@ -68,14 +82,20 @@ MATCHING_PROFILES_DESCRIPTION = \
 """ Return a dict of profiles (name : path) whose driver is in the provided
  list (w = drivers)"""
 
+DRIVER_TYPES_REQUEST_DESCRIPTION = \
+""" Request the classes associated to a list of driver types. """
+
+PROFILES_REQUEST_DESCRIPTION = \
+""" Request the classes associated to a list of drivers. """
+
 PROFILES_REQUEST_DESCRIPTION = \
 """ Request the privilege to use the specified profiles. No profile should be
 used without first asking for this privilege, if necessary and possible
-currently used profiles will released"""
+currently used profiles will released. """
 
 PROFILES_RELEASED_DESCRIPTION = \
 """ Inform the manager that the specified profiles are no longer in use by the
-caller"""
+caller. """
 
 MANAGER_STATE_DESCRIPTION = \
 """ The instrument manager gives access to the known drivers
@@ -105,7 +125,8 @@ enamldef InstrManagerManifest(PluginManifest):
         State:
             id = 'hqc_meas.states.instr_manager'
             description = MANAGER_STATE_DESCRIPTION
-            sync_members = ['drivers', 'all_profiles', 'available_profiles']
+            sync_members = ['driver_types', 'drivers', 'all_profiles',
+                            'available_profiles']
     Extension:
         id = 'commands'
         point = 'enaml.workbench.core.commands'
@@ -118,13 +139,21 @@ enamldef InstrManagerManifest(PluginManifest):
             description = MATCHING_PROFILES_DECRIPTION
             handler = matching_profiles
         Command:
-            id = 'hqc_meas.instr_manager.profiles_released'
-            description = PROFILES_RELEASED_DESCRIPTION
-            handler = profiles_released
+            id = 'hqc_meas.instr_manager.driver_types_request'
+            description = DRIVER_TYPES_REQUEST_DESCRIPTION
+            handler = driver_types_request
+        Command:
+            id = 'hqc_meas.instr_manager.drivers_request'
+            description = DRIVERS_REQUEST_DESCRIPTION
+            handler = drivers_request
         Command:
             id = 'hqc_meas.instr_manager.profiles_request'
             description = PROFILES_REQUEST_DESCRIPTION
             handler = profiles_request
+        Command:
+            id = 'hqc_meas.instr_manager.profiles_released'
+            description = PROFILES_RELEASED_DESCRIPTION
+            handler = profiles_released
     Extension:
         id = 'menu'
         point = 'enaml.workbench.ui.actions'

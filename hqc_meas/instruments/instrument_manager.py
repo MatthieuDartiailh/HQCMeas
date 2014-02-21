@@ -29,7 +29,7 @@ also capabilities to filter through the available profiles.
 """
 from atom.api import (Atom, Dict, Unicode, Instance, Typed, observe)
 import enaml
-from enaml.workbench.api import Plugin
+
 with enaml.imports():
     from enaml.stdlib.message_box import question
     from .instrument_form_view import InstrumentFormDialog
@@ -47,6 +47,7 @@ from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
 from .instrument_form import InstrumentForm
 
 MODULE_PATH = os.path.dirname(__file__)
+
 
 class FileListUpdater(FileSystemEventHandler):
     """Simple `watchdog` handler used for auto-updating the profiles list
@@ -68,6 +69,7 @@ class FileListUpdater(FileSystemEventHandler):
         super(FileListUpdater, self).on_deleted(event)
         if isinstance(event, FileMovedEvent):
             self.handler()
+
 
 class InstrumentManager(Atom):
     """
@@ -93,7 +95,7 @@ class InstrumentManager(Atom):
     selected_instr_name = Unicode()
     selected_instr_form = Instance(InstrumentForm)
 
-    observer = Typed(Observer,())
+    observer = Typed(Observer, ())
     event_handler = Typed(FileListUpdater)
     watch = Typed(ObservedWatch)
 
@@ -124,8 +126,8 @@ class InstrumentManager(Atom):
         # sorted files only
         path = self.instr_folder
         instrs_filename = sorted(f for f in os.listdir(path)
-                           if (os.path.isfile(os.path.join(path, f))
-                           and f.endswith('.ini')))
+                                 if (os.path.isfile(os.path.join(path, f))
+                                     and f.endswith('.ini')))
         instrs = {}
         for instr_filename in instrs_filename:
             instr_name = self._normalise_name(instr_filename)
@@ -148,7 +150,7 @@ class InstrumentManager(Atom):
                 continue
 
             if char != '\0':
-                if char.isupper() and i!=0 :
+                if char.isupper() and i != 0:
                     if name[i-1].islower():
                         if name[i+1].islower():
                             aux += ' ' + char.lower()
@@ -165,6 +167,7 @@ class InstrumentManager(Atom):
                     else:
                         aux += char
         return aux
+
 
 class InstrumentManagerHandler(Atom):
     """Handler for the UI of an `InstrumentManager` instance
@@ -189,8 +192,8 @@ class InstrumentManagerHandler(Atom):
 
         """
         instr_form = InstrumentForm()
-        result = InstrumentFormDialog(model = instr_form,
-                                      mode = 'new').exec_()
+        result = InstrumentFormDialog(model=instr_form,
+                                      mode='new').exec_()
         manager = view.manager
         if result:
             path = os.path.abspath(manager.instr_folder)
@@ -210,8 +213,8 @@ class InstrumentManagerHandler(Atom):
         """
         manager = view.manager
         instr_form = manager.selected_instr_form
-        result = InstrumentFormDialog(model = instr_form,
-                                      mode = 'edit').exec_()
+        result = InstrumentFormDialog(model=instr_form,
+                                      mode='edit').exec_()
         if result:
             instr_file = manager.instrs[manager.selected_instr_name]
             path = os.path.abspath(manager.instr_folder)
@@ -229,13 +232,14 @@ class InstrumentManagerHandler(Atom):
         manager = view.manager
         message = cleandoc(u"""Are you sure want to delete this
                         instrument connection informations ?""")
-        result = question(parent = view, text = fill(message, 80),
-                title = 'Deletion confirmation' )
+        result = question(parent=view, text=fill(message, 80),
+                          title='Deletion confirmation')
         if result is not None and result.action == 'accept':
             instr_file = manager.instrs[manager.selected_instr_name]
             path = os.path.abspath(manager.instr_folder)
             fullpath = os.path.join(path, instr_file)
             os.remove(fullpath)
+
 
 def matching_instr_list(driver_key):
     """Return a list of instrument whose driver match the argument
