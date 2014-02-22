@@ -5,24 +5,48 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import List, Str, Subclass
+from atom.api import List, Str, Callable
 from enaml.workbench.api import Plugin
-from enaml.core.declarative import Declarative, d_
-from enaml.core.enamldef_meta import EnamlDefMeta
 
-
-class Preferences(Declarative):
-    """
-    """
-    saving_method = d_(Str())
-
-    loading_method = d_(Str())
-
-    auto_save = d_(List(Str()))
-
-    edit_view = d_(Subclass(EnamlDefMeta))
-
+from .preferences import Preferences
 
 class PrefPlugin(Plugin):
     """
+
     """
+
+    def start(self):
+        """
+        """
+        pass
+
+    def stop(self):
+        """
+        """
+        pass
+
+    def save_preferences(self, path=None):
+        """
+        """
+        pass
+
+    def load_preferences(self, path=None):
+        """
+        """
+        pass
+
+    def plugin_init_complete(self, plugin_id):
+        """
+        """
+        pass
+
+    def plugin_preferences(self, plugin_id):
+        """
+        """
+        # TODO
+        return {}
+
+    def update_plugin_preferences(self, plugin_id):
+        """
+        """
+        pass

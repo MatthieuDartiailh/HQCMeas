@@ -30,4 +30,6 @@ class HasPrefPlugin(Plugin):
     def stop(self):
         """
         """
-        pass
+        core = self.workbench.get_plugin('enaml.workbench.core')
+        core.invoke_command('hqc_meas.preferences.update_plugin_prefs',
+                            parameters={}, trigger=self)

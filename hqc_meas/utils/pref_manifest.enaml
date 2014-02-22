@@ -57,7 +57,8 @@ def load_preferences(event):
 def plugin_init_complete(event):
     """
     """
-    #needed to avoid overwriting loaded prefs for sync members
+    pref = event.workbench.get_plugin('hqc_meas.preferences')
+    return pref.plugin_ini_complete(event.parameters['plugin_id'])
 
 
 def get_plugin_preferences(event):
@@ -102,6 +103,9 @@ GET_PLUGIN_PREF_DESCRIPTION = \
 """ Return the preferences stored for a given plugin as a dict composed only
 of strings."""
 
+UPDATE_PLUGIN_PREF_DESCRIPTION = \
+""" Update the values stored as preferences using the given dictionnary. """
+
 
 enamldef PreferencesManifest(PluginManifest):
     """
@@ -129,3 +133,7 @@ enamldef PreferencesManifest(PluginManifest):
             id = 'hqc_meas.preferences.get_plugin_pref'
             description = GET_PLUGIN_PREF_DESCRIPTION
             handler = get_plugin_preferences
+        Command:
+            id = 'hqc_meas.preferences.update_plugin_pref'
+            description = UPDATE_PLUGIN_PREF_DESCRIPTION
+            handler = update_plugin_preferences

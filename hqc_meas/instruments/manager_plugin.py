@@ -9,9 +9,7 @@
 import os
 import logging
 from importlib import import_module
-from atom.api import (Callable, Str, Dict, List, Unicode, Typed, Subclass,
-                      ContainerList)
-from enaml.core.declarative import Declarative, d_
+from atom.api import (Str, Dict, List, Unicode, Typed, Subclass, Tuple)
 
 from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
@@ -22,34 +20,12 @@ from collections import defaultdict
 
 from ..enaml_util.pref_plugin import HasPrefPlugin
 from .drivers.driver_tools import BaseInstrument
-
-
-class InstrUser(Declarative):
-    """Extension to the 'instr_users' extensions point of the ManagerPlugin.
-
-    Attributes
-    ----------
-    release_method: str
-        Id of the command to call when the ManagerPlugin needs to get an
-        instrument profile back from its current user. It will pass a list
-        of profiles to release. It should return a bool indicating whether
-        or not the operation succeeded. The released_profiles command must
-        not be called by the release_method.
-
-    default_policy:
-        Does by default the user allows the manager to get the profile back
-        when needed.
-
-    """
-    release_method = d_(Callable())
-
-    default_policy = d_(Str('releasable'))
+from .instr_user import InstrUser
 
 
 USERS_POINT = u'hqc_meas.instr_manager.users'
 
 MODULE_PATH = os.path.dirname(__file__)
-
 
 
 def open_profile(profile_path):
@@ -64,7 +40,7 @@ def open_profile(profile_path):
     return ConfigObj(profile_path).dict()
 
 
-def save_profile(profile_path, profile_infos):
+def save_profile(directory, profile_name, profile_infos):
     """ Save a profile to a file
 
     Parameters
@@ -75,9 +51,10 @@ def save_profile(profile_path, profile_infos):
     profiles_infos : dict
         Dict containing the profiles infos
     """
+    path = os.path.join(directory, profile_name + '.ini')
     conf = ConfigObj()
     conf.update(profile_infos)
-    conf.write(profile_path)
+    conf.write(path)
 
 
 class InstrManagerPlugin(HasPrefPlugin):
@@ -91,7 +68,7 @@ class InstrManagerPlugin(HasPrefPlugin):
     # Drivers loading exception
     drivers_loading = List(Unicode()).tag(pref=True)
 
-    drivers_type = List()
+    driver_types = List()
 
     #Name: class
     drivers = List()
@@ -120,9 +97,13 @@ class InstrManagerPlugin(HasPrefPlugin):
         It should never be called by user code.
 
         """
+        super(InstrManagerPlugin, self).stop()
         self._unbind_observers()
         self._users.clear()
-        # TODO clear all ressources, save preferences
+        self._driver_types.clear()
+        self._drivers.clear()
+        self._profiles_map.clear()
+        self._used_profiles.clear()
 
     def driver_types_request(self, driver_types):
         """ Give access to the driver type implementation
@@ -137,7 +118,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         driver_types : dict
             The required driver types as a dict {name: class}
         """
-        return {key: val for key, val in self._drivers_types.iteritems()
+        return {key: val for key, val in self._driver_types.iteritems()
                 if key in driver_types}
 
     def drivers_request(self, drivers):
@@ -155,6 +136,26 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         return {key: val for key, val in self._drivers.iteritems()
                 if key in drivers}
+
+    def profile_path(self, profile):
+        """ Request the path of the file storing a profile
+
+        Beware this path should not be used to establish a during communication
+        with an instrument as it by-pass the manager securities.
+
+        Parameters
+        ----------
+        profile : str
+            Name of the profile for which the path to its file should be
+            returned.
+
+        Returns
+        -------
+        path : unicode
+            The absolute path to the file in which the profile is stored
+
+        """
+        return self._profiles_map[profile]
 
     def profiles_request(self, new_owner, profiles):
         """ Register the user of the specified profiles.
@@ -191,14 +192,14 @@ class InstrManagerPlugin(HasPrefPlugin):
                 to_release[decl.release_method].append(prof)
 
         if to_release:
-            core = workbench.get_plugin('enaml.workbench.core')
+            core = self.workbench.get_plugin('enaml.workbench.core')
             for meth, profs in to_release.iteritems():
                 res = core.invoke_command(meth, {'profiles': profs}, self)
                 if not res:
                     return False, {}
 
         # Now that we are sure that the profiles can be sent to the users,
-        # remove them from the available_profiles list register who is using
+        # remove them from the available_profiles list, register who is using
         # them,  and load them
         avail = self.available_profiles
         self.available_profiles = [prof for prof in avail
@@ -208,7 +209,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         self._used_profiles.update(used)
 
         mapping = self._profiles_map
-        profile_objects = {prof: load_profile(mapping[prof])
+        profile_objects = {prof: open_profile(mapping[prof])
                            for prof in profiles}
 
         return True, profile_objects
@@ -234,26 +235,50 @@ class InstrManagerPlugin(HasPrefPlugin):
         avail = list(self.available_profiles)
         self.available_profiles = avail + profiles
 
+    def matching_drivers(self, driver_types):
+        """ List the existing drivers whose type is in the specified list
+
+        Parameters
+        ----------
+        driver_types : list(str)
+            Names of the driver types for which matching drivers should be
+            returned
+
+        Returns
+        -------
+        drivers : list(str)
+            Names of the matching drivers
+
+        """
+        drivers = []
+        for d_type in driver_types:
+            drivs = [driv for driv, d_class in self._drivers.iteritems()
+                     if issubclass(d_class, d_type)]
+            drivers.extend(drivs)
+
+        return drivers
+
     def matching_profiles(self, drivers):
-        """ List the existing profile whose driver is in the specified list
+        """ List the existing profiles whose driver is in the specified list
 
         Parameters
         ----------
         drivers : list(str)
-            Names of the driver for which matching profiles should be returned
+            Names of the drivers for which matching profiles should be returned
 
         Returns
         -------
         profiles : list(str)
             Names of the matching profiles
-        """
-        profiles_dict = {}
-        for driver in drivers:
-            profs = {prof for prof, path in self._profiles_map.iteritems()
-                     if open_profile(path)['driver'] == driver}:
-            profiles_dict.update(profs)
 
-        return profile_dict
+        """
+        profiles = []
+        for driver in drivers:
+            profs = [prof for prof, path in self._profiles_map.iteritems()
+                     if open_profile(path)['driver'] == driver]
+            profiles.extend(profs)
+
+        return profiles
 
     #--- Private API ----------------------------------------------------------
     # Drivers types
@@ -286,7 +311,7 @@ class InstrManagerPlugin(HasPrefPlugin):
 
             for filename in filenames:
                 profile_name = self._normalise_name(filename)
-                prof_path = os.path.join(self.instr_folder, filename)
+                prof_path = os.path.join(path, filename)
                 # Beware redundant names are overwrited
                 profiles[profile_name] = prof_path
 
@@ -306,7 +331,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         modules.remove('__init__')
         modules.remove('driver_tools')
         for mod in modules[:]:
-            if mod in self.driver_loading:
+            if mod in self.drivers_loading:
                 modules.remove(mod)
 
         driver_types = {}
@@ -318,13 +343,13 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         # Remove packages which should not be explored
         for pack in driver_packages[:]:
-            if pack in self.driver_loading:
+            if pack in self.drivers_loading:
                 driver_packages.remove(pack)
 
         # Explore packages
         while driver_packages:
             pack = driver_packages.pop(0)
-            pack_path = os.path.join(path, os.path.join(pack.split('.'))
+            pack_path = os.path.join(path, os.path.join(pack.split('.')))
             if not os.path.isdir(pack_path):
                 log = logging.getLogger(__name__)
                 mess = '{} is not a valid directory.({})'.format(pack,
@@ -333,11 +358,11 @@ class InstrManagerPlugin(HasPrefPlugin):
                 failed[pack] = mess
                 continue
 
-            modules = sorted(rel + '.' + m[:-3] for m in os.listdir(pack_path)
+            modules = sorted(pack + '.' + m[:-3] for m in os.listdir(pack_path)
                              if (os.path.isfile(os.path.join(path, m))
                                  and m.endswith('.py')))
             try:
-                modules.removes(rel + '__init__')
+                modules.removes(pack + '.__init__')
             except ValueError:
                 log = logging.getLogger(__name__)
                 mess = cleandoc('''{} is not a valid Python package (miss
@@ -348,7 +373,7 @@ class InstrManagerPlugin(HasPrefPlugin):
 
             # Remove modules which shouldnjot be imported
             for mod in modules[:]:
-                if mod in self.driver_loading:
+                if mod in self.drivers_loading:
                     modules.remove(mod)
 
             self._explore_modules(modules, driver_types, driver_packages,
@@ -356,11 +381,11 @@ class InstrManagerPlugin(HasPrefPlugin):
 
             # Remove packages which should not be explored
             for pack in driver_packages[:]:
-                if pack in self.driver_loading:
+                if pack in self.drivers_loading:
                     driver_packages.remove(pack)
 
         self._drivers = drivers
-        self._drivers_types = driver_types
+        self._driver_types = driver_types
 
         # TODO do something with failed
 
@@ -397,7 +422,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 continue
 
             if hasattr(m, 'DRIVER_TYPES'):
-                types.update(m.DRIVERS_TYPES)
+                types.update(m.DRIVER_TYPES)
 
             if hasattr(m, 'DRIVER_PACKAGES'):
                 if prefix is not None:
@@ -472,7 +497,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         point = workbench.get_extension_point(USERS_POINT)
         point.observe('extensions', self._on_users_updated)
 
-        for folder in self.profiles_folder:
+        for folder in self.profiles_folders:
             handler = _FileListUpdater(self._refresh_profiles_map)
             self._observer.schedule(handler, folder, recursive=True)
 

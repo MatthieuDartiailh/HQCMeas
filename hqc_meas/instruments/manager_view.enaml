@@ -1,0 +1,154 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : manager_view.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from atom.api import (Atom, Unicode, Instance)
+
+import os
+from configobj import ConfigObj
+from textwrap import fill
+from inspect import cleandoc
+
+from enaml.widgets.api import (Window, Container, PushButton, Form,
+                               ObjectCombo, Label, Field, Notebook, Page)
+from enaml.core.api import Conditional
+from enaml.layout.api import hbox, vbox, spacer
+from enaml.stdlib.mapped_view import MappedView
+from enaml.stdlib.message_box import question
+
+from hqc_meas.enaml_util.qt_list_str_widget import QtListStrWidget
+from .manager_plugin import InstrManagerPlugin, open_profile, save_profile
+from .profile_form import ProfileForm
+from .profile_edition import ProfileDialog
+
+
+class _EditorModel(Atom):
+    """
+
+
+    Attributes
+    ----------
+    selected_profile : str
+        Name of the selected instrumen profile
+    form : instance(`InstrumentForm`)
+        `InstrumentForm` instance associated to the selected profile
+
+    """
+    manager = Typed(InstrManagerPlugin)
+    selected_profile = Unicode()
+    form = Instance(InstrumentForm)
+
+    def add_profile(self, view):
+        """
+        Open a dialog to create a new profile and save it if the user close the
+        dialog by cicking the 'OK' button.
+
+        """
+        form = ProfileForm()
+        dial = InstrumentFormDialog(plugin=self.plugin, model=instr_form,
+                                    mode='new')
+        result = dial.exec_()
+        if result:
+            directory = self.plugin.profiles_folders[0]
+            save_profile(path, instr_form.name, profile.dict())
+
+    def edit_profile(self, view):
+        """
+        Open a dialog to edit a profile and save the modifications if the user
+        close the dialog by cicking the 'OK' button.
+
+        """
+        form = self.form
+        result = InstrumentFormDialog(model=instr_form,
+                                      mode='edit').exec_()
+        if result:
+            path = self.manager.profile_path(self.selected_profile)
+            profile = open_profile(path)
+            profile.update(form.dict())
+            folder, filename = os.path.split(path)
+            save_profile(folder, filename.split('.')[0], profile)
+
+    def del_profile(self, view):
+        """
+        Open confirmation dialog when the user asks to delete a profile
+        """
+        manager = view.manager
+        message = cleandoc(u"""Are you sure want to delete this
+                        instrument connection informations ?""")
+        result = question(parent=view, text=fill(message, 80),
+                          title='Deletion confirmation')
+        if result is not None and result.action == 'accept':
+            path = self.manager.profile_path(self.selected_profile)
+            os.remove(path)
+
+    #--- Private API ----------------------------------------------------------
+
+    def _observe_selected_profile(self, change):
+        """Create a form for the selected instrument
+        """
+        fullpath = self.manager.profile_path(change['value'])
+        profile_infos = open_profile(fullpath)
+        self.form = InstrumentForm(**profile_infos)
+
+
+def _layout(list_view, instr_form, *buttons):
+    b = list(buttons)
+    b.append(spacer)
+    if instr_form:
+        return hbox(list_view, instr_form[0], vbox(*b))
+    else:
+        return hbox(list_view, vbox(*b))
+
+
+enamldef InstrumentManagerView(Window): instr_manager_view:
+    """
+    """
+    attr manager
+    attr _internal =
+    title = 'Instrument manager'
+
+    Notebook:
+        tabs_closable = False
+        tabs_movable = False
+        Page:
+            title = 'Profile use'
+            Container:
+                # TODO
+                pass
+
+        Page:
+            title = 'Profile edition'
+            Container:
+                hug_height = 'strong'
+                constraints << [_layout(list_view, instr_form.items,
+                                       add, edit, delete)]
+                QtListStrWidget: list_view:
+                    hug_width = 'medium'
+                    hug_height = 'medium'
+                    items << sorted(manager.profiles)
+                    selected_item >> _internal.selected_profile
+                Conditional: instr_form:
+                    condition << bool(_internal.selected_profile)
+                    InstrumentFormView:
+                        hug_width = 'weak'
+                        hug_height = 'medium'
+                        mode = 'static'
+                        model << _internal.form
+                PushButton: add:
+                    text = 'Add'
+                    clicked :: _internal.add_profile(instr_manager_view)
+                PushButton: edit:
+                    text = 'Edit'
+                    clicked :: _internal.edit_profile(instr_manager_view)
+                PushButton: delete:
+                    text = 'Delete'
+                    clicked :: _internal.del_profile(instr_manager_view)
+        Page:
+            title = 'Profile directories'
+            # TODO
+
+        Page:
+            title = 'Driver loading'
+            # TODO should also appear in preferences
