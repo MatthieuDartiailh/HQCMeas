@@ -7,6 +7,7 @@
 import contextlib
 from atom.api import (Atom, Str, Dict, Instance, Bool, Tuple)
 from enaml.workbench.api import Plugin
+from .state import State
 
 
 class _StateHolder(Atom):
@@ -73,7 +74,8 @@ class StatePlugin(Plugin):
         self._states.clear()
 
     def get_state(self, state_id):
-        """
+        """ Return the state associated to the state id
+
         """
         return self._states[state_id]
 
@@ -95,13 +97,12 @@ class StatePlugin(Plugin):
         if not extensions:
             self._notify_state_death(self._states.keys())
             self._states.clear()
-            self._command_extensions.clear()
             return
 
         # Notify the death of the state whose extensions have been removed
         dead_extensions = [extension for extension in self._state_extensions
                            if extension not in extensions]
-        self._notify_dead_states(dead_extensions)
+        self._notify_state_death(dead_extensions)
 
         # Keep track of which extension declared which state (keep triplet :
         # decalration, run-time class, state object)
