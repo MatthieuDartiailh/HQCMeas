@@ -1,0 +1,101 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : manager_manifest.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
+from enaml.workbench.core.api import Command
+from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
+
+from ..utils.pref_plugin import Preferences
+from ..utils.state_plugin import State
+
+
+def manager_plugin_factory():
+    """ Factory funcion for the instr manager plugin.
+
+    """
+    from .manager_plugin import TaskManagerPlugin
+    return TaskManagerPlugin()
+
+
+def show_manager(event):
+    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    from .manager_view import TaskManagerView
+    TaskManagerView(manager=manager).show()
+
+
+def tasks_request(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.drivers_request(**event.parameters)
+
+
+INSTR_USERS_DESCRIPTION = \
+""" Extensions to this point can be used to provide the id of a plugin
+which will use instruments. Plugins which do not provides an extension to this
+point won't be allowed to use the command defined by the manager.Additionally
+the default policy concerning the release of instrument can be provided, as
+well as the name of the method to call when the manager need to get an
+instrument back."""
+
+SHOW_MANAGER_DESCRIPTION = \
+""" Show the instrument manager window."""
+
+
+TASK_REQUEST_DESCRIPTION = \
+""" Request the classes associated to a list of tasks. """
+
+MANAGER_STATE_DESCRIPTION = \
+""" The tasks manager gives access to the known tasks."""
+
+
+enamldef InstrManagerManifest(PluginManifest):
+    """
+    """
+    id = 'hqc_meas.task_manager'
+    factory = manager_plugin_factory
+    Extension:
+        id = 'prefs'
+        point = 'hqc_meas.preferences.pref_plugins'
+        Preferences:
+            saving_method = 'pref_from_members'
+            loading_method = 'members_from_preferences'
+            auto_save = []
+    Extension:
+        id = 'state"
+        point = 'hqc_meas.state.states
+        State:
+            id = 'hqc_meas.states.task_manager'
+            description = MANAGER_STATE_DESCRIPTION
+            sync_members = ['tasks']
+    Extension:
+        id = 'commands'
+        point = 'enaml.workbench.core.commands'
+        Command:
+            id = 'hqc_meas.instr_manager.show_manager'
+            description = SHOW_MANAGER_DESCRIPTION
+            handler = show_manager
+        Command:
+            id = 'hqc_meas.instr_manager.task_request'
+            description = TASK_REQUEST_DESCRIPTION
+            handler = tasks_request
+    Extension:
+        id = 'menu'
+        point = 'enaml.workbench.ui.actions'
+        MenuItem:
+            path = '/tasks'
+            label = 'Tasks'
+            ItemGroup:
+                id = 'user'
+        ActionItem:
+            path = '/tasks/show_manager'
+            label = 'Manager'
+            command = 'hqc_meas.task_manager.show_manager'

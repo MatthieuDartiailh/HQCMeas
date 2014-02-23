@@ -10,7 +10,6 @@ from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
 from enaml.workbench.core.api import Command
 from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 
-from .manager_view import InstrManagerView
 from ..utils.pref_plugin import Preferences
 from ..utils.state_plugin import State
 
@@ -19,8 +18,8 @@ def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
 
     """
-    from .manager_plugin import ManagerPlugin
-    return ManagerPlugin()
+    from .manager_plugin import InstrManagerPlugin
+    return InstrManagerPlugin()
 
 
 def show_manager(event):
@@ -28,6 +27,7 @@ def show_manager(event):
 
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    from .manager_view import InstrManagerView
     InstrManagerView(manager=manager).show()
 
 
@@ -54,7 +54,7 @@ def driver_type_request(event):
     return manager.driver_types_request(**event.parameters)
 
 
-def driver_type_request(event):
+def drivers_request(event):
     """ Handler for the 'hqc_meas.instr_manager.drivers_request' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
@@ -96,7 +96,7 @@ MATCHING_PROFILES_DESCRIPTION = \
 DRIVER_TYPES_REQUEST_DESCRIPTION = \
 """ Request the classes associated to a list of driver types. """
 
-PROFILES_REQUEST_DESCRIPTION = \
+DRIVERS_REQUEST_DESCRIPTION = \
 """ Request the classes associated to a list of drivers. """
 
 PROFILES_REQUEST_DESCRIPTION = \
@@ -109,10 +109,9 @@ PROFILES_RELEASED_DESCRIPTION = \
 caller. """
 
 MANAGER_STATE_DESCRIPTION = \
-""" The instrument manager gives access to the known drivers
-('drivers', dict(name: class)), profiles ('all_profiles', dict(name: path))
-defined for the current session, and to the currently available profiles
-(available_profiles', dict(name: path)). """
+""" The instrument manager gives access to the known drivers ('drivers'),
+profiles ('all_profiles') defined for the current session, and to the
+currently available profiles available_profiles'). """
 
 
 enamldef InstrManagerManifest(PluginManifest):

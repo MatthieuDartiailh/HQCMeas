@@ -3,9 +3,9 @@
 """
 
 from atom.api import (Atom, List, Unicode)
-# BaseLoopTask, , InstrumentTask
-from ...tasks import (BaseTask,ComplexTask)
+from ...tasks import (BaseTask, ComplexTask)
 from ...atom_util import Subclass
+
 
 class AbstractTaskFilter(Atom):
     """
@@ -35,7 +35,7 @@ class AbstractTaskFilter(Atom):
                 continue
 
             if char != '\0':
-                if char.isupper() and i!=0 :
+                if char.isupper() and i != 0:
                     if name[i-1].islower():
                         if name[i+1].islower():
                             aux += ' ' + char.lower()
@@ -52,6 +52,7 @@ class AbstractTaskFilter(Atom):
                     else:
                         aux += char
         return aux
+
 
 class AllTaskFilter(AbstractTaskFilter):
     """
@@ -71,6 +72,7 @@ class AllTaskFilter(AbstractTaskFilter):
 
         return tasks
 
+
 class PyTaskFilter(AbstractTaskFilter):
     """
     """
@@ -84,6 +86,7 @@ class PyTaskFilter(AbstractTaskFilter):
             tasks[task_name] = py_task
 
         return tasks
+
 
 class TemplateTaskFilter(AbstractTaskFilter):
     """
@@ -99,6 +102,7 @@ class TemplateTaskFilter(AbstractTaskFilter):
 
         return tasks
 
+
 class SimpleTaskFilter(AbstractTaskFilter):
     """
     """
@@ -113,6 +117,7 @@ class SimpleTaskFilter(AbstractTaskFilter):
                 tasks[task_name] = py_task
 
         return tasks
+
 
 class LoopTaskFilter(AbstractTaskFilter):
     """
@@ -143,6 +148,7 @@ class LoopableTaskFilter(AbstractTaskFilter):
                 tasks[task_name] = py_task
 
         return tasks
+
 
 class InstrumentTaskFilter(AbstractTaskFilter):
     """

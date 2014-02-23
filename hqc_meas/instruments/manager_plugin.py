@@ -62,8 +62,8 @@ class InstrManagerPlugin(HasPrefPlugin):
     """
 
     profiles_folders = List(Unicode(),
-                            [(os.path.join(MODULE_PATH,
-                                           'profiles'))]).tag(pref=True)
+                            [os.path.join(MODULE_PATH,
+                                           'profiles')]).tag(pref=True)
 
     # Drivers loading exception
     drivers_loading = List(Unicode()).tag(pref=True)
@@ -371,7 +371,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 failed[pack] = mess
                 continue
 
-            # Remove modules which shouldnjot be imported
+            # Remove modules which should not be imported
             for mod in modules[:]:
                 if mod in self.drivers_loading:
                     modules.remove(mod)
@@ -397,7 +397,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         Parameters
         ----------
         modules : list
-            The list of modules of explore
+            The list of modules to explore
 
         types : dict
             A dict in which discovered types will be stored.
