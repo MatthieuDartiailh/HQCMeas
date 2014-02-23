@@ -106,12 +106,12 @@ of strings."""
 UPDATE_PLUGIN_PREF_DESCRIPTION = \
 """ Update the values stored as preferences using the given dictionnary. """
 
+OPEN_EDITOR_DESCRIPTION = \
+""" Open the preference editor dialog. """
 
 enamldef PreferencesManifest(PluginManifest):
     """
     """
-    attr default_folder: str
-
     id = 'hqc_meas.preferences'
     factory = preference_plugin_factory
 
@@ -137,3 +137,43 @@ enamldef PreferencesManifest(PluginManifest):
             id = 'hqc_meas.preferences.update_plugin_pref'
             description = UPDATE_PLUGIN_PREF_DESCRIPTION
             handler = update_plugin_preferences
+        Command:
+            id = 'hqc_meas.preferences.open_editor'
+            description = OPEN_EDITOR_DESCRIPTION
+            handler = open_editor
+    Extension:
+        id = 'menus'
+        point = 'enaml.workbench.ui.actions'
+        MenuItem:
+            path = '/prefs'
+            label = 'Preferences'
+            ItemGroup:
+                id = 'pref'
+        ActionItem:
+            path = '/prefs/save'
+            label = 'Save'
+            group = 'pref'
+            command = 'hqc_meas.preferences.save'
+            parameters = {'ask_user' = True}
+        ActionItem:
+            path = '/prefs/load'
+            label = 'Load'
+            group = 'pref'
+            command = 'hqc_meas.preferences.load'
+            parameters = {'ask_user' = True}
+        ActionItem:
+            path = '/prefs/save_default'
+            label = 'Save default'
+            group = 'pref'
+            command = 'hqc_meas.preferences.save'
+        ActionItem:
+            path = '/prefs/load_default'
+            label = 'Load default'
+            group = 'pref'
+            command = 'hqc_meas.preferences.load'
+        ActionItem:
+            path = '/prefs/edit'
+            label = 'Edit'
+            command = 'hqc_meas.preferences.open_editor'
+
+

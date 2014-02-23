@@ -5,8 +5,8 @@
 # license : MIT license
 #==============================================================================
 import contextlib
-from atom.api import (Atom, Str, Dict, Instance, Bool, Tuple)
-from enaml.workbench.api import Plugin
+from atom.api import (Atom, Str, Dict, Instance, Bool, Tuple, Typed)
+from enaml.workbench.api import Plugin, Extension
 from .state import State
 
 
@@ -59,6 +59,7 @@ class StatePlugin(Plugin):
 
         This method is called by the framework at the appropriate time. It
         should never be called by user code.
+
         """
         self._states = {}
         self._bind_observers()
@@ -83,7 +84,7 @@ class StatePlugin(Plugin):
 
     _states = Dict(Str(), Instance(_StateHolder))
 
-    _state_extensions = Dict(value=Tuple())
+    _state_extensions = Dict(Typed(Extension), Tuple())
 
     def _refresh_states(self):
         """ Refresh the list of states contributed by extensions.
@@ -97,6 +98,7 @@ class StatePlugin(Plugin):
         if not extensions:
             self._notify_state_death(self._states.keys())
             self._states.clear()
+            self._state_extensions.clear()
             return
 
         # Notify the death of the state whose extensions have been removed
@@ -105,7 +107,7 @@ class StatePlugin(Plugin):
         self._notify_state_death(dead_extensions)
 
         # Keep track of which extension declared which state (keep triplet :
-        # decalration, run-time class, state object)
+        # declaration, run-time class, state object)
         new_extensions = dict()
         old_extensions = self._state_extensions
         for extension in extensions:
