@@ -9,7 +9,7 @@
 import os
 import logging
 from importlib import import_module
-from atom.api import (Str, Dict, List, Unicode, Typed, Subclass)
+from atom.api import (Str, Dict, List, Unicode, Typed, Subclass, Tuple)
 
 from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
@@ -18,12 +18,19 @@ from inspect import cleandoc
 
 from ..enaml_util.pref_plugin import HasPrefPlugin
 from ..tasks.base_tasks import BaseTask
-from .filters import AbstractTaskFilter
+from .filters import AbstractTaskFilter, TASK_FILTERS
+from .config import SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask
 
 
 MODULE_PATH = os.path.dirname(__file__)
 
 
+# XXXX Filters and Config being less prone to frequent udpates, no dynamic
+# introspection is performed and the old system using variables defined in
+# __init__ is kept. However as this might change in the future all the logic
+# will be centralized in the manager just like for tasks, and all the variables
+# will be defined to ease a future transition (save exceptions) only the
+# refresh_methods will be dummies.
 class TaskManagerPlugin(HasPrefPlugin):
     """
     """
@@ -42,7 +49,7 @@ class TaskManagerPlugin(HasPrefPlugin):
     tasks = List()
 
     # List of the filters
-    filters = List()
+    filters = List(Str(), TASK_FILTERS.keys())
 
     def start(self):
         """ Start the plugin life-cycle.
@@ -52,6 +59,9 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         super(TaskManagerPlugin, self).start()
+        self._refresh_template_tasks()
+        self._refresh_tasks()
+        self._refresh_filters()
         self._bind_observers()
 
     def stop(self):
@@ -64,9 +74,11 @@ class TaskManagerPlugin(HasPrefPlugin):
         super(TaskManagerPlugin, self).stop()
         self._unbind_observers()
         self._tasks.clear()
+        self._template_tasks.clear()
+        self._filters.clear()
 
     def tasks_request(self, tasks):
-        """ Give access to a task class.
+        """ Give access to task classes.
 
         NB : This function won't work with template
 
@@ -83,6 +95,40 @@ class TaskManagerPlugin(HasPrefPlugin):
         return {key: val for key, val in self._py_tasks.iteritems()
                 if key in tasks}
 
+    def filter_tasks(self, filter_name):
+        """ Filter the known using the specified filter.
+
+        Parameters
+        ----------
+        filter_name : str
+            Name of the filter to use
+
+        Returns
+        -------
+        tasks : list(str)
+            Tasks selected by the filter
+
+        """
+        # TODO implement
+        pass
+
+    def config_request(self, task_name):
+        """ Access the proper config for a task
+
+        Parameters
+        ----------
+        task_name : str
+            Name of the task for which a config is required
+
+        Returns
+        -------
+        config : tuple
+            Tuple containing the config object requested, and its visualisation
+
+        """
+        # TODO implement
+        pass
+
     #--- Private API ----------------------------------------------------------
     # Tasks implemented in Python
     _py_tasks = Dict(Str(), Subclass(BaseTask))
@@ -91,7 +137,10 @@ class TaskManagerPlugin(HasPrefPlugin):
     _template_tasks = Dict(Str(), Unicode())
 
     # Task filters
-    _filters = Dict(Str(), Subclass(AbstractTaskFilter))
+    _filters = Dict(Str(), Subclass(AbstractTaskFilter), TASK_FILTERS)
+
+    # Task config dict for python tasks
+    _configs = Dict(Subclass(BaseTask), Tuple())
 
     # Watchdog observer
     _observer = Typed(Observer, ())
@@ -116,7 +165,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         self.tasks = list(self._py_tasks.keys) + list(templates.keys())
 
     def _refresh_tasks(self):
-        """ Refresh the known driver types and drivers.
+        """ Refresh the known tasks.
 
         """
         path = os.path.join(MODULE_PATH, '../tasks')
@@ -180,6 +229,22 @@ class TaskManagerPlugin(HasPrefPlugin):
         self.tasks = list(tasks.keys) + list(self._template_tasks.keys())
 
         # TODO do something with failed
+
+    def _refresh_filters(self):
+        """ Place holder for a future filter discovery function
+
+        """
+        self._filters = TASK_FILTERS
+
+    def _refresh_config(self):
+        """ Place holder for a future config discovery function
+
+        """
+        mapping = {}
+        for key, val in SPECIAL_CONFIG:
+            mapping[key] = (val, CONFIG_MAP_VIEW[val])
+
+        self._configs = mapping
 
     def _explore_modules(self, modules, tasks, packages, failed,
                          prefix=None):

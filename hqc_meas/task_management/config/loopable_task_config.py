@@ -5,4 +5,4 @@ for the loopable task. It has to be done that way to avoid circular import"""
 from ...tasks import SimpleTask
 from .base_task_config import PyConfigTask
 
-loopable_task_config = {SimpleTask : PyConfigTask}
+loopable_task_config = {SimpleTask: PyConfigTask}

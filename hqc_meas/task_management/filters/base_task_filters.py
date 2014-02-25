@@ -3,8 +3,13 @@
 """
 
 from atom.api import (Atom, List, Unicode)
-from ...tasks import (BaseTask, ComplexTask)
+from ...tasks.api import (BaseTask, ComplexTask, BaseLoopTask, InstrumentTask)
 from ...atom_util import Subclass
+
+# TODO reimplement all filters as functions, normalise name has no meaning
+# anymore as the arguments will be a dict of py_tasks, and one of templates.
+# TODO define the tasks api exporting what will be considered to be the core
+# tasks (ie always present no matter the install)
 
 
 class AbstractTaskFilter(Atom):
@@ -127,7 +132,7 @@ class LoopTaskFilter(AbstractTaskFilter):
         """
         tasks = {}
         for py_task in self.py_tasks:
-            if issubclass(py_task, BaseLoopTask) :
+            if issubclass(py_task, BaseLoopTask):
                 task_name = self.normalise_name(py_task.__name__)
                 tasks[task_name] = py_task
 

@@ -1,10 +1,12 @@
-from enaml.widgets.api import (Container, MultilineField, Field, GroupBox, Form,
-                            Label)
+from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
+                               Form, Label)
 from enaml.core.api import Conditional
+
 
 enamldef NoneView(Container):
     attr model
     attr loop
+
 
 enamldef SimpleView(Container):
     attr model
@@ -24,13 +26,15 @@ enamldef SimpleView(Container):
             read_only = True
             text << model.task_doc
 
+
+# TODO still using traits .....
 def edit_template(template_path):
         """
         """
         model = info.object
         with open(model.template_path) as template_file:
             model.template_content = template_file.read()
-        ui = model.edit_traits(view = 'edit_view', parent = info.ui.control)
+        ui = model.edit_traits(view='edit_view', parent=info.ui.control)
         if ui.result:
             with open(model.template_path, 'w') as template_file:
                 template_file.write(model.template_content)
@@ -38,9 +42,8 @@ def edit_template(template_path):
         doc_list = ConfigObj(model.template_path).initial_comment
         doc = ''
         for line in doc_list:
-            doc += line.replace('#','')
+            doc += line.replace('#', '')
         model.template_doc = doc
 
 enamldef IniView(Container):
     attr model
-    

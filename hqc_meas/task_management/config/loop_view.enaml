@@ -1,5 +1,5 @@
-from enaml.widgets.api import (Container, MultilineField, Field, GroupBox, Form,
-                            Label)
+from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
+                               Form, Label)
 from enaml.core.api import Conditional
 from enaml.stdlib.mapped_view import MappedView
 from enaml.layout.api import hbox
@@ -31,5 +31,5 @@ enamldef LoopView(Container): view:
         Container: map:
             MappedView:
                 model << view.model.task_config
-                typemap = {type(None) : NoneView, PyConfigTask : SimpleView}
-                kwargs = {'loop' : True}
+                typemap = {type(None): NoneView, PyConfigTask: SimpleView}
+                kwargs = {'loop': True}
