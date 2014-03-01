@@ -1,24 +1,75 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : build_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from atom.api import (Atom, Instance, Str, observe, Typed, Bool)
+from enaml.core.api import Include
+from enaml.core.object import Object
 from enaml.layout.api import hbox, spacer, vbox
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
-                                Label, MultilineField)
-from enaml.stdlib.mapped_view import MappedView
-from configobj import ConfigObj
+                               Label, MultilineField)
 
-from .config import CONFIG_MAP_VIEW
-from .manager_view import TaskSelector
+from .browsing import TaskSelector
+from .manager_plugin import TaskManagerPlugin
+from .config import AbstractConfigTask
 
-enamldef BuilderView(Dialog): dial:
-    attr model
+
+class _TaskBuilderModel(Atom):
+    """ Simple model for the TaskBuilder dialog.
+
+    """
+    # Task manager.
+    manager = Typed(TaskManagerPlugin)
+
+    # Name of the currently selected task.
+    task_name = Str()
+
+    # Currently in use tsk config.
+    task_config = Instance(AbstractConfigTask)
+    config_view = Instance(Object)
+
+    # Bool indicating whether or not the task can be built.
+    ok_ready = Bool()
+
+    def _observe_task_name(self, change):
+        """ Observer requesting the appropriate config for a task.
+
+        """
+        self.ok_ready = False
+        config, view = self.manager.config_request(change['value'])
+        self.task_config = config
+        self.config_view = view(model=config, manager=self.manager)
+
+    @observe('task_config.config_ready')
+    def _config_complete(self, change):
+        """ Observe the config to notify the ui that config is ready.
+
+        """
+        self.ok_ready = change['value']
+
+enamldef TaskBuilder(Dialog): dial:
+    """ Simple Dialog to create a task.
+
+    """
+    attr manager
+    attr model = _TaskBuilderModel(manager=manager)
     title = 'Select the task you want to add'
+
     Container:
-        constraints = [hbox(selector, map, vbox(ok, cancel, spacer))]
+        constraints << [hbox(selector,
+                             *tuple([*conf.objects] + [vbox(ok,
+                                                            cancel,
+                                                            spacer)]))]
         TaskSelector: selector:
             hug_width = 'strong'
-            model << dial.model.task_manager
-        Container: map:
-            MappedView:
-                model << dial.model.task_config
-                typemap = CONFIG_MAP_VIEW
+            manager << dial.manager
+            selected_task >> model.task_name
+        Include: conf:
+            objects  << [model.config_view]
         PushButton: ok:
             text = 'Ok'
             enabled << model.ok_ready
@@ -29,38 +80,35 @@ enamldef BuilderView(Dialog): dial:
             clicked ::
                 dial.reject()
 
-def get_template_doc(task_desc):
-    if task_desc:
-        template_path = task_desc['template_path']
-        doc_list = [com[1:].strip() 
-                    for com in ConfigObj(template_path).initial_comment]
-        return ' '.join(doc_list)
-    else:
-        return ''
 
 enamldef TemplateSelectorView(Dialog): dial:
-    attr model
+    """ Simple dialog to select a template to build.
+
+    """
+    attr manager
     attr path
     Container:
-        constraints = [hbox(selector, 
+        constraints = [hbox(selector,
                             vbox(name, doc),
                             vbox(ok, cancel, spacer))]
         TaskSelector: selector:
             display_filters = False
+            selected_filter = 'Template'
             hug_width = 'strong'
             hug_height = 'ignore'
-            model << dial.model
+            manager << dial.manager
         Label: name:
-            text << model.selected_task_name
+            text << manager.selected_task
             text ::
-                doc.text = get_template_doc(model.task)
+                new_path, _, new_doc = self.manager.request_task(text)
+                path = new_path
+                doc.text = new_doc
         MultilineField: doc:
             read_only = True
         PushButton: ok:
             text = 'Ok'
             enabled << bool(name.text)
             clicked ::
-                dial.path = model.task['template_path']
                 dial.accept()
         PushButton: cancel:
             text = 'Cancel'

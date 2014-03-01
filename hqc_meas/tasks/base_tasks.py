@@ -102,7 +102,7 @@ class BaseTask(Atom):
         """
         """
         return self.__class__.__name__
-        
+
     def _default_process_(self):
         """
         """
@@ -127,7 +127,7 @@ class BaseTask(Atom):
                 for entry in added:
                     self.write_in_database(entry,
                                            self.task_database_entries[entry])
-                                           
+
     def _list_database_entries(self):
         """
         """
@@ -200,10 +200,10 @@ class SimpleTask(BaseTask):
             value = parameters[name]
             converted = member_from_str(member, value)
             setattr(self, name, converted)
-            
-    def make_parallel(self, pool, switch = ''):            
-        """This method should be called in __init__ when there is no need to 
-        wait for the process method to return to start the next task,ie the 
+
+    def make_parallel(self, pool, switch = ''):
+        """This method should be called in __init__ when there is no need to
+        wait for the process method to return to start the next task,ie the
         process method decorated don't use any data succeptible to be corrupted
         by the next task.
         """
@@ -213,7 +213,7 @@ class SimpleTask(BaseTask):
         if switch:
             self.observe('switch', self._redefine_process_)
         self._redefine_process_()
-        
+
     def make_wait(self, wait = [], no_wait = []):
         """This method should be be called in __init__ when the process method
         need to access data in the database or need to be sure that physical
@@ -222,8 +222,8 @@ class SimpleTask(BaseTask):
         _wait = self._wait
         _wait['wait'] = wait
         _wait['no_wait'] = no_wait
-        self._redefine_process_()        
-        
+        self._redefine_process_()
+
     def _redefine_process_(self, change = None):
         """
         """
@@ -233,15 +233,15 @@ class SimpleTask(BaseTask):
         parallel = self._parallel
         if parallel['activated'] and parallel['pool']:
             process = self._make_parallel_process_(process, parallel['pool'])
-            
+
         wait = self._wait
         if 'wait' in wait and 'no_wait' in wait:
             process = self._make_wait_process_(process,
                                                wait['wait'],
                                                wait['no_wait'])
-            
+
         self.process_ = make_stoppable(process)
-        
+
     @staticmethod
     def _make_parallel_process_(process, pool):
         """
@@ -264,57 +264,57 @@ class SimpleTask(BaseTask):
 
         wrapper.__name__ = process.__name__
         wrapper.__doc__ = process.__doc__
-        return wrapper        
-        
+        return wrapper
+
     @staticmethod
     def _make_wait_process_(process, wait, no_wait):
         """
         """
         if wait:
             def wrapper(*args, **kwargs):
-    
+
                 obj = args[0]
                 all_threads = obj.task_database.get_value('root', 'threads')
-                
+
                 threads = chain([all_threads.get(w, []) for w in wait])
                 for thread in threads:
                     thread.join()
                 all_threads.update({w : [] for w in wait if w in all_threads})
-                    
+
                 obj.task_database.set_value('root', 'threads', all_threads)
                 return process(*args, **kwargs)
         elif no_wait:
             def wrapper(*args, **kwargs):
-    
+
                 obj = args[0]
                 all_threads = obj.task_database.get_value('root', 'threads')
-                
+
                 pools = [k for k in all_threads if k not in no_wait]
                 threads = chain([all_threads[p] for p in pools])
                 for thread in threads:
                     thread.join()
                 all_threads.update({p : [] for p in pools})
-                    
+
                 obj.task_database.set_value('root', 'threads', all_threads)
                 return process(*args, **kwargs)
         else:
             def wrapper(*args, **kwargs):
-    
+
                 obj = args[0]
                 all_threads = obj.task_database.get_value('root', 'threads')
-                
+
                 threads = chain(all_threads.values())
                 for thread in threads:
                     thread.join()
                 all_threads.update({w : [] for w in all_threads})
-                    
+
                 obj.task_database.set_value('root', 'threads', all_threads)
-                return process(*args, **kwargs)            
+                return process(*args, **kwargs)
 
         wrapper.__name__ = process.__name__
         wrapper.__doc__ = process.__doc__
 
-        return wrapper    
+        return wrapper
 
 class ComplexTask(BaseTask):
     """Task composed of several subtasks.
@@ -327,7 +327,7 @@ class ComplexTask(BaseTask):
         self.observe('task_name', self._update_paths)
         self.observe('task_path', self._update_paths)
         self.observe('task_depth', self._update_paths)
-        
+
     @make_stoppable
     def process(self):
         """
@@ -468,26 +468,26 @@ class ComplexTask(BaseTask):
             if meta and 'pref' in meta :
                 if not parameters.has_key(name):
                     continue
-    
+
                 # member_from_str handle containers
                 value = parameters[name]
                 validated = member_from_str(member, value)
-    
+
                 setattr(self, name, validated)
 
             elif meta and 'child' in meta:
                 if not parameters.has_key(name):
                     continue
-    
+
                 value = parameters[name]
-    
+
                 if isinstance(member, ContainerList):
                     validated = value
                 else:
                     validated = value[0]
-    
+
                 setattr(self, name, validated)
-                
+
     def walk(self, members = [], callables = {}):
         """
         """
@@ -497,9 +497,9 @@ class ComplexTask(BaseTask):
                 answer.append(self._answer(task, members, callables))
             else:
                 answer.append(task.walk(members, callables))
-            
+
         return answer
-    
+
     @staticmethod
     def _answer(obj, members, callables):
         """
@@ -528,14 +528,14 @@ class ComplexTask(BaseTask):
                     if 'items' in change:
                         for child in change['items']:
                             self._child_added(child)
-                        
+
                 elif op in ('__delitem__', 'remove', 'pop'):
                     if 'item' in change:
                         self._child_removed(change['item'])
                     if 'items' in change:
                         for child in change['items']:
                             self._child_removed(child)
-                        
+
                 elif op in ('__setitem__'):
                     old = change['olditem']
                     if isinstance(old, list):
@@ -543,7 +543,7 @@ class ComplexTask(BaseTask):
                             self._child_removed(child)
                     else:
                         self._child_removed(old)
-                        
+
                     new = change['newitem']
                     if isinstance(new, list):
                         for child in new:
@@ -647,6 +647,7 @@ class ComplexTask(BaseTask):
                     child.root_task = self.root_task
 
 from multiprocessing.synchronize import Event
+
 
 class RootTask(ComplexTask):
     """Special task which is always the root of a measurement and is the only

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
-# module : __init__.py
+# module : api.py
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
+
+from .base_task_filters import AbstractTaskFilter, TASK_FILTERS

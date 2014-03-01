@@ -1,0 +1,55 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : browsing.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from atom.api import Atom, Typed, List, Str
+from enaml.layout.api import hbox, spacer
+from enaml.core.api import Conditional
+from enaml.widgets.api import (PushButton, ObjectCombo, Action, Container,
+                               Dialog)
+
+from ..utils.widgets.qt_list_str_widget import QtListStrWidget
+from .manager_plugin import TaskManagerPlugin
+
+
+class _SelectorModel(Atom):
+    """ Simple model for TaskSelector.
+
+    """
+    manager = Typed(TaskManagerPlugin)
+
+    selected_filter = Str()
+    display_tasks = List(Str())
+
+    def _observe_selected_filter(self, change):
+        """ Observer getting the tasks to display.
+
+        """
+        fil = change['value']
+        if fil:
+            self.diplay_tasks = self.manager.filter_tasks(fil)
+        else:
+            self.diplay_tasks = self.manager.filter_tasks('All')
+
+enamldef TaskSelector(Container):
+    """ Simple task selector supporting filtering.
+
+    """
+    attr manager
+    attr display_filters : bool = True
+    attr _internal = _SelectorModel(manager=manager)
+    alias selected_task : t_select.selected_item
+    alias selected_filter : _internal.selected_filter
+
+    Conditional:
+        condition << display_filters
+        ObjectCombo:
+            items << sorted(manager.filters)
+            selected >> _internal.selected_filter
+
+    QtListStrWidget: t_select:
+        items << sorted(model.display_tasks)

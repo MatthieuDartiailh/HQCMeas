@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
-# module : instrument_manager.py
+# module : manager_plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
@@ -8,6 +8,7 @@
 """
 import os
 import logging
+import enaml
 from importlib import import_module
 from atom.api import (Str, Dict, List, Unicode, Typed, Subclass, Tuple)
 
@@ -18,8 +19,9 @@ from inspect import cleandoc
 
 from ..enaml_util.pref_plugin import HasPrefPlugin
 from ..tasks.base_tasks import BaseTask
-from .filters import AbstractTaskFilter, TASK_FILTERS
-from .config import SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask
+from .filters.api import AbstractTaskFilter, TASK_FILTERS
+from .config import SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask, IniView
+from template import load_template
 
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -42,8 +44,11 @@ class TaskManagerPlugin(HasPrefPlugin):
                                               '../tasks/templates'))]
                              ).tag(pref=True)
 
-    # Drivers loading exception
+    # Tasks loading exception
     tasks_loading = List(Unicode()).tag(pref=True)
+
+    # Task views loading exception
+    views_loading = List(Unicode()).tag(pref=True)
 
     # List of all the known tasks
     tasks = List()
@@ -73,30 +78,48 @@ class TaskManagerPlugin(HasPrefPlugin):
         """
         super(TaskManagerPlugin, self).stop()
         self._unbind_observers()
-        self._tasks.clear()
+        self._py_tasks.clear()
         self._template_tasks.clear()
         self._filters.clear()
+        self._task_views.clear()
+        self._configs.clear()
 
-    def tasks_request(self, tasks):
-        """ Give access to task classes.
-
-        NB : This function won't work with template
+    def tasks_request(self, tasks, views=False):
+        """ Give access to task infos.
 
         Parameters
         ----------
         tasks : list(str)
-            The names of the requested tasks
+            The names of the requested tasks.
+        views : bool, optional
+            Whether or not to return the associated.
 
         Returns
         -------
         tasks : dict
-            The required tasks class as a dict {name: class}
+            The required tasks infos as a dict. For Python tasks the entry will
+            contain the class and optionally the view ({name: (class, view)}.
+            For templates teh netry will contain the path the data as a dict
+            and the doc ({name : (path, data, doc)})
         """
-        return {key: val for key, val in self._py_tasks.iteritems()
-                if key in tasks}
+        answer = {}
+        if views:
+            t_views = self._task_views
+            answer.update({key: (val, t_views.get(val, None))
+                          for key, val in self._py_tasks.iteritems()
+                          if key in tasks})
+        else:
+            answer.update({key: val for key, val in self._py_tasks.iteritems()
+                          if key in tasks})
+
+        answer.update({key: tuple(val, *load_template(val))
+                      for key, val in self._template_tasks
+                      if key in tasks})
+
+        return answer
 
     def filter_tasks(self, filter_name):
-        """ Filter the known using the specified filter.
+        """ Filter the known tasks using the specified filter.
 
         Parameters
         ----------
@@ -109,8 +132,8 @@ class TaskManagerPlugin(HasPrefPlugin):
             Tasks selected by the filter
 
         """
-        # TODO implement
-        pass
+        t_filter = self._filters[filter_name]
+        return t_filter.filter_tasks(self._py_tasks, self._template_tasks)
 
     def config_request(self, task_name):
         """ Access the proper config for a task
@@ -126,8 +149,20 @@ class TaskManagerPlugin(HasPrefPlugin):
             Tuple containing the config object requested, and its visualisation
 
         """
-        # TODO implement
-        pass
+        templates = self._template_tasks
+        if task_name in self._template_tasks:
+            return (IniConfigTask(templates[task_name]), IniView)
+
+        else:
+            configs = self._configs
+            #Look up the hierarchy of the selected task to get the appropriate
+            #TaskConfig
+            task_class = self._py_tasks[task_name]
+            for t_class in type.mro(task_class):
+                if t_class in configs:
+                    config = configs[t_class][0]
+                    view = configs[t_class][1]
+                    return config(task_class), view
 
     #--- Private API ----------------------------------------------------------
     # Tasks implemented in Python
@@ -136,10 +171,13 @@ class TaskManagerPlugin(HasPrefPlugin):
     # Template tasks (store full path to .ini)
     _template_tasks = Dict(Str(), Unicode())
 
+    # Tasks views (task_class: view)
+    _task_views = Dict(Subclass(BaseTask))
+
     # Task filters
     _filters = Dict(Str(), Subclass(AbstractTaskFilter), TASK_FILTERS)
 
-    # Task config dict for python tasks
+    # Task config dict for python tasks (task_class: (config, view))
     _configs = Dict(Subclass(BaseTask), Tuple())
 
     # Watchdog observer
@@ -150,7 +188,7 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         templates = {}
-        for path in self.profiles_folders:
+        for path in self.templates_folders:
             filenames = sorted(f for f in os.listdir(path)
                                if (os.path.isfile(os.path.join(path, f))
                                    and f.endswith('.ini')))
@@ -169,18 +207,16 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         path = os.path.join(MODULE_PATH, '../tasks')
-        modules = sorted(m[:-3] for m in os.listdir(path)
-                         if (os.path.isfile(os.path.join(path, m))
-                             and m.endswith('.py')))
-        modules.remove('__init__')
-        for mod in modules[:]:
-            if mod in self.tasks_loading:
-                modules.remove(mod)
+        failed = {}
+
+        modules, v_modules = self._explore_package('tasks', path, failed)
 
         tasks = {}
+        views = {}
         tasks_packages = []
-        failed = {}
-        self._explore_modules(modules, tasks, tasks_packages, failed)
+        self._explore_modules(modules, tasks, tasks_packages, failed,
+                              prefix='tasks')
+        self._explore_views(v_modules, views, failed)
 
         # Remove packages which should not be explored
         for pack in tasks_packages[:]:
@@ -190,42 +226,20 @@ class TaskManagerPlugin(HasPrefPlugin):
         # Explore packages
         while tasks_packages:
             pack = tasks_packages.pop(0)
-            pack_path = os.path.join(path, os.path.join(pack.split('.')))
-            if not os.path.isdir(pack_path):
-                log = logging.getLogger(__name__)
-                mess = '{} is not a valid directory.({})'.format(pack,
-                                                                 pack_path)
-                log.error(mess)
-                failed[pack] = mess
-                continue
+            pack_path = os.path.join(MODULE_PATH, '..', *pack.split('.'))
+            modules, v_modules = self._explore_package(pack, pack_path, failed)
 
-            modules = sorted(pack + '.' + m[:-3] for m in os.listdir(pack_path)
-                             if (os.path.isfile(os.path.join(path, m))
-                                 and m.endswith('.py')))
-            try:
-                modules.removes(pack + '.__init__')
-            except ValueError:
-                log = logging.getLogger(__name__)
-                mess = cleandoc('''{} is not a valid Python package (miss
-                    __init__.py).'''.format(pack))
-                log.error(mess)
-                failed[pack] = mess
-                continue
-
-            # Remove modules which should not be imported
-            for mod in modules[:]:
-                if mod in self.tasks_loading:
-                    modules.remove(mod)
-
-            self._explore_modules(modules, tasks, tasks_packages,
-                                  failed, prefix=pack)
+            self._explore_modules(modules, tasks, tasks_packages, failed,
+                                  prefix=pack)
+            self._explore_views(v_modules, views, failed)
 
             # Remove packages which should not be explored
             for pack in tasks_packages[:]:
-                if pack in self.drivers_loading:
+                if pack in self.tasks_loading:
                     tasks_packages.remove(pack)
 
         self._py_tasks = tasks
+        self._task_views = views
         self.tasks = list(tasks.keys) + list(self._template_tasks.keys())
 
         # TODO do something with failed
@@ -246,9 +260,88 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         self._configs = mapping
 
+    def _explore_package(self, pack, pack_path, failed):
+        """ Explore a package
+
+        Parameters
+        ----------
+        pack : str
+            The package name relative to "tasks". (ex : tasks.instr)
+
+        path : unicode
+            Path of the package to explore
+
+        failed : dict
+            A dict in which failed imports will be stored.
+
+        Returns
+        -------
+        modules : list
+            List of string indicating modules which can be imported
+
+        v_modules : list
+            List of string indicating enaml modules which can be imported
+
+        """
+        if not os.path.isdir(pack_path):
+            log = logging.getLogger(__name__)
+            mess = '{} is not a valid directory.({})'.format(pack,
+                                                             pack_path)
+            log.error(mess)
+            failed[pack] = mess
+            return [], []
+
+        modules = sorted(pack + '.' + m[:-3] for m in os.listdir(pack_path)
+                         if (os.path.isfile(os.path.join(pack_path, m))
+                             and m.endswith('.py')))
+
+        try:
+            modules.removes(pack + '.__init__')
+        except ValueError:
+            log = logging.getLogger(__name__)
+            mess = cleandoc('''{} is not a valid Python package (miss
+                __init__.py).'''.format(pack))
+            log.error(mess)
+            failed[pack] = mess
+            return [], []
+
+        # Remove modules which should not be imported
+        for mod in modules[:]:
+            if mod in self.tasks_loading:
+                modules.remove(mod)
+
+        # Look for enaml definitions
+        v_path = os.path.join(pack_path, 'views')
+        if not os.path.isdir(v_path):
+            log = logging.getLogger(__name__)
+            mess = '{}.views is not a valid directory.({})'.format(pack,
+                                                                   v_path)
+            log.error(mess)
+            failed[pack] = mess
+            return [], []
+
+        v_modules = sorted(pack + '.views.' + m[:-3]
+                           for m in os.listdir(v_path)
+                           if (os.path.isfile(os.path.join(v_path, m))
+                               and m.endswith('.enaml')))
+
+        if not os.path.isfile(pack_path, '__init__.py'):
+            log = logging.getLogger(__name__)
+            mess = cleandoc('''{} is not a valid Python package (miss
+                __init__.py).'''.format(pack + '.views'))
+            log.error(mess)
+            failed[pack] = mess
+            return [], []
+
+        for mod in v_modules[:]:
+            if mod in self.views_loading:
+                v_modules.remove(mod)
+
+        return modules, v_modules
+
     def _explore_modules(self, modules, tasks, packages, failed,
                          prefix=None):
-        """ Explore a list of modules.
+        """ Explore a list of modules, looking for tasks.
 
         Parameters
         ----------
@@ -261,13 +354,13 @@ class TaskManagerPlugin(HasPrefPlugin):
         packages : list
             A list in which discovered packages will be stored.
 
-
         failed : list
-            A list in which failed imports will be stored.
+            A dict in which failed imports will be stored.
+
         """
         for mod in modules:
             try:
-                m = import_module('..tasks.' + mod)
+                m = import_module('..' + mod)
             except Exception as e:
                 log = logging.getLogger(__name__)
                 mess = 'Failed to import {} : {}'.format(mod, e.message)
@@ -276,7 +369,7 @@ class TaskManagerPlugin(HasPrefPlugin):
                 continue
 
             if hasattr(m, 'KNOWN_PY_TASKS'):
-                tasks.update({self._normalize_name(task.__name__): task
+                tasks.update({self._normalise_name(task.__name__): task
                               for task in m.KNOWN_PY_TASKS})
 
             if hasattr(m, 'TASK_PACKAGES'):
@@ -286,11 +379,40 @@ class TaskManagerPlugin(HasPrefPlugin):
                     packs = m.TASK_PACKAGES
                 packages.extend(packs)
 
+    def _explore_views(self, modules, views, failed):
+        """ Explore a list of modules, looking for views.
+
+        Parameters
+        ----------
+        modules : list
+            The list of modules to explore
+
+        views : dict
+            A dict in which discovered views will be stored.
+
+        failed : list
+            A list in which failed imports will be stored.
+
+        """
+        for mod in modules:
+            try:
+                with enaml.imports():
+                    m = import_module('..' + mod)
+            except Exception as e:
+                log = logging.getLogger(__name__)
+                mess = 'Failed to import {} : {}'.format(mod, e.message)
+                log.error(mess)
+                failed[mod] = mess
+                continue
+
+            if hasattr(m, 'TASK_VIEW_MAPPING'):
+                views.update(m.TASK_VIEW_MAPPING)
+
     def _bind_observers(self):
         """ Setup the observers for the plugin.
 
         """
-        for folder in self.profiles_folders:
+        for folder in self.templates_folders:
             handler = _FileListUpdater(self._refresh_template_tasks)
             self._observer.schedule(handler, folder, recursive=True)
 
@@ -302,8 +424,8 @@ class TaskManagerPlugin(HasPrefPlugin):
 
     @staticmethod
     def _normalise_name(name):
-        """Normalize the name of the profiles by replacing '_' by spaces,
-        removing the extension, and adding spaces between 'aA' sequences.
+        """Normalize names by replacing '_' by spaces, removing the extension,
+        and adding spaces between 'aA' sequences.
         """
         if name.endswith('.ini') or name.endswith('Task'):
             name = name[:-4] + '\0'

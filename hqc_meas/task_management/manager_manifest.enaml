@@ -35,7 +35,7 @@ def tasks_request(event):
     """ Handler for the 'hqc_meas.instr_manager.drivers_request' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    return manager.drivers_request(**event.parameters)
+    return manager.tasks_request(**event.parameters)
 
 
 INSTR_USERS_DESCRIPTION = \
@@ -57,7 +57,7 @@ MANAGER_STATE_DESCRIPTION = \
 """ The tasks manager gives access to the known tasks."""
 
 
-enamldef InstrManagerManifest(PluginManifest):
+enamldef TaskManagerManifest(PluginManifest):
     """
     """
     id = 'hqc_meas.task_manager'
