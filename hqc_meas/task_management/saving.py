@@ -11,12 +11,33 @@ from enaml.widgets.api import FileDialogEx
 import enaml
 with enaml.imports():
     from .save_views import (TemplateTaskSaver, TemplateSaverDialog,
-                                ScintillaDialog)
+                             ScintillaDialog)
+
 from .templates import save_template
 
 
 def save_task(manager, task, mode, parent_ui=None):
-    """
+    """ Save a task in an .ini file.
+
+    Parameters
+    ----------
+    manager : TaskManagerPlugin
+        Current task manager instance.
+
+    task : BaseTask
+        Task to save.
+
+    mode : {'config', 'template', 'file'}
+        Should the task be returned as a dict (config), saved as a,
+        template, saved in a cusyom file.
+    parent_ui : optional
+        Optional widget to use as a parent for the dialogs.
+
+    Returns:
+    -------
+    config or None:
+        A ConfigObj object is returned if the mose is 'config'.
+
     """
     full_path = u''
     if mode == 'template':
@@ -43,7 +64,7 @@ def save_task(manager, task, mode, parent_ui=None):
     preferences = task.task_preferences
 
     if mode == 'config':
-        return preferences.dict()
+        return preferences
 
     else:
         doc = ''

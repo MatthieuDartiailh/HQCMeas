@@ -20,8 +20,12 @@ from inspect import cleandoc
 from ..enaml_util.pref_plugin import HasPrefPlugin
 from ..tasks.base_tasks import BaseTask
 from .filters.api import AbstractTaskFilter, TASK_FILTERS
-from .config import SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask, IniView
-from template import load_template
+from .config.api import (SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask,
+                         IniView)
+
+from .building import build_task, build_root
+from .saving import save_task
+from .template import load_template
 
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -44,16 +48,16 @@ class TaskManagerPlugin(HasPrefPlugin):
                                               '../tasks/templates'))]
                              ).tag(pref=True)
 
-    # Tasks loading exception
+    # Tasks loading exception.
     tasks_loading = List(Unicode()).tag(pref=True)
 
-    # Task views loading exception
+    # Task views loading exception.
     views_loading = List(Unicode()).tag(pref=True)
 
-    # List of all the known tasks
+    # List of all the known tasks.
     tasks = List()
 
-    # List of the filters
+    # List of the filters.
     filters = List(Str(), TASK_FILTERS.keys())
 
     def start(self):
@@ -81,10 +85,10 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._py_tasks.clear()
         self._template_tasks.clear()
         self._filters.clear()
-        self._task_views.clear()
+        self.views.clear()
         self._configs.clear()
 
-    def tasks_request(self, tasks, views=False):
+    def tasks_request(self, tasks, use_class_names=False):
         """ Give access to task infos.
 
         Parameters
@@ -101,22 +105,39 @@ class TaskManagerPlugin(HasPrefPlugin):
             contain the class and optionally the view ({name: (class, view)}.
             For templates teh netry will contain the path the data as a dict
             and the doc ({name : (path, data, doc)})
+
         """
         answer = {}
-        if views:
-            t_views = self._task_views
-            answer.update({key: (val, t_views.get(val, None))
-                          for key, val in self._py_tasks.iteritems()
-                          if key in tasks})
+
+        if not use_class_names:
+            answer.update({key: val for key, val in self._py_tasks.iteritems()
+                           if key in tasks})
+
+            answer.update({key: tuple(val, *load_template(val))
+                           for key, val in self._template_tasks
+                           if key in tasks})
         else:
             answer.update({key: val for key, val in self._py_tasks.iteritems()
-                          if key in tasks})
-
-        answer.update({key: tuple(val, *load_template(val))
-                      for key, val in self._template_tasks
-                      if key in tasks})
+                           if val.__name__ in tasks})
 
         return answer
+
+    def views_request(self, task_classes):
+        """ Give acces to task views.
+
+        Parameters
+        ----------
+        task_classes : list
+            List of classes for which a view should be returned.
+
+        Returns
+        -------
+        views : dict
+            Dict mapping the task classes to their associated views.
+
+        """
+        views = self._task_views
+        return {t_class: views[t_class] for t_class in task_classes}
 
     def filter_tasks(self, filter_name):
         """ Filter the known tasks using the specified filter.
@@ -163,6 +184,14 @@ class TaskManagerPlugin(HasPrefPlugin):
                     config = configs[t_class][0]
                     view = configs[t_class][1]
                     return config(task_class), view
+
+    # Declared as method here simply to avoid breaking the delayed import of
+    # the manifest.
+    save_task = save_task
+
+    build_task = build_task
+
+    build_root = build_root
 
     #--- Private API ----------------------------------------------------------
     # Tasks implemented in Python
@@ -239,7 +268,7 @@ class TaskManagerPlugin(HasPrefPlugin):
                     tasks_packages.remove(pack)
 
         self._py_tasks = tasks
-        self._task_views = views
+        self.views = views
         self.tasks = list(tasks.keys) + list(self._template_tasks.keys())
 
         # TODO do something with failed

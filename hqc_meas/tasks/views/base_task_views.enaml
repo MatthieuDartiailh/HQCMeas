@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : base_task_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from enaml.layout.api import hbox, align, spacer, vbox
 from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, ScrollArea)
@@ -6,23 +14,36 @@ from .task_editor import (TaskEditor, NonFoldingTaskEditor)
 from hqc_meas.task_management.task_building import build_task
 
 enamldef NoneView(Container):
+    """ Empty task view.
+
+    """
     attr task
-    attr mapping
+    attr core
 
 enamldef ComplexView(GroupBox): view:
+    """ View for complex task.
+
+    """
     attr task
-    alias mapping : editor.mapping
+    alias core : editor.core
+
     title << task.task_name
     padding = 0
+
     TaskEditor: editor:
         task := view.task
         factory = build_task
 
 enamldef RootView(GroupBox): view:
+    """ View for root task.
+
+    """
     attr task
-    alias mapping : editor.mapping
+    alias core : editor.core
+
     constraints = [vbox(hbox(path, explore), scroll),
                 align('v_center', path, explore)]
+
     GroupBox: path:
         title = 'Root path'
         Field:
@@ -31,9 +52,9 @@ enamldef RootView(GroupBox): view:
         text = 'E'
         hug_width = 'strong'
         clicked ::
-            path = FileDialog(mode = 'directory',
-                            title = 'Select a default path',
-                            ).exec_()
+            path = FileDialogEx(file_mode='directory', accept_mode='open',
+                                title='Select a default path',
+                                ).exec_()
             if path:
                 task.default_path = path
     ScrollArea: scroll:

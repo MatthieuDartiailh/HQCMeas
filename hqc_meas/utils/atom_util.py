@@ -120,36 +120,47 @@ class HasPrefAtom(Atom):
 
     """
 
-    def update_members_from_preferences(self, **parameters):
-        """ Use the string values given in the parameters to update the members
+    pass
 
-        This function will call itself on any tagged HasPrefAtom member.
 
-        """
-        for name, member in tagged_members(self, 'pref').iteritems():
-
-            if not name in parameters:
-                continue
-
-            old_val = getattr(self, name)
-            if isinstance(old_val, lambda: HasPrefAtom):
-                old_val.update_members_from_preferences(**parameters[name])
-            else:
-                value = parameters[name]
-                converted = member_from_str(member, value)
-                setattr(self, name, converted)
-
-    def preferences_from_members(self):
+def preferences_from_members(self):
         """ Get the members values as string to store them in .ini files.
 
         """
         pref = {}
         for name in tagged_members(self, 'pref'):
             old_val = getattr(self, name)
-            if isinstance(old_val, lambda: HasPrefAtom):
+            if issubclass(type(old_val), HasPrefAtom):
                 pref[name] = old_val.preferences_from_members()
             else:
                 pref[name] = str(getattr(self, name))
+
+        return pref
+
+
+def update_members_from_preferences(self, **parameters):
+    """ Use the string values given in the parameters to update the members
+
+    This function will call itself on any tagged HasPrefAtom member.
+
+    """
+    for name, member in tagged_members(self, 'pref').iteritems():
+
+        if not name in parameters:
+            continue
+
+        old_val = getattr(self, name)
+        if issubclass(type(old_val), HasPrefAtom):
+            old_val.update_members_from_preferences(**parameters[name])
+        elif old_val is None:
+            pass
+        else:
+            value = parameters[name]
+            converted = member_from_str(member, value)
+            setattr(self, name, converted)
+
+HasPrefAtom.preferences_from_members = preferences_from_members
+HasPrefAtom.update_members_from_preferences = update_members_from_preferences
 
 
 class Subclass(Member):

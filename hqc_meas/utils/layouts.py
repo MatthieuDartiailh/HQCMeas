@@ -6,7 +6,8 @@ from enaml.widgets.api import GroupBox
 class HGroup(GroupBox):
     """
     """
-    padding = (0,5,5,5)
+    padding = (0, 5, 5, 5)
+
     def layout_constraints(self):
         """
         """
@@ -21,4 +22,4 @@ class HGroup(GroupBox):
             else:
                 widgets.pop()
 
-        return [grid(labels, widgets)]        
+        return [grid(labels, widgets)]

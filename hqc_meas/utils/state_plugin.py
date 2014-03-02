@@ -5,8 +5,10 @@
 # license : MIT license
 #==============================================================================
 import contextlib
-from atom.api import (Atom, Str, Dict, Instance, Bool, Tuple, Typed)
+from atom.api import (Atom, Str, Dict, Instance, Bool, Tuple, Typed, Value,
+                      Property)
 from enaml.workbench.api import Plugin, Extension
+from new import classobj
 from .state import State
 
 
@@ -22,7 +24,7 @@ class _StateHolder(Atom):
     _allow_set = Bool(False)
 
     def __setattr__(self, name, value):
-        if self._allow_set:
+        if self._allow_set or name == '_allow_set':
             super(_StateHolder, self).__setattr__(name, value)
         else:
             raise AttributeError('Attributes of states holder are read-only')
@@ -62,6 +64,7 @@ class StatePlugin(Plugin):
 
         """
         self._states = {}
+        self._refresh_states()
         self._bind_observers()
 
     def stop(self):
@@ -96,7 +99,7 @@ class StatePlugin(Plugin):
 
         # If no extension remain clear everything
         if not extensions:
-            self._notify_state_death(self._states.keys())
+            self._notify_state_death(self._state_extensions.keys())
             self._states.clear()
             self._state_extensions.clear()
             return
@@ -128,7 +131,7 @@ class StatePlugin(Plugin):
             if not state_decl.sync_members and not state_decl.prop_getters:
                 msg = "state '%s' does not declare any attribute"
                 raise ValueError(msg % state_decl.id)
-            states[state.id] = state[2]
+            states[state_decl.id] = state[2]
 
         self._states = states
         self._state_extensions = new_extensions
@@ -169,12 +172,13 @@ class StatePlugin(Plugin):
         # Dynamic building of the state class
         # TODO add check sync_members and prop not confincting
         class_name = state.id.replace('.', '').capitalize()
-        class_builder = "class _{}(_StateHolder):\n".format(class_name)
+
+        members = {}
         for m in state.sync_members:
-            class_builder += '    {} = Value()\n'.format(m)
+            members[m] = Value()
         for p in state.prop_getters:
-            class_builder += '    {} = Property()\n'.format(p)
-        state_class = eval(class_builder)
+            members[p] = Property()
+        state_class = classobj(class_name, (_StateHolder,), members)
 
         # Instantiation and binding of the state object to the plugin declaring
         # it
@@ -195,7 +199,8 @@ class StatePlugin(Plugin):
         states = self._state_extensions
         for dead_state in dead_extensions:
             state = states[dead_state][2]
-            state.alive = False
+            with state.setting_allowed():
+                state.alive = False
 
     def _on_states_updated(self, change):
         """ The observer for the state extension point

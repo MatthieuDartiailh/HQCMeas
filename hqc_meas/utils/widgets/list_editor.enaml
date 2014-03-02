@@ -1,26 +1,27 @@
 from enaml.core.api import Looper, Conditional
 from enaml.layout.api import hbox, align, spacer, grid, vbox
 from enaml.widgets.api import (PushButton, Menu, Action, Container, ScrollArea,
-                                GroupBox, Form)
+                               GroupBox, Form)
 
 enamldef PopupListMenu(Menu):
     attr model
     attr index
     attr operations
     attr factory
+    attr args = ()
     attr kwargs = {}
     Conditional:
         condition = bool('add' in operations)
         Action:
             text = 'Add before'
-            triggered :: 
-                obj = factory(**kwargs)
+            triggered ::
+                obj = factory(*args, **kwargs)
                 if obj is not None:
                     model.insert(index, obj)
         Action:
             text = 'Add after'
-            triggered :: 
-                obj = factory(**kwargs)
+            triggered ::
+                obj = factory(*args, **kwargs)
                 if obj is not None:
                     model.insert(index + 1, obj)
         Action:
@@ -71,7 +72,7 @@ class ListContainer(Container):
         """
         children = self.widgets()
         lines = []; aligns = []
-        
+
         while children:
             lines.append(hbox(*children[0:2]))
             aligns.append(align('top', children[0], children[1]))
@@ -94,7 +95,7 @@ template ListEditor(Content):
                             'add' in operations)
             PushButton:
                 text = 'Add first element'
-                clicked :: 
+                clicked ::
                     obj = factory(**kwargs)
                     if obj is not None:
                         getattr(model, iterable_name).append(obj)
@@ -124,4 +125,4 @@ template ListEditor(Content):
                                     kwargs = kwargs,
                                     operations = operations).popup()
                         Content: content:
-                            model << loop_item          
+                            model << loop_item

@@ -175,5 +175,3 @@ enamldef PreferencesManifest(PluginManifest):
             path = '/prefs/edit'
             label = 'Edit'
             command = 'hqc_meas.preferences.open_editor'
-
-

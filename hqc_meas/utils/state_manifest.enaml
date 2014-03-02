@@ -34,7 +34,7 @@ GET_STATE_DESCRIPTION = \
 of the plugin contributing the state"""
 
 
-enamldef PreferencesManifest(PluginManifest):
+enamldef StateManifest(PluginManifest):
     """
     """
     id = 'hqc_meas.state'

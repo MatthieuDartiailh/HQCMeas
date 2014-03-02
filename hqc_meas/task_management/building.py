@@ -8,7 +8,7 @@
 """
 from enaml.widgets.api import FileDialogEx
 
-from .config import IniConfigTask
+from .config.api import IniConfigTask
 from .templates import load_template
 
 
@@ -18,20 +18,54 @@ with enaml.imports():
 
 
 def build_task(manager, parent_ui=None):
+    """ Open a dialog to include a task in a task hierarchy.
+
+    Parameters:
+    ----------
+    manager : TaskManagerPlugin
+        Instance of the current task manager plugin.
+
+    parent_ui : optional
+        Optional parent widget for the dialog.
+
+    Returns:
+    -------
+    task : BaseTask
+        Task selected by the user to be added to a hierarchy.
+
     """
-    """
-    dialog = BuilderView(manager=manager)
+    dialog = BuilderView(manager=manager, parent=parent_ui)
     result = dialog.exec_()
     if result:
-        task, view = dialog.model.task_config.build_task()
+        task = dialog.model.task_config.build_task()
 
-        return task, view
+        return task
     else:
-        return None, None
+        return None
 
 
 def build_root(manager, mode, config=None, parent_ui=None):
-    """
+    """ Create a new RootTask.
+
+    Parameters
+    ----------
+    manager : TaskManagerPlugin
+        Instance of the current task manager plugin.
+
+    mode : {'from config', 'from template', 'from file'}
+        Whether to use the given config, or look for one in templates or a
+        file.
+
+    config : configobj.Section
+        Object holding the informations necessary to build the root task.
+
+    parent_ui : optional
+        Optional parent widget for the dialog.
+
+    Returns:
+    -------
+    task : RootTask
+
     """
     if mode == 'from config':
         pass
@@ -49,4 +83,4 @@ def build_root(manager, mode, config=None, parent_ui=None):
         config, _ = load_template(path)
 
     if config:
-        return IniConfigTask.build_task_from_config(manager, config)
+        return IniConfigTask(manager=manager).build_task_from_config(config)

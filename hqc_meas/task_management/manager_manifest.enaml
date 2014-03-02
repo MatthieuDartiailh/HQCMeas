@@ -13,7 +13,6 @@ from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 from ..utils.pref_plugin import Preferences
 from ..utils.state_plugin import State
 
-
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
 
@@ -21,22 +20,54 @@ def manager_plugin_factory():
     from .manager_plugin import TaskManagerPlugin
     return TaskManagerPlugin()
 
-
-def show_manager(event):
-    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
-
-    """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    from .manager_view import TaskManagerView
-    TaskManagerView(manager=manager).show()
+# TODO implement a true manager
+#def show_manager(event):
+#    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
+#
+#    """
+#    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+#    from .manager_view import TaskManagerView
+#    TaskManagerView(manager=manager).show()
 
 
 def tasks_request(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     return manager.tasks_request(**event.parameters)
 
+
+def views_request(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.views_request(**event.parameters)
+
+
+def save_task(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.save_task(**event.parameters)
+
+
+def build_task(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.build_task(**event.parameters)
+
+
+def build_root(event):
+    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.build_root(**event.parameters)
 
 INSTR_USERS_DESCRIPTION = \
 """ Extensions to this point can be used to provide the id of a plugin
@@ -51,10 +82,22 @@ SHOW_MANAGER_DESCRIPTION = \
 
 
 TASK_REQUEST_DESCRIPTION = \
-""" Request the classes associated to a list of tasks. """
+""" Request the infos associated to a list of tasks. """
+
+VIEW_REQUEST_DESCRIPTION = \
+""" Request the views associated to a list of tasks. """
+
+SAVE_TASK_DESCRIPTION = \
+""" Save a task to a file or object. """
+
+BUILD_TASK_DESCRIPTION = \
+""" Build a task to insert in a task hierarchy. """
+
+BUILD_ROOT_DESCRIPTION = \
+""" Build a root task. """
 
 MANAGER_STATE_DESCRIPTION = \
-""" The tasks manager gives access to the known tasks."""
+""" The tasks manager gives access to the known tasks and filters."""
 
 
 enamldef TaskManagerManifest(PluginManifest):
@@ -75,18 +118,34 @@ enamldef TaskManagerManifest(PluginManifest):
         State:
             id = 'hqc_meas.states.task_manager'
             description = MANAGER_STATE_DESCRIPTION
-            sync_members = ['tasks']
+            sync_members = ['tasks', 'filters']
     Extension:
         id = 'commands'
         point = 'enaml.workbench.core.commands'
+#        Command:
+#            id = 'hqc_meas.instr_manager.show_manager'
+#            description = SHOW_MANAGER_DESCRIPTION
+#            handler = show_manager
         Command:
-            id = 'hqc_meas.instr_manager.show_manager'
-            description = SHOW_MANAGER_DESCRIPTION
-            handler = show_manager
-        Command:
-            id = 'hqc_meas.instr_manager.task_request'
+            id = 'hqc_meas.task_manager.tasks_request'
             description = TASK_REQUEST_DESCRIPTION
             handler = tasks_request
+        Command:
+            id = 'hqc_meas.task_manager.views_request'
+            description = VIEW_REQUEST_DESCRIPTION
+            handler = views_request
+        Command:
+            id = 'hqc_meas.task_manager.save_task'
+            description = SAVE_TASK_DESCRIPTION
+            handler = save_task
+        Command:
+            id = 'hqc_meas.task_manager.build_task'
+            description = BUILD_TASK_DESCRIPTION
+            handler = build_task
+        Command:
+            id = 'hqc_meas.task_manager.build_root'
+            description = BUILD_ROOT_DESCRIPTION
+            handler = build_root
     Extension:
         id = 'menu'
         point = 'enaml.workbench.ui.actions'
@@ -95,7 +154,7 @@ enamldef TaskManagerManifest(PluginManifest):
             label = 'Tasks'
             ItemGroup:
                 id = 'user'
-        ActionItem:
-            path = '/tasks/show_manager'
-            label = 'Manager'
-            command = 'hqc_meas.task_manager.show_manager'
+#        ActionItem:
+#            path = '/tasks/show_manager'
+#            label = 'Manager'
+#            command = 'hqc_meas.task_manager.show_manager'

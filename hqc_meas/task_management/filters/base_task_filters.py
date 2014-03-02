@@ -99,6 +99,7 @@ class SubclassFilter(AbstractTaskFilter):
     # Class attribute to which task will be compared.
     task_class = type
 
+    @classmethod
     def filter_tasks(cls, py_tasks, template_tasks):
         """
         """
@@ -143,6 +144,7 @@ class LoopableTaskFilter(AbstractTaskFilter):
 
     """
 
+    @classmethod
     def filter_tasks(cls, py_tasks, template_tasks):
         """
         """

@@ -1,6 +1,11 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : base_views.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
                                Form, Label)
-from enaml.core.api import Conditional
 
 
 enamldef NoneView(Container):
@@ -10,15 +15,7 @@ enamldef NoneView(Container):
 
 enamldef SimpleView(Container):
     attr model
-    attr loop : bool = False
-    Conditional:
-        condition << not loop
-        Form:
-            Label:
-                text = 'Task name'
-            Field:
-                text >> model.task_name
-                submit_triggers = ['auto_sync']
+    attr loop
     GroupBox:
         title = 'Descritpion'
         MultilineField:
@@ -45,5 +42,6 @@ def edit_template(template_path):
             doc += line.replace('#', '')
         model.template_doc = doc
 
+# TODO implement.
 enamldef IniView(Container):
     attr model

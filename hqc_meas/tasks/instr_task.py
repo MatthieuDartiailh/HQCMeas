@@ -14,6 +14,7 @@ from ..instruments.drivers.driver_tools import BaseInstrument, InstrIOError
 class InstrumentTask(SimpleTask):
     """
     """
+    # profile_dict is not need anymore
     profile_dict = Dict(Unicode(), Unicode()).tag(pref = True)
     selected_profile = Unicode().tag(pref = True)
     driver_list = []
@@ -30,7 +31,7 @@ class InstrumentTask(SimpleTask):
             traceback[self.task_path + '/' +self.task_name] = cleandoc(
                 '''You must provide an instrument profile''')
             return False, traceback
-        
+
         if not os.path.isfile(full_path):
             traceback[self.task_path + '/' +self.task_name] =\
                 'Failed to get the specified instr profile'''

@@ -42,6 +42,7 @@ enamldef TaskSelector(Container):
     attr manager
     attr display_filters : bool = True
     attr _internal = _SelectorModel(manager=manager)
+
     alias selected_task : t_select.selected_item
     alias selected_filter : _internal.selected_filter
 

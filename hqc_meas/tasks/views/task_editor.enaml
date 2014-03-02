@@ -1,23 +1,100 @@
-from enaml.core.api import Looper, Conditional
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : task_editor.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.core.api import Looper, Conditional, Include
 from enaml.layout.api import vbox, spacer, hbox, align
-from enaml.stdlib.mapped_view import MappedView
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Stack,
-                              StackItem, Label, GroupBox, Form)
+                               StackItem, Label, GroupBox, Form)
 
-from hqc_meas.enaml_util.list_editor import PopupListMenu
-    
+from hqc_meas.utils.widgets.list_editor import PopupListMenu
+
+
+def _task_view_helper(core, task):
+    """ A helper function for the _TaskView component.
+
+    This helper instantiates the view for the given task of
+    a _TaskView component.
+
+    """
+    t_class = type(task)
+    view = core.invoke_command('hqc_meas.task_manager.views_request',
+                               parameters={'task_classes': [t_class]})
+    return [view(task=task, core=core)]
+
+
+enamldef _TaskView(Include):
+    """ A custom Include subtype which will automatically query the right
+    view for task.
+
+    Parameters
+    ----------
+    task : BaseTask
+        The task acting as the model for this view.
+
+    core : CorePlugin
+        The core plugin of the application used to call commands.
+
+    """
+    attr task
+    attr core
+    objects << _mappedview_helper(core, task)
+
+enamldef _TaskListView(Container): list_view:
+    """ A base ustom container to edit the children of a task.
+
+    """
+    attr task
+    attr core
+    attr operations = ['add', 'remove', 'move']
+
+    hug_height = 'strong'
+    padding = 0
+
+    Looper:
+        iterable << task.children_task[:]
+        Container:
+            padding = 0
+            constraints = [hbox(button, *view.objects),
+                           align('top', button, *view.objects)]
+            PushButton: button:
+                constraints = [width == 15,
+                                height == 20]
+                font = 'bold 12pt Consolas'
+                text = '>'
+                clicked ::
+                    edited_list = task.children_task
+                    menu = PopupListMenu(
+                      model = edited_list,
+                      index = edited_list.index(loop_item),
+                      factory = core.invoke_commad,
+                      operations = operations,
+                      args = ('hqc_meas.task_manager.build_task',)
+                      kwargs = {'parameters': {'parent_ui': list_view},
+                                'trigger': button)
+                    menu.popup()
+            _TaskView: view:
+                task << loop_item
+                core = list_view.core
 
 enamldef TaskEditor(Container): view:
+    """ A custom container to edit the children of a task. Support folding.
+
+    """
+
     attr task
-    attr factory
-    attr mapping
-    attr operations = ['add', 'remove', 'move']
-    padding = (0,5,2,2)
+    attr core
+
+    padding = 2
     Conditional:
         condition << not bool(task.children_task)
         PushButton:
             text = 'Add first element'
-            clicked :: 
+            clicked ::
                 obj = factory(parent_ui = view)
                 if obj:
                     task.children_task.append(obj)
@@ -37,7 +114,7 @@ enamldef TaskEditor(Container): view:
                         folding.text = '+'
                     else:
                        box.stack_index = 1
-                       folding.text = '-' 
+                       folding.text = '-'
             GroupBox: foldable_content:
                 padding = (0,5,2,2)
                 Stack:
@@ -51,75 +128,28 @@ enamldef TaskEditor(Container): view:
                             Label:
                                 text = 'FOLDED ITEMS'
                     StackItem:
-                        Container:
-                            padding = 0
-                            Looper:
-                                iterable << task.children_task[:]
-                                Container:
-                                    padding = (0,0,0,0) 
-                                    constraints = [hbox(button, *map.objects),
-                                            align('top', button, *map.objects)]
-                                    MappedView: map:
-                                        model << loop_item
-                                        typemap = mapping
-                                        modelkey  = 'task'
-                                        kwargs = {'mapping' : mapping}
-                                    PushButton: button:
-                                        constraints = [width == 15,
-                                                        height == 20]
-                                        hug_width = 'strong'
-                                        font = 'bold 12pt Consolas'
-                                        text = '>'
-                                        clicked ::
-                                            edited_list = task.children_task
-                                            menu = PopupListMenu(
-                                              model = edited_list,
-                                              index = edited_list.index(loop_item),
-                                              factory = factory,
-                                              operations = operations,
-                                              kwargs = {'parent_ui': view})
-                                            menu.popup()
+                        _TaskListView:
+                            task = view.task
+                            core = view.core
 
 enamldef NonFoldingTaskEditor(Container): view:
+    """ A custom container to edit the children of a task.
+
+    """
     attr task
-    attr factory
-    attr mapping
-    attr operations = ['add', 'remove', 'move']
+    attr core
+
     Conditional:
         condition << not bool(task.children_task)
         PushButton:
             text = 'Add first element'
-            clicked :: 
+            clicked ::
                 obj = factory(parent_ui = view)
                 if obj:
                     task.children_task.append(obj)
     Conditional:
         condition << bool(task.children_task)
         Container:
-            hug_height = 'strong'
-            padding = 0
-            Looper:
-                iterable << task.children_task[:]
-                Container:
-                    padding = 0
-                    constraints = [hbox(button, *map.objects),
-                            align('top', button, *map.objects)]
-                    PushButton: button:
-                        constraints = [width == 15,
-                                        height == 20]
-                        font = 'bold 12pt Consolas'
-                        text = '>'
-                        clicked ::
-                            edited_list = task.children_task
-                            menu = PopupListMenu(
-                              model = edited_list,
-                              index = edited_list.index(loop_item),
-                              factory = factory,
-                              operations = operations,
-                              kwargs = {'parent_ui': view})
-                            menu.popup()
-                    MappedView: map:
-                        model << loop_item
-                        typemap = mapping
-                        modelkey  = 'task'
-                        kwargs = {'mapping' : mapping}
+            _TaskListView:
+                task = view.task
+                core = view.core

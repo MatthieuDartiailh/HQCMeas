@@ -1,14 +1,22 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : loop_view.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
                                Form, Label)
 from enaml.core.api import Conditional
 from enaml.stdlib.mapped_view import MappedView
 from enaml.layout.api import hbox
 
-from ..manager_view import TaskSelector
-from ..task_manager import TaskManager
+from ..browsing import TaskSelector
 
 from .base_task_config import PyConfigTask
 from .base_views import (SimpleView, NoneView)
+
 
 enamldef LoopView(Container): view:
     attr model
@@ -23,13 +31,12 @@ enamldef LoopView(Container): view:
         Label:
             text << model.task_doc
     Container:
-        constraints = [hbox(selector, map)]
+        constraints = [hbox(selector, *conf.objects)]
         TaskSelector: selector:
             hug_width = 'strong'
-            model = view.model.task_manager
+            manager = view.model.manager
             display_filters = False
-        Container: map:
-            MappedView:
-                model << view.model.task_config
-                typemap = {type(None): NoneView, PyConfigTask: SimpleView}
-                kwargs = {'loop': True}
+            selected_filter = 'Loopable'
+            selected_task >> model.subtask
+         Include: conf:
+            objects  << [model.config_view]

@@ -252,7 +252,7 @@ class PrefPlugin(Plugin):
         if plugin_id in self._prefs:
             self._prefs[plugin_id][name] = value
         else:
-            self._prefs[plugin_id] = {name : value}
+            self._prefs[plugin_id] = {name: value}
 
     def _on_pref_decls_updated(self, change):
         """ The observer for the state extension point
