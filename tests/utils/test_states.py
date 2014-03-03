@@ -27,7 +27,7 @@ class Test_State(object):
 
     @classmethod
     def teardown_class(cls):
-        print __name__, ': TestClass.teardown_class() -------'
+        print '\n', __name__, ': TestClass.teardown_class() -------'
 
     def setup(self):
         self.workbench = Workbench()

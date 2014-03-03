@@ -52,6 +52,6 @@ def save_template(path, data, doc):
     config = ConfigObj(indent_type='    ')
     config.filename = path
     config.merge(data)
-    config.initial_comment = wrap(doc, 80)
+    config.initial_comment = wrap(doc, 79)
 
     config.write()

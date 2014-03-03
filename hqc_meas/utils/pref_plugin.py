@@ -46,6 +46,7 @@ class PrefPlugin(Plugin):
         self._refresh_pref_decls()
         self._bind_observers()
 
+    # TODO make this less hacky
     def stop(self):
         """ Stop the plugin life-cycle.
 
@@ -56,17 +57,22 @@ class PrefPlugin(Plugin):
         self._unbind_observers()
         self._pref_decls.clear()
         pref_path = os.path.join(self.default_folder, self.default_file)
-        if os.path.isfile(pref_path):
+        try:
             prefs = ConfigObj()
             prefs.update(self._prefs)
             prefs.filename = pref_path
             prefs.write()
+        except:
+            print 'Invalid pref path'
 
         def_path = os.path.join(MODULE_PATH, 'default.ini')
-        if not os.path.isfile(def_path):
+        try:
             defaults = ConfigObj(def_path)
             defaults['folder'] = self.default_folder
             defaults['file'] = self.default_file
+            defaults.write()
+        except:
+            print 'Invalid default pref path'
 
     def save_preferences(self, path=None):
         """ Collect and save preferences for all registered plugins.

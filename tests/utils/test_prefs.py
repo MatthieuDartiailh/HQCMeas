@@ -45,7 +45,7 @@ class Test_State(object):
 
     @classmethod
     def teardown_class(cls):
-        print __name__, ': TestClass.teardown_class() -------'
+        print '\n', __name__, ': TestClass.teardown_class() -------'
          # Removing test
         shutil.rmtree(cls.test_dir)
 
@@ -83,8 +83,19 @@ class Test_State(object):
         assert contrib.string == 'test'
         assert contrib.auto == ''
 
+        pref_plugin = self.workbench.get_plugin(u'hqc_meas.preferences')
+        pref_plugin.default_file = 'test.ini'
+
         self.workbench.unregister(u'test.prefs')
         self.workbench.unregister(u'hqc_meas.preferences')
+
+        directory = os.path.dirname(__file__)
+        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        def_path = os.path.join(util_path, 'default.ini')
+        def_conf = ConfigObj(def_path)
+        assert def_conf['file'] == 'test.ini'
+        def_conf['file'] = 'default_test.ini'
+        def_conf.write()
 
     def test_get_plugin_pref1(self):
         self.workbench.register(PreferencesManifest())
