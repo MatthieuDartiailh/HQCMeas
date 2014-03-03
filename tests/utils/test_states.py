@@ -3,9 +3,12 @@ from enaml.workbench.api import Workbench
 import enaml
 
 with enaml.imports():
-    from hqc_meas.utils.core_manifest import CoreManifest
+    from hqc_meas.utils.core_manifest import HqcCoreManifest
     from hqc_meas.utils.state_manifest import StateManifest
     from .states_utils import StateContributor, StateContributor2
+
+CORE_PLUGIN = u'hqc_meas.core'
+GET_STATE = u'hqc_meas.state.get'
 
 
 def setup_module():
@@ -28,7 +31,7 @@ class Test_State(object):
 
     def setup(self):
         self.workbench = Workbench()
-        self.workbench.register(CoreManifest())
+        self.workbench.register(HqcCoreManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(StateContributor())
 
@@ -36,23 +39,23 @@ class Test_State(object):
         pass
 
     def test_get_state(self):
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core = self.workbench.get_plugin(CORE_PLUGIN)
         par = {'state_id': 'test.states.state'}
-        assert core.invoke_command('hqc_meas.state.get',
+        assert core.invoke_command(GET_STATE,
                                    par, trigger=self)
 
     def test_state_content(self):
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core = self.workbench.get_plugin(CORE_PLUGIN)
         par = {'state_id': 'test.states.state'}
-        state = core.invoke_command('hqc_meas.state.get',
+        state = core.invoke_command(GET_STATE,
                                     par, trigger=self)
         assert hasattr(state, 'string')
         assert hasattr(state, 'prop')
 
     def test_member_sync(self):
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core = self.workbench.get_plugin(CORE_PLUGIN)
         par = {'state_id': 'test.states.state'}
-        state = core.invoke_command('hqc_meas.state.get',
+        state = core.invoke_command(GET_STATE,
                                     par, trigger=self)
 
         plugin = self.workbench.get_plugin('test.states')
@@ -61,17 +64,17 @@ class Test_State(object):
         assert state.string == 'test'
 
     def test_prop_getter(self):
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core = self.workbench.get_plugin(CORE_PLUGIN)
         par = {'state_id': 'test.states.state'}
-        state = core.invoke_command('hqc_meas.state.get',
+        state = core.invoke_command(GET_STATE,
                                     par, trigger=self)
 
         assert state.prop == 'ok'
 
     def test_death_notif1(self):
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core = self.workbench.get_plugin(CORE_PLUGIN)
         par = {'state_id': 'test.states.state'}
-        state = core.invoke_command('hqc_meas.state.get',
+        state = core.invoke_command(GET_STATE,
                                     par, trigger=self)
 
         self.workbench.unregister(u'test.states')
@@ -79,9 +82,9 @@ class Test_State(object):
 
     def test_death_notif2(self):
         self.workbench.register(StateContributor2())
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core = self.workbench.get_plugin(CORE_PLUGIN)
         par = {'state_id': 'test.states.state2'}
-        state = core.invoke_command('hqc_meas.state.get',
+        state = core.invoke_command(GET_STATE,
                                     par, trigger=self)
 
         self.workbench.unregister(u'test.states2')

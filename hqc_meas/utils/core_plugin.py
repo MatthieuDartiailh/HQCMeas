@@ -1,52 +1,17 @@
 # -*- coding: utf-8 -*-
-
-# Copied from enaml to make the invoke command return values
-
-#------------------------------------------------------------------------------
-# Copyright (c) 2013, Nucleic Development Team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-#------------------------------------------------------------------------------
 from collections import defaultdict
-
-from atom.api import Typed
-
-from enaml.workbench.plugin import Plugin
-
+from enaml.workbench.core.core_plugin import CorePlugin
 from enaml.workbench.core.command import Command
 from enaml.workbench.core.execution_event import ExecutionEvent
 
+COMMANDS_POINT = u'hqc_meas.core.commands'
 
-COMMANDS_POINT = u'enaml.workbench.core.commands'
 
-
-class CorePlugin(Plugin):
-    """ The core plugin for the Enaml workbench.
+class HqcCorePlugin(CorePlugin):
+    """ The core plugin for the HQC workbench. Reimplement invoke command to
+    returnvalues
 
     """
-    def start(self):
-        """ Start the plugin life-cycle.
-
-        This method is called by the framework at the appropriate time.
-        It should never be called by user code.
-
-        """
-        self._refresh_commands()
-        self._bind_observers()
-
-    def stop(self):
-        """ Stop the plugin life-cycle.
-
-        This method is called by the framework at the appropriate time.
-        It should never be called by user code.
-
-        """
-        self._unbind_observers()
-        self._commands.clear()
-        self._command_extensions.clear()
-
     def invoke_command(self, command_id, parameters={}, trigger=None):
         """ Invoke the command handler for the given command id.
 
@@ -75,15 +40,6 @@ class CorePlugin(Plugin):
         event.trigger = trigger
 
         return command.handler(event)
-
-    #--------------------------------------------------------------------------
-    # Private API
-    #--------------------------------------------------------------------------
-    #: The mapping of command id to Command object.
-    _commands = Typed(dict, ())
-
-    #: The mapping of extension object to list of Command objects.
-    _command_extensions = Typed(defaultdict, (list,))
 
     def _refresh_commands(self):
         """ Refresh the command objects for the plugin.
@@ -126,12 +82,12 @@ class CorePlugin(Plugin):
         Parameters
         ----------
         extension : Extension
-            The extension object of interest.
+        The extension object of interest.
 
         Returns
         -------
         result : list
-            The list of Command objects declared by the extension.
+        The list of Command objects declared by the extension.
 
         """
         workbench = self.workbench
@@ -144,12 +100,6 @@ class CorePlugin(Plugin):
                     raise TypeError(msg % args)
                 commands.append(item)
         return commands
-
-    def _on_commands_updated(self, change):
-        """ The observer for the commands extension point.
-
-        """
-        self._refresh_commands()
 
     def _bind_observers(self):
         """ Setup the observers for the plugin.

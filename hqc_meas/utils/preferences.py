@@ -36,10 +36,10 @@ class Preferences(Declarative):
         used to update the preferences.
 
     """
-    saving_method = d_(Str())
+    saving_method = d_(Str('preferences_from_members'))
 
-    loading_method = d_(Str())
+    loading_method = d_(Str('update_members_from_preferences'))
 
     auto_save = d_(List(Str()))
 
-    edit_view = d_(Callable)
+    edit_view = d_(Callable())

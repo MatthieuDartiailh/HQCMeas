@@ -139,7 +139,7 @@ enamldef InstrManagerManifest(PluginManifest):
                             'available_profiles']
     Extension:
         id = 'commands'
-        point = 'enaml.workbench.core.commands'
+        point = 'hqc_meas.core.commands'
         Command:
             id = 'hqc_meas.instr_manager.show_manager'
             description = SHOW_MANAGER_DESCRIPTION

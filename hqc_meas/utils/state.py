@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (List, Str, Dict)
+from atom.api import (List, Str, Dict, Unicode)
 from enaml.core.declarative import Declarative, d_
 
 
@@ -16,7 +16,7 @@ class State(Declarative):
 
     Attributes
     ----------
-    id : str
+    id : unicode
         The globally unique identifier for the state
 
     description : str
@@ -31,7 +31,7 @@ class State(Declarative):
         the method on the plugin which can be used as the property getter.
 
     """
-    id = d_(Str())
+    id = d_(Unicode())
 
     description = d_(Str())
 

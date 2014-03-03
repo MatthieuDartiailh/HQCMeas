@@ -14,7 +14,7 @@ from .preferences import Preferences
 
 MODULE_PATH = os.path.dirname(__file__)
 
-PREFS_POINT = 'hqc_meas.preferences.pref_plugins'
+PREFS_POINT = 'hqc_meas.preferences.pref_plugin'
 
 
 class PrefPlugin(Plugin):
@@ -42,8 +42,9 @@ class PrefPlugin(Plugin):
             self.default_file = defaults['file']
             pref_path = os.path.join(defaults['folder'], defaults['file'])
             if os.path.isfile(pref_path):
-                self._prefs = ConfigObj(pref_path).dict()
+                self._prefs = ConfigObj(pref_path)
 
+        self._refresh_pref_decls()
         self._bind_observers()
 
     def stop(self):
@@ -181,7 +182,7 @@ class PrefPlugin(Plugin):
     # Mapping between plugin_id and the declared preferences.
     _pref_decls = Dict(Str(), Typed(Preferences))
 
-    def _refresh_pref_decl(self):
+    def _refresh_pref_decls(self):
         """ Refresh the list of states contributed by extensions.
 
         """
@@ -202,7 +203,7 @@ class PrefPlugin(Plugin):
                 pref = old_ids[extension.plugin_id]
             else:
                 pref = self._load_pref_decl(extension)
-            new_ids[extension] = pref
+            new_ids[extension.plugin_id] = pref
 
         self._pref_decls = new_ids
 

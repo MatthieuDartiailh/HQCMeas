@@ -20,16 +20,18 @@ class HasPrefPlugin(Plugin):
     def start(self):
         """
         """
-        core = self.workbench.get_plugin('enaml.workbench.core')
-        prefs = core.invoke_command('hqc_meas.preferences.get_plugin_prefs',
-                                    parameters={}, trigger=self)
-        self.update_members_from_preferences(**prefs)
-        core.invoke_command('hqc_meas.preferences.plugin_init_completed',
-                            parameters={}, trigger=self)
+        core = self.workbench.get_plugin('hqc_meas.core')
 
-    def stop(self):
-        """
-        """
-        core = self.workbench.get_plugin('enaml.workbench.core')
-        core.invoke_command('hqc_meas.preferences.update_plugin_prefs',
-                            parameters={}, trigger=self)
+        prefs = core.invoke_command('hqc_meas.preferences.get_plugin_prefs',
+                                    {'plugin_id': self.manifest.id}, self)
+        self.update_members_from_preferences(**prefs)
+        core.invoke_command('hqc_meas.preferences.plugin_init_complete',
+                            {'plugin_id': self.manifest.id}, self)
+
+    # This would turn everything in auto which is not desired
+#    def stop(self):
+#        """
+#        """
+#        core = self.workbench.get_plugin('hqc_meas.core')
+#        core.invoke_command('hqc_meas.preferences.update_plugin_prefs',
+#                            parameters={}, trigger=self)

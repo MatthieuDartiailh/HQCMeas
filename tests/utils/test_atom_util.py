@@ -33,7 +33,7 @@ def test_tagged_members1():
     aux = _Aux()
     members = sorted(tagged_members(aux, 'pref').keys())
     test = sorted(['string', 'float_n', 'enum', 'enum_float', 'list_',
-                   'dict_'])
+                   'dict_', 'atom'])
     assert members == test
 
 
