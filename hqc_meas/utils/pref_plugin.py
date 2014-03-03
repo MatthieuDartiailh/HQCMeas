@@ -41,8 +41,7 @@ class PrefPlugin(Plugin):
             self.default_folder = defaults['folder']
             self.default_file = defaults['file']
             pref_path = os.path.join(defaults['folder'], defaults['file'])
-            if os.path.isfile(pref_path):
-                self._prefs = ConfigObj(pref_path)
+            self._prefs = ConfigObj(pref_path)
 
         self._refresh_pref_decls()
         self._bind_observers()
@@ -86,7 +85,7 @@ class PrefPlugin(Plugin):
         for plugin_id in self._pref_decls:
             plugin = self.workbench.get_plugin(plugin_id)
             decl = self._pref_decls[plugin_id]
-            save_method = getattr(plugin, decl.load_method)
+            save_method = getattr(plugin, decl.saving_method)
             prefs[plugin_id] = save_method()
 
         prefs.write()
@@ -104,13 +103,16 @@ class PrefPlugin(Plugin):
         if path is None:
             path = os.path.join(self.default_folder, self.default_file)
 
+        if not os.path.isfile(path):
+            return
+
         prefs = ConfigObj(path)
         for plugin_id in prefs:
             if plugin_id in self._pref_decls:
                 plugin = self.workbench.get_plugin(plugin_id)
                 decl = self._pref_decls[plugin_id]
-                load_method = getattr(plugin, decl.load_method)
-                load_method(prefs[plugin_id])
+                load_method = getattr(plugin, decl.loading_method)
+                load_method(**prefs[plugin_id])
 
     def plugin_init_complete(self, plugin_id):
         """ Notify the preference plugin that a plugin has started properly.
@@ -153,6 +155,7 @@ class PrefPlugin(Plugin):
         else:
             return {}
 
+    # TODO add a member kw to restrict update
     def update_plugin_preferences(self, plugin_id):
         """ Update the preferences using the current value of a plugin.
 
@@ -165,7 +168,7 @@ class PrefPlugin(Plugin):
         """
         decl = self._pref_decls[plugin_id]
         plugin = self.workbench.get_plugin(plugin_id)
-        save_method = getattr(plugin, decl.save_method)
+        save_method = getattr(plugin, decl.saving_method)
         self._prefs[plugin_id] = save_method()
 
     def open_editor(self):
@@ -254,6 +257,8 @@ class PrefPlugin(Plugin):
             self._prefs[plugin_id][name] = value
         else:
             self._prefs[plugin_id] = {name: value}
+
+        self._prefs.write()
 
     def _on_pref_decls_updated(self, change):
         """ The observer for the state extension point

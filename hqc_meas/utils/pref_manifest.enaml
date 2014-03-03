@@ -72,7 +72,7 @@ def update_plugin_preferences(event):
 
     """
     pref = event.workbench.get_plugin('hqc_meas.preferences')
-    pref.update_plugin_preferences(event.parameters['prefs'])
+    pref.update_plugin_preferences(event.parameters['plugin_id'])
 
 # TODO implement pref editor
 
