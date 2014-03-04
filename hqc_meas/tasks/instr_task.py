@@ -11,6 +11,7 @@ from ..instruments.drivers import DRIVERS
 from ..instruments.instrument_manager import matching_instr_list
 from ..instruments.drivers.driver_tools import BaseInstrument, InstrIOError
 
+
 class InstrumentTask(SimpleTask):
     """
     """

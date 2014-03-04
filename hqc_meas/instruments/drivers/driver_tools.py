@@ -35,6 +35,7 @@ from textwrap import fill
 from inspect import cleandoc
 import inspect
 
+
 class InstrError(Exception):
     """Generic error raised when an instrument does not behave as expected
     """
@@ -78,16 +79,16 @@ class instrument_property(property):
     _cache = None
     _allow_caching = False
 
-    def __get__(self, obj, objtype = None):
+    def __get__(self, obj, objtype=None):
         """
         """
         if self._allow_caching:
             if self._cache is None:
                 self._cache = super(instrument_property, self).__get__(obj,
-                                                                     objtype)
+                                                                       objtype)
             return self._cache
         else:
-           return super(instrument_property, self).__get__(obj, objtype)
+            return super(instrument_property, self).__get__(obj, objtype)
 
     def __set__(self, obj, value):
         """
@@ -115,7 +116,8 @@ class instrument_property(property):
         """
         self._allow_caching = author
 
-def secure_communication(max_iter = 10):
+
+def secure_communication(max_iter=10):
     """Decorator making sure that a communication error cannot simply be
     resolved by attempting again to send a message.
 
@@ -199,8 +201,8 @@ class BaseInstrument(object):
     secure_com_except = ()
     owner = ''
 
-    def __init__(self, connection_info, caching_allowed = True,
-                 caching_permissions = {}, auto_open = True):
+    def __init__(self, connection_info, caching_allowed=True,
+                 caching_permissions={}, auto_open=True):
         super(BaseInstrument, self).__init__()
         if caching_allowed:
             # Avoid overriding class attribute
@@ -216,52 +218,52 @@ class BaseInstrument(object):
         """Open a connection to an instrument
         """
         message = fill(cleandoc(
-                    '''This method is used to open the connection with the
-                    instrument and should be implemented by classes
-                    subclassing BaseInstrument'''),
-                    80)
+            '''This method is used to open the connection with the
+            instrument and should be implemented by classes
+            subclassing BaseInstrument'''),
+            80)
         raise NotImplementedError(message)
 
     def close_connection(self):
         """Close the connection established previously using `open_connection`
         """
         message = fill(cleandoc(
-                    '''This method is used to close the connection with the
-                    instrument and should be implemented by classes
-                    subclassing BaseInstrument'''),
-                    80)
+            '''This method is used to close the connection with the
+            instrument and should be implemented by classes
+            subclassing BaseInstrument'''),
+            80)
         raise NotImplementedError(message)
 
     def reopen_connection(self):
         """Reopen the connection established previously using `open_connection`
         """
         message = fill(cleandoc(
-                    '''This method is used to reopen a connection whose state
-                    is suspect, for example the last message sent did not
-                    go through.'''),
-                    80)
+            '''This method is used to reopen a connection whose state
+            is suspect, for example the last message sent did not
+            go through.'''),
+            80)
         raise NotImplementedError(message)
 
     def check_connection(self):
         """Check whether or not the cache is likely to have been corrupted
         """
         message = fill(cleandoc(
-                        '''This method is used to check that the instrument is
-                        in remote mode and that none of the values in the cache
-                        has been corrupted by a local user.'''),
-                    80)
+            '''This method is used to check that the instrument is
+            in remote mode and that none of the values in the cache
+            has been corrupted by a local user.'''),
+            80)
         raise NotImplementedError(message)
 
     def connected(self):
         """Return whether or not commands can be sent to the instrument
         """
         message = fill(cleandoc(
-                        '''This method returns whether or not command can be
-                        sent to the instrument'''),
-                    80)
+            '''This method returns whether or not command can be
+            sent to the instrument'''),
+            80)
         raise NotImplementedError(message)
 
-    def clear_instrument_cache(self, properties = None):
+    def clear_instrument_cache(self, properties=None):
         """Clear the cache of all the properties or only the one of specified
         ones
 

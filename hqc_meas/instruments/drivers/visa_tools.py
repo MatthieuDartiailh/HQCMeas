@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# TODO this is not compatible with PyVisa 1.5
 try:
     from visa import Instrument, VisaIOError
 except ImportError:
@@ -70,17 +71,19 @@ class VisaInstrument(BaseInstrument):
     """
     secure_com_except = (InstrIOError, VisaIOError)
 
-    def __init__(self, connection_info, caching_allowed = True,
-                 caching_permissions = {}, auto_open = True):
+    def __init__(self, connection_info, caching_allowed=True,
+                 caching_permissions={}, auto_open=True):
         super(VisaInstrument, self).__init__(connection_info, caching_allowed,
                                              caching_permissions)
         if connection_info['additionnal_mode'] != '':
-            self.connection_str = connection_info['connection_type']\
-                                + '::' + connection_info['address']\
-                                + '::' + connection_info['additionnal_mode']
+            self.connection_str =\
+                connection_info['connection_type']\
+                + '::' + connection_info['address']\
+                + '::' + connection_info['additionnal_mode']
         else:
-            self.connection_str = connection_info['connection_type']\
-                                + '::' + connection_info['address']
+            self.connection_str =\
+                connection_info['connection_type']\
+                + '::' + connection_info['address']
         self._driver = None
         if auto_open:
             self.open_connection()
@@ -137,13 +140,13 @@ class VisaInstrument(BaseInstrument):
         """
         return self._driver.read()
 
-    def read_values(self, format = None):
+    def read_values(self, format=None):
         """Read one line of the instrument's buffer and convert to values.
 
         Simply call the `read_values` method of the `Instrument` object
         stored in the attribute `_driver`
         """
-        return self._driver.read_values(format = format)
+        return self._driver.read_values(format=format)
 
     def ask(self, message):
         """Send the specified message to the instrument and read its answer.
@@ -153,7 +156,7 @@ class VisaInstrument(BaseInstrument):
         """
         return self._driver.ask(message)
 
-    def ask_for_values(self, message, format = None):
+    def ask_for_values(self, message, format=None):
         """Send the specified message to the instrument and convert its answer
         to values.
 

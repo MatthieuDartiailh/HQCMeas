@@ -60,10 +60,10 @@ def save_profile(directory, profile_name, profile_infos):
 class InstrManagerPlugin(HasPrefPlugin):
     """
     """
-
+    # Directories in which the profiles are looked for.
     profiles_folders = List(Unicode(),
                             [os.path.join(MODULE_PATH,
-                                           'profiles')]).tag(pref=True)
+                                          'profiles')]).tag(pref=True)
 
     # Drivers loading exception
     drivers_loading = List(Unicode()).tag(pref=True)
@@ -325,19 +325,13 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         """
         path = os.path.join(MODULE_PATH, 'drivers')
-        modules = sorted(m[:-3] for m in os.listdir(path)
-                         if (os.path.isfile(os.path.join(path, m))
-                             and m.endswith('.py')))
-        modules.remove('__init__')
-        modules.remove('driver_tools')
-        for mod in modules[:]:
-            if mod in self.drivers_loading:
-                modules.remove(mod)
+        failed = {}
+
+        modules = self._explore_package('drivers', path, failed)
 
         driver_types = {}
         driver_packages = []
         drivers = {}
-        failed = {}
         self._explore_modules(modules, driver_types, driver_packages, drivers,
                               failed)
 
@@ -350,31 +344,8 @@ class InstrManagerPlugin(HasPrefPlugin):
         while driver_packages:
             pack = driver_packages.pop(0)
             pack_path = os.path.join(path, os.path.join(pack.split('.')))
-            if not os.path.isdir(pack_path):
-                log = logging.getLogger(__name__)
-                mess = '{} is not a valid directory.({})'.format(pack,
-                                                                 pack_path)
-                log.error(mess)
-                failed[pack] = mess
-                continue
 
-            modules = sorted(pack + '.' + m[:-3] for m in os.listdir(pack_path)
-                             if (os.path.isfile(os.path.join(path, m))
-                                 and m.endswith('.py')))
-            try:
-                modules.removes(pack + '.__init__')
-            except ValueError:
-                log = logging.getLogger(__name__)
-                mess = cleandoc('''{} is not a valid Python package (miss
-                    __init__.py).'''.format(pack))
-                log.error(mess)
-                failed[pack] = mess
-                continue
-
-            # Remove modules which should not be imported
-            for mod in modules[:]:
-                if mod in self.drivers_loading:
-                    modules.remove(mod)
+            modules = self._explore_package(pack, pack_path, failed)
 
             self._explore_modules(modules, driver_types, driver_packages,
                                   drivers, failed, prefix=pack)
@@ -388,6 +359,54 @@ class InstrManagerPlugin(HasPrefPlugin):
         self._driver_types = driver_types
 
         # TODO do something with failed
+
+    def _explore_package(self, pack, pack_path, failed):
+        """ Explore a package
+
+        Parameters
+        ----------
+        pack : str
+            The package name relative to "drivers". (ex : drivers.visa)
+
+        pack_path : unicode
+            Path of the package to explore
+
+        failed : dict
+            A dict in which failed imports will be stored.
+
+        Returns
+        -------
+        modules : list
+            List of string indicating modules which can be imported
+
+        """
+        if not os.path.isdir(pack_path):
+            log = logging.getLogger(__name__)
+            mess = '{} is not a valid directory.({})'.format(pack,
+                                                             pack_path)
+            log.error(mess)
+            failed[pack] = mess
+            return []
+
+        modules = sorted(pack + '.' + m[:-3] for m in os.listdir(pack_path)
+                         if (os.path.isfile(os.path.join(pack_path, m))
+                             and m.endswith('.py')))
+        try:
+            modules.removes(pack + '.__init__')
+        except ValueError:
+            log = logging.getLogger(__name__)
+            mess = cleandoc('''{} is not a valid Python package (miss
+                __init__.py).'''.format(pack))
+            log.error(mess)
+            failed[pack] = mess
+            return []
+
+        # Remove modules which should not be imported
+        for mod in modules[:]:
+            if mod in self.drivers_loading:
+                modules.remove(mod)
+
+        return modules
 
     @staticmethod
     def _explore_modules(modules, types, packages, drivers, failed,
@@ -413,7 +432,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         for mod in modules:
             try:
-                m = import_module('.drivers.' + mod)
+                m = import_module('.' + mod)
             except Exception as e:
                 log = logging.getLogger(__name__)
                 mess = 'Failed to import {} : {}'.format(mod, e.message)

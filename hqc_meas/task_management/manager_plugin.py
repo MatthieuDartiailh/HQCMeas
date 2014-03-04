@@ -297,7 +297,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         pack : str
             The package name relative to "tasks". (ex : tasks.instr)
 
-        path : unicode
+        pack_path : unicode
             Path of the package to explore
 
         failed : dict

@@ -11,6 +11,8 @@ from ..instruments.drivers.driver_tools import instrument_property
 from ..instruments.forms import AbstractConnectionForm, FORMS
 from ..instruments.instrument_manager import matching_instr_list
 
+# TODO turn this into, a plugin using InstrManager.
+
 
 class DriverDebugger(Atom):
     """

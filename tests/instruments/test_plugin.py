@@ -10,8 +10,6 @@ with enaml.imports():
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
 
-# TODO This stuff cannot be completed before some tasks are refactored, as they
-# are currently broken (InstrTask)
 
 def setup_module():
     print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
@@ -45,16 +43,22 @@ class Test_TaskManagement(object):
         default['file'] = 'default_test.ini'
         default.write()
 
-        conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini')
+        driv_path = os.path.join(directory, '..', '..', 'hqc_meas',
+                                 'instruments', 'drivers')
+        driv_api = set(('driver_tools.py', 'dummy.py'))
+        driv_loading = [unicode('drivers.' + mod[:-3])
+                        for mod in os.listdir(driv_path)
+                        if mod.endswith('.py') and mod not in driv_api]
+
+        profile_path = os.path.join(directory, 'temp_profiles')
+        os.mkdir(profile_path)
+        # TODO create False profile
+
+        conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
         conf['hqc_meas.task_manager'] = {}
-        task_path = os.path.join(directory, '..', '..', 'hqc_meas', 'tasks')
-        task_api = set(('base_tasks.py', 'instr_task.py', '))
-        task_loading = [unicode('tasks.' + mod[:-3])
-                        for mod in os.listdir(task_path)
-                        if mod.endswith('.py') and mod not in ]
-        # TODO create false preferences for the task manager to avoid loading
-        # all tasks and users templates. (create False template and add a non
-        # working task to check everything is well behaved)
+
+        # TODO create false preferences for the instr manager to avoid loading
+        # all driv and profiles.
 
     @classmethod
     def teardown_class(cls):

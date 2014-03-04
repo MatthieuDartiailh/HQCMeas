@@ -21,14 +21,14 @@ def manager_plugin_factory():
     from .manager_plugin import InstrManagerPlugin
     return InstrManagerPlugin()
 
-
-def show_manager(event):
-    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
-
-    """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    from .manager_view import InstrManagerView
-    InstrManagerView(manager=manager).show()
+# TODO
+#def show_manager(event):
+#    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
+#
+#    """
+#    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+#    from .manager_view import InstrManagerView
+#    InstrManagerView(manager=manager).show()
 
 
 def matching_drivers(event):
@@ -140,10 +140,10 @@ enamldef InstrManagerManifest(PluginManifest):
     Extension:
         id = 'commands'
         point = 'hqc_meas.core.commands'
-        Command:
-            id = 'hqc_meas.instr_manager.show_manager'
-            description = SHOW_MANAGER_DESCRIPTION
-            handler = show_manager
+#        Command:
+#            id = 'hqc_meas.instr_manager.show_manager'
+#            description = SHOW_MANAGER_DESCRIPTION
+#            handler = show_manager
         Command:
             id = 'hqc_meas.instr_manager.matching_drivers'
             description = MATCHING_DRIVERS_DESCRIPTION
@@ -176,7 +176,7 @@ enamldef InstrManagerManifest(PluginManifest):
             label = 'Instr'
             ItemGroup:
                 id = 'user'
-        ActionItem:
-            path = '/instr/show_manager'
-            label = 'Manager'
-            command = 'hqc_meas.instr_manager.show_manager'
+#        ActionItem:
+#            path = '/instr/show_manager'
+#            label = 'Manager'
+#            command = 'hqc_meas.instr_manager.show_manager'
