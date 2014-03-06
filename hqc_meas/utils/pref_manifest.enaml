@@ -123,7 +123,7 @@ enamldef PreferencesManifest(PluginManifest):
         description = PREF_PLUGINS_DESCRIPTION
     Extension:
         id = 'commands'
-        point = 'hqc_meas.core.commands'
+        point = 'enaml.workbench.core.commands'
         Command:
             id = 'hqc_meas.preferences.save'
             description = SAVE_PREF_DESCRIPTION

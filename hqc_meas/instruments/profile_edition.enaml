@@ -103,6 +103,7 @@ def _handle_close(self, view, is_ok):
         return False
 
 
+# TODO allow to choose the folder if different ones exist
 enamldef ProfileDialog(Dialog): instr_dialog:
     """
     """

@@ -171,7 +171,7 @@ class StatePlugin(Plugin):
 
         # Dynamic building of the state class
         # TODO add check sync_members and prop not confincting
-        class_name = state.id.replace('.', '').capitalize()
+        class_name = str(state.id.replace('.', '').capitalize())
 
         members = {}
         for m in state.sync_members:

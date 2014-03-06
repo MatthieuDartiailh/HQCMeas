@@ -1,0 +1,65 @@
+# -*- coding: utf-8 -*-
+from atom.api import Atom, Str
+from enaml.workbench.api import PluginManifest, Extension, Plugin
+from enaml.workbench.core.api import Command
+
+from hqc_meas.instruments.api import InstrUser
+
+
+def release_instr(self, instrs):
+    return True
+
+def not_release_instr(self, intrs):
+    return False
+
+enamldef InstrUser1(PluginManifest):
+    """
+    """
+    id = u'test.user1'
+
+    Extension:
+        id = 'com'
+        point = u'enaml.workbench.core.commands'
+        Command:
+            id = 'test.user1.release'
+            handler = release_instr
+    Extension:
+        id = 'i_user'
+        point = u'hqc_meas.instr_manager.users'
+        InstrUser:
+            release_command = 'test.user1.release'
+
+enamldef InstrUser2(PluginManifest):
+    """
+    """
+    id = u'test.user2'
+
+    Extension:
+        id = 'com'
+        point = u'enaml.workbench.core.commands'
+        Command:
+            id = 'test.user2.release'
+            handler = not_release_instr
+    Extension:
+        id = 'i_user'
+        point = u'hqc_meas.instr_manager.users'
+        InstrUser:
+            release_command = 'test.user2.release'
+
+enamldef InstrUser3(PluginManifest):
+    """
+    """
+    id = u'test.user3'
+
+    Extension:
+        id = 'com'
+        point = u'enaml.workbench.core.commands'
+        Command:
+            id = 'test.user3.release'
+            handler = release_instr
+    Extension:
+        id = 'i_user'
+        point = u'hqc_meas.instr_manager.users'
+        InstrUser:
+            release_command = 'test.user3.release'
+            default_policy = 'unreleasable'

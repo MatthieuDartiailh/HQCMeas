@@ -3,11 +3,11 @@ from enaml.workbench.api import Workbench
 import enaml
 
 with enaml.imports():
-    from hqc_meas.utils.core_manifest import HqcCoreManifest
+    from enaml.workbench.core.core_manifest import CoreManifest
     from hqc_meas.utils.state_manifest import StateManifest
     from .states_utils import StateContributor, StateContributor2
 
-CORE_PLUGIN = u'hqc_meas.core'
+CORE_PLUGIN = u'enaml.workbench.core'
 GET_STATE = u'hqc_meas.state.get'
 
 
@@ -31,7 +31,7 @@ class Test_State(object):
 
     def setup(self):
         self.workbench = Workbench()
-        self.workbench.register(HqcCoreManifest())
+        self.workbench.register(CoreManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(StateContributor())
 

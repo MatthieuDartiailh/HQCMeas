@@ -20,7 +20,7 @@ class HasPrefPlugin(Plugin):
     def start(self):
         """
         """
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
 
         prefs = core.invoke_command('hqc_meas.preferences.get_plugin_prefs',
                                     {'plugin_id': self.manifest.id}, self)

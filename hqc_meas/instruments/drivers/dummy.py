@@ -39,4 +39,4 @@ class DummyInstrument(BaseInstrument):
         return self._connected
 
 DRIVER_TYPES = {'Dummy': DummyInstrument}
-DRIVER_PACKAGE = 'dummies'
+DRIVER_PACKAGES = ['dummies']

@@ -45,7 +45,7 @@ enamldef StateManifest(PluginManifest):
         description = STATES_DESCRIPTION
     Extension:
         id = 'commands'
-        point = 'hqc_meas.core.commands'
+        point = 'enaml.workbench.core.commands'
         Command:
             id = 'hqc_meas.state.get'
             description = SAVE_PREF_DESCRIPTION

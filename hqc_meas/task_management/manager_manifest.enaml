@@ -121,7 +121,7 @@ enamldef TaskManagerManifest(PluginManifest):
             sync_members = ['tasks', 'filters']
     Extension:
         id = 'commands'
-        point = 'hqc_meas.core.commands'
+        point = 'enaml.workbench.core.commands'
 #        Command:
 #            id = 'hqc_meas.instr_manager.show_manager'
 #            description = SHOW_MANAGER_DESCRIPTION

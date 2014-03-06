@@ -18,7 +18,7 @@ from inspect import cleandoc
 from configobj import ConfigObj
 from collections import defaultdict
 
-from ..enaml_util.pref_plugin import HasPrefPlugin
+from ..utils.has_pref_plugin import HasPrefPlugin
 from .drivers.driver_tools import BaseInstrument
 from .instr_user import InstrUser
 
@@ -26,6 +26,8 @@ from .instr_user import InstrUser
 USERS_POINT = u'hqc_meas.instr_manager.users'
 
 MODULE_PATH = os.path.dirname(__file__)
+
+MODULE_ANCHOR = 'hqc_meas.instruments'
 
 
 def open_profile(profile_path):
@@ -68,15 +70,16 @@ class InstrManagerPlugin(HasPrefPlugin):
     # Drivers loading exception
     drivers_loading = List(Unicode()).tag(pref=True)
 
+    # Name of the known driver types.
     driver_types = List()
 
-    #Name: class
+    # Name of the known drivers.
     drivers = List()
 
-    #Name: path
+    # Name of the known profiles.
     all_profiles = List()
 
-    #Name: path
+    # Name of the currently available profiles.
     available_profiles = List()
 
     def start(self):
@@ -87,6 +90,8 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         """
         super(InstrManagerPlugin, self).start()
+        self._refresh_drivers()
+        self._refresh_profiles_map()
         self._refresh_users()
         self._bind_observers()
 
@@ -253,7 +258,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         drivers = []
         for d_type in driver_types:
             drivs = [driv for driv, d_class in self._drivers.iteritems()
-                     if issubclass(d_class, d_type)]
+                     if issubclass(d_class, self._driver_types[d_type])]
             drivers.extend(drivs)
 
         return drivers
@@ -275,7 +280,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         profiles = []
         for driver in drivers:
             profs = [prof for prof, path in self._profiles_map.iteritems()
-                     if open_profile(path)['driver'] == driver]
+                     if open_profile(path)['driver_class'] == driver]
             profiles.extend(profs)
 
         return profiles
@@ -294,7 +299,7 @@ class InstrManagerPlugin(HasPrefPlugin):
     _used_profiles = Dict(Str(), Tuple())
 
     # Mapping between plugin_id and InstrUser declaration.
-    _users = Dict(Str(), Typed(InstrUser))
+    _users = Dict(Unicode(), Typed(InstrUser))
 
     # Watchdog observer
     _observer = Typed(Observer, ())
@@ -333,7 +338,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         driver_packages = []
         drivers = {}
         self._explore_modules(modules, driver_types, driver_packages, drivers,
-                              failed)
+                              failed, 'drivers')
 
         # Remove packages which should not be explored
         for pack in driver_packages[:]:
@@ -343,7 +348,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         # Explore packages
         while driver_packages:
             pack = driver_packages.pop(0)
-            pack_path = os.path.join(path, os.path.join(pack.split('.')))
+            pack_path = os.path.join(MODULE_PATH, *pack.split('.'))
 
             modules = self._explore_package(pack, pack_path, failed)
 
@@ -357,6 +362,9 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         self._drivers = drivers
         self._driver_types = driver_types
+
+        self.driver_types = driver_types.keys()
+        self.drivers = drivers.keys()
 
         # TODO do something with failed
 
@@ -392,7 +400,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                          if (os.path.isfile(os.path.join(pack_path, m))
                              and m.endswith('.py')))
         try:
-            modules.removes(pack + '.__init__')
+            modules.remove(pack + '.__init__')
         except ValueError:
             log = logging.getLogger(__name__)
             mess = cleandoc('''{} is not a valid Python package (miss
@@ -410,7 +418,7 @@ class InstrManagerPlugin(HasPrefPlugin):
 
     @staticmethod
     def _explore_modules(modules, types, packages, drivers, failed,
-                         prefix=None):
+                         prefix):
         """ Explore a list of modules.
 
         Parameters
@@ -432,7 +440,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         for mod in modules:
             try:
-                m = import_module('.' + mod)
+                m = import_module('.' + mod, MODULE_ANCHOR)
             except Exception as e:
                 log = logging.getLogger(__name__)
                 mess = 'Failed to import {} : {}'.format(mod, e.message)
@@ -471,7 +479,7 @@ class InstrManagerPlugin(HasPrefPlugin):
             if plugin_id in old_users:
                 user = old_users[plugin_id]
             else:
-                user = self._load_user(plugin_id)
+                user = self._load_user(extension)
             new_users[plugin_id] = user
 
         self._users = new_users
@@ -533,7 +541,9 @@ class InstrManagerPlugin(HasPrefPlugin):
     @staticmethod
     def _normalise_name(name):
         """Normalize the name of the profiles by replacing '_' by spaces,
-        removing the extension, and adding spaces between 'aA' sequences.
+        removing the extension, adding spaces between 'aA' sequences and
+        capitalizing the first letter.
+
         """
         if name.endswith('.ini') or name.endswith('Task'):
             name = name[:-4] + '\0'
@@ -571,6 +581,7 @@ class _FileListUpdater(FileSystemEventHandler):
         self.handler = handler
 
     def on_created(self, event):
+        print 'File created'
         super(_FileListUpdater, self).on_created(event)
         if isinstance(event, FileCreatedEvent):
             self.handler()

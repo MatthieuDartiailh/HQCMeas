@@ -6,7 +6,7 @@ Created on Tue Nov 05 11:57:33 2013
 """
 from atom.api import (Atom, Unicode, Bool, List, Value, Property, ContainerList,
                   Dict, Typed, Instance, Str)
-                  
+
 #from enaml.qt.deferred_caller import deferredCall
 from enaml.widgets.api import Menu
 
@@ -95,7 +95,7 @@ class TreeNode (Atom):
 
     # Selector or name for foreground color
     foreground = Value('black')
-    
+
     _py_data = Value()
 
     #---------------------------------------------------------------------------
@@ -612,7 +612,7 @@ class TreeNode (Atom):
             return obj
 
         return obj.__class__
-        
+
 #-------------------------------------------------------------------------------
 #  'MultiTreeNode' object:
 #-------------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 """
 """
 
-from atom.api import (Callable, Str)
+from atom.api import (Callable, Enum)
 from enaml.core.declarative import Declarative, d_
 
 
@@ -16,7 +16,7 @@ class InstrUser(Declarative):
 
     Attributes
     ----------
-    release_method: str
+    release_command : unicode
         Id of the command to call when the ManagerPlugin needs to get an
         instrument profile back from its current user. It will pass a list
         of profiles to release. It should return a bool indicating whether
@@ -28,6 +28,6 @@ class InstrUser(Declarative):
         when needed.
 
     """
-    release_method = d_(Callable())
+    release_command = d_(Callable())
 
-    default_policy = d_(Str('releasable'))
+    default_policy = d_(Enum('releasable', 'unreleasable'))

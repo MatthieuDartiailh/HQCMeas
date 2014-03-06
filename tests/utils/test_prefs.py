@@ -6,7 +6,7 @@ import enaml
 from configobj import ConfigObj
 
 with enaml.imports():
-    from hqc_meas.utils.core_manifest import HqcCoreManifest
+    from enaml.workbench.core.core_manifest import CoreManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
     from .pref_utils import PrefContributor
 
@@ -62,7 +62,7 @@ class Test_State(object):
     def setup(self):
 
         self.workbench = Workbench()
-        self.workbench.register(HqcCoreManifest())
+        self.workbench.register(CoreManifest())
 
     def teardown(self):
         path = os.path.join(self.test_dir, 'default_test.ini')
@@ -101,7 +101,7 @@ class Test_State(object):
         self.workbench.register(PreferencesManifest())
         self.workbench.register(PrefContributor())
 
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         pref = core.invoke_command('hqc_meas.preferences.get_plugin_prefs',
                                    {'plugin_id': u'test.prefs'}, self)
         assert pref == {}
@@ -116,7 +116,7 @@ class Test_State(object):
         self.workbench.register(PreferencesManifest())
         self.workbench.register(PrefContributor())
 
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         pref = core.invoke_command('hqc_meas.preferences.get_plugin_prefs',
                                    {'plugin_id': u'test.prefs'}, self)
         assert pref['string'] == 'test'
@@ -127,7 +127,7 @@ class Test_State(object):
 
         contrib = self.workbench.get_plugin(u'test.prefs')
         contrib.string = 'test_update'
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         core.invoke_command('hqc_meas.preferences.update_plugin_prefs',
                             {'plugin_id': u'test.prefs'}, self)
 
@@ -155,7 +155,7 @@ class Test_State(object):
 
         contrib = self.workbench.get_plugin(u'test.prefs')
         contrib.string = 'test_save'
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         core.invoke_command('hqc_meas.preferences.save', {}, self)
 
         path = os.path.join(self.test_dir, 'default_test.ini')
@@ -171,7 +171,7 @@ class Test_State(object):
         contrib.string = 'test_save'
 
         path = os.path.join(self.test_dir, 'custom_test.ini')
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         core.invoke_command('hqc_meas.preferences.save',
                             {'path': path}, self)
 
@@ -189,7 +189,7 @@ class Test_State(object):
         conf[u'test.prefs']['string'] = 'test'
         conf.write()
 
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         core.invoke_command('hqc_meas.preferences.load',
                             {}, self)
         contrib = self.workbench.get_plugin(u'test.prefs')
@@ -206,7 +206,7 @@ class Test_State(object):
         conf[u'test.prefs']['string'] = 'test'
         conf.write()
 
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         core.invoke_command('hqc_meas.preferences.load',
                             {'path': ''}, self)
 
@@ -220,7 +220,7 @@ class Test_State(object):
         conf[u'test.prefs']['string'] = 'test'
         conf.write()
 
-        core = self.workbench.get_plugin('hqc_meas.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         core.invoke_command('hqc_meas.preferences.load',
                             {'path': path}, self)
         contrib = self.workbench.get_plugin(u'test.prefs')
