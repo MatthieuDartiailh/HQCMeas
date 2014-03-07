@@ -28,7 +28,7 @@ class Test_TaskManagement(object):
 
     @classmethod
     def setup_class(cls):
-        print __name__, ': TestClass.setup_class() ----------'
+        print __name__, ': ', cls.__name__, '.setup_class() ----------'
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_tests')
@@ -73,8 +73,8 @@ class Test_TaskManagement(object):
 
     @classmethod
     def teardown_class(cls):
-        print __name__, ': TestClass.teardown_class() -------'
-         # Removing .ini files created during tests.
+        print '\n', __name__, ': ', cls.__name__, 'teardown_class() -------'
+        # Removing .ini files created during tests.
         shutil.rmtree(cls.test_dir)
 
         # Restoring default.ini file in utils
@@ -95,7 +95,10 @@ class Test_TaskManagement(object):
         self.workbench.register(PreferencesManifest())
 
     def teardown(self):
-        pass
+        self.workbench.unregister(u'hqc_meas.instr_manager')
+        self.workbench.unregister(u'hqc_meas.preferences')
+        self.workbench.unregister(u'hqc_meas.state')
+        self.workbench.unregister(u'enaml.workbench.core')
 
     def test_init(self):
         self.workbench.register(InstrManagerManifest())
@@ -126,8 +129,14 @@ class Test_TaskManagement(object):
         prof['driver_type'] = 'Dummy'
         prof['driver_class'] = 'PanelTestDummy'
         prof.write()
-        assert plugin.all_profiles == ['Dummy', 'Test']
-        assert plugin.available_profiles == ['Dummy', 'Test']
+        from time import sleep
+        sleep(0.1)
+        assert plugin.all_profiles == sorted([u'Dummy', u'Test'])
+        assert plugin.available_profiles == sorted([u'Dummy', u'Test'])
+        os.remove(os.path.join(profile_path, 'test.ini'))
+        sleep(0.1)
+        assert plugin.all_profiles == sorted([u'Dummy'])
+        assert plugin.available_profiles == sorted([u'Dummy'])
 
     def test_driver_types_request(self):
         self.workbench.register(InstrManagerManifest())
@@ -172,3 +181,77 @@ class Test_TaskManagement(object):
         assert path == os.path.join(self.test_dir,
                                     'temp_profiles',
                                     'dummy.ini')
+
+    def test_profile_request1(self):
+        self.workbench.register(InstrManagerManifest())
+        self.workbench.register(InstrUser1())
+        user = self.workbench.get_plugin(u'test.user1')
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+
+        # Can get profile.
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user)
+        manager = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+        assert manager.available_profiles == []
+        assert manager._used_profiles == {'Dummy': u'test.user1'}
+
+        # Can release profile.
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
+                            {'profiles': ['Dummy']}, user)
+        assert manager.available_profiles == ['Dummy']
+        assert manager._used_profiles == {}
+        self.workbench.unregister(u'test.user1')
+
+    def test_profiles_request2(self):
+        self.workbench.register(InstrManagerManifest())
+        self.workbench.register(InstrUser1())
+        self.workbench.register(InstrUser2())
+        user1 = self.workbench.get_plugin(u'test.user1')
+        user2 = self.workbench.get_plugin(u'test.user2')
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user1)
+
+        # Can get profile if other user release it.
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user2)
+        manager = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+        assert manager._used_profiles == {'Dummy': u'test.user2'}
+
+        # Don't get profile if other user does not release, because method
+        # fails
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user1)
+        assert manager._used_profiles == {'Dummy': u'test.user2'}
+
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
+                            {'profiles': [u'Dummy']}, user2)
+        self.workbench.unregister(u'test.user1')
+        self.workbench.unregister(u'test.user2')
+
+    def test_profiles_request3(self):
+        self.workbench.register(InstrManagerManifest())
+        self.workbench.register(InstrUser1())
+        self.workbench.register(InstrUser3())
+        user1 = self.workbench.get_plugin(u'test.user1')
+        user3 = self.workbench.get_plugin(u'test.user3')
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user1)
+
+        # Can get profile if other user release it.
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user3)
+        manager = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+        assert manager._used_profiles == {'Dummy': u'test.user3'}
+
+        # Don't get profile if other user does not release because of its
+        # policy
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user1)
+        assert manager._used_profiles == {'Dummy': u'test.user3'}
+
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
+                            {'profiles': [u'Dummy']}, user3)
+        self.workbench.unregister(u'test.user1')
+        self.workbench.unregister(u'test.user3')

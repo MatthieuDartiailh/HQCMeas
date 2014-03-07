@@ -9,7 +9,7 @@
 import os
 import logging
 from importlib import import_module
-from atom.api import (Str, Dict, List, Unicode, Typed, Subclass, Tuple)
+from atom.api import (Str, Dict, List, Unicode, Typed, Subclass)
 
 from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
@@ -194,7 +194,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 if decl.default_policy == 'unreleasable':
                     return False, {}
 
-                to_release[decl.release_method].append(prof)
+                to_release[decl.release_command].append(prof)
 
         if to_release:
             core = self.workbench.get_plugin('enaml.workbench.core')
@@ -208,7 +208,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         # them,  and load them
         avail = self.available_profiles
         self.available_profiles = [prof for prof in avail
-                                   if prof in profiles]
+                                   if prof not in profiles]
 
         used = {prof: new_owner for prof in profiles}
         self._used_profiles.update(used)
@@ -296,7 +296,7 @@ class InstrManagerPlugin(HasPrefPlugin):
     _profiles_map = Dict(Str(), Unicode())
 
     # Mapping between profile names and user id.
-    _used_profiles = Dict(Str(), Tuple())
+    _used_profiles = Dict(Str(), Unicode())
 
     # Mapping between plugin_id and InstrUser declaration.
     _users = Dict(Unicode(), Typed(InstrUser))
@@ -321,9 +321,9 @@ class InstrManagerPlugin(HasPrefPlugin):
                 profiles[profile_name] = prof_path
 
         self._profiles_map = profiles
-        self.all_profiles = list(profiles.keys())
-        self.available_profiles = [profile for profile in profiles.keys()
-                                   if profile not in self._used_profiles]
+        self.all_profiles = sorted(list(profiles.keys()))
+        self.available_profiles = [prof for prof in sorted(profiles.keys())
+                                   if prof not in self._used_profiles]
 
     def _refresh_drivers(self):
         """ Refresh the known driver types and drivers.
@@ -363,8 +363,8 @@ class InstrManagerPlugin(HasPrefPlugin):
         self._drivers = drivers
         self._driver_types = driver_types
 
-        self.driver_types = driver_types.keys()
-        self.drivers = drivers.keys()
+        self.driver_types = sorted(driver_types.keys())
+        self.drivers = sorted(drivers.keys())
 
         # TODO do something with failed
 
@@ -516,6 +516,8 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         self._refresh_users()
 
+    # TODO observe profiles folders and update _observer in consequence
+
     def _bind_observers(self):
         """ Setup the observers for the plugin.
 
@@ -528,11 +530,15 @@ class InstrManagerPlugin(HasPrefPlugin):
             handler = _FileListUpdater(self._refresh_profiles_map)
             self._observer.schedule(handler, folder, recursive=True)
 
+        self._observer.start()
+
     def _unbind_observers(self):
         """ Remove the observers for the plugin.
 
         """
-        self._observer.unchedule_all()
+        self._observer.unschedule_all()
+        self._observer.stop()
+        self._observer.join()
 
         workbench = self.workbench
         point = workbench.get_extension_point(USERS_POINT)
@@ -581,7 +587,6 @@ class _FileListUpdater(FileSystemEventHandler):
         self.handler = handler
 
     def on_created(self, event):
-        print 'File created'
         super(_FileListUpdater, self).on_created(event)
         if isinstance(event, FileCreatedEvent):
             self.handler()

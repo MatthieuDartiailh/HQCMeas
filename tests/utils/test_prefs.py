@@ -25,7 +25,7 @@ class Test_State(object):
 
     @classmethod
     def setup_class(cls):
-        print __name__, ': TestClass.setup_class() ----------'
+        print __name__, ': ', cls.__name__, '.setup_class() ----------'
         # Creating dummy directory to store prefs during test
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_tests')
@@ -45,7 +45,7 @@ class Test_State(object):
 
     @classmethod
     def teardown_class(cls):
-        print '\n', __name__, ': TestClass.teardown_class() -------'
+        print __name__, ': ', cls.__name__, 'teardown_class() -------'
          # Removing test
         shutil.rmtree(cls.test_dir)
 

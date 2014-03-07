@@ -7,7 +7,7 @@
 """
 """
 
-from atom.api import (Callable, Enum)
+from atom.api import (Unicode, Enum)
 from enaml.core.declarative import Declarative, d_
 
 
@@ -28,6 +28,6 @@ class InstrUser(Declarative):
         when needed.
 
     """
-    release_command = d_(Callable())
+    release_command = d_(Unicode())
 
     default_policy = d_(Enum('releasable', 'unreleasable'))

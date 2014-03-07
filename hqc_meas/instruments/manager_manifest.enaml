@@ -65,14 +65,16 @@ def profiles_request(event):
     """ Handler for the 'hqc_meas.instr_manager.profiles_request' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    return manager.profiles_request(event.trigger, **event.parameters)
+    plugin_id = event.trigger.manifest.id
+    return manager.profiles_request(plugin_id, **event.parameters)
 
 
 def profiles_released(event):
     """ Handler for the 'hqc_meas.instr_manager.profiles_released' command
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    return manager.drivers_released(event.trigger, **event.parameters)
+    plugin_id = event.trigger.manifest.id
+    return manager.profiles_released(plugin_id, **event.parameters)
 
 
 INSTR_USERS_DESCRIPTION = \
@@ -101,8 +103,8 @@ DRIVERS_REQUEST_DESCRIPTION = \
 
 PROFILES_REQUEST_DESCRIPTION = \
 """ Request the privilege to use the specified profiles. No profile should be
-used without first asking for this privilege, if necessary and possible
-currently used profiles will released. """
+used without first asking for this privilege, if necessary and possible,
+currently used profiles will be released. """
 
 PROFILES_RELEASED_DESCRIPTION = \
 """ Inform the manager that the specified profiles are no longer in use by the

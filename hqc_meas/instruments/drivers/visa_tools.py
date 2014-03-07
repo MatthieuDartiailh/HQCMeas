@@ -250,5 +250,5 @@ class VisaInstrument(BaseInstrument):
     """Conveninence to set/get the `chunk_size` attribute of the `Instrument`
     object"""
 
-DRIVER_PACKAGE = 'visa'
+DRIVER_PACKAGES = ['visa']
 DRIVER_TYPES = {'Visa': VisaInstrument}

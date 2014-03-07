@@ -6,10 +6,10 @@ from enaml.workbench.core.api import Command
 from hqc_meas.instruments.api import InstrUser
 
 
-def release_instr(self, instrs):
+def release_instr(profiles):
     return True
 
-def not_release_instr(self, intrs):
+def not_release_instr(profiles):
     return False
 
 enamldef InstrUser1(PluginManifest):
