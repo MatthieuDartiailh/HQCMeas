@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (Atom, Unicode, Instance)
+from atom.api import (Atom, Unicode, Instance, Typed)
 
 import os
 from configobj import ConfigObj
@@ -18,10 +18,10 @@ from enaml.layout.api import hbox, vbox, spacer
 from enaml.stdlib.mapped_view import MappedView
 from enaml.stdlib.message_box import question
 
-from hqc_meas.enaml_util.qt_list_str_widget import QtListStrWidget
-from .manager_plugin import InstrManagerPlugin, open_profile, save_profile
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+from .manager_plugin import (InstrManagerPlugin, open_profile, save_profile)
 from .profile_form import ProfileForm
-from .profile_edition import ProfileDialog
+from .profile_edition import (ProfileDialog, ProfileView)
 
 
 class _EditorModel(Atom):
@@ -38,7 +38,7 @@ class _EditorModel(Atom):
     """
     manager = Typed(InstrManagerPlugin)
     selected_profile = Unicode()
-    form = Instance(InstrumentForm)
+    form = Instance(ProfileForm)
 
     def add_profile(self, view):
         """
@@ -47,12 +47,11 @@ class _EditorModel(Atom):
 
         """
         form = ProfileForm()
-        dial = InstrumentFormDialog(plugin=self.plugin, model=instr_form,
-                                    mode='new')
+        dial = ProfileDialog(model=form, mode='new')
         result = dial.exec_()
         if result:
-            directory = self.plugin.profiles_folders[0]
-            save_profile(path, instr_form.name, profile.dict())
+            directory = self.manager.profiles_folders[0]
+            save_profile(path, form.name, form.dict())
 
     def edit_profile(self, view):
         """
@@ -61,8 +60,7 @@ class _EditorModel(Atom):
 
         """
         form = self.form
-        result = InstrumentFormDialog(model=instr_form,
-                                      mode='edit').exec_()
+        result = ProfileDialog(model=form, mode='edit').exec_()
         if result:
             path = self.manager.profile_path(self.selected_profile)
             profile = open_profile(path)
@@ -74,7 +72,6 @@ class _EditorModel(Atom):
         """
         Open confirmation dialog when the user asks to delete a profile
         """
-        manager = view.manager
         message = cleandoc(u"""Are you sure want to delete this
                         instrument connection informations ?""")
         result = question(parent=view, text=fill(message, 80),
@@ -90,7 +87,7 @@ class _EditorModel(Atom):
         """
         fullpath = self.manager.profile_path(change['value'])
         profile_infos = open_profile(fullpath)
-        self.form = InstrumentForm(**profile_infos)
+        self.form = ProfileForm(**profile_infos)
 
 
 def _layout(list_view, instr_form, *buttons):
@@ -102,11 +99,11 @@ def _layout(list_view, instr_form, *buttons):
         return hbox(list_view, vbox(*b))
 
 
-enamldef InstrumentManagerView(Window): instr_manager_view:
+enamldef InstrManagerView(Window): instr_manager_view:
     """
     """
     attr manager
-    attr _internal =
+    attr _internal = _EditorModel(manager=manager)
     title = 'Instrument manager'
 
     Notebook:
@@ -131,11 +128,11 @@ enamldef InstrumentManagerView(Window): instr_manager_view:
                     selected_item >> _internal.selected_profile
                 Conditional: instr_form:
                     condition << bool(_internal.selected_profile)
-                    InstrumentFormView:
+                    ProfileView:
                         hug_width = 'weak'
                         hug_height = 'medium'
                         mode = 'static'
-                        model << _internal.form
+                        form << _internal.form
                 PushButton: add:
                     text = 'Add'
                     clicked :: _internal.add_profile(instr_manager_view)

@@ -59,9 +59,9 @@ class AbstractConnectionForm(Atom):
         raise NotImplementedError(msg)
 
     def connection_dict(self):
-        """Return a dictionnary holding all the necessary informations to open a
-        connection with an instrument using the protocol for which the form was
-        written.
+        """Return a dictionnary holding all the necessary informations to open
+        a connection with an instrument using the protocol for which the form
+        was written.
 
         """
         msg = fill(cleandoc("""This  method should be implemented by classes

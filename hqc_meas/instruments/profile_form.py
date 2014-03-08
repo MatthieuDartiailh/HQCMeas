@@ -7,7 +7,7 @@
 """
 """
 
-from atom.api import (Atom, List, Unicode, Instance, Typed)
+from atom.api import (Atom, List, Str, Unicode, Instance, Typed)
 
 from .forms import AbstractConnectionForm, FORMS
 from .manager_plugin import InstrManagerPlugin
@@ -43,13 +43,13 @@ class ProfileForm(Atom):
     """
     manager = Typed(InstrManagerPlugin)
     name = Unicode('')
-    driver_type = Unicode('')
-    drivers = List(Unicode(), [])
-    driver = Unicode('')
+    driver_type = Str('')
+    drivers = List(Str(), [])
+    driver = Str('')
     connection_form = Instance(AbstractConnectionForm)
 
-    def __init__(self, *args, **kwargs):
-        super(ProfileForm, self).__init__(*args)
+    def __init__(self, **kwargs):
+        super(ProfileForm, self).__init__()
         self.manager = kwargs.pop('manager')
         if 'name' in kwargs:
             self.name = kwargs.pop('name')
@@ -67,7 +67,8 @@ class ProfileForm(Atom):
         """
         infos = {'name': self.name, 'driver_type': self.driver_type,
                  'driver': self.driver}
-        infos.update(self.connection_form.connection_dict())
+        if self.connection_form:
+            infos.update(self.connection_form.connection_dict())
         return infos
 
     def _observe_driver_type(self, change):
@@ -78,7 +79,7 @@ class ProfileForm(Atom):
         new_type = change['value']
         if new_type:
             driver_list = self.manager.matching_drivers([new_type])
-            self.driver_list = sorted(driver_list)
+            self.drivers = sorted(driver_list)
             form_class = FORMS.get(change['value'], None)
             if form_class:
                 self.connection_form = form_class()

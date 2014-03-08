@@ -18,7 +18,6 @@ from .forms import FORMS_MAP_VIEWS
 enamldef ProfileView(Form): instr_form_view:
     """
     """
-    attr manager
     attr form
     attr mode = Enum('static', 'new', 'edit')
 
@@ -38,7 +37,7 @@ enamldef ProfileView(Form): instr_form_view:
     Conditional:
         condition = bool(mode != 'static')
         ObjectCombo:
-            items << manager.driver_types
+            items << model.manager.driver_types
             selected := model.driver_type
 
     Label:
@@ -51,7 +50,7 @@ enamldef ProfileView(Form): instr_form_view:
     Conditional:
         condition = bool(mode != 'static')
         ObjectCombo:
-            items << model.driver_list
+            items << model.drivers
             selected := model.driver
 
     MappedView:
@@ -66,8 +65,8 @@ def _handle_close(self, view, is_ok):
     Before closing an InstrFormDialog ensures that the informations provided
     allow to open the connection to the specified instrument.
     """
-    manager = view.manager
     model = view.model
+    manager = model.manager
     connection_form = model.connection_form
     if is_ok:
         if (model.name != '' and model.driver_type and model.driver != ''
@@ -107,7 +106,6 @@ def _handle_close(self, view, is_ok):
 enamldef ProfileDialog(Dialog): instr_dialog:
     """
     """
-    attr manager
     attr model
     attr mode = Enum('new', 'edit')
     title = 'Instrument form'
@@ -119,12 +117,11 @@ enamldef ProfileDialog(Dialog): instr_dialog:
             vbox(form, hbox(cancel, ok)),
             align('midline', form),
             ]
-        InstrumentFormView: form:
+        ProfileView: form:
             hug_width = 'weak'
             hug_height = 'medium'
             mode = instr_dialog.mode
-            model << instr_dialog.model
-            manager << instr_dialog.manager
+            form << instr_dialog.model
         PushButton: cancel:
             text = 'Cancel'
             hug_width = 'strong'
