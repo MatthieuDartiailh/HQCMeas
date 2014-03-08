@@ -19,9 +19,10 @@ from enaml.stdlib.mapped_view import MappedView
 from enaml.stdlib.message_box import question
 
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
-from .manager_plugin import (InstrManagerPlugin, open_profile, save_profile)
+from .manager_plugin import InstrManagerPlugin
 from .profile_form import ProfileForm
 from .profile_edition import (ProfileDialog, ProfileView)
+from .profile_utils import (open_profile, save_profile)
 
 
 class _EditorModel(Atom):
