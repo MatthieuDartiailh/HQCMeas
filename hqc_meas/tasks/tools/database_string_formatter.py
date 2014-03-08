@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : database_string_formatter.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 """
 """
 import textwrap
@@ -11,7 +17,8 @@ COMPLETER_TOOLTIP = textwrap.fill("""In this field you can enter a text and
                         include fields which will be replaced by database
                         entries by using the delimiters '{' and '}'.""", 80)
 
-def safe_eval(expr, local_var = None):
+
+def safe_eval(expr, local_var=None):
     """
     """
     if expr.isalpha():
@@ -22,15 +29,16 @@ def safe_eval(expr, local_var = None):
     else:
         return eval(expr)
 
+
 def get_formatted_string(edit_str, path, database):
     """
     """
     aux_strings = edit_str.split('{')
     if len(aux_strings) > 1:
-        string_elements = [ string for aux in aux_strings
-                                    for string in aux.split('}')]
+        string_elements = [string for aux in aux_strings
+                           for string in aux.split('}')]
         replacement_values = [database.get_value(path, key)
-                            for key in string_elements[1::2]]
+                              for key in string_elements[1::2]]
         str_to_format = ''
         for key in string_elements[::2]:
             str_to_format += key + '{}'
@@ -43,16 +51,17 @@ def get_formatted_string(edit_str, path, database):
     else:
         return edit_str
 
+
 def format_and_eval_string(edit_str, path, database):
 
     aux_strings = edit_str.split('{')
     if len(aux_strings) > 1:
-        string_elements = [ string for aux in aux_strings
-                                    for string in aux.split('}')]
+        string_elements = [string for aux in aux_strings
+                           for string in aux.split('}')]
         replacement_token = ['_a{}'.format(i)
                              for i in xrange(len(string_elements[1::2]))]
-        replacement_values = {'_a{}'.format(i) : database.get_value(path, key)
-                            for i, key in enumerate(string_elements[1::2])}
+        replacement_values = {'_a{}'.format(i): database.get_value(path, key)
+                              for i, key in enumerate(string_elements[1::2])}
         str_to_format = ''
         for key in string_elements[::2]:
             str_to_format += key + '{}'

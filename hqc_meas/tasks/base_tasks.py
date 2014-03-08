@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : base_tasks.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 """
 """
-
 from atom.api\
     import (Atom, Str, Int, Instance, Bool, Value, observe, Unicode, List,
             ForwardTyped, Typed, ContainerList, set_default, Callable, Dict)
@@ -15,21 +19,23 @@ from ..atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
 from .tools.task_decorator import make_stoppable
 
+
 class BaseTask(Atom):
-    """Abstract  class defining common members of all Task
+    """Base  class defining common members of all Tasks.
 
     This class basically defines the minimal skeleton of a Task in term of
     members and methods.
+
     """
-    task_class = Str().tag(pref = True)
-    task_name = Str().tag(pref = True)
+    task_class = Str().tag(pref=True)
+    task_name = Str().tag(pref=True)
     task_label = Str()
     task_depth = Int()
     task_preferences = Instance(Section)
     task_database = Typed(TaskDatabase)
     task_database_entries = Dict(Str(), Value())
     task_path = Str()
-    root_task = ForwardTyped(lambda : RootTask)
+    root_task = ForwardTyped(lambda: RootTask)
     process_ = Callable()
 
     def process(self):
@@ -99,24 +105,28 @@ class BaseTask(Atom):
         raise NotImplementedError(err_str)
 
     def _default_task_class(self):
-        """
+        """ Default value for the task_class member.
+
         """
         return self.__class__.__name__
 
     def _default_process_(self):
-        """
+        """ Default value for the process_ member.
+
         """
         return self.process.__func__
 
     def _observe_task_name(self, change):
-        """
+        """ Update the label any time the task name changes.
+
         """
         new = change['value']
         self.task_label = new + ' (' + self.task_class + ')'
 
     @observe('task_database_entries')
     def _update_database(self, change):
-        """
+        """ Update the database content each time the database entries change.
+
         """
         if change['type'] == 'update':
             added = set(change['value']) - set(change['oldvalue'])
@@ -129,42 +139,70 @@ class BaseTask(Atom):
                                            self.task_database_entries[entry])
 
     def _list_database_entries(self):
-        """
+        """ Convenience to get the accesible entries in the database.
+
         """
         return self.task_database.list_accessible_entries(self.task_path)
 
+
 class SimpleTask(BaseTask):
     """Task with no child task, written in pure Python.
+
     """
     #Class attribute specifying if instances of that class can be used in loop
-    # Not a Trait because otherwise would not be a class attribute
     loopable = False
-    _parallel = Dict(Str(), default = {'activated' : False, 'pool' : ''})
-    _wait = Dict(Str(), List())
+
+    #--- Public API -----------------------------------------------------------
 
     def write_in_database(self, name, value):
-        """This method build a task specific database entry from the task_name
-        and the name argument and set the database entry to the specified value.
+        """ Write a value to the right database entry.
+
+        This method build a task specific database entry from the task_name
+        and the name argument and set the database entry to the specified
+        value.
+
+        Parameters
+        ----------
+        name : str
+            Simple name of the entry whose value should be set, ie no task name
+            required.
+
+        value:
+            Value to give to the entry.
+
         """
         value_name = self.task_name + '_' + name
         return self.task_database.set_value(self.task_path, value_name, value)
 
     def get_from_database(self, full_name):
-        """This method return the value under the database entry specified by
-        the full name (ie task_name + '_' + entry, where task_name is the name
-        of the task that wrote the value in the database).
+        """ Access to a database value using full name.
+
+        Parameters
+        ----------
+        full_name : str
+            Full name of the database entry, ie task_name + '_' + entry,
+            where task_name is the name of the task that wrote the value in
+            the database.
+
         """
         return self.task_database.get_value(self.task_path, full_name)
 
     def remove_from_database(self, full_name):
-        """This method deletes the database entry specified by
-        the full name (ie task_name + '_' + entry, where task_name is the name
-        of the task that wrote the value in the database).
+        """ Delete a database entry using its full name.
+
+        Parameters
+        ----------
+        full_name : str
+            Full name of the database entry, ie task_name + '_' + entry,
+            where task_name is the name of the task that wrote the value in
+            the database.
+
         """
         return self.task_database.delete_value(self.task_path, full_name)
 
     def register_in_database(self):
-        """
+        """ Register the task entries into the database.
+
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
@@ -173,7 +211,8 @@ class SimpleTask(BaseTask):
                                              self.task_database_entries[entry])
 
     def unregister_from_database(self):
-        """
+        """ Remove the task entries from the database.
+
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
@@ -181,7 +220,8 @@ class SimpleTask(BaseTask):
                                                 self.task_name + '_' + entry)
 
     def register_preferences(self):
-        """
+        """ Register the task preferences into the preferences system.
+
         """
         self.task_preferences.clear()
         for name in tagged_members(self, 'pref'):
@@ -190,22 +230,41 @@ class SimpleTask(BaseTask):
     update_preferences_from_members = register_preferences
 
     def update_members_from_preferences(self, **parameters):
-        """
+        """ Update the members values using a dict.
+
+        Parameters
+        ----------
+        parameters : dict(str: str)
+            Dictionary holding the new values to give to the members in string
+            format.
+
         """
         for name, member in tagged_members(self, 'pref').iteritems():
 
-            if not parameters.has_key(name):
+            if name not in parameters:
                 continue
 
             value = parameters[name]
             converted = member_from_str(member, value)
             setattr(self, name, converted)
 
-    def make_parallel(self, pool, switch = ''):
-        """This method should be called in __init__ when there is no need to
+    def make_parallel(self, pool, switch=''):
+        """ Make the execution of a task happens in parallel.
+
+        This method should be called in __init__ when there is no need to
         wait for the process method to return to start the next task,ie the
         process method decorated don't use any data succeptible to be corrupted
         by the next task.
+
+        Parameters
+        ----------
+        pool : str
+            Name of the pool this task is part of.
+
+        switch : str
+            Name of the member indicating whether or not to run this task in
+            parallel.
+
         """
         par = self._parallel
         par['pool'] = pool
@@ -214,18 +273,40 @@ class SimpleTask(BaseTask):
             self.observe('switch', self._redefine_process_)
         self._redefine_process_()
 
-    def make_wait(self, wait = [], no_wait = []):
-        """This method should be be called in __init__ when the process method
+    def make_wait(self, wait=[], no_wait=[]):
+        """ Make the execution of a task wait for the completion fo others.
+
+        This method should be be called in __init__ when the process method
         need to access data in the database or need to be sure that physical
         quantities reached their expected values.
+
+        Parameters
+        ----------
+        wait : list(str)
+            Names of the pools this task waits to complete before starting .
+
+        no_wait : list(str)
+            Names of the pools this task does not wait to complete before
+            starting .
+
+        This parameters are mutually exclusive.
         """
         _wait = self._wait
         _wait['wait'] = wait
         _wait['no_wait'] = no_wait
         self._redefine_process_()
 
-    def _redefine_process_(self, change = None):
-        """
+    #--- Private API ----------------------------------------------------------
+
+    # Is the task parallel and what is its execution pool.
+    _parallel = Dict(Str(), default={'activated': False, 'pool': ''})
+
+    # Is the task waiting for execution pools and which.
+    _wait = Dict(Str(), List())
+
+    def _redefine_process_(self, change={}):
+        """ Make process_ refects the parallel/wait settings.
+
         """
         if change:
             self._parallel['activated'] = change['value']
@@ -244,15 +325,27 @@ class SimpleTask(BaseTask):
 
     @staticmethod
     def _make_parallel_process_(process, pool):
-        """
+        """ Machinery to execute process_ in parallel.
+
+        Create a wrapper around a method to execute it in a thread and
+        register the thread.
+
+        Parameters
+        ----------
+        process : method
+            Method which should be wrapped to run in parallel.
+
+        pool : str
+            Name of the execution pool to which the created thread belongs.
+
         """
         def wrapper(*args, **kwargs):
 
             obj = args[0]
-            thread = Thread(group = None,
-                            target = process,
-                            args = args,
-                            kwargs = kwargs)
+            thread = Thread(group=None,
+                            target=process,
+                            args=args,
+                            kwargs=kwargs)
             all_threads = obj.task_database.get_value('root', 'threads')
             threads = all_threads.get(pool, None)
             if threads:
@@ -268,7 +361,26 @@ class SimpleTask(BaseTask):
 
     @staticmethod
     def _make_wait_process_(process, wait, no_wait):
-        """
+        """ Machinery to make process_ wait on other tasks execution.
+
+        Create a wrapper around a method to wait for some threads to terminate
+        before calling the method. Threads are grouped in execution pools.
+
+        Parameters
+        ----------
+        process : method
+            Method which should be wrapped to wait on threads.
+
+        wait : list(str)
+            Names of the execution pool which should be waited for.
+
+        no_wait : list(str)
+            Names of the execution pools which should not be waited for.
+
+        Both parameters are mutually exlusive. If both lists are empty the
+        execution will be differed till all the execution pools have completed
+        their works.
+
         """
         if wait:
             def wrapper(*args, **kwargs):
@@ -279,10 +391,11 @@ class SimpleTask(BaseTask):
                 threads = chain([all_threads.get(w, []) for w in wait])
                 for thread in threads:
                     thread.join()
-                all_threads.update({w : [] for w in wait if w in all_threads})
+                all_threads.update({w: [] for w in wait if w in all_threads})
 
                 obj.task_database.set_value('root', 'threads', all_threads)
                 return process(*args, **kwargs)
+
         elif no_wait:
             def wrapper(*args, **kwargs):
 
@@ -293,7 +406,7 @@ class SimpleTask(BaseTask):
                 threads = chain([all_threads[p] for p in pools])
                 for thread in threads:
                     thread.join()
-                all_threads.update({p : [] for p in pools})
+                all_threads.update({p: [] for p in pools})
 
                 obj.task_database.set_value('root', 'threads', all_threads)
                 return process(*args, **kwargs)
@@ -306,7 +419,7 @@ class SimpleTask(BaseTask):
                 threads = chain(all_threads.values())
                 for thread in threads:
                     thread.join()
-                all_threads.update({w : [] for w in all_threads})
+                all_threads.update({w: [] for w in all_threads})
 
                 obj.task_database.set_value('root', 'threads', all_threads)
                 return process(*args, **kwargs)
@@ -316,10 +429,15 @@ class SimpleTask(BaseTask):
 
         return wrapper
 
+
 class ComplexTask(BaseTask):
     """Task composed of several subtasks.
+
     """
-    children_task = ContainerList(Instance(BaseTask)).tag(child = True)
+    # List of all the children of the task.
+    children_task = ContainerList(Instance(BaseTask)).tag(child=True)
+
+    # Flag indicating whether or not the task has a root task.
     has_root = Bool(False)
 
     def __init__(self, *args, **kwargs):
@@ -328,15 +446,19 @@ class ComplexTask(BaseTask):
         self.observe('task_path', self._update_paths)
         self.observe('task_depth', self._update_paths)
 
+    #--- Public API -----------------------------------------------------------
+
     @make_stoppable
     def process(self):
-        """
+        """ Run sequentially all child tasks.
+
         """
         for child in self.children_task:
             child.process_(child)
 
     def check(self, *args, **kwargs):
-        """Implementation of the test method of AbstractTask
+        """ Run test of all child tasks.
+
         """
         test = True
         traceback = {}
@@ -355,29 +477,85 @@ class ComplexTask(BaseTask):
 
         return test, traceback
 
+    def walk(self, members=[], callables={}):
+        """ Explore the tasks hierarchy looking.
+
+        Parameters
+        ----------
+        members : list(str)
+            Names of the members whose value should be retrieved.
+
+        callables : dict(callable)
+            Dict {name: callables} to call on every task in the hierarchy. Each
+            callable should take as single argument the task.
+
+        Returns
+        -------
+        result : dict
+            Dict summarizing the result of the exploration.
+
+        """
+        answer = [self._answer(self, members, callables)]
+        for task in self.children_task:
+            if isinstance(task, SimpleTask):
+                answer.append(self._answer(task, members, callables))
+            else:
+                answer.append(task.walk(members, callables))
+
+        return answer
+
     def write_in_database(self, name, value):
-        """This method build a task specific database entry from the task_name
-        and the name arg and set the database entry to the value specified.
+        """ Write a value to the right database entry.
+
+        This method build a task specific database entry from the task_name
+        and the name argument and set the database entry to the specified
+        value.
+
+        Parameters
+        ----------
+        name : str
+            Simple name of the entry whose value should be set, ie no task name
+            required.
+
+        value:
+            Value to give to the entry.
+
         """
         value_name = self.task_name + '_' + name
         return self.task_database.set_value(self.task_path, value_name, value)
 
     def get_from_database(self, full_name):
-        """This method return the value under the database entry specified by
-        the full name (ie task_name + '_' + entry, where task_name is the name
-        of the task that wrote the value in the database).
+        """ Access to a database value using full name.
+
+        Parameters
+        ----------
+        full_name : str
+            Full name of the database entry, ie task_name + '_' + entry,
+            where task_name is the name of the task that wrote the value in
+            the database.
+
         """
         return self.task_database.get_value(self.task_path, full_name)
 
     def remove_from_database(self, full_name):
-        """This method deletes the database entry specified by
-        the full name (ie task_name + '_' + entry, where task_name is the name
-        of the task that wrote the value in the database).
+        """ Delete a database entry using its full name.
+
+        Parameters
+        ----------
+        full_name : str
+            Full name of the database entry, ie task_name + '_' + entry,
+            where task_name is the name of the task that wrote the value in
+            the database.
+
         """
         return self.task_database.delete_value(self.task_path, full_name)
 
     def register_in_database(self):
-        """
+        """ Create a node in the database and register all entries.
+
+        This method registers both the task entries and all the tasks tagged
+        as child.
+
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
@@ -398,7 +576,11 @@ class ComplexTask(BaseTask):
                     child.register_in_database()
 
     def unregister_from_database(self):
-        """
+        """ Unregister all entries and delete associated database node.
+
+        This method unregisters both the task entries and all the tasks tagged
+        as child.
+
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
@@ -417,15 +599,21 @@ class ComplexTask(BaseTask):
         self.task_database.delete_node(self.task_path, self.task_name)
 
     def register_preferences(self):
-        """
+        """ Register the task preferences into the preferences system.
+
+        This method registers both the task preferences and all the
+        preferences of the tasks tagged as child.
+
         """
         self.task_preferences.clear()
         members = self.members()
         for name in members:
+            # Register preferences.
             meta = members[name].metadata
             if meta and 'pref' in meta:
                 self.task_preferences[name] = str(getattr(self, name))
 
+            # Find all tagged children.
             elif meta and 'child' in meta:
                 child = getattr(self, name)
                 if child:
@@ -434,7 +622,7 @@ class ComplexTask(BaseTask):
                             child_id = name + '_{}'.format(i)
                             self.task_preferences[child_id] = {}
                             aux.task_preferences = \
-                                            self.task_preferences[child_id]
+                                self.task_preferences[child_id]
                             aux.register_preferences()
                     else:
                         self.task_preferences[name] = {}
@@ -442,13 +630,17 @@ class ComplexTask(BaseTask):
                         child.register_preferences()
 
     def update_preferences_from_members(self):
-        """
+        """ Update the values stored in the preference system.
+
+        This method updates both the task preferences and all the
+        preferences of the tasks tagged as child.
+
         """
         for name in tagged_members(self, 'pref'):
             self.task_preferences[name] = str(getattr(self, name))
 
         for name in tagged_members(self, 'child'):
-            child =  getattr(self, name)
+            child = getattr(self, name)
             if child:
                 if isinstance(child, list):
                     for aux in child:
@@ -457,16 +649,26 @@ class ComplexTask(BaseTask):
                     child.update_preferences_from_members()
 
     def update_members_from_preferences(self, **parameters):
-        """
+        """ Update the members values using a dict.
 
-        NB : This method is fairly powerful and can handle a lot of cases so
+        Parameters
+        ----------
+        parameters : dict(str: str)
+            Dictionary holding the new values to give to the members in string
+            format.
+
+        Notes
+        -----
+        This method is fairly powerful and can handle a lot of cases so
         don't override it without checking that it works.
+
         """
-        #First we set the preference members
         for name, member in self.members().iteritems():
+
+            # First we set the preference members
             meta = member.metadata
-            if meta and 'pref' in meta :
-                if not parameters.has_key(name):
+            if meta and 'pref' in meta:
+                if name not in parameters:
                     continue
 
                 # member_from_str handle containers
@@ -475,8 +677,9 @@ class ComplexTask(BaseTask):
 
                 setattr(self, name, validated)
 
+            # Then we deal with the choild tasks
             elif meta and 'child' in meta:
-                if not parameters.has_key(name):
+                if name not in parameters:
                     continue
 
                 value = parameters[name]
@@ -488,31 +691,14 @@ class ComplexTask(BaseTask):
 
                 setattr(self, name, validated)
 
-    def walk(self, members = [], callables = {}):
-        """
-        """
-        answer = [self._answer(self, members, callables)]
-        for task in self.children_task:
-            if isinstance(task, SimpleTask):
-                answer.append(self._answer(task, members, callables))
-            else:
-                answer.append(task.walk(members, callables))
-
-        return answer
-
-    @staticmethod
-    def _answer(obj, members, callables):
-        """
-        """
-        answers = {m : getattr(obj, m, None) for m in members}
-        answers.update({k : c(obj) for k,c in callables.iteritems()})
-        return answers
-
     @observe('children_task')
     def on_children_modified(self, change):
-        """Handle children being added or removed from the task, no matter the
-        source"""
+        """Handle children being added or removed from the task.
+
+        """
+        # Do nothing in the absence of a root task.
         if self.has_root:
+            # The whole list changed.
             if change['type'] == 'update':
                 added = set(change['value']) - set(change['oldvalue'])
                 removed = set(change['oldvalue']) - set(change['value'])
@@ -520,8 +706,12 @@ class ComplexTask(BaseTask):
                     self._child_removed(child)
                 for child in added:
                     self._child_added(child)
+
+            # An operation has been performed on the list.
             elif change['type'] == 'container':
                 op = change['operation']
+
+                # Children have been added
                 if op in ('__iadd__', 'append', 'extend', 'insert'):
                     if 'item' in change:
                         self._child_added(change['item'])
@@ -529,6 +719,7 @@ class ComplexTask(BaseTask):
                         for child in change['items']:
                             self._child_added(child)
 
+                # Children have been removed.
                 elif op in ('__delitem__', 'remove', 'pop'):
                     if 'item' in change:
                         self._child_removed(change['item'])
@@ -536,6 +727,7 @@ class ComplexTask(BaseTask):
                         for child in change['items']:
                             self._child_removed(child)
 
+                # One child was replaced.
                 elif op in ('__setitem__'):
                     old = change['olditem']
                     if isinstance(old, list):
@@ -553,8 +745,9 @@ class ComplexTask(BaseTask):
 
     #@observe('task_name, task_path, task_depth')
     def _update_paths(self, change):
-        """Method taking care that the path of children, the database and the
-        task name remains coherent
+        """Takes care that the paths, the database and the task names remains
+        coherent.
+
         """
         if change['type'] == 'update':
             name = change['name']
@@ -590,10 +783,9 @@ class ComplexTask(BaseTask):
                             else:
                                 child.task_depth = new + 1
 
-
     def _child_added(self, child):
-        """Method updating the database, depth and preference tree when a child
-        is added
+        """Update the database, depth and preferences when a child is added.
+
         """
         child.task_depth = self.task_depth + 1
         child.task_database = self.task_database
@@ -609,19 +801,21 @@ class ComplexTask(BaseTask):
         self.register_preferences()
 
     def _child_removed(self, child):
-        """Method updating the database and preference tree when a child is
-        removed.
+        """Update the database, depth and preferences when a child is removed.
+
         """
         self.register_preferences()
         child.unregister_from_database()
 
-    @observe('root_task')
-    def _when_root(self, change):
-        """Method making sure that all children get all the info they need to
-        behave correctly when the task get its root parent (ie the task is now
+    def _observe_root_task(self, change):
+        """ Observer.
+
+        Make sure that all children get all the info they need to behave
+        correctly when the task get its root parent (ie the task is now
         in a 'correct' environnement).
+
         """
-        if change['value'] == None:
+        if change['value'] is None:
             return
 
         self.has_root = True
@@ -634,36 +828,53 @@ class ComplexTask(BaseTask):
                         aux.task_database = self.task_database
                         aux.task_path = self.task_path + '/' + self.task_name
 
-                        #Give him its root so that it can proceed to any child
-                        #registration it needs to.
+                        # Give him its root so that it can proceed to any child
+                        # registration it needs to.
                         aux.root_task = self.root_task
                 else:
                     child.task_depth = self.task_depth + 1
                     child.task_database = self.task_database
                     child.task_path = self.task_path + '/' + self.task_name
 
-                    #Give him its root so that it can proceed to any child
-                    #registration it needs to.
+                    # Give him its root so that it can proceed to any child
+                    # registration it needs to.
                     child.root_task = self.root_task
+
+    @staticmethod
+    def _answer(obj, members, callables):
+        """ Collect answers for the walk method.
+
+        """
+        answers = {m: getattr(obj, m, None) for m in members}
+        answers.update({k: c(obj) for k, c in callables.iteritems()})
+        return answers
 
 from multiprocessing.synchronize import Event
 
 
 class RootTask(ComplexTask):
-    """Special task which is always the root of a measurement and is the only
-    task directly referencing the measurement editor.
+    """Special task which is always the root of a measurement.
+
     """
-    default_path = Unicode('').tag(pref = True)
+    # Path to which log infos, prefernces, etc should be written by default.
+    default_path = Unicode('').tag(pref=True)
+
+    # Dict storing data needed at execution time (ex: drivers classes)
+    run_time = Dict()
+
+    # Inter-process evnt signaling the task it should stop execution.
+    should_stop = Instance(Event)
+
+    # Seeting default values for the root task.
     has_root = set_default(True)
     task_name = set_default('Root')
     task_label = set_default('Root')
-    task_preferences = ConfigObj(indent_type = '    ')
+    task_preferences = ConfigObj(indent_type='    ')
     task_depth = set_default(0)
     task_path = set_default('root')
-    task_database_entries = set_default({'threads' : [],
-                                         'instrs' : {},
-                                         'default_path' : ''})
-    should_stop = Instance(Event)
+    task_database_entries = set_default({'threads': [],
+                                         'instrs': {},
+                                         'default_path': ''})
 
     def __init__(self, *args, **kwargs):
         super(RootTask, self).__init__(*args, **kwargs)
@@ -671,6 +882,8 @@ class RootTask(ComplexTask):
         self.task_database.set_value('root', 'threads', {})
         self.task_database.set_value('root', 'instrs', {})
         self.root_task = self
+
+    #--- Public API -----------------------------------------------------------
 
     def check(self, *args, **kwargs):
         traceback = {}
@@ -687,22 +900,23 @@ class RootTask(ComplexTask):
 
     @make_stoppable
     def process(self):
-        """
+        """ Run sequentially all child tasks, and close ressources.
+
         """
         for child in self.children_task:
             child.process_(child)
-        pools = self.task_database.get_value('root','threads')
+        pools = self.task_database.get_value('root', 'threads')
         for pool in pools.items():
             for thread in pool:
                 thread.join()
-        instrs = self.task_database.get_value('root','instrs')
+        instrs = self.task_database.get_value('root', 'instrs')
         for instr_profile in instrs:
             instrs[instr_profile].close_connection()
 
+    #--- Private API ----------------------------------------------------------
+
+    # Overrided here to give the child its root task right away.
     def _child_added(self, child):
-        """Method updating the database, depth and preference tree when a child
-        is added
-        """
         #Give the child all the info it needs to register
         child.task_depth = self.task_depth + 1
         child.task_database = self.task_database

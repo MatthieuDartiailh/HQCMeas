@@ -1,11 +1,21 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : task_database.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 """
 """
 from atom.api import Atom, Dict, Bool, Value, Event
 from threading import Lock
 
+
 class DatabaseNode(dict):
+    """ Helper class to differentiate nodes and dict in database
+
+    """
     pass
+
 
 class TaskDatabase(Atom):
     """
@@ -24,8 +34,8 @@ class TaskDatabase(Atom):
             Path to the node holding the value to be set
 
         value_name : str
-            Public key associated with the value to be set, internally converted
-            so that we do not mix value and nodes
+            Public key associated with the value to be set, internally
+            converted so that we do not mix value and nodes
 
         value : any
             Actual value to be stored
@@ -35,11 +45,12 @@ class TaskDatabase(Atom):
         new_val : bool
             Boolean indicating whether or not a new entry has been created in
             the database
+
         """
         node = self._go_to_path(node_path)
         safe_value_name = '_' + value_name
         new_val = False
-        if not node.has_key(safe_value_name):
+        if safe_value_name not in node:
             new_val = True
 
         if self._running:
@@ -57,8 +68,9 @@ class TaskDatabase(Atom):
     def get_value(self, assumed_path, value_name):
         """Method to get a value from the database from its name and a path
 
-        This method returns the value stored under the specified name. It starts
-        looking at the specified path and if necessary goes up in the hierarchy.
+        This method returns the value stored under the specified name. It
+        starts looking at the specified path and if necessary goes up in the
+        hierarchy.
 
         Parameters
         ----------
@@ -72,11 +84,12 @@ class TaskDatabase(Atom):
         -------
         value : any
             Value stored under the entry value_name
+
         """
         assumed_node = self._go_to_path(assumed_path)
         safe_value_name = '_' + value_name
 
-        if assumed_node.has_key(safe_value_name):
+        if safe_value_name in assumed_node:
             if self._running:
                 self._lock.acquire()
                 value = assumed_node[safe_value_name]
@@ -93,8 +106,8 @@ class TaskDatabase(Atom):
         """Method to remove an entry from the specified node
 
         This method remove the specified entry from the specified node. This
-        method is thread safe even if it shouldn't be used once the setup of the
-        task is done.
+        method is thread safe even if it shouldn't be used once the setup of
+        the task is done.
 
         Parameters
         ----------
@@ -103,11 +116,12 @@ class TaskDatabase(Atom):
 
         value_name : str
             Name of the value we are looking for
+
         """
         node = self._go_to_path(node_path)
         safe_value_name = '_' + value_name
 
-        if node.has_key(safe_value_name):
+        if safe_value_name in node:
             if self._running:
                 self._lock.acquire()
                 del node[safe_value_name]
@@ -131,6 +145,7 @@ class TaskDatabase(Atom):
         -------
         entries_list : list
             List of entries accessible from the specified node
+
         """
         entries = []
         while node_path != 'root':
@@ -152,14 +167,14 @@ class TaskDatabase(Atom):
         entries.remove('instrs')
         return entries
 
-    def list_all_entries(self, path = 'root'):
+    def list_all_entries(self, path='root'):
         """
         """
         entries = []
         node = self._go_to_path(path)
         for entry in node.keys():
             if isinstance(node[entry], DatabaseNode):
-                entries += self.list_all_entries(path = path + '/' + entry)
+                entries += self.list_all_entries(path=path + '/' + entry)
             else:
                 # removing the leading underscore
                 entries.append(path + '/' + entry[1:])
@@ -167,7 +182,7 @@ class TaskDatabase(Atom):
         if path == 'root':
             entries.remove('root/threads')
             entries.remove('root/instrs')
-#            entries.remove('root/default_path')
+
         return sorted(entries)
 
     def create_node(self, parent_path, node_name):
@@ -185,6 +200,7 @@ class TaskDatabase(Atom):
 
         node_name : str
             Name of the new node to create
+
         """
         parent_node = self._go_to_path(parent_path)
         parent_node[node_name] = DatabaseNode()
@@ -204,6 +220,7 @@ class TaskDatabase(Atom):
 
         node_name : str
             New name of node
+
         """
         parent_node = self._go_to_path(parent_path)
         parent_node[new_name] = parent_node[old_name]
@@ -224,12 +241,14 @@ class TaskDatabase(Atom):
 
         node_name : str
             Name of the new node to create
+
         """
         parent_node = self._go_to_path(parent_path)
         if node_name in parent_node:
             del parent_node[node_name]
         else:
-            err_str = 'No node {} at the path {}'.format(node_name, parent_path)
+            err_str = 'No node {} at the path {}'.format(node_name,
+                                                         parent_path)
             raise ValueError(err_str)
 
     def prepare_for_running(self):
@@ -256,8 +275,9 @@ class TaskDatabase(Atom):
             else:
                 ind = keys.index(key)
                 if ind == 0:
-                    err_str = 'Path {} is invalid, no node {} in root'.format(
-                                path, key)
+                    err_str = \
+                        'Path {} is invalid, no node {} in root'.format(path,
+                                                                        key)
                 else:
                     err_str = 'Path {} is invalid, no node {} in node\
                         {}'.format(path, key, keys[ind-1])
