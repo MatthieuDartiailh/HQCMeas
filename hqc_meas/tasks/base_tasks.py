@@ -15,7 +15,7 @@ from threading import Thread
 from itertools import chain
 import os
 
-from ..atom_util import member_from_str, tagged_members
+from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
 from .tools.task_decorator import make_stoppable
 

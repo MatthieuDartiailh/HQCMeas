@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : atom_util.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 
 from atom.api import Str, Unicode, Enum, Atom, Member, Validate
 

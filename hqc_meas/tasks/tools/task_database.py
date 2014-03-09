@@ -6,7 +6,7 @@
 #==============================================================================
 """
 """
-from atom.api import Atom, Dict, Bool, Value, Event
+from atom.api import Atom, Dict, Bool, Value, Event, List, Str
 from threading import Lock
 
 
@@ -20,7 +20,12 @@ class DatabaseNode(dict):
 class TaskDatabase(Atom):
     """
     """
+    # Event used to notify a value changed in the database.
     notifier = Event()
+
+    # List of root entries which should not be listed.
+    excluded = List(Str(), ['threads', 'instrs'])
+
     _running = Bool(False)
     _database = Dict()
     _lock = Value()
@@ -100,6 +105,9 @@ class TaskDatabase(Atom):
 
         else:
             new_assumed_path = assumed_path.rpartition('/')[0]
+            if assumed_path == new_assumed_path:
+                mes = "Can't find database entry : {}".format(value_name)
+                raise KeyError(mes)
             return self.get_value(new_assumed_path, value_name)
 
     def delete_value(self, node_path, value_name):
@@ -134,16 +142,16 @@ class TaskDatabase(Atom):
             raise ValueError(err_str)
 
     def list_accessible_entries(self, node_path):
-        """Method used to get a list of all entries accessible from a node
+        """ Method used to get a list of all entries accessible from a node
 
         Parameters:
         ----------
         node_path : str
-            Path to the node parent of the new one
+            Path to the node from which accessible entries should be listed.
 
         Returns
         -------
-        entries_list : list
+        entries_list : list(str)
             List of entries accessible from the specified node
 
         """
@@ -163,12 +171,25 @@ class TaskDatabase(Atom):
             if not isinstance(node[key], DatabaseNode):
                 entries.append(key[1:])
 
-        entries.remove('threads')
-        entries.remove('instrs')
-        return entries
+        for entry in self.excluded:
+            if entry in entries:
+                entries.remove(entry)
+
+        return sorted(entries)
 
     def list_all_entries(self, path='root'):
-        """
+        """ List all entries in the database.
+
+        Parameters
+        ----------
+        path : str, optional
+            Starting node. This parameters is for internal use only.
+
+        Returns
+        -------
+        paths : list(str)
+            List of all accessible entries with their full path.
+
         """
         entries = []
         node = self._go_to_path(path)
@@ -180,8 +201,10 @@ class TaskDatabase(Atom):
                 entries.append(path + '/' + entry[1:])
 
         if path == 'root':
-            entries.remove('root/threads')
-            entries.remove('root/instrs')
+            for entry in self.excluded:
+                aux = path + '/' + entry
+                if aux in entries:
+                    entries.remove(aux)
 
         return sorted(entries)
 
@@ -252,13 +275,17 @@ class TaskDatabase(Atom):
             raise ValueError(err_str)
 
     def prepare_for_running(self):
-        """
+        """ Enter a thread safe state.
+
+        This is used when tasks are excuted.
+
         """
         self._lock = Lock()
         self._running = True
 
     def _go_to_path(self, path):
-        """Method used to reach a node specified by a path
+        """Method used to reach a node specified by a path.
+
         """
         node = self._database
         if path == 'root':
