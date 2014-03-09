@@ -1,29 +1,34 @@
 # -*- coding: utf-8 -*-
 """
 """
-from atom.api import (Enum, Float, observe, set_default)
+from atom.api import (Enum, Float, set_default)
 
 from time import sleep
 
 from .instr_task import InstrumentTask
 from .tools.task_decorator import smooth_instr_crash
 
+
 class LockInMeasureTask(InstrumentTask):
-    """Ask a lock-in to perform a measure. Wait for any parallel operation
-    before execution.
+    """Ask a lock-in to perform a measure.
+
+    Wait for any parallel operationbefore execution.
+
     """
+    # Value to retrieve.
     mode = Enum('X', 'Y', 'X&Y', 'Amp', 'Phase',
-                         'Amp&Phase').tag(pref = True)
-    waiting_time = Float().tag(pref = True)
+                'Amp&Phase').tag(pref=True)
+
+    # Time to wait before performing the measurement.
+    waiting_time = Float().tag(pref=True)
 
     driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830']
-
-    task_database_entries = set_default({'x' : 1.0})
+    task_database_entries = set_default({'x': 1.0})
 
     def __init__(self, **kwargs):
         super(LockInMeasureTask, self).__init__(**kwargs)
-        self.make_wait(wait = ['instr'])
-        
+        self.make_wait(wait=['instr'])
+
     @smooth_instr_crash
     def process(self):
         """
@@ -54,22 +59,22 @@ class LockInMeasureTask(InstrumentTask):
             self.write_in_database('amplitude', amplitude)
             self.write_in_database('phase', phase)
 
-    @observe('mode')
-    def _update_database_entries(self, change):
-        """
+    def _observe_mode(self, change):
+        """ Update the database entries acording to the mode.
+
         """
         new = change['value']
         if new == 'X':
-            self.task_database_entries = {'x' : 1.0}
+            self.task_database_entries = {'x': 1.0}
         elif new == 'Y':
-            self.task_database_entries = {'y' : 1.0}
+            self.task_database_entries = {'y': 1.0}
         elif new == 'X&Y':
-            self.task_database_entries = {'x' : 1.0, 'y' : 1.0}
+            self.task_database_entries = {'x': 1.0, 'y': 1.0}
         elif new == 'Amp':
-            self.task_database_entries = {'amplitude' : 1.0}
+            self.task_database_entries = {'amplitude': 1.0}
         elif new == 'Phase':
-            self.task_database_entries = {'phase' : 1.0}
+            self.task_database_entries = {'phase': 1.0}
         elif new == 'Amp&Phase':
-            self.task_database_entries = {'amplitude' : 1.0, 'phase' : 1.0}
-            
+            self.task_database_entries = {'amplitude': 1.0, 'phase': 1.0}
+
 KNOWN_PY_TASKS = [LockInMeasureTask]

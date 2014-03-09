@@ -91,3 +91,5 @@ class InstrumentTask(SimpleTask):
 
         """
         self.driver.close_connection()
+
+TASK_PACKAGES = ['tasks_instr']

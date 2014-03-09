@@ -2,26 +2,32 @@
 """
 """
 from atom.api import (Str, Bool, set_default, Enum)
+from inspect import cleandoc
 
-from .instr_task import InstrumentTask
-from .tools.task_decorator import (smooth_instr_crash)
-from .tools.database_string_formatter import format_and_eval_string
+from ..instr_task import InstrumentTask
+from ..tools.task_decorator import (smooth_instr_crash)
+from ..tools.database_string_formatter import format_and_eval_string
 
 
 class RFSourceSetFrequencyTask(InstrumentTask):
     """Set the frequency of the signal delivered by the source.
-    """
 
-    frequency = Str().tag(pref = True)
-    unit = Enum('GHz', 'MHz', 'kHz', 'Hz').tag(pref = True)
-    auto_start = Bool(False).tag(pref = True)
+    """
+    # Target frequency (dynamically evaluated)
+    frequency = Str().tag(pref=True)
+
+    # Unit of the frequency
+    unit = Enum('GHz', 'MHz', 'kHz', 'Hz').tag(pref=True)
+
+    # Whether to start the source if its output is off.
+    auto_start = Bool(False).tag(pref=True)
 
     driver_list = ['AgilentE8257D']
     task_database_entries = set_default({'frequency': 1.0, 'unit': 'GHz'})
     loopable = True
 
     @smooth_instr_crash
-    def process(self, frequency = None):
+    def process(self, frequency=None):
         """
         """
         if not self.driver:
@@ -49,8 +55,8 @@ class RFSourceSetFrequencyTask(InstrumentTask):
             except:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
-                    'Failed to eval the frequency formula {}'.format(
-                                                                self.frequency)
+                    cleandoc('''Failed to eval the frequency
+                        formula {}'''.format(self.frequency))
             self.write_in_database('unit', self.unit)
             self.write_in_database('frequency', freq)
         return test, traceback
@@ -58,17 +64,20 @@ class RFSourceSetFrequencyTask(InstrumentTask):
 
 class RFSourceSetPowerTask(InstrumentTask):
     """Set the power of the signal delivered by the source.
-    """
 
-    power = Str().tag(pref = True)
-    auto_start = Bool(False).tag(pref = True)
+    """
+    # Target power (dynamically evaluated)
+    power = Str().tag(pref=True)
+
+    # Whether to start the source if its output is off.
+    auto_start = Bool(False).tag(pref=True)
 
     driver_list = ['AgilentE8257D']
-    task_database_entries = set_default({'power' : -10})
+    task_database_entries = set_default({'power': -10})
     loopable = True
 
     @smooth_instr_crash
-    def process(self, power = None):
+    def process(self, power=None):
         """
         """
         if not self.driver:
@@ -103,16 +112,17 @@ class RFSourceSetPowerTask(InstrumentTask):
 
 class RFSourceSetOnOffTask(InstrumentTask):
     """Switch on/off the output of the source.
-    """
 
-    switch = Str('Off').tag(pref = True)
+    """
+    # Desired state of the output, runtime value can be 0 or 1.
+    switch = Str('Off').tag(pref=True)
 
     driver_list = ['AgilentE8257D']
     task_database_entries = {'output': 0}
     loopable = True
 
     @smooth_instr_crash
-    def process(self, switch = None):
+    def process(self, switch=None):
         """
         """
         if not self.driver:

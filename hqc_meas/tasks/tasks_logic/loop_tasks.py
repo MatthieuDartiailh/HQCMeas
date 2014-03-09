@@ -12,9 +12,9 @@ from atom.api\
 from numpy import linspace
 from timeit import default_timer
 
-from .tools.task_decorator import make_stoppable
-from .tools.database_string_formatter import format_and_eval_string
-from .base_tasks import (SimpleTask, ComplexTask)
+from ..tools.task_decorator import make_stoppable
+from ..tools.database_string_formatter import format_and_eval_string
+from ..base_tasks import (SimpleTask, ComplexTask)
 
 
 class BaseLoopTask(ComplexTask):

@@ -6,8 +6,8 @@ from atom.api import (Str, Float, ContainerList, Typed, set_default, Atom)
 from time import sleep
 from inspect import cleandoc
 
-from .base_tasks import SimpleTask
-from .tools.database_string_formatter import get_formatted_string, safe_eval
+from ..base_tasks import SimpleTask
+from ..tools.database_string_formatter import get_formatted_string, safe_eval
 
 
 class PrintTask(SimpleTask):

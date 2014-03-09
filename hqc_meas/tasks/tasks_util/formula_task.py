@@ -8,8 +8,8 @@
 """
 from atom.api import (Str, ContainerList, Instance, Atom, Bool)
 
-from .base_tasks import SimpleTask
-from .tools.database_string_formatter import (format_and_eval_string)
+from ..base_tasks import SimpleTask
+from ..tools.database_string_formatter import (format_and_eval_string)
 
 
 class _Formula(Atom):

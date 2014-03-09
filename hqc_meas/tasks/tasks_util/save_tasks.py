@@ -14,9 +14,9 @@ import numpy
 import logging
 from inspect import cleandoc
 
-from .tools.database_string_formatter import (get_formatted_string,
-                                              format_and_eval_string)
-from .base_tasks import SimpleTask
+from ..tools.database_string_formatter import (get_formatted_string,
+                                               format_and_eval_string)
+from ..base_tasks import SimpleTask
 
 
 class _SavedValue(Atom):

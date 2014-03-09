@@ -7,28 +7,32 @@
 """
 
 """
-
+# TODO fix PNATAsks check and PEP8
 from atom.api import (Atom, Str, Int, List, observe, Enum, set_default, Bool,
-                        Typed, ContainerList)
+                      Typed, ContainerList)
 
-import time, os
+import time
+import os
 from inspect import cleandoc
 from configobj import ConfigObj
 import numpy as np
 
-from .instr_task import InstrumentTask
-from .tools.task_decorator import (smooth_instr_crash)
-from .tools.database_string_formatter import (format_and_eval_string)
-from ..instruments.drivers import DRIVERS
-from ..instruments.drivers.driver_tools import InstrIOError
+from ..instr_task import InstrumentTask
+from ..tools.task_decorator import (smooth_instr_crash)
+from ..tools.database_string_formatter import (format_and_eval_string)
+from hqc_meas.instruments.drivers.driver_tools import InstrIOError
+
 
 class PNATasks(InstrumentTask):
+    """ Helper class managing the notion of channel in the PNA.
+
     """
-    """
-    channels = List(Int()).tag(pref = True)
+    # List of necessary channels.
+    channels = List(Int()).tag(pref=True)
 
     def check(self, *args, **kwargs):
-        """
+        """ Add checking for channels to the base tests.
+
         """
         traceback = {}
         full_path = self.profile_dict[self.selected_profile]
@@ -71,14 +75,16 @@ class PNATasks(InstrumentTask):
 
         return True, traceback
 
+
 class PNASetFreqTask(PNATasks):
     """Set the central frequecny to be used for the specified channel.
+
     """
-    channel = Int(1).tag(pref = True)
-    frequency = Str().tag(pref = True)
+    channel = Int(1).tag(pref=True)
+    frequency = Str().tag(pref=True)
 
     driver_list = ['AgilentPNA']
-    task_database_entries = set_default({'frequency' : 1e9})
+    task_database_entries = set_default({'frequency': 1e9})
     loopable = True
 
     @smooth_instr_crash
@@ -127,7 +133,7 @@ class PNASetPowerTask(PNATasks):
     driver_list = ['AgilentPNA']
     task_database_entries = set_default({'power' : -10})
     loopable = True
-    
+
     @smooth_instr_crash
     def process(self, power = None):
         """
@@ -163,7 +169,7 @@ class PNASetPowerTask(PNATasks):
     @observe('channel')
     def _update_channels(self, change):
         self.channels = [change['value']]
-        
+
 class PNAMeasure(Atom):
     """
     """
@@ -181,11 +187,11 @@ class PNASinglePointMeasureTask(PNATasks):
     window = Int(1).tag(pref = True)
 
     driver_list = ['AgilentPNA']
-    
+
     def __init__(self, **kwargs):
         super(PNASinglePointMeasureTask, self).__init__(**kwargs)
         self.make_wait(wait = ['instr'])
-        
+
     @smooth_instr_crash
     def process(self):
         """
@@ -220,10 +226,10 @@ class PNASinglePointMeasureTask(PNATasks):
             self.channel_driver.power = power
 
             # Check whether or not we are doing the same measures as the ones
-            # already defined (avoid losing display optimisation)                                
+            # already defined (avoid losing display optimisation)
             existing_meas = [meas['name']
                     for meas in self.channel_driver.list_existing_measures()]
-                        
+
             if not (all([meas in existing_meas for meas in meas_names])
                     and all([meas in meas_names for meas in existing_meas])):
                 clear = True
@@ -295,7 +301,7 @@ class PNASweepTask(PNATasks):
     def __init__(self, **kwargs):
         super(PNASweepTask, self).__init__(**kwargs)
         self.make_wait(wait = ['instr'])
-        
+
     @smooth_instr_crash
     def process(self):
         """
@@ -313,7 +319,7 @@ class PNASweepTask(PNATasks):
 
         meas_names = ['Ch{}:'.format(self.channel) + measure.measure
                             for measure in self.measures]
-                                
+
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
             self.channel_driver.if_bandwidth = self.if_bandwidth
@@ -322,7 +328,7 @@ class PNASweepTask(PNATasks):
             # already defined (avoid losing display optimisation)
             existing_meas = [meas['name']
                     for meas in self.channel_driver.list_existing_measures()]
-                        
+
             if not (all([meas in existing_meas for meas in meas_names])
                     and all([meas in meas_names for meas in existing_meas])):
                 clear = True
@@ -411,6 +417,6 @@ class PNASweepTask(PNATasks):
                 meas_for.append(False)
 
         return meas_for
-        
+
 KNOWN_PY_TASKS = [PNASetFreqTask, PNASetPowerTask, PNASinglePointMeasureTask,
                   PNASweepTask]

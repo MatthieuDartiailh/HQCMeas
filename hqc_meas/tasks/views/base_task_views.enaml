@@ -10,8 +10,7 @@ from enaml.layout.api import hbox, align, spacer, vbox
 from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, ScrollArea)
 
-from .task_editor import (TaskEditor, NonFoldingTaskEditor)
-from hqc_meas.task_management.task_building import build_task
+from ..tools.task_editor import (TaskEditor, NonFoldingTaskEditor)
 
 enamldef NoneView(Container):
     """ Empty task view.
@@ -32,7 +31,6 @@ enamldef ComplexView(GroupBox): view:
 
     TaskEditor: editor:
         task := view.task
-        factory = build_task
 
 enamldef RootView(GroupBox): view:
     """ View for root task.
@@ -60,4 +58,3 @@ enamldef RootView(GroupBox): view:
     ScrollArea: scroll:
         NonFoldingTaskEditor: editor:
             task := view.task
-            factory = build_task

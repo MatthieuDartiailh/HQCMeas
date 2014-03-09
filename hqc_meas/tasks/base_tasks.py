@@ -862,7 +862,7 @@ class RootTask(ComplexTask):
     # Dict storing data needed at execution time (ex: drivers classes)
     run_time = Dict()
 
-    # Inter-process evnt signaling the task it should stop execution.
+    # Inter-process event signaling the task it should stop execution.
     should_stop = Instance(Event)
 
     # Seeting default values for the root task.
@@ -943,3 +943,7 @@ class RootTask(ComplexTask):
             self.default_path = os.path.normpath(new)
             self.task_database.set_value('root', 'default_path',
                                          self.default_path)
+
+KNOWN_PY_TASKS = [ComplexTask]
+
+TASK_PACKAGES = ['tasks_util', 'tasks_logic']
