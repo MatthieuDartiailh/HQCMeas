@@ -7,6 +7,14 @@
 from hqc_meas.tasks.api import RootTask, SimpleTask, ComplexTask
 
 
+def setup_module():
+    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+
+
+def teardown_module():
+    print '\n', __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+
+
 def test_register_in_database1():
     root = RootTask()
     assert root.get_from_database('threads') == {}

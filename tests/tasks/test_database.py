@@ -8,6 +8,14 @@ from nose.tools import raises
 from hqc_meas.tasks.tools.task_database import TaskDatabase
 
 
+def setup_module():
+    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+
+
+def teardown_module():
+    print '\n', __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+
+
 def test_database_nodes():
     database = TaskDatabase()
     database.create_node('root', 'node1')

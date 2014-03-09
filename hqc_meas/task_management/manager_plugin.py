@@ -48,7 +48,7 @@ class TaskManagerPlugin(HasPrefPlugin):
                                               '../tasks/templates'))]
                              ).tag(pref=True)
 
-    # Tasks loading exception.
+    # Tasks and packages loading exception.
     tasks_loading = List(Unicode()).tag(pref=True)
 
     # Task views loading exception.
