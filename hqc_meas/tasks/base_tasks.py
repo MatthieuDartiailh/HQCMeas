@@ -872,15 +872,14 @@ class RootTask(ComplexTask):
     task_preferences = ConfigObj(indent_type='    ')
     task_depth = set_default(0)
     task_path = set_default('root')
-    task_database_entries = set_default({'threads': [],
+    task_database_entries = set_default({'threads': {},
                                          'instrs': {},
                                          'default_path': ''})
 
     def __init__(self, *args, **kwargs):
         super(RootTask, self).__init__(*args, **kwargs)
         self.task_database = TaskDatabase()
-        self.task_database.set_value('root', 'threads', {})
-        self.task_database.set_value('root', 'instrs', {})
+        self.register_in_database()
         self.root_task = self
 
     #--- Public API -----------------------------------------------------------
@@ -912,6 +911,31 @@ class RootTask(ComplexTask):
         instrs = self.task_database.get_value('root', 'instrs')
         for instr_profile in instrs:
             instrs[instr_profile].close_connection()
+
+    def register_in_database(self):
+        """ Create a node in the database and register all entries.
+
+        This method registers both the task entries and all the tasks tagged
+        as child.
+
+        """
+        if self.task_database_entries:
+            for entry in self.task_database_entries:
+                self.task_database.set_value(self.task_path,
+                                             entry,
+                                             self.task_database_entries[entry])
+
+        self.task_database.create_node(self.task_path, self.task_name)
+
+        #ComplexTask defines children_task so we always get something
+        for name in tagged_members(self, 'child'):
+            child = getattr(self, name)
+            if child:
+                if isinstance(child, list):
+                    for aux in child:
+                        aux.register_in_database()
+                else:
+                    child.register_in_database()
 
     #--- Private API ----------------------------------------------------------
 

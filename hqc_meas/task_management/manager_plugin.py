@@ -157,7 +157,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         return t_filter.filter_tasks(self._py_tasks, self._template_tasks)
 
     def config_request(self, task_name):
-        """ Access the proper config for a task
+        """ Access the proper config for a task.
 
         Parameters
         ----------
