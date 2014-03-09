@@ -28,7 +28,7 @@ class Test_State(object):
         print __name__, ': ', cls.__name__, '.setup_class() ----------'
         # Creating dummy directory to store prefs during test
         directory = os.path.dirname(__file__)
-        cls.test_dir = os.path.join(directory, '_tests')
+        cls.test_dir = os.path.join(directory, '_temps')
         os.mkdir(cls.test_dir)
 
         # Creating dummy default.ini file in utils
@@ -45,9 +45,20 @@ class Test_State(object):
 
     @classmethod
     def teardown_class(cls):
-        print __name__, ': ', cls.__name__, 'teardown_class() -------'
+        print '\n', __name__, ': ', cls.__name__, 'teardown_class() -------'
          # Removing test
-        shutil.rmtree(cls.test_dir)
+        try:
+            shutil.rmtree(cls.test_dir)
+
+        # Hack for win32.
+        except OSError:
+            try:
+                dirs = os.listdir(cls.test_dir)
+                for directory in dirs:
+                    shutil.rmtree(os.path.join(cls.test_dir), directory)
+                shutil.rmtree(cls.test_dir)
+            except OSError:
+                pass
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)

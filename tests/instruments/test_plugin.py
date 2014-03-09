@@ -28,6 +28,8 @@ def teardown_module():
 
 class Test_TaskManagement(BaseClass):
 
+    mod = __name__
+
     def test_init(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
