@@ -24,6 +24,7 @@ class HasPrefPlugin(Plugin):
 
         prefs = core.invoke_command('hqc_meas.preferences.get_plugin_prefs',
                                     {'plugin_id': self.manifest.id}, self)
+
         self.update_members_from_preferences(**prefs)
         core.invoke_command('hqc_meas.preferences.plugin_init_complete',
                             {'plugin_id': self.manifest.id}, self)

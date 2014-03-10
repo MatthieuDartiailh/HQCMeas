@@ -6,21 +6,25 @@
 #==============================================================================
 """
 """
-from atom.api import Atom, Typed, List, Str
+from atom.api import Atom, ForwardTyped, List, Str
 from enaml.layout.api import hbox, spacer
-from enaml.core.api import Conditional
+from enaml.core.api import Conditional, Include
 from enaml.widgets.api import (PushButton, ObjectCombo, Action, Container,
                                Dialog)
 
 from ..utils.widgets.qt_list_str_widget import QtListStrWidget
-from .manager_plugin import TaskManagerPlugin
 
+
+# Circular import protection
+def task_manager():
+    from .manager_plugin import TaskManagerPlugin
+    return TaskManagerPlugin
 
 class _SelectorModel(Atom):
     """ Simple model for TaskSelector.
 
     """
-    manager = Typed(TaskManagerPlugin)
+    manager = ForwardTyped(task_manager)
 
     selected_filter = Str()
     display_tasks = List(Str())
@@ -42,9 +46,9 @@ enamldef TaskSelector(Container):
     attr manager
     attr display_filters : bool = True
     attr _internal = _SelectorModel(manager=manager)
+    attr selected_filter := _internal.selected_filter
 
     alias selected_task : t_select.selected_item
-    alias selected_filter : _internal.selected_filter
 
     Conditional:
         condition << display_filters

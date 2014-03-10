@@ -6,13 +6,14 @@
 #==============================================================================
 
 # Importing all known tasks
-from ...tasks.api import SimpleTask, LoopTask, ComplexTask
+from ...tasks.api import SimpleTask, ComplexTask
+from ...tasks.tasks_logic.loop_tasks import LoopTask
 
 # Importing the base task config
 from .base_task_config import (AbstractConfigTask, IniConfigTask, PyConfigTask)
 
 # Importing the config for the loop tasks
-from loop_task_config import LoopConfigTask
+from .loop_task_config import LoopConfigTask
 
 # Defining the special config dictionnary used by the builder to select the
 # right config task class.

@@ -3,8 +3,8 @@ from enaml.layout.api import hbox, align, spacer, vbox, grid
 from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, CheckBox)
 
-from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
-from .task_editor import (TaskEditor)
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.tasks.tools.task_editor import (TaskEditor)
 from hqc_meas.task_management.task_building import build_task
 
 enamldef SimpleLoopView(GroupBox): view:

@@ -8,15 +8,10 @@
 """
 from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
                                Form, Label)
-from enaml.core.api import Conditional
-from enaml.stdlib.mapped_view import MappedView
+from enaml.core.api import Conditional, Include
 from enaml.layout.api import hbox
 
 from ..browsing import TaskSelector
-
-from .base_task_config import PyConfigTask
-from .base_views import (SimpleView, NoneView)
-
 
 enamldef LoopView(Container): view:
     attr model
@@ -38,5 +33,5 @@ enamldef LoopView(Container): view:
             display_filters = False
             selected_filter = 'Loopable'
             selected_task >> model.subtask
-         Include: conf:
+        Include: conf:
             objects  << [model.config_view]

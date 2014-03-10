@@ -13,13 +13,19 @@
 
 """
 
-from atom.api import (Atom, Str, Bool, Unicode, Subclass, Typed, observe)
+from atom.api import (Atom, Str, Bool, Unicode, Subclass, ForwardTyped,
+                      observe)
 
 from inspect import getdoc, cleandoc
 
 from ...tasks.api import BaseTask, RootTask
-from ..manager_plugin import TaskManagerPlugin
 from ..templates import load_template
+
+
+# Circular import protection
+def task_manager():
+    from ..manager_plugin import TaskManagerPlugin
+    return TaskManagerPlugin
 
 
 class AbstractConfigTask(Atom):
@@ -27,7 +33,7 @@ class AbstractConfigTask(Atom):
 
     """
     # Task manager, necessary to retrieve task implementations.
-    manager = Typed(TaskManagerPlugin)
+    manager = ForwardTyped(lambda: task_manager)
 
     # Name of the task to create.
     task_name = Str('')

@@ -8,16 +8,12 @@
 """
 from atom.api import (Instance, Value, Str, observe)
 
-from ..manager_plugin import TaskManagerPlugin
 from .base_task_config import PyConfigTask, AbstractConfigTask
 
 
 class LoopConfigTask(PyConfigTask):
     """
     """
-    # Task manager plugin.
-    manager = Instance(TaskManagerPlugin, ())
-
     # Embedded task
     sub_task = Str()
 

@@ -6,7 +6,7 @@
 #==============================================================================
 """
 """
-from atom.api import (Atom, Instance, Str, observe, Typed, Bool)
+from atom.api import (Atom, Instance, Str, observe, ForwardTyped, Bool)
 from enaml.core.api import Include
 from enaml.core.object import Object
 from enaml.layout.api import hbox, spacer, vbox
@@ -14,16 +14,20 @@ from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
                                Label, MultilineField)
 
 from .browsing import TaskSelector
-from .manager_plugin import TaskManagerPlugin
-from .config import AbstractConfigTask
+from .config.api import AbstractConfigTask
 
+
+# Circular import protection
+def task_manager():
+    from .manager_plugin import TaskManagerPlugin
+    return TaskManager
 
 class _TaskBuilderModel(Atom):
     """ Simple model for the TaskBuilder dialog.
 
     """
     # Task manager.
-    manager = Typed(TaskManagerPlugin)
+    manager = ForwardTyped(task_manager)
 
     # Name of the currently selected task.
     task_name = Str()
@@ -51,7 +55,7 @@ class _TaskBuilderModel(Atom):
         """
         self.ok_ready = change['value']
 
-enamldef TaskBuilder(Dialog): dial:
+enamldef BuilderView(Dialog): dial:
     """ Simple Dialog to create a task.
 
     """
@@ -61,7 +65,7 @@ enamldef TaskBuilder(Dialog): dial:
 
     Container:
         constraints << [hbox(selector,
-                             *tuple([*conf.objects] + [vbox(ok,
+                             *tuple(list(conf.objects) + [vbox(ok,
                                                             cancel,
                                                             spacer)]))]
         TaskSelector: selector:

@@ -17,18 +17,20 @@ from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                              FileDeletedEvent, FileMovedEvent)
 from inspect import cleandoc
 
-from ..enaml_util.pref_plugin import HasPrefPlugin
-from ..tasks.base_tasks import BaseTask
+from ..utils.has_pref_plugin import HasPrefPlugin
+from ..tasks.api import BaseTask
 from .filters.api import AbstractTaskFilter, TASK_FILTERS
 from .config.api import (SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask,
                          IniView)
 
 from .building import build_task, build_root
 from .saving import save_task
-from .template import load_template
+from .templates import load_template
 
 
 MODULE_PATH = os.path.dirname(__file__)
+
+MODULE_ANCHOR = 'hqc_meas.task_management'
 
 
 # XXXX Filters and Config being less prone to frequent udpates, no dynamic
@@ -40,7 +42,6 @@ MODULE_PATH = os.path.dirname(__file__)
 class TaskManagerPlugin(HasPrefPlugin):
     """
     """
-
     # Folders containings templates which should be loaded.
     templates_folders = List(Unicode(),
                              [os.path.realpath(
@@ -85,7 +86,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._py_tasks.clear()
         self._template_tasks.clear()
         self._filters.clear()
-        self.views.clear()
+        self._task_views.clear()
         self._configs.clear()
 
     def tasks_request(self, tasks, use_class_names=False):
@@ -113,8 +114,8 @@ class TaskManagerPlugin(HasPrefPlugin):
             answer.update({key: val for key, val in self._py_tasks.iteritems()
                            if key in tasks})
 
-            answer.update({key: tuple(val, *load_template(val))
-                           for key, val in self._template_tasks
+            answer.update({key: tuple([val] + list(load_template(val)))
+                           for key, val in self._template_tasks.iteritems()
                            if key in tasks})
         else:
             answer.update({key: val for key, val in self._py_tasks.iteritems()
@@ -137,7 +138,7 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         views = self._task_views
-        return {t_class: views[t_class] for t_class in task_classes}
+        return {t_class: views[t_class.__name__] for t_class in task_classes}
 
     def filter_tasks(self, filter_name):
         """ Filter the known tasks using the specified filter.
@@ -201,7 +202,7 @@ class TaskManagerPlugin(HasPrefPlugin):
     _template_tasks = Dict(Str(), Unicode())
 
     # Tasks views (task_class: view)
-    _task_views = Dict(Subclass(BaseTask))
+    _task_views = Dict(Str())
 
     # Task filters
     _filters = Dict(Str(), Subclass(AbstractTaskFilter), TASK_FILTERS)
@@ -229,7 +230,7 @@ class TaskManagerPlugin(HasPrefPlugin):
                 templates[template_name] = template_path
 
         self._template_tasks = templates
-        self.tasks = list(self._py_tasks.keys) + list(templates.keys())
+        self.tasks = list(self._py_tasks.keys()) + list(templates.keys())
 
     def _refresh_tasks(self):
         """ Refresh the known tasks.
@@ -268,9 +269,8 @@ class TaskManagerPlugin(HasPrefPlugin):
                     tasks_packages.remove(pack)
 
         self._py_tasks = tasks
-        self.views = views
-        self.tasks = list(tasks.keys) + list(self._template_tasks.keys())
-
+        self._task_views = views
+        self.tasks = list(tasks.keys()) + list(self._template_tasks.keys())
         # TODO do something with failed
 
     def _refresh_filters(self):
@@ -325,7 +325,7 @@ class TaskManagerPlugin(HasPrefPlugin):
                              and m.endswith('.py')))
 
         try:
-            modules.removes(pack + '.__init__')
+            modules.remove(pack + '.__init__')
         except ValueError:
             log = logging.getLogger(__name__)
             mess = cleandoc('''{} is not a valid Python package (miss
@@ -349,12 +349,12 @@ class TaskManagerPlugin(HasPrefPlugin):
             failed[pack] = mess
             return [], []
 
-        v_modules = sorted(pack + '.views.' + m[:-3]
+        v_modules = sorted(pack + '.views.' + m[:-6]
                            for m in os.listdir(v_path)
                            if (os.path.isfile(os.path.join(v_path, m))
                                and m.endswith('.enaml')))
 
-        if not os.path.isfile(pack_path, '__init__.py'):
+        if not os.path.isfile(os.path.join(pack_path, '__init__.py')):
             log = logging.getLogger(__name__)
             mess = cleandoc('''{} is not a valid Python package (miss
                 __init__.py).'''.format(pack + '.views'))
@@ -389,7 +389,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         """
         for mod in modules:
             try:
-                m = import_module('..' + mod)
+                m = import_module('..' + mod, MODULE_ANCHOR)
             except Exception as e:
                 log = logging.getLogger(__name__)
                 mess = 'Failed to import {} : {}'.format(mod, e.message)
@@ -426,7 +426,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         for mod in modules:
             try:
                 with enaml.imports():
-                    m = import_module('..' + mod)
+                    m = import_module('..' + mod, MODULE_ANCHOR)
             except Exception as e:
                 log = logging.getLogger(__name__)
                 mess = 'Failed to import {} : {}'.format(mod, e.message)
@@ -445,11 +445,15 @@ class TaskManagerPlugin(HasPrefPlugin):
             handler = _FileListUpdater(self._refresh_template_tasks)
             self._observer.schedule(handler, folder, recursive=True)
 
+        self._observer.start()
+
     def _unbind_observers(self):
         """ Remove the observers for the plugin.
 
         """
-        self._observer.unchedule_all()
+        self._observer.unschedule_all()
+        self._observer.stop()
+        self._observer.join()
 
     @staticmethod
     def _normalise_name(name):

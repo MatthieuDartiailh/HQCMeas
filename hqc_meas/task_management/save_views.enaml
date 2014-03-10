@@ -6,23 +6,26 @@
 #==============================================================================
 """
 """
-from atom.api import (Atom, List, Str, Unicode, Bool, observe)
+from atom.api import (Atom, List, Str, Unicode, Bool, ForwardTyped, observe)
 from enaml.widgets.api import (Container, Field, MultilineField, CheckBox,
                                PushButton, Dialog)
 from enaml.layout.api import align, hbox, vbox, spacer
 from enaml.stdlib.message_box import question
 from textwrap import fill
 
-from ..enaml_util.qt_list_str_widget import QtListStrWidget
-from .manager_plugin import TaskManagerPlugin
+from ..utils.widgets.qt_list_str_widget import QtListStrWidget
 
+# Protection from circular imports
+def task_manager():
+    from .manager_plugin import TaskManagerPlugin
+    return TaskManager
 
 # TODO allow to access any folder known to the manager.
 class TemplateTaskSaver(Atom):
     """ Simple model for the Template saver dialog.
 
     """
-    manager = Typed(TaskManagerPlugin)
+    manager = ForwardTyped(task_manager)
     template_filenames = List(Unicode())
 
     template_filename = Str()

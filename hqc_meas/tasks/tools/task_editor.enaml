@@ -73,9 +73,9 @@ enamldef _TaskListView(Container): list_view:
                       index = edited_list.index(loop_item),
                       factory = core.invoke_commad,
                       operations = operations,
-                      args = ('hqc_meas.task_manager.build_task',)
-                      kwargs = {'parameters': {'parent_ui': list_view},
-                                'trigger': button)
+                      args = ('hqc_meas.task_manager.build_task',),
+                      kwargs = {'parameters': {'parent_ui': button},
+                                'trigger': button})
                     menu.popup()
             _TaskView: view:
                 task << loop_item

@@ -20,7 +20,7 @@ with enaml.imports():
 
 class TestForms(BaseClass):
 
-     mod = __name__
+    mod = __name__
 
     def test_form1(self):
         self.workbench.register(InstrManagerManifest())

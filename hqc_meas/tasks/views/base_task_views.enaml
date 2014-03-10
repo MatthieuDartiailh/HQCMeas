@@ -58,3 +58,7 @@ enamldef RootView(GroupBox): view:
     ScrollArea: scroll:
         NonFoldingTaskEditor: editor:
             task := view.task
+
+TASK_VIEW_MAPPING = {'ComplexTask': ComplexView,
+                     'RootTask': RootView,
+                     'None': NoneView}

@@ -7,7 +7,7 @@ from configobj import ConfigObj
 from nose.tools import assert_in, assert_not_in, assert_equal
 
 with enaml.imports():
-    from hqc_meas.utils.core_manifest import HqcCoreManifest
+    from enaml.workbench.core.core_manifest import CoreManifest
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
     from hqc_meas.task_management.manager_manifest import TaskManagerManifest
@@ -59,7 +59,7 @@ class Test_TaskManagement(object):
         # Copying false template.
         template_path = os.path.join(cls.test_dir, 'temp_templates')
         os.mkdir(template_path)
-        shutil.copyfile(os.path.join(directory, 'template.ini'),
+        shutil.copyfile(os.path.join(directory, 'template_ref.ini'),
                         os.path.join(template_path, 'template.ini'))
 
         # Saving plugin preferences.
@@ -67,23 +67,24 @@ class Test_TaskManagement(object):
                     'templates_folders': str([template_path])}
 
         conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
-        conf['hqc_meas.task_manager'] = {}
-        conf['hqc_meas.task_manager'].update(man_conf)
+        conf[u'hqc_meas.task_manager'] = {}
+        conf[u'hqc_meas.task_manager'].update(man_conf)
         conf.write()
 
+    # TODO find why template_ref.ini disappear (not linked to rmtree)
     @classmethod
     def teardown_class(cls):
-        print __name__, ': TestClass.teardown_class() -------'
+        print '\n', __name__, ': TestClass.teardown_class() -------'
          # Removing pref files creating during tests.
-        try:
-            shutil.rmtree(cls.test_dir)
-
-        # Hack for win32.
-        except OSError:
-            dirs = os.listdir(cls.test_dir)
-            for directory in dirs:
-                shutil.rmtree(os.path.join(cls.test_dir), directory)
-            shutil.rmtree(cls.test_dir)
+#        try:
+#            shutil.rmtree(cls.test_dir)
+#
+#        # Hack for win32.
+#        except OSError:
+#            dirs = os.listdir(cls.test_dir)
+#            for directory in dirs:
+#                shutil.rmtree(os.path.join(cls.test_dir), directory)
+#            shutil.rmtree(cls.test_dir)
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
@@ -98,14 +99,15 @@ class Test_TaskManagement(object):
     def setup(self):
 
         self.workbench = Workbench()
-        self.workbench.register(HqcCoreManifest())
+        self.workbench.register(CoreManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
 
     def teardown(self):
-        path = os.path.join(self.test_dir, 'default_test.ini')
-        if os.path.isfile(path):
-            os.remove(path)
+        self.workbench.unregister(u'hqc_meas.task_manager')
+        self.workbench.unregister(u'hqc_meas.preferences')
+        self.workbench.unregister(u'hqc_meas.state')
+        self.workbench.unregister(u'enaml.workbench.core')
 
     def test_init(self):
         self.workbench.register(TaskManagerManifest())
@@ -115,7 +117,7 @@ class Test_TaskManagement(object):
         assert_in('Complex', plugin.tasks)
         assert_not_in('Instr', plugin.tasks)
         assert_in('Print', plugin.tasks)
-        assert_in('Defintion', plugin.tasks)
+        assert_in('Definition', plugin.tasks)
         assert_in('Sleep', plugin.tasks)
 
         # Testing templates
@@ -161,16 +163,16 @@ class Test_TaskManagement(object):
 
     # TODO still to write (use internl storage for filters and config)
     def test_filter_tasks(self):
-        pass
+        self.workbench.register(TaskManagerManifest())
 
     def test_config_request(self):
-        pass
+        self.workbench.register(TaskManagerManifest())
 
     def test_save_task(self):
-        pass
+        self.workbench.register(TaskManagerManifest())
 
     def test_build_task(self):
-        pass
+        self.workbench.register(TaskManagerManifest())
 
     def test_build_root(self):
-        pass
+        self.workbench.register(TaskManagerManifest())

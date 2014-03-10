@@ -31,42 +31,42 @@ def manager_plugin_factory():
 
 
 def tasks_request(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.tasks_request(**event.parameters)
 
 
 def views_request(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.views_request(**event.parameters)
 
 
 def save_task(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.save_task(**event.parameters)
 
 
 def build_task(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.build_task(**event.parameters)
 
 
 def build_root(event):
-    """ Handler for the 'hqc_meas.instr_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.build_root(**event.parameters)
 
 INSTR_USERS_DESCRIPTION = \
@@ -107,14 +107,14 @@ enamldef TaskManagerManifest(PluginManifest):
     factory = manager_plugin_factory
     Extension:
         id = 'prefs'
-        point = 'hqc_meas.preferences.pref_plugins'
+        point = 'hqc_meas.preferences.pref_plugin'
         Preferences:
             saving_method = 'pref_from_members'
             loading_method = 'members_from_preferences'
             auto_save = []
     Extension:
-        id = 'state"
-        point = 'hqc_meas.state.states
+        id = 'state'
+        point = 'hqc_meas.state.states'
         State:
             id = 'hqc_meas.states.task_manager'
             description = MANAGER_STATE_DESCRIPTION
