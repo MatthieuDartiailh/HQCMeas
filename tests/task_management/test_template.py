@@ -13,7 +13,7 @@ def setup_module():
 
 
 def teardown_module():
-    print __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+    print '\n', __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
 
 
 def setup():

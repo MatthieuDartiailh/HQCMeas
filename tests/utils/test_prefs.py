@@ -19,7 +19,7 @@ def teardown_module():
     print __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
 
 
-class Test_State(object):
+class Test_Prefs(object):
 
     test_dir = ''
 

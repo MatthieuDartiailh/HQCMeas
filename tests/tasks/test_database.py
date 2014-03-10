@@ -56,7 +56,6 @@ def test_database_listing():
         sorted(['val1', 'val2'])
 
     database.excluded = ['val1']
-    print database.list_all_entries()
     assert database.list_all_entries() ==\
         sorted(['root/node1/val2'])
     assert database.list_accessible_entries('root') == []
