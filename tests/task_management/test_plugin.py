@@ -5,6 +5,7 @@ import os
 import shutil
 from configobj import ConfigObj
 from nose.tools import assert_in, assert_not_in, assert_equal
+from nose.plugins.skip import SkipTest
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
@@ -21,13 +22,13 @@ def teardown_module():
     print __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
 
 
-class Test_TaskManagement(object):
+class Test(object):
 
     test_dir = ''
 
     @classmethod
     def setup_class(cls):
-        print __name__, ': TestClass.setup_class() ----------'
+        print __name__, ':{}.setup_class() ----------'.format(cls.__name__)
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
@@ -59,7 +60,10 @@ class Test_TaskManagement(object):
         # Copying false template.
         template_path = os.path.join(cls.test_dir, 'temp_templates')
         os.mkdir(template_path)
-        shutil.copyfile(os.path.join(directory, 'template_ref.ini'),
+        # Not in the root test dirt otherwise .ini got deleted ...
+        # Not understood but unlinked to shutil.
+        shutil.copyfile(os.path.join(directory, 'config_files',
+                                     'template_ref.ini'),
                         os.path.join(template_path, 'template.ini'))
 
         # Saving plugin preferences.
@@ -71,20 +75,20 @@ class Test_TaskManagement(object):
         conf[u'hqc_meas.task_manager'].update(man_conf)
         conf.write()
 
-    # TODO find why template_ref.ini disappear (not linked to rmtree)
     @classmethod
     def teardown_class(cls):
-        print '\n', __name__, ': TestClass.teardown_class() -------'
+        print __name__, ':{}.teardown_class() ----------'.format(cls.__name__)
          # Removing pref files creating during tests.
-#        try:
-#            shutil.rmtree(cls.test_dir)
-#
-#        # Hack for win32.
-#        except OSError:
-#            dirs = os.listdir(cls.test_dir)
-#            for directory in dirs:
-#                shutil.rmtree(os.path.join(cls.test_dir), directory)
-#            shutil.rmtree(cls.test_dir)
+        try:
+            shutil.rmtree(cls.test_dir)
+
+        # Hack for win32.
+        except OSError:
+            print 'OSError'
+            dirs = os.listdir(cls.test_dir)
+            for directory in dirs:
+                shutil.rmtree(os.path.join(cls.test_dir), directory)
+            shutil.rmtree(cls.test_dir)
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
@@ -122,6 +126,18 @@ class Test_TaskManagement(object):
 
         # Testing templates
         assert_in('Template',  plugin.tasks)
+
+    def test_load_all(self):
+        self.workbench.register(TaskManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
+        with plugin.suppress_notifications():
+            plugin.views_loading = []
+            plugin.tasks_loading = []
+
+        plugin.notify('tasks_loading', {})
+
+        if plugin.starting_report():
+            raise SkipTest(plugin.report())
 
     def test_template_observation(self):
         self.workbench.register(TaskManagerManifest())

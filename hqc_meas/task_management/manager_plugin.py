@@ -186,6 +186,12 @@ class TaskManagerPlugin(HasPrefPlugin):
                     view = configs[t_class][1]
                     return config(task_class), view
 
+    def report(self):
+        """ Give access to the failures which happened at startup.
+
+        """
+        return self._failed
+
     # Declared as method here simply to avoid breaking the delayed import of
     # the manifest.
     save_task = save_task
@@ -209,6 +215,9 @@ class TaskManagerPlugin(HasPrefPlugin):
 
     # Task config dict for python tasks (task_class: (config, view))
     _configs = Dict(Subclass(BaseTask), Tuple())
+
+    # Dict holding the list of failures which happened during loading
+    _failed = Dict()
 
     # Watchdog observer
     _observer = Typed(Observer, ())
@@ -271,6 +280,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._py_tasks = tasks
         self._task_views = views
         self.tasks = list(tasks.keys()) + list(self._template_tasks.keys())
+        self._failed = failed
         # TODO do something with failed
 
     def _refresh_filters(self):
@@ -441,19 +451,42 @@ class TaskManagerPlugin(HasPrefPlugin):
         """ Setup the observers for the plugin.
 
         """
+
         for folder in self.templates_folders:
             handler = _FileListUpdater(self._refresh_template_tasks)
             self._observer.schedule(handler, folder, recursive=True)
 
         self._observer.start()
+        self.observe('tasks_loading', self._update_tasks)
+        self.observe('views_loading', self._update_tasks)
+        self.observe('templates_folders', self._update_templates)
 
     def _unbind_observers(self):
         """ Remove the observers for the plugin.
 
         """
+        self.unobserve('tasks_loading', self._update_tasks)
+        self.unobserve('views_loading', self._update_tasks)
+        self.unobserve('templates_folders', self._update_templates)
         self._observer.unschedule_all()
         self._observer.stop()
         self._observer.join()
+
+    def _update_tasks(self, change):
+        """ Observer ensuring that loading preferences are taken into account.
+
+        """
+        self._refresh_tasks()
+
+    def _update_templates(self, change):
+        """ Observer ensuring that we observe the right template folders.
+
+        """
+        self._observer.unschedule_all()
+
+        for folder in self.templates_folders:
+            handler = _FileListUpdater(self._refresh_template_tasks)
+            self._observer.schedule(handler, folder, recursive=True)
 
     @staticmethod
     def _normalise_name(name):
