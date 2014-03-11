@@ -9,6 +9,7 @@
 import enaml
 import os
 from configobj import ConfigObj
+from nose.plugins.skip import SkipTest
 
 from .tools import BaseClass
 
@@ -40,6 +41,14 @@ class Test_TaskManagement(BaseClass):
         assert plugin.drivers == ['PanelTestDummy']
         assert plugin.all_profiles == ['Dummy']
         assert plugin.available_profiles == ['Dummy']
+
+    def test_load_all(self):
+        self.workbench.register(InstrManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+        plugin.drivers_loading = []
+
+        if plugin.report():
+            raise SkipTest(plugin.report())
 
     def test_user_management(self):
         self.workbench.register(InstrManagerManifest())

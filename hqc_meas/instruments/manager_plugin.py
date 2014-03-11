@@ -53,6 +53,8 @@ class InstrManagerPlugin(HasPrefPlugin):
     # Name of the currently available profiles.
     available_profiles = List()
 
+    #--- Public API -----------------------------------------------------------
+
     def start(self):
         """ Start the plugin life-cycle.
 
@@ -256,6 +258,12 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         return profiles
 
+    def report(self):
+        """ Give access to the failures which happened at startup.
+
+        """
+        return self._failed
+
     #--- Private API ----------------------------------------------------------
     # Drivers types
     _driver_types = Dict(Str(), Subclass(BaseInstrument))
@@ -271,6 +279,9 @@ class InstrManagerPlugin(HasPrefPlugin):
 
     # Mapping between plugin_id and InstrUser declaration.
     _users = Dict(Unicode(), Typed(InstrUser))
+
+    # Dict holding the list of failures which happened during loading
+    _failed = Dict()
 
     # Watchdog observer
     _observer = Typed(Observer, ())
@@ -336,7 +347,7 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         self.driver_types = sorted(driver_types.keys())
         self.drivers = sorted(drivers.keys())
-
+        self._failed = failed
         # TODO do something with failed
 
     def _explore_package(self, pack, pack_path, failed):
@@ -487,8 +498,6 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         self._refresh_users()
 
-    # TODO observe profiles folders and update _observer in consequence
-
     def _bind_observers(self):
         """ Setup the observers for the plugin.
 
@@ -502,11 +511,15 @@ class InstrManagerPlugin(HasPrefPlugin):
             self._observer.schedule(handler, folder, recursive=True)
 
         self._observer.start()
+        self.observe('drivers_loading', self._update_drivers)
+        self.observe('profiles_folders', self._update_profiles)
 
     def _unbind_observers(self):
         """ Remove the observers for the plugin.
 
         """
+        self.unobserve('drivers_loading', self._update_drivers)
+        self.unobserve('profiles_folders', self._update_profiles)
         self._observer.unschedule_all()
         self._observer.stop()
         self._observer.join()
@@ -515,9 +528,25 @@ class InstrManagerPlugin(HasPrefPlugin):
         point = workbench.get_extension_point(USERS_POINT)
         point.unobserve('extensions', self._on_users_updated)
 
+    def _update_drivers(self, change):
+        """ Observer ensuring that loading preferences are taken into account.
+
+        """
+        self._refresh_drivers()
+
+    def _update_profiles(self, change):
+        """ Observer ensuring that we observe the right profile folders.
+
+        """
+        self._observer.unschedule_all()
+
+        for folder in self.profiles_folders:
+            handler = _FileListUpdater(self._refresh_profiles_map)
+            self._observer.schedule(handler, folder, recursive=True)
+
     @staticmethod
     def _normalise_name(name):
-        """Normalize the name of the profiles by replacing '_' by spaces,
+        """ Normalize the name of the profiles by replacing '_' by spaces,
         removing the extension, adding spaces between 'aA' sequences and
         capitalizing the first letter.
 
