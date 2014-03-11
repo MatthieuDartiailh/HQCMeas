@@ -7,27 +7,32 @@ with enaml.imports():
     from hqc_meas.utils.state_manifest import StateManifest
     from .states_utils import StateContributor, StateContributor2
 
+from ..util import complete_line
+
 CORE_PLUGIN = u'enaml.workbench.core'
 GET_STATE = u'hqc_meas.state.get'
 
 
 def setup_module():
-    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': setup_module()', '~', 78)
 
 
 def teardown_module():
-    print __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
 class Test_State(object):
 
     @classmethod
     def setup_class(cls):
-        print __name__, ': ', cls.__name__, '.setup_class() ----------'
+        print complete_line(__name__ +
+                            ':{}.setup_class()'.format(cls.__name__), '-', 77)
 
     @classmethod
     def teardown_class(cls):
-        print '\n', __name__, ': ', cls.__name__, 'teardown_class() -------'
+        print complete_line(__name__ +
+                            ':{}.teardown_class()'.format(cls.__name__), '-',
+                            77)
 
     def setup(self):
         self.workbench = Workbench()

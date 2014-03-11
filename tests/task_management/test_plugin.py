@@ -13,13 +13,15 @@ with enaml.imports():
     from hqc_meas.utils.pref_manifest import PreferencesManifest
     from hqc_meas.task_management.manager_manifest import TaskManagerManifest
 
+from ..util import complete_line
+
 
 def setup_module():
-    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': setup_module()', '~', 78)
 
 
 def teardown_module():
-    print __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
 class Test(object):
@@ -28,7 +30,8 @@ class Test(object):
 
     @classmethod
     def setup_class(cls):
-        print __name__, ':{}.setup_class() ----------'.format(cls.__name__)
+        print complete_line(__name__ +
+                            ':{}.setup_class()'.format(cls.__name__), '-', 77)
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
@@ -77,7 +80,9 @@ class Test(object):
 
     @classmethod
     def teardown_class(cls):
-        print __name__, ':{}.teardown_class() ----------'.format(cls.__name__)
+        print complete_line(__name__ +
+                            ':{}.teardown_class()'.format(cls.__name__), '-',
+                            77)
          # Removing pref files creating during tests.
         try:
             shutil.rmtree(cls.test_dir)
@@ -136,7 +141,7 @@ class Test(object):
 
         plugin.notify('tasks_loading', {})
 
-        if plugin.starting_report():
+        if plugin.report():
             raise SkipTest(plugin.report())
 
     def test_template_observation(self):
@@ -177,9 +182,34 @@ class Test(object):
         assert_in(ComplexTask, views)
         assert_equal(views[ComplexTask], ComplexView)
 
-    # TODO still to write (use internl storage for filters and config)
     def test_filter_tasks(self):
         self.workbench.register(TaskManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.filter_tasks'
+
+        tasks = core.invoke_command(com, {'filter': 'All'}, self)
+        assert_equal(sorted(tasks), sorted(plugin.tasks))
+
+        tasks = core.invoke_command(com, {'filter': 'Python'}, self)
+        assert_equal(sorted(tasks), sorted(plugin._py_tasks.keys()))
+
+        tasks = core.invoke_command(com, {'filter': 'Template'}, self)
+        assert_equal(sorted(tasks), sorted(plugin._template_tasks.keys()))
+
+        # These two tests are sufficient to ensure that subclass tests works
+        tasks = core.invoke_command(com, {'filter': 'Simple'}, self)
+        assert_not_in('Complex', tasks)
+        assert_in('Print', tasks)
+
+        tasks = core.invoke_command(com, {'filter': 'Complex'}, self)
+        assert_not_in('Print', tasks)
+        assert_in('Complex', tasks)
+
+        # Test the class attr filter
+        tasks = core.invoke_command(com, {'filter': 'Loopable'}, self)
+        assert_not_in('Definition', tasks)
+        assert_in('Print', tasks)
 
     def test_config_request(self):
         self.workbench.register(TaskManagerManifest())

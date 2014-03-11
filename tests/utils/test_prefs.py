@@ -10,13 +10,15 @@ with enaml.imports():
     from hqc_meas.utils.pref_manifest import PreferencesManifest
     from .pref_utils import PrefContributor
 
+from ..util import complete_line
+
 
 def setup_module():
-    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': setup_module()', '~', 78)
 
 
 def teardown_module():
-    print __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
 class Test_Prefs(object):
@@ -25,7 +27,8 @@ class Test_Prefs(object):
 
     @classmethod
     def setup_class(cls):
-        print __name__, ': ', cls.__name__, '.setup_class() ----------'
+        print complete_line(__name__ +
+                            ':{}.setup_class()'.format(cls.__name__), '-', 77)
         # Creating dummy directory to store prefs during test
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
@@ -45,7 +48,9 @@ class Test_Prefs(object):
 
     @classmethod
     def teardown_class(cls):
-        print '\n', __name__, ': ', cls.__name__, 'teardown_class() -------'
+        print complete_line(__name__ +
+                            ':{}.teardown_class()'.format(cls.__name__), '-',
+                            77)
          # Removing test
         try:
             shutil.rmtree(cls.test_dir)

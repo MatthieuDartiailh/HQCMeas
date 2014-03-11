@@ -17,6 +17,16 @@ with enaml.imports():
                                                       ProfileDialog)
     from hqc_meas.instruments.forms.base_forms import DummyForm
 
+from ..util import complete_line
+
+
+def setup_module():
+    print complete_line(__name__ + ': setup_module()', '~', 78)
+
+
+def teardown_module():
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
+
 
 class TestForms(BaseClass):
 

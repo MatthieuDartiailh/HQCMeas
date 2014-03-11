@@ -7,13 +7,15 @@ import os
 
 from hqc_meas.task_management.templates import load_template, save_template
 
+from ..util import complete_line
+
 
 def setup_module():
-    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': setup_module()', '~', 78)
 
 
 def teardown_module():
-    print '\n', __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
 def setup():

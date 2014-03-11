@@ -10,6 +10,8 @@ with enaml.imports():
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
 
+from ..util import complete_line
+
 
 class BaseClass(object):
 
@@ -18,7 +20,8 @@ class BaseClass(object):
 
     @classmethod
     def setup_class(cls):
-        print cls.mod, ': ', cls.__name__, '.setup_class() ----------'
+        print complete_line(__name__ +
+                            ':{}.setup_class()'.format(cls.__name__), '-', 77)
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
@@ -63,7 +66,9 @@ class BaseClass(object):
 
     @classmethod
     def teardown_class(cls):
-        print '\n', cls.mod, ': ', cls.__name__, 'teardown_class() -------'
+        print complete_line(__name__ +
+                            ':{}.teardown_class()'.format(cls.__name__), '-',
+                            77)
         # Removing .ini files created during tests.
         try:
             shutil.rmtree(cls.test_dir)

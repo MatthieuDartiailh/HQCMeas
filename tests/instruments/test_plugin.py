@@ -17,13 +17,15 @@ with enaml.imports():
 
     from .users import InstrUser1, InstrUser2, InstrUser3
 
+from ..util import complete_line
+
 
 def setup_module():
-    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': setup_module()', '~', 78)
 
 
 def teardown_module():
-    print __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
 class Test_TaskManagement(BaseClass):

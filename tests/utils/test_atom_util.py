@@ -3,13 +3,15 @@ from atom.api import Str, Float, Enum, List, Dict, Typed, Int
 from hqc_meas.utils.atom_util import (tagged_members, simple_member_from_str,
                                       member_from_str, HasPrefAtom)
 
+from ..util import complete_line
+
 
 def setup_module():
-    print __name__, ': setup_module() ~~~~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': setup_module()', '~', 78)
 
 
 def teardown_module():
-    print '\n', __name__, ': teardown_module() ~~~~~~~~~~~~~~~~~~~'
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
 class _Aaux(HasPrefAtom):

@@ -14,10 +14,20 @@ with enaml.imports():
     from hqc_meas.instruments.manager_manifest import InstrManagerManifest
     from hqc_meas.instruments.manager_view import InstrManagerView
 
+from ..util import complete_line
+
+
+def setup_module():
+    print complete_line(__name__ + ': setup_module()', '~', 78)
+
+
+def teardown_module():
+    print complete_line(__name__ + ': teardown_module()', '~', 78)
+
 
 class TestManagerView(BaseClass):
 
-    mod  = __name__
+    mod = __name__
 
     def test_form1(self):
         self.workbench.register(InstrManagerManifest())
