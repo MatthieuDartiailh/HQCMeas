@@ -72,6 +72,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._refresh_template_tasks()
         self._refresh_tasks()
         self._refresh_filters()
+        self._refresh_config()
         self._bind_observers()
 
     def stop(self):
@@ -96,16 +97,18 @@ class TaskManagerPlugin(HasPrefPlugin):
         ----------
         tasks : list(str)
             The names of the requested tasks.
-        views : bool, optional
-            Whether or not to return the associated.
+        use_class_names : bool, optional
+            Should the search be performed using class names rather than task
+            names.
 
         Returns
         -------
         tasks : dict
             The required tasks infos as a dict. For Python tasks the entry will
-            contain the class and optionally the view ({name: (class, view)}.
-            For templates teh netry will contain the path the data as a dict
-            and the doc ({name : (path, data, doc)})
+            contain the class ({name: class}). If use_class_names is True the
+            class name will be used.
+            For templates the entry will contain the path, the data as a
+            ConfigObj object and the doc ({name : (path, data, doc)})
 
         """
         answer = {}
@@ -118,7 +121,8 @@ class TaskManagerPlugin(HasPrefPlugin):
                            for key, val in self._template_tasks.iteritems()
                            if key in tasks})
         else:
-            answer.update({key: val for key, val in self._py_tasks.iteritems()
+            answer.update({val.__name__: val
+                           for key, val in self._py_tasks.iteritems()
                            if val.__name__ in tasks})
 
         return answer
@@ -173,7 +177,8 @@ class TaskManagerPlugin(HasPrefPlugin):
         """
         templates = self._template_tasks
         if task in self._template_tasks:
-            return (IniConfigTask(templates[task]), IniView)
+            return IniConfigTask(manager=self,
+                                 template_path=templates[task]), IniView
 
         else:
             configs = self._configs
@@ -184,7 +189,10 @@ class TaskManagerPlugin(HasPrefPlugin):
                 if t_class in configs:
                     config = configs[t_class][0]
                     view = configs[t_class][1]
-                    return config(task_class), view
+                    return config(manager=self,
+                                  task_class=task_class), view
+
+        return None, None
 
     def report(self):
         """ Give access to the failures which happened at startup.
@@ -294,7 +302,7 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         mapping = {}
-        for key, val in SPECIAL_CONFIG:
+        for key, val in SPECIAL_CONFIG.iteritems():
             mapping[key] = (val, CONFIG_MAP_VIEW[val])
 
         self._configs = mapping

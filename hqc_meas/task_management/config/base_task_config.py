@@ -33,7 +33,7 @@ class AbstractConfigTask(Atom):
 
     """
     # Task manager, necessary to retrieve task implementations.
-    manager = ForwardTyped(lambda: task_manager)
+    manager = ForwardTyped(task_manager)
 
     # Name of the task to create.
     task_name = Str('')
@@ -83,8 +83,8 @@ class PyConfigTask(AbstractConfigTask):
     # Docstring of the class to help pepole know what they are going to create.
     task_doc = Str()
 
-    def __init__(self, *args, **kwargs):
-        super(PyConfigTask, self).__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super(PyConfigTask, self).__init__(**kwargs)
         self.task_doc = getdoc(self.task_class).replace('\n', ' ')
 
     def build_task(self):
@@ -114,8 +114,8 @@ class IniConfigTask(AbstractConfigTask):
     # Description of the template.
     template_doc = Str()
 
-    def __init__(self, *args, **kwargs):
-        super(IniConfigTask, self).__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super(IniConfigTask, self).__init__(**kwargs)
         _, doc = load_template(self.template_path)
         self.template_doc = doc
 

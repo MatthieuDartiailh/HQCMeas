@@ -160,11 +160,23 @@ class Test(object):
         assert_not_in('Test',  plugin.tasks)
         assert_in('Template',  plugin.tasks)
 
-    def test_tasks_request(self):
+    def test_tasks_request1(self):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.tasks_request'
         tasks = core.invoke_command(com, {'tasks': ['Complex', 'Sleep']},
+                                    self)
+        from hqc_meas.tasks.api import ComplexTask
+        assert_equal(sorted(tasks.keys()), sorted(['Complex', 'Sleep']))
+        assert_in(ComplexTask, tasks.values())
+
+    def test_tasks_request2(self):
+        self.workbench.register(TaskManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.tasks_request'
+        tasks = core.invoke_command(com, {'tasks': ['ComplexTask',
+                                                    'SleepTask'],
+                                          'use_class_names': True},
                                     self)
         from hqc_meas.tasks.api import ComplexTask
         assert_equal(sorted(tasks.keys()), sorted(['Complex', 'Sleep']))
@@ -211,8 +223,35 @@ class Test(object):
         assert_not_in('Definition', tasks)
         assert_in('Print', tasks)
 
-    def test_config_request(self):
+    def test_config_request1(self):
         self.workbench.register(TaskManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.config_request'
+
+        conf, view = core.invoke_command(com, {'task': 'Print'}, self)
+        assert_equal(type(conf).__name__, 'PyConfigTask')
+
+    def test_config_request2(self):
+        self.workbench.register(TaskManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.config_request'
+
+        conf, view = core.invoke_command(com, {'task': 'Template'}, self)
+        assert_equal(type(conf).__name__, 'IniConfigTask')
+
+    def test_config_request3(self):
+        self.workbench.register(TaskManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.config_request'
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
+        if u'tasks.tasks_logic' in plugin.tasks_loading:
+            aux = plugin.tasks_loading[:]
+            aux.remove(u'tasks.tasks_logic')
+            plugin.tasks_loading = aux
+
+        conf, view = core.invoke_command(com, {'task': 'Loop'}, self)
+        assert_equal(type(conf).__name__, 'LoopConfigTask')
 
     def test_save_task(self):
         self.workbench.register(TaskManagerManifest())

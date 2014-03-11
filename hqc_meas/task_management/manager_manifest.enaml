@@ -163,7 +163,7 @@ enamldef TaskManagerManifest(PluginManifest):
         Command:
             id = 'hqc_meas.task_manager.config_request'
             description = CONFIG_REQUEST_DESCRIPTION
-            handler = views_request
+            handler = config_request
         Command:
             id = 'hqc_meas.task_manager.save_task'
             description = SAVE_TASK_DESCRIPTION
