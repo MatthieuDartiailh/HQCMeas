@@ -31,7 +31,7 @@ def manager_plugin_factory():
 
 
 def tasks_request(event):
-    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.taskss_request' command.
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
@@ -39,15 +39,31 @@ def tasks_request(event):
 
 
 def views_request(event):
-    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.views_request' command.
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.views_request(**event.parameters)
 
 
+def filter_tasks(event):
+    """ Handler for the 'hqc_meas.task_manager.filter_tasks' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.filter_tasks(**event.parameters)
+
+
+def config_request(event):
+    """ Handler for the 'hqc_meas.task_manager.config_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.config_request(**event.parameters)
+
+
 def save_task(event):
-    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.save_task' command.
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
@@ -55,7 +71,7 @@ def save_task(event):
 
 
 def build_task(event):
-    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.build_task' command.
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
@@ -63,7 +79,7 @@ def build_task(event):
 
 
 def build_root(event):
-    """ Handler for the 'hqc_meas.task_manager.drivers_request' command.
+    """ Handler for the 'hqc_meas.task_manager.build_root' command.
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
@@ -86,6 +102,12 @@ TASK_REQUEST_DESCRIPTION = \
 
 VIEW_REQUEST_DESCRIPTION = \
 """ Request the views associated to a list of tasks. """
+
+FILTER_TASKS_DESCRIPTION = \
+""" Filter tasks using the provided filter (filter). """
+
+CONFIG_REQUEST_DESCRIPTION = \
+""" Request the appropriate config for a task (task) """
 
 SAVE_TASK_DESCRIPTION = \
 """ Save a task to a file or object. """
@@ -133,6 +155,14 @@ enamldef TaskManagerManifest(PluginManifest):
         Command:
             id = 'hqc_meas.task_manager.views_request'
             description = VIEW_REQUEST_DESCRIPTION
+            handler = views_request
+        Command:
+            id = 'hqc_meas.task_manager.filter_tasks'
+            description = FILTER_TASKS_DESCRIPTION
+            handler = filter_tasks
+        Command:
+            id = 'hqc_meas.task_manager.config_request'
+            description = CONFIG_REQUEST_DESCRIPTION
             handler = views_request
         Command:
             id = 'hqc_meas.task_manager.save_task'

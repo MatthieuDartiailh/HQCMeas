@@ -132,28 +132,41 @@ class LoopTaskFilter(SubclassFilter):
     task_class = BaseLoopTask
 
 
-class InstrumentTaskFilter(AbstractTaskFilter):
+class InstrumentTaskFilter(SubclassFilter):
     """ Filter keeping only the subclasses of InstrumentTask.
 
     """
     task_class = InstrumentTask
 
 
-class LoopableTaskFilter(AbstractTaskFilter):
-    """ Filter keeping only the task declared to be loopable.
+class ClassAttrTaskFilter(AbstractTaskFilter):
+    """ Filter keeping only the tasks with the right class attribute.
 
     """
+
+    class_attr = {'name': '', 'value': None}
 
     @classmethod
     def filter_tasks(cls, py_tasks, template_tasks):
         """
         """
         tasks = []
+        attr_name = cls.class_attr['name']
+        attr_val = cls.class_attr['value']
         for name, t_class in py_tasks.iteritems():
-            if hasattr(t_class, 'loopable') and t_class.loopable:
+            if (hasattr(t_class, attr_name)
+                    and getattr(t_class, attr_name) == attr_val):
                 tasks.append(name)
 
         return tasks
+
+
+class LoopableTaskFilter(ClassAttrTaskFilter):
+    """ Filter keeping only the task declared to be loopable.
+
+    """
+    class_attr = {'name': 'loopable', 'value': True}
+
 
 TASK_FILTERS = {'All': AllTaskFilter,
                 'Python': PyTaskFilter,

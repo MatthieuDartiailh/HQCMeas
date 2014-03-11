@@ -140,7 +140,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         views = self._task_views
         return {t_class: views[t_class.__name__] for t_class in task_classes}
 
-    def filter_tasks(self, filter_name):
+    def filter_tasks(self, filter):
         """ Filter the known tasks using the specified filter.
 
         Parameters
@@ -154,15 +154,15 @@ class TaskManagerPlugin(HasPrefPlugin):
             Tasks selected by the filter
 
         """
-        t_filter = self._filters[filter_name]
+        t_filter = self._filters[filter]
         return t_filter.filter_tasks(self._py_tasks, self._template_tasks)
 
-    def config_request(self, task_name):
+    def config_request(self, task):
         """ Access the proper config for a task.
 
         Parameters
         ----------
-        task_name : str
+        task : str
             Name of the task for which a config is required
 
         Returns
@@ -172,14 +172,14 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         templates = self._template_tasks
-        if task_name in self._template_tasks:
-            return (IniConfigTask(templates[task_name]), IniView)
+        if task in self._template_tasks:
+            return (IniConfigTask(templates[task]), IniView)
 
         else:
             configs = self._configs
             #Look up the hierarchy of the selected task to get the appropriate
             #TaskConfig
-            task_class = self._py_tasks[task_name]
+            task_class = self._py_tasks[task]
             for t_class in type.mro(task_class):
                 if t_class in configs:
                     config = configs[t_class][0]
