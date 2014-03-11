@@ -5,8 +5,8 @@ from atom.api import (Enum, Float, set_default)
 
 from time import sleep
 
-from .instr_task import InstrumentTask
-from .tools.task_decorator import smooth_instr_crash
+from ..instr_task import InstrumentTask
+from ..tools.task_decorator import smooth_instr_crash
 
 
 class LockInMeasureTask(InstrumentTask):

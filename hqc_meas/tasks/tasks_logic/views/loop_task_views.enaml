@@ -5,11 +5,10 @@ from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.tasks.tools.task_editor import (TaskEditor)
-from hqc_meas.task_management.task_building import build_task
 
 enamldef SimpleLoopView(GroupBox): view:
     attr task
-    alias mapping : editor.mapping
+    alias core : editor.core
     title << task.task_name
     constraints = [grid(
                     [lab_start, lab_stop, lab_step, timing],
@@ -39,11 +38,10 @@ enamldef SimpleLoopView(GroupBox): view:
         checked := task.timing
     TaskEditor: editor:
         task := view.task
-        factory = build_task
 
 enamldef LoopView(GroupBox): view:
     attr task
-    alias mapping : editor.mapping
+    alias core : editor.core
     title << task.task_name
     constraints << [vbox(grid(
                     [lab_start, lab_stop, lab_step, timing],
@@ -82,4 +80,6 @@ enamldef LoopView(GroupBox): view:
             kwargs = {'mapping' : mapping, 'in_loop' : True}
     TaskEditor: editor:
         task := view.task
-        factory = build_task
+
+TASK_VIEW_MAPPING = {'SimpleLoopTask': SimpleLoopView,
+                     'LoopTask': LoopView}

@@ -19,7 +19,7 @@ from ..tools.database_string_formatter import (get_formatted_string,
 from ..base_tasks import SimpleTask
 
 
-class _SavedValue(Atom):
+class SavedValue(Atom):
     """ Helper class.
 
     """
@@ -66,7 +66,7 @@ class SaveTask(SimpleTask):
     line_index = Int(0)
 
     # List of values to be saved.
-    saved_values = ContainerList(Instance(_SavedValue))
+    saved_values = ContainerList(Instance(SavedValue))
 
     # Flag indicating whether or not initialisation has been performed.
     initialized = Bool(False)
@@ -221,7 +221,7 @@ class SaveTask(SimpleTask):
         """
         super(SaveTask, self).update_members_from_preferences(**parameters)
         if 'saved_values' in parameters:
-            self.saved_values = [_SavedValue(label=s[0], value=s[1])
+            self.saved_values = [SavedValue(label=s[0], value=s[1])
                                  for s in parameters['saved_values']]
 
     @observe('saving_target')

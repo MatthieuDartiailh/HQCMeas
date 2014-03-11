@@ -6,9 +6,9 @@ from enaml.stdlib.fields import IntField, FloatField
 from inspect import cleandoc
 from textwrap import fill
 
-from hqc_meas.enaml_util.forms import HGroup
-from hqc_meas.enaml_util.qt_line_completer import QtLineCompleter
-from hqc_meas.enaml_util.list_editor import ListEditor
+from hqc_meas.utils.layouts import HGroup
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.widgets.list_editor import ListEditor
 
 enamldef PNASetFreqView(HGroup): view:
     attr task
@@ -16,9 +16,9 @@ enamldef PNASetFreqView(HGroup): view:
     attr in_loop : bool = False
     padding = (0,0,5,5)
     title << task.task_name
-    Label:  
+    Label:
         text = 'Driver'
-    ObjectCombo: 
+    ObjectCombo:
         items << sorted(task.driver_list)
         selected := task.selected_driver
     Label:
@@ -38,16 +38,16 @@ enamldef PNASetFreqView(HGroup): view:
         QtLineCompleter:
             text := task.frequency
             entries_updater << task._list_database_entries
-        
+
 enamldef PNASetPowerView(HGroup): view:
     attr task
     attr mapping
     attr in_loop : bool = False
     padding = (0,0,5,5)
     title << task.task_name
-    Label:  
+    Label:
         text = 'Driver'
-    ObjectCombo: 
+    ObjectCombo:
         items << sorted(task.driver_list)
         selected := task.selected_driver
     Label:
@@ -78,8 +78,8 @@ enamldef MeasField(Container):
     Field: field:
         text := model.measure
         tool_tip =  fill(cleandoc(
-                        '''Measure should be described by the parameter to 
-                          measure and followed by ':' and then the format in 
+                        '''Measure should be described by the parameter to
+                          measure and followed by ':' and then the format in
                           which to display and read them, if omitted,
                           the measurement will return a complex number.
                           ex : 'S21:PHAS.'''), 60) + '\n' +\
@@ -123,7 +123,7 @@ enamldef PNASinglePointView(GroupBox): view:
             ed.model = task
             ed.iterable_name = 'measures'
             ed.factory = PNAMeasure
-        
+
 def label_maker(label, type):
     if type == 'Freq':
         return label + '(Hz)'
@@ -190,9 +190,7 @@ enamldef PNASweepMeasView(GroupBox): view:
             ed.iterable_name = 'measures'
             ed.factory = lambda : ''
 
-from ..pna_tasks import (PNASetFreqTask, PNASetPowerTask, 
-                        PNASinglePointMeasureTask, PNASweepTask)
-TASK_VIEW_MAPPING = {PNASetFreqTask : PNASetFreqView,
-                     PNASetPowerTask : PNASetPowerView,
-                     PNASinglePointMeasureTask : PNASinglePointView,
-                     PNASweepTask : PNASweepMeasView}
+TASK_VIEW_MAPPING = {'PNASetFreqTask' : PNASetFreqView,
+                     'PNASetPowerTask' : PNASetPowerView,
+                     'PNASinglePointMeasureTask' : PNASinglePointView,
+                     'PNASweepTask' : PNASweepMeasView}

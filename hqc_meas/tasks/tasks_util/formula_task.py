@@ -12,7 +12,7 @@ from ..base_tasks import SimpleTask
 from ..tools.database_string_formatter import (format_and_eval_string)
 
 
-class _Formula(Atom):
+class Formula(Atom):
     """
     """
     label = Str()
@@ -24,7 +24,7 @@ class FormulaTask(SimpleTask):
     evaluated and replacement to access to the database data can be used.
     """
     # List of formulas.
-    formulas = ContainerList(Instance(_Formula))
+    formulas = ContainerList(Instance(Formula))
 
     # Flag indicating the state of the database.
     database_ready = Bool(False)
@@ -84,7 +84,7 @@ class FormulaTask(SimpleTask):
         """
         super(FormulaTask, self).update_members_from_preferences(**parameters)
         if 'formulas' in parameters:
-            self.definitions = [_Formula(label=f[0], formula=f[1])
+            self.definitions = [Formula(label=f[0], formula=f[1])
                                 for f in parameters['formulas']]
 
 KNOWN_PY_TASKS = [FormulaTask]

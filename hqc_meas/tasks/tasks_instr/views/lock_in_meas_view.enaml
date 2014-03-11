@@ -4,16 +4,16 @@ from enaml.stdlib.fields import FloatField
 from inspect import cleandoc
 from textwrap import fill
 
-from hqc_meas.enaml_util.forms import HGroup
+from hqc_meas.utils.layouts import HGroup
 
 enamldef LockInMeasView(HGroup): view:
     attr task
     attr mapping
     padding = (0,0,5,5)
     title << task.task_name
-    Label:  
+    Label:
         text = 'Driver'
-    ObjectCombo: 
+    ObjectCombo:
         items << sorted(task.driver_list)
         selected := task.selected_driver
     Label:
@@ -33,5 +33,4 @@ enamldef LockInMeasView(HGroup): view:
         tool_tip = fill('Time to wait before querying values from the lock-in',
                         60)
 
-from ..lock_in_measure_task import LockInMeasureTask
-TASK_VIEW_MAPPING = {LockInMeasureTask : LockInMeasView}
+TASK_VIEW_MAPPING = {'LockInMeasureTask' : LockInMeasView}
