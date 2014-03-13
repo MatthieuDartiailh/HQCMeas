@@ -179,7 +179,8 @@ class Test(object):
                                           'use_class_names': True},
                                     self)
         from hqc_meas.tasks.api import ComplexTask
-        assert_equal(sorted(tasks.keys()), sorted(['Complex', 'Sleep']))
+        assert_equal(sorted(tasks.keys()), sorted(['ComplexTask',
+                     'SleepTask']))
         assert_in(ComplexTask, tasks.values())
 
     def test_views_request(self):
@@ -223,23 +224,31 @@ class Test(object):
         assert_not_in('Definition', tasks)
         assert_in('Print', tasks)
 
-    def test_config_request1(self):
+    def test_config_request_build1(self):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.config_request'
 
         conf, view = core.invoke_command(com, {'task': 'Print'}, self)
         assert_equal(type(conf).__name__, 'PyConfigTask')
+        conf.task_name = 'Test'
+        assert_equal(conf.config_ready, True)
+        task = conf.build_task()
+        assert_equal(task.task_name, 'Test')
 
-    def test_config_request2(self):
+    def test_config_request_build2(self):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.config_request'
 
         conf, view = core.invoke_command(com, {'task': 'Template'}, self)
         assert_equal(type(conf).__name__, 'IniConfigTask')
+        conf.task_name = 'Test'
+        assert_equal(conf.config_ready, True)
+        task = conf.build_task()
+        assert_equal(task.task_name, 'Test')
 
-    def test_config_request3(self):
+    def test_config_request_build3(self):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.config_request'
@@ -252,12 +261,20 @@ class Test(object):
 
         conf, view = core.invoke_command(com, {'task': 'Loop'}, self)
         assert_equal(type(conf).__name__, 'LoopConfigTask')
+        conf.task_name = 'Test'
+        conf.sub_task = 'Print'
+        assert_equal(conf.config_ready, True)
+        task = conf.build_task()
+        assert_equal(task.task_name, 'Test')
 
-    def test_save_task(self):
-        self.workbench.register(TaskManagerManifest())
+    # Cannot test this as it would require UI must test lower level
+#    def test_save_task(self):
+#        self.workbench.register(TaskManagerManifest())
+#
+#
+#    def test_build_task(self):
+#        self.workbench.register(TaskManagerManifest())
 
-    def test_build_task(self):
-        self.workbench.register(TaskManagerManifest())
-
-    def test_build_root(self):
-        self.workbench.register(TaskManagerManifest())
+#    # config mode only
+#    def test_build_root(self):
+#        self.workbench.register(TaskManagerManifest())

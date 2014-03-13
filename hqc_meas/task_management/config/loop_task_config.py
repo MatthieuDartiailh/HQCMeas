@@ -40,10 +40,11 @@ class LoopConfigTask(PyConfigTask):
         loopable_task = self.config.build_task()
         return self.task_class(task_name=self.task_name, task=loopable_task)
 
-    def _observe_subtask(self, change):
+    def _observe_sub_task(self, change):
         """ Observer getting the right config and config view for the subtask.
 
         """
         conf, view = self.manager.config_request(change['value'])
         self.config = conf
         self.config_view = view(model=conf, loop=True)
+        self.config.task_name = self.task_name

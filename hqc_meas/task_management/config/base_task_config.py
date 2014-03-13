@@ -133,18 +133,16 @@ class IniConfigTask(AbstractConfigTask):
         #Handle the case of an attempt to make a root task of a task which is
         #not a ComplexTask. built_task will be returned but task will be the
         #object used for the following manipulations.
-        if self.task_class == RootTask\
-                and config['task_class'] != 'ComplexTask':
+        task_class = self._get_task(config['task_class'])
+        if 'ComplexTask' not in [c.__name__ for c in type.mro(task_class)]:
             built_task = RootTask()
-            task = self._get_task(config['task_class'])(task_name=
-                                                        config['task_name'])
+            task = task_class(task_name=config['task_name'])
             built_task.children.append(task)
         else:
-            task = self.task_class(task_name=self.task_name)
+            task = task_class(task_name=self.task_name)
             built_task = task
 
         parameters = self._prepare_parameters(config)
-
         task.update_members_from_preferences(**parameters)
         return built_task
 
@@ -227,5 +225,5 @@ class IniConfigTask(AbstractConfigTask):
         """ Helper to retrieve a task class from the manager.
 
         """
-        tasks = self.manager.tasks_request([name], use_class_name=True)
-        return tasks.items()[0]
+        tasks = self.manager.tasks_request([name], use_class_names=True)
+        return tasks.values()[0]
