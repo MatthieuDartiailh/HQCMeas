@@ -13,6 +13,7 @@ from atom.api\
 from configobj import Section, ConfigObj
 from threading import Thread
 from itertools import chain
+from inspect import cleandoc
 import os
 
 from ..utils.atom_util import member_from_str, tagged_members
@@ -46,7 +47,7 @@ class BaseTask(Atom):
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
         to be performed'
-        raise NotImplementedError(err_str)
+        raise NotImplementedError(cleandoc(err_str))
 
     def check(self, *args, **kwargs):
         """Method used to check that everything is alright before starting a
@@ -55,7 +56,7 @@ class BaseTask(Atom):
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
         to check that all parameters are ok'
-        raise NotImplementedError(err_str)
+        raise NotImplementedError(cleandoc(err_str))
 
     def register_in_database(self):
         """Method used to create entries in the database
@@ -63,7 +64,7 @@ class BaseTask(Atom):
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
         to create its entry in the database'
-        raise NotImplementedError(err_str)
+        raise NotImplementedError(cleandoc(err_str))
 
     def unregister_from_database(self):
         """Method used to delete entries from the database
@@ -71,7 +72,7 @@ class BaseTask(Atom):
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
         to delete its entry from the database'
-        raise NotImplementedError(err_str)
+        raise NotImplementedError(cleandoc(err_str))
 
     def register_preferences(self):
         """Method used to create entries in the preferences object
@@ -79,7 +80,7 @@ class BaseTask(Atom):
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
         to create its entries in the preferences object'
-        raise NotImplementedError(err_str)
+        raise NotImplementedError(cleandoc(err_str))
 
     def update_preferences_from_members(self):
         """Method used to update the entries in the preference object before
@@ -88,7 +89,7 @@ class BaseTask(Atom):
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
         to update the entries in the preference object before saving'
-        raise NotImplementedError(err_str)
+        raise NotImplementedError(cleandoc(err_str))
 
     def update_members_from_preferences(self, **parameters):
         """Method used to update the trait values using the info extracted from
@@ -102,7 +103,7 @@ class BaseTask(Atom):
         AbstractTask. This method is called when the program requires the task\
         to update update the trait values using the info extracted from\
         a config file.'
-        raise NotImplementedError(err_str)
+        raise NotImplementedError(cleandoc(err_str))
 
     def _default_task_class(self):
         """ Default value for the task_class member.

@@ -10,39 +10,23 @@ from enaml.core.api import Looper, Conditional, Include
 from enaml.layout.api import vbox, spacer, hbox, align
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Stack,
                                StackItem, Label, GroupBox, Form)
+from enaml.stdlib.mapped_view import MappedView
 
 from hqc_meas.utils.widgets.list_editor import PopupListMenu
 
 
-def _task_view_helper(core, task):
+def _views_helper(core, tasks):
     """ A helper function for the _TaskView component.
 
     This helper instantiates the view for the given task of
     a _TaskView component.
 
     """
-    t_class = type(task)
-    view = core.invoke_command('hqc_meas.task_manager.views_request',
+    t_classes = [type(task) for task in tasks]
+    views = core.invoke_command('hqc_meas.task_manager.views_request',
                                parameters={'task_classes': [t_class]})
-    return [view(task=task, core=core)]
+    return views
 
-
-enamldef _TaskView(Include):
-    """ A custom Include subtype which will automatically query the right
-    view for task.
-
-    Parameters
-    ----------
-    task : BaseTask
-        The task acting as the model for this view.
-
-    core : CorePlugin
-        The core plugin of the application used to call commands.
-
-    """
-    attr task
-    attr core
-    objects << _mappedview_helper(core, task)
 
 enamldef _TaskListView(Container): list_view:
     """ A base ustom container to edit the children of a task.
@@ -51,6 +35,7 @@ enamldef _TaskListView(Container): list_view:
     attr task
     attr core
     attr operations = ['add', 'remove', 'move']
+    attr views_map << _views_helper(core, task.children_task[:])
 
     hug_height = 'strong'
     padding = 0
@@ -77,9 +62,11 @@ enamldef _TaskListView(Container): list_view:
                       kwargs = {'parameters': {'parent_ui': button},
                                 'trigger': button})
                     menu.popup()
-            _TaskView: view:
-                task << loop_item
-                core = list_view.core
+            MappedView: view:
+                model = loop_item
+                typemap = views_map
+                kwargs = {'core': core}
+                modelkey = 'task'
 
 enamldef TaskEditor(Container): view:
     """ A custom container to edit the children of a task. Support folding.
