@@ -167,12 +167,11 @@ class InstrManagerPlugin(HasPrefPlugin):
                 if decl.default_policy == 'unreleasable':
                     return False, {}
 
-                to_release[decl.release_command].append(prof)
+                to_release[decl.release_method].append(prof)
 
         if to_release:
-            core = self.workbench.get_plugin('enaml.workbench.core')
             for meth, profs in to_release.iteritems():
-                res = core.invoke_command(meth, {'profiles': profs}, self)
+                res = meth(self.workbench, profiles=profs)
                 if not res:
                     return False, {}
 

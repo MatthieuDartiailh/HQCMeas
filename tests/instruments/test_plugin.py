@@ -33,7 +33,6 @@ class Test_TaskManagement(BaseClass):
 
     mod = __name__
 
-    # TODO add test checking the failure recordings.
     def test_init(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
