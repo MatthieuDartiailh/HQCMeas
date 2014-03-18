@@ -860,6 +860,9 @@ class RootTask(ComplexTask):
     # Path to which log infos, prefernces, etc should be written by default.
     default_path = Unicode('').tag(pref=True)
 
+    # Header assembled just before the measure is run.
+    default_header = Str('')
+
     # Dict storing data needed at execution time (ex: drivers classes)
     run_time = Dict()
 
