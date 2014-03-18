@@ -1,0 +1,26 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : measure_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+
+from enaml.workbench.api import PluginManifest, ExtensionPoint, Extension
+
+enamldef MeasureManifest(PluginManifest):
+    """
+    """
+    id = u'hqc_meas.measure'
+
+    attr workspace_active
+
+    ExtensionPoint:
+        id = u'engines'
+    ExtensionPoint:
+        id = u'monitors'
+    ExtensionPoint:
+        id = u'checks'
+    ExtensionPoint:
+        id = u'headers'
+    Extension:
+        # TODO UI

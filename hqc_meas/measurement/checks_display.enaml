@@ -1,0 +1,75 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : checks_display.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+
+from atom.api import (Atom, Str,Dict)
+
+class _TaskCheckModel(Atom):
+
+    """Simple dialog displaying the errors messages resulting from a failed
+    check.
+
+    Attributes
+    ----------
+    check_dict_result : dict(str, str)
+        Dictionnary storing the path of the task in which a check failed and
+        the associated message.
+    name_to_path_dict : dict(str, str)
+        Dictionnary mapping the name of the tasks in which a check failed to
+        its path.
+    selected_check : str
+        Name of the task the user selected from `failed_check_list`.
+    full_path : str
+        Path of the selected task.
+    message : str
+        Message associated to the selected task.
+
+    """
+    check_dict_result = Dict(Str(), Str())
+    name_to_path_dict = Dict(Str(), Str())
+
+    selected_check = Str()
+    full_path = Str()
+    message = Str()
+
+    def __init__(self, check_dict_result):
+        super(TaskCheckModel, self).__init__()
+        self.check_dict_result = check_dict_result
+        self.name_to_path_dict = {key.rpartition('/')[-1]: key
+                                  for key in self.check_dict_result.keys()}
+        self.selected_check = self.name_to_path_dict.keys()[0]
+        self.full_path = self.name_to_path_dict[self.selected_check]
+        self.message = self.check_dict_result[self.full_path]
+
+    @observe('selected_check')
+    def _update(self, change):
+        """Automatically set the `full_path` and `message` attribute when the
+        user select a new failed check."""
+        new = change['value']
+        self.full_path = self.name_to_path_dict[new]
+        self.message = self.check_dict_result[self.full_path]
+
+enamldef TaskCheckDisplay(Dialog): dial:
+    attr errors
+    attr model << _TaskCheckModel(errors)
+    Container:
+        constraints = [vbox(grid([lis_lab, che_lab],[lis, che]),
+                            hbox(spacer,close)),
+                        align('left', lis_lab, lis),
+                        align('left', che_lab, che)]
+        Label: lis_lab:
+            text = 'Failed tests'
+        QtListStrWidget: lis:
+            items << model.name_to_path_dict.keys()
+            selected_item >> model.selected_check
+        Label: che_lab:
+            text << model.full_path
+        MultilineField: che:
+            text << model.message
+            read_only = True
+        PushButton: close:
+            text = 'Close'
+            clicked :: dial.accept()

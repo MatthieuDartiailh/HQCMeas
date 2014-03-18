@@ -32,7 +32,7 @@ class _TaskBuilderModel(Atom):
     # Name of the currently selected task.
     task_name = Str()
 
-    # Currently in use tsk config.
+    # Currently in use task config.
     task_config = Instance(AbstractConfigTask)
     config_view = Instance(Object)
 
