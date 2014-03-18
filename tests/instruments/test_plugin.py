@@ -9,6 +9,7 @@
 import enaml
 import os
 from configobj import ConfigObj
+from nose.tools import assert_equal
 from nose.plugins.skip import SkipTest
 
 from .tools import BaseClass
@@ -79,25 +80,46 @@ class Test_TaskManagement(BaseClass):
         assert plugin.all_profiles == sorted([u'Dummy'])
         assert plugin.available_profiles == sorted([u'Dummy'])
 
-    def test_driver_types_request(self):
+    def test_driver_types_request1(self):
         self.workbench.register(InstrManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.driver_types_request'
-        d_types = core.invoke_command(com, {'driver_types': ['Dummy']}, self)
+        _, d_types = core.invoke_command(com, {'driver_types': ['Dummy']},
+                                         self)
         from hqc_meas.instruments.drivers.dummy import DummyInstrument
         assert d_types.keys() == ['Dummy']
         assert d_types.values() == [DummyInstrument]
 
-    def test_drivers_request(self):
+    def test_driver_types_request2(self):
+        self.workbench.register(InstrManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.instr_manager.driver_types_request'
+        res, d_types = core.invoke_command(com, {'driver_types': ['N']},
+                                           self)
+        assert res is False
+        assert_equal(d_types, ['N'])
+
+    def test_drivers_request1(self):
         self.workbench.register(InstrManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.drivers_request'
-        drivers = core.invoke_command(com, {'drivers': ['PanelTestDummy']},
-                                      self)
+        _, drivers = core.invoke_command(com, {'drivers': ['PanelTestDummy']},
+                                         self)
         from hqc_meas.instruments.drivers.dummies.panel_dummy\
             import PanelTestDummy
         assert drivers.keys() == ['PanelTestDummy']
         assert drivers.values() == [PanelTestDummy]
+
+    def test_drivers_request2(self):
+        self.workbench.register(InstrManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.instr_manager.drivers_request'
+        res, drivers = core.invoke_command(com,
+                                           {'drivers': ['N']},
+                                           self)
+
+        assert_equal(res, False)
+        assert_equal(drivers, ['N'])
 
     def test_matching_drivers(self):
         self.workbench.register(InstrManagerManifest())
@@ -115,13 +137,19 @@ class Test_TaskManagement(BaseClass):
                                           self)
         assert prof_name == 'Dummy'
 
-    def test_profile_path(self):
+    def test_profile_path1(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
         path = plugin.profile_path('Dummy')
         assert path == os.path.join(self.test_dir,
                                     'temp_profiles',
                                     'dummy.ini')
+
+    def test_profile_path2(self):
+        self.workbench.register(InstrManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+        path = plugin.profile_path('N')
+        assert path is None
 
     def test_profile_request1(self):
         self.workbench.register(InstrManagerManifest())
@@ -196,3 +224,23 @@ class Test_TaskManagement(BaseClass):
                             {'profiles': [u'Dummy']}, user3)
         self.workbench.unregister(u'test.user1')
         self.workbench.unregister(u'test.user3')
+
+    def test_profile_request4(self):
+        self.workbench.register(InstrManagerManifest())
+        self.workbench.register(InstrUser1())
+        user = self.workbench.get_plugin(u'test.user1')
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+
+        # Can get profile.
+        core.invoke_command(u'hqc_meas.instr_manager.profiles_request',
+                            {'profiles': [u'Dummy']}, user)
+        manager = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+        assert manager.available_profiles == []
+        assert manager._used_profiles == {'Dummy': u'test.user1'}
+
+        # Can release profile.
+        com = u'hqc_meas.instr_manager.profiles_released'
+        res, miss = core.invoke_command(com, {'profiles': ['Dummy']}, user)
+        assert_equal(res, False)
+        assert_equal(miss, ['N'])
+        self.workbench.unregister(u'test.user1')

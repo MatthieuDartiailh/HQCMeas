@@ -3,5 +3,6 @@
 *.enamlc
 *.log
 *.log.*
+*.py~
 hqc_meas/instruments/profiles/
 hqc_meas/tasks/templates/

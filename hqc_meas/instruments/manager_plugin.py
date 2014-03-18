@@ -93,11 +93,22 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        driver_types : dict
-            The required driver types as a dict {name: class}
+        result : bool
+            Whether or not the manager found all the requested driver types.
+
+        driver_types : dict or list
+            The required driver types as a dict {name: class},  or list of
+            missing driver types.
+
         """
-        return {key: val for key, val in self._driver_types.iteritems()
-                if key in driver_types}
+        missing = [driver_type for driver_type in driver_types
+                   if driver_type not in self.driver_types]
+
+        if missing:
+            return False, missing
+        else:
+            return {key: val for key, val in self._driver_types.iteritems()
+                    if key in driver_types}
 
     def drivers_request(self, drivers):
         """ Give access to the driver type implementation
@@ -109,11 +120,21 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        drivers : dict
-            The required drivers as a dict {name: class}
+        result : bool
+            Whether or not the manager found all the requested drivers.
+        drivers : dict or list
+            The required drivers as a dict {name: class}, or list of missing
+            drivers.
+
         """
-        return {key: val for key, val in self._drivers.iteritems()
-                if key in drivers}
+        missing = [driver for driver in drivers
+                   if driver not in self.drivers]
+
+        if missing:
+            return False, missing
+        else:
+            return {key: val for key, val in self._drivers.iteritems()
+                    if key in drivers}
 
     def profile_path(self, profile):
         """ Request the path of the file storing a profile
@@ -129,11 +150,12 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        path : unicode
-            The absolute path to the file in which the profile is stored
+        path : unicode or None
+            The absolute path to the file in which the profile is stored, if
+            the profile is known.
 
         """
-        return self._profiles_map[profile]
+        return self._profiles_map.get(profile, None)
 
     def profiles_request(self, new_owner, profiles):
         """ Register the user of the specified profiles.
@@ -155,9 +177,17 @@ class InstrManagerPlugin(HasPrefPlugin):
         result : bool
             Whether or not the manager grant the user the privilege to use
             the profiles.
-        profiles : dict
-            The required profiles as a dict {name: profile}
+        profiles : dict or list
+            The required profiles as a dict {name: profile}, or a list of
+            missing profiles.
+
         """
+        missing = [prof for prof in profiles
+                   if prof not in self.all_profiles]
+
+        if missing:
+            return False, missing
+
         to_release = defaultdict(list)
         # Identify the profiles which need to be released
         for prof in profiles:
