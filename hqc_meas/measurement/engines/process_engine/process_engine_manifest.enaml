@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : process_engine_manifest.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+
+from enaml.workbench.api import PluginManifest, Extension
+
+from ..base_engine import Engine
+from .process_engine import ProcessEngine
+
+
+enamldef ProcessEngineManifest(PluginManifest):
+    """
+    """
+    id = u'hqc_meas.measure.engines.process_engine'
+    Extension:
+        id = 'engine'
+        point = u'hqc_meas.measure.engines'
+        Engine:
+            factory = ProcessEngine
