@@ -13,7 +13,7 @@
 
 """
 
-from atom.api import (Atom, Str, Bool, Unicode, Subclass, ForwardTyped,
+from atom.api import (Atom, Str, Bool, Unicode, Subclass, ForwardTyped, Dict,
                       observe)
 
 from inspect import getdoc, cleandoc
@@ -114,10 +114,15 @@ class IniConfigTask(AbstractConfigTask):
     # Description of the template.
     template_doc = Str()
 
+    # Dict holding the task classes, if absent classes will be queried from
+    #the task manager.
+    task_classes = Dict(Str(), Subclass(BaseTask))
+
     def __init__(self, **kwargs):
         super(IniConfigTask, self).__init__(**kwargs)
-        _, doc = load_template(self.template_path)
-        self.template_doc = doc
+        if self.template_path:
+            _, doc = load_template(self.template_path)
+            self.template_doc = doc
 
     @observe('task_name')
     def check_parameters(self, change):
@@ -225,5 +230,8 @@ class IniConfigTask(AbstractConfigTask):
         """ Helper to retrieve a task class from the manager.
 
         """
-        tasks = self.manager.tasks_request([name], use_class_names=True)
-        return tasks.values()[0]
+        if self.task_classes:
+            return self.task_classes[name]
+        else:
+            tasks = self.manager.tasks_request([name], use_class_names=True)
+            return tasks.values()[0]
