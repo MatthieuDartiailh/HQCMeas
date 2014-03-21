@@ -7,12 +7,11 @@
 import logging
 import os
 import enaml
-from atom.api import Instance, Typed
+from atom.api import Typed
 from enaml.workbench.ui.api import Workspace
 from inspect import cleandoc
 
 from .measure import Measure
-from .engines.base_engine import BaseEngine
 from .plugin import MeasurePlugin
 
 from ..tasks.tools.walks import flatten_walk
@@ -28,9 +27,25 @@ class MeasureSpace(Workspace):
     def start(self):
         """
         """
-        pass
+        self._plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        # TODO vv
 
     def stop(self):
+        """
+        """
+        # TODO vv
+
+    def new_measure(self):
+        """
+        """
+        pass
+
+    def save_measure(self, mode):
+        """
+        """
+        pass
+
+    def load_measure(self, mode):
         """
         """
         pass
@@ -108,6 +123,8 @@ class MeasureSpace(Workspace):
             # purpose of the manager.
             meas.root_task.run_time = {'drivers': drivers}
             meas.store['profiles'] = profs
+            meas.status = 'READY'
+            meas.infos = 'The measure is ready to be performed by an engine.'
             self._plugin.enqueued_measures.append(meas)
 
             return True
@@ -122,14 +139,13 @@ class MeasureSpace(Workspace):
         Measure will be processed in their order of appearance in the queue.
 
         """
-        # Here reset all flags concerning stopping, etc.
-        # TODO xx
+        self._plugin.flags.clear()
 
         measure = self._plugin.find_next_measure()
         if measure is not None:
             self._plugin.start_measure()
 
-    def process_single_measure(self, index=0):
+    def process_single_measure(self, measure):
         """ Performs a single measurement and then stops.
 
         Parameters
@@ -138,42 +154,27 @@ class MeasureSpace(Workspace):
             Index of the measurement to perform in the queue.
 
         """
-        # Reset flags and set stop flags to perform a single measure.
-        # TODO v
+        self._plugin.flags.clear()
+        self._plugin.flags['stop_processing'] = True
 
-        try:
-            measure = self._plugin.enqueued_measures[index]
-        except IndexError:
-            logger = logging.getLogger(__name__)
-            mes = 'Tried to start a measure not currently in the queue'
-            logger.info(mes)
-            measure = None
-
-        if measure is not None:
-            self._plugin.start_measure(measure)
+        self._plugin.start_measure(measure)
 
     def stop_current_measure(self):
         """
         """
-        # TODO call plugin method
+        self._plugin.stop_measure()
 
     def stop_processing_measures(self):
         """
         """
-        # TODO call plugin method
+        self._plugin.stop_processing()
 
     def force_stop_measure(self):
         """
         """
-        pass
+        self._plugin.force_stop_measure()
 
     def force_stop_processing(self):
         """
         """
-        pass
-
-    def listen_to_engine(self, change):
-        """ Observer for the 'done' event of the engine
-
-        """
-        pass
+        self._plugin.force_stop_processing()

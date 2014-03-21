@@ -6,16 +6,19 @@
 #==============================================================================
 import logging
 from inspect import cleandoc
-from atom.api import Typed, Unicode, Callable, Dict, ContainerList
+from atom.api import Typed, Unicode, Dict, ContainerList
+from time import sleep
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
-from .engines.base_engine import BaseEngine
+from .engines.base_engine import BaseEngine, Engine
 from .measure import Measure
 
 
-INVALID_MEASURE_STATUS = ['EDITING', 'SKIPPED']
+INVALID_MEASURE_STATUS = ['EDITING', 'SKIPPED', 'FAILED', 'COMPLETED',
+                          'INTERRUPTED']
 
 
+# TODO handle extensions points
 class MeasurePlugin(HasPrefPlugin):
     """
     """
@@ -30,8 +33,13 @@ class MeasurePlugin(HasPrefPlugin):
     # Currently run measure or last measure run.
     running_measure = Typed(Measure)
 
-    engines = Dict(Unicode(), Callable())
+    # Dict holding the contributed Engine declarations.
+    engines = Dict(Unicode(), Engine())
+
+    # Currently selected engine represented by its manifest id.
     selected_engine = Unicode().tag(pref=True)
+
+    # Instance of the currently used engine.
     engine_instance = Typed(BaseEngine)
 
 #    monitors
@@ -51,6 +59,12 @@ class MeasurePlugin(HasPrefPlugin):
         """
         logger = logging.getLogger(__name__)
 
+        # Discard old monitors if there is any remaining.
+        for monitor in self.running_measure.monitors:
+            monitor.shutdown()
+
+        self.running_measure = measure
+
         # Requesting profiles.
         profiles = measure.store('profiles')
         core = self.workbench.get_plugin('enaml.workbench.core')
@@ -63,10 +77,10 @@ class MeasurePlugin(HasPrefPlugin):
                            not available, the measurement cannot be performed
                            '''.format(measure.name))
             logger.info(mes)
-            measure.status = 'SKIPPED'
-            measure.infos = 'Skipped : failed to get requested profiles'
-            # TODO here call the function listening the engine to try to run
-            # the next measure if there is one.
+
+            # Simulate a message coming from the engine.
+            done = {'value': ('SKIPPED', 'Failed to get requested profiles')}
+            self._listen_to_engine(done)
 
         measure.root_task.run_time.update({'profiles': profiles})
 
@@ -78,35 +92,51 @@ class MeasurePlugin(HasPrefPlugin):
             maker = self.engines[self.selected_engine]
             self.engine_instance = maker(self.workbench)
 
+            # Connect signal handler to engine.
+            self.engine_instance.observe('done', self._listen_to_engine)
+
         engine = self.engine_instance
 
         # Call engine prepare to run method.
         entries = measure.collect_entries_to_observe()
         engine.prepare_to_run(measure.root_task, entries)
 
-        # Discard old monitors if there is any remaining.
-        for monitor in self.running_measure.monitors:
-            monitor.shutdown()
-
-        self.running_measure = measure
         measure.status = 'RUNNING'
+        measure.infos = 'The measure is running'
 
         # Connect new monitors, and start them.
         for monitor in measure.monitors:
             engine.observe('news', monitor.process_news)
             monitor.start()
 
-        # Connect signal handlers to engine.
-        engine.observe('done', self.listen_to_engine)
-
         # Ask the engine to start the measure.
-        engine.start()
+        engine.run()
 
-    def listen_to_engine(self, change):
-        """ Observer for the engine notifications.
+    def stop_measure(self):
+        """ Stop the currently active measure.
 
         """
-        pass
+        self.engine_instance.stop()
+
+    def stop_processing(self):
+        """ Stop processing the enqueued measure.
+
+        """
+        self.flags['stop_processing'] = True
+        self.engine_instance.exit()
+
+    def force_stop_measure(self):
+        """ Force the engine to stop performing the current measure.
+
+        """
+        self.engine_instance.force_stop()
+
+    def force_stop_processing(self):
+        """ Force the engine to exit and stop processing measures.
+
+        """
+        self.flags['stop_processing'] = True
+        self.engine_instance.force_exit()
 
     def find_next_measure(self):
         """ Find the next runnable measure in the queue.
@@ -114,8 +144,8 @@ class MeasurePlugin(HasPrefPlugin):
         Returns
         -------
         measure : Measure
-            First valid measurement in the queue (ie not being edited), or None
-            if there is no available measure.
+            First valid measurement in the queue or None if there is no
+            available measure.
 
         """
         enqueued_measures = self._plugin.enqueued_measures
@@ -132,3 +162,30 @@ class MeasurePlugin(HasPrefPlugin):
                 break
 
         return measure
+
+    def _listen_to_engine(self, change):
+        """ Observer for the engine notifications.
+
+        """
+        status, infos = change['value']
+        self.running_measure.status = status
+        self.running_measure.infos = infos
+
+        # Disconnect monitors.
+        self.engine_instance.unobserve('news')
+
+        # If we are supposed to stop, stop.
+        if 'stop_processing' in self.flags:
+            self.stop_processing()
+            while not self.engine_instance.active:
+                sleep(0.5)
+
+        # Otherwise find the next measure, if there is none stop the engine.
+        else:
+            meas = self.find_next_measure()
+            if meas is not None:
+                self.start_measure(meas)
+            else:
+                self.stop_processing()
+                while not self.engine_instance.active:
+                    sleep(0.5)
