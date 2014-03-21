@@ -74,7 +74,7 @@ class FormulaTask(SimpleTask):
         """
         super(FormulaTask, self).register_preferences()
         self.task_preferences['formulas'] = \
-            [(f.label, f.formula) for f in self.formulas]
+            repr([(f.label, f.formula) for f in self.formulas])
 
     update_preferences_from_members = register_preferences
 

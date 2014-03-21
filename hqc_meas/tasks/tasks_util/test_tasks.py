@@ -112,7 +112,7 @@ class DefinitionTask(SimpleTask):
         """
         super(DefinitionTask, self).register_preferences()
         self.task_preferences['definitions'] = \
-            [(d.label, d.definition) for d in self.definitions]
+            repr([(d.label, d.definition) for d in self.definitions])
 
     update_preferences_from_members = register_preferences
 

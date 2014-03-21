@@ -212,8 +212,8 @@ class SaveTask(SimpleTask):
 
         """
         super(SaveTask, self).update_preferences_from_members()
-        self.task_preferences['saved_values'] = [(s.label, s.value)
-                                                 for s in self.saved_values]
+        to_save = [(s.label, s.value) for s in self.saved_values]
+        self.task_preferences['saved_values'] = repr(to_save)
 
     def update_members_from_preferences(self, **parameters):
         """ Override handling saved_values.

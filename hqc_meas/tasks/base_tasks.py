@@ -226,7 +226,7 @@ class SimpleTask(BaseTask):
         """
         self.task_preferences.clear()
         for name in tagged_members(self, 'pref'):
-            self.task_preferences[name] = str(getattr(self, name))
+            self.task_preferences[name] = repr(getattr(self, name))
 
     update_preferences_from_members = register_preferences
 
@@ -612,7 +612,7 @@ class ComplexTask(BaseTask):
             # Register preferences.
             meta = members[name].metadata
             if meta and 'pref' in meta:
-                self.task_preferences[name] = str(getattr(self, name))
+                self.task_preferences[name] = repr(getattr(self, name))
 
             # Find all tagged children.
             elif meta and 'child' in meta:
@@ -638,7 +638,7 @@ class ComplexTask(BaseTask):
 
         """
         for name in tagged_members(self, 'pref'):
-            self.task_preferences[name] = str(getattr(self, name))
+            self.task_preferences[name] = repr(getattr(self, name))
 
         for name in tagged_members(self, 'child'):
             child = getattr(self, name)
