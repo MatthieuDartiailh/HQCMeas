@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Typed, Bool, Value, Tuple
+from atom.api import Typed, Value, Tuple
 from enaml.workbench.api import Workbench
 from multiprocessing import Pipe
 from multiprocessing.queues import Queue
@@ -27,9 +27,6 @@ class ProcessEngine(BaseEngine):
     """
     # Reference to the workbench got at __init__
     workbench = Typed(Workbench)
-
-    # Flag indicating whether or not the negine is working.
-    running = Bool(False)
 
     # Interprocess event used to stop the subprocess current measure.
     _meas_stop = Typed(Event, ())
@@ -126,7 +123,7 @@ class ProcessEngine(BaseEngine):
 
             # Start process.
             self._process.start()
-            self.running = True
+            self.active = True
 
             # Start main communication thread.
             self._com_thread = Thread(group=None,
@@ -155,7 +152,7 @@ class ProcessEngine(BaseEngine):
         self._log_thread.join()
         self._monitor_thread.join()
         self._com_thread.join()
-        self.running = False
+        self.active = False
         self.done = ('INTERRUPTED', 'The user forced the system to stop')
 
         # Discard the queues as they may have been corrupted when the process
@@ -235,4 +232,4 @@ class ProcessEngine(BaseEngine):
             self._process.join()
         self._log_thread.join()
         self._monitor_thread.join()
-        self.running = False
+        self.active = False

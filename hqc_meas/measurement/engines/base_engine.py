@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Atom, Event, Callable
+from atom.api import Atom, Event, Callable, Bool
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -23,6 +23,9 @@ class BaseEngine(Atom):
 
     # Event through the engine signals it is done with a measure.
     done = Event()
+
+    # Bool representing the current state of the engine.
+    active = Bool()
 
     def prepare_to_run(self, root, monitored_entries):
         """ Make the engine ready to perform a measure.

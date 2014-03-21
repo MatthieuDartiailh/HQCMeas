@@ -12,7 +12,8 @@ from .process_engine import ProcessEngine
 
 
 enamldef ProcessEngineManifest(PluginManifest):
-    """
+    """ Manifest contributing the ProcessEngine to the MeasurePlugin.
+
     """
     id = u'hqc_meas.measure.engines.process_engine'
     Extension:

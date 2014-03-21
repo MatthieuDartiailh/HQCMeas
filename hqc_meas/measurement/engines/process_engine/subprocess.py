@@ -154,11 +154,11 @@ class TaskProcess(Process):
                     meas_result = root.process()
                     result = ['', '', '']
                     if self.task_stop.is_set():
-                        result[0] = 'STOPPED'
+                        result[0] = 'INTERRUPTED'
                         result[2] = 'Measure {} was stopped'.format(name)
                     else:
                         if meas_result:
-                            result[0] = 'SUCCEEDED'
+                            result[0] = 'COMPLETED'
                             result[2] = 'Measure {} succeeded'.format(name)
                         else:
                             result[0] = 'FAILED'
