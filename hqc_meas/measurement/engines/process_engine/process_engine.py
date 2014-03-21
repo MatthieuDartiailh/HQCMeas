@@ -4,205 +4,235 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Typed, Instance, Bool, Value
+from atom.api import Typed, Bool, Value, Tuple
+from enaml.workbench.api import Workbench
 from multiprocessing import Pipe
 from multiprocessing.queues import Queue
 from multiprocessing.synchronize import Event
 from threading import Thread
-from time import sleep
+from threading import Event as tEvent
+import logging
+
+from hqc_meas.log_facility import QueueLoggerThread
+from hqc_meas.tasks.tools.walks import flatten_walk
 
 from ..base_engine import BaseEngine
+from ..tools import ThreadMeasureMonitor
 from .subprocess import TaskProcess
 
 
 class ProcessEngine(BaseEngine):
-    """
+    """ An engine executing the measurement it is sent in a different process.
 
     """
-    workbench = Typed()
+    # Reference to the workbench got at __init__
+    workbench = Typed(Workbench)
 
+    # Flag indicating whether or not the negine is working.
     running = Bool(False)
-    task_stop = Instance(Event, ())
-    process_stop = Instance(Event, ())
 
-    process = Typed(TaskProcess)
-    log_thread = Instance(Thread)
-    log_queue = Instance(Queue, ())
-    # Instance of Connection but ambiguous when the OS is not known
-    pipe = Value()
+    # Interprocess event used to stop the subprocess current measure.
+    _meas_stop = Typed(Event, ())
 
-    monitor_queue = Instance(Queue, ())
+    # Interprocess event used to stop the subprocess.
+    _stop = Typed(Event, ())
 
-    # TODO will go somewhere
-    def totot(self):
-        """Handle the `start_button` being pressed.
+    # Flag signaling that a forced exit has been requested
+    _force_stop = Value(tEvent())
 
-        Clear the event `task_stop` and `process_stop`, create the pipe
-        and the measurement process. Start then the log thread and then
-        the process. Finally start the thread handling the communication
-        with the measurement process.
+    # Flag indicating the communication thread it can send the next measure.
+    _starting_allowed = Value(tEvent())
 
-        """
-        if not self.parent_widget:
-            self.parent_widget = widget
-        print 'Starting process'
-        self.task_stop.clear()
-        self.process_stop.clear()
-        self.pipe, process_pipe = Pipe()
-        self.process = TaskProcess(process_pipe,
-                                   self.log_queue,
-                                   self.monitor_queue,
-                                   self.task_stop,
-                                   self.process_stop)
-        self.log_thread = QueueLoggerThread(self.log_queue)
-        self.log_thread.daemon = True
-        self.log_thread.start()
+    # Temporary tuple to store the data to be sent to the process when a
+    # new measure is ready.
+    _temp = Tuple()
 
-        self.process.start()
-        self.running = True
-        Thread(group=None, target=self._process_listerner).start()
+    # Current subprocess.
+    _process = Typed(TaskProcess)
 
-    def prepare_to_run(self, root, monitored_entries):
-        """
-        """
-        mes = cleandoc('''''')
-        raise NotImplementedError(mes)
+    # Connection used to send and receive messages about execution (type
+    # ambiguous when the OS is not known)
+    _pipe = Value()
+
+    # Thread in charge of transferring measure to the process.
+    _com_thread = Typed(Thread)
+
+    # Inter-process queue used by the subprocess to transmit its log records.
+    _log_queue = Typed(Queue, ())
+
+    # Thread in charge of collecting the log message coming from the
+    # subprocess.
+    _log_thread = Typed(Thread)
+
+    # Inter-process queue used by the subprocess to send the values of the
+    # observed database entries.
+    _monitor_queue = Typed(Queue, ())
+
+    # Thread in charge of collecting the values of the observed database
+    # entries.
+    _monitor_thread = Typed(Thread)
+
+    def prepare_to_run(self, name, root, monitored_entries):
+        # Get all the tasks classes we need to rebuild the measure in the
+        # process.
+        walk = root.walk(['task_class'])
+        task_names = flatten_walk(walk)
+
+        # Get core plugin to request tasks.
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.tasks_request'
+        task_classes = core.invoke_command(com, {'tasks': task_names,
+                                                 'use_class_names': True},
+                                           self)
+
+        # Gather all runtime dependencies in a single dict.
+        runtimes = root.run_time
+        runtimes['task_classes', task_classes]
+
+        # Get ConfigObj describing measure.
+        root.update_preferences_from_members()
+        config = root.preferences
+
+        # Make infos tuple to send to the subprocess.
+        self._temp = (name, config, runtimes, monitored_entries)
+
+        # Clear all the flags.
+        self._meas_stop.clear()
+        self._stop.clear()
+        self._force_stop.clear()
+
+        # If the process does not exist or is dead create a new one.
+        if not self._process or not self._process.is_alive():
+            self._pipe, process_pipe = Pipe()
+            self._process = TaskProcess(process_pipe,
+                                        self._log_queue,
+                                        self._monitor_queue,
+                                        self._meas_stop,
+                                        self._stop)
+            self._process.daemon = True
+
+            self._log_thread = QueueLoggerThread(self._log_queue)
+            self._log_thread.daemon = True
+
+            self._monitor_thread = ThreadMeasureMonitor(self,
+                                                        self._monitor_queue)
+            self._monitor_thread.daemon = True
 
     def run(self):
-        """
-        """
-        mes = cleandoc('''''')
-        raise NotImplementedError(mes)
+        if not self._process.is_alive():
+            # Starting monitoring threads.
+            self._log_thread.start()
+            self._monitor_thread.start()
+
+            # Start process.
+            self._process.start()
+            self.running = True
+
+            # Start main communication thread.
+            self._com_thread = Thread(group=None,
+                                      target=self._process_listener)
+            self._com_thread.start()
+
+        self._starting_allowed.set()
 
     def stop(self):
-        """
-        """
-        mes = cleandoc('''''')
-        raise NotImplementedError(mes)
+        self._meas_stop.set()
 
     def exit(self):
-        """
-        """
-        mes = cleandoc('''''')
-        raise NotImplementedError(mes)
+        self._stop.set()
+        # Everything else handled by the _com_thread.
 
     def force_stop(self):
-        """
-        """
-        mes = cleandoc('''''')
-        raise NotImplementedError(mes)
+        # Just in case the user calls this directly. Will signal all threads to
+        # stop (save _com_thread).
+        self._stop.set()
+
+        # Set _force_stop to stop _com_thread.
+        self._force_stop.set()
+
+        # Terminate the process and make sure all threads stopped properly.
+        self._process.terminate()
+        self._log_thread.join()
+        self._monitor_thread.join()
+        self._com_thread.join()
+        self.running = False
+        self.done = ('INTERRUPTED', 'The user forced the system to stop')
+
+        # Discard the queues as they may have been corrupted when the process
+        # was terminated.
+        self._log_queue = Queue()
+        self._monitor_queue = Queue()
 
     def force_exit(self):
+        self.force_stop()
+
+    def _process_listener(self):
+        """ Handle the communications with the worker process.
+
+        Executed in a different thread.
+
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Starting listener')
+
+        while not self._pipe.poll(2):
+            if not self._process.is_alive():
+                self.done = ('FAILED', 'Subprocess started to fail')
+                self._stop.set()
+                self._cleanup(process=False)
+                return
+
+        mess = self._pipe.recv()
+        if mess != 'READY':
+            self.done = ('FAILED', 'Subprocess started to fail')
+            self._cleanup()
+            return
+
+        # Infinite loop waiting for measure.
+        while not self._stop.is_set():
+
+            # Wait for measure and check for stopping.
+            while not self._starting_allowed.wait(2):
+                if self._stop.is_set():
+                    self._cleanup()
+                    return
+
+            # Send the measure.
+            self.pipe.send(self._temp)
+
+            # Empty _temp and reset flag.
+            self._temp = None
+            self._starting_allowed.clear()
+
+            logger.info('Measurement sent')
+
+            # Wait for the process to finish the measure and check it has not
+            # been killed.
+            while not self._pipe.poll(1):
+                if self._force_stop.is_set():
+                    self._cleanup()
+                    return
+
+            # Here get message from process and react
+            meas_status, int_status, mess = self._pipe.recv()
+
+            self.done = (meas_status, mess)
+            if int_status == 'STOPPING':
+                self._cleanup()
+
+    def _cleanup(self, process=True):
+        """ Helper method taking care of making sure that everybody stops.
+
+        Parameters
+        ----------
+        process : bool
+            Wether to join the worker process. Used when the process has been
+            termintaed abruptly.
+
         """
-        mes = cleandoc('''''')
-        raise NotImplementedError(mes)
-
-    def _process_listerner(self):
-        """Method called in a separated thread to handle communications with
-        the measurement process."""
-        print 'Starting listener'
-        meas = None
-        while not self.process_stop.is_set():
-            self.pipe.poll(None)
-            mess = self.pipe.recv()
-            print 'Message received : {}'.format(mess)
-            if mess == 'Need task':
-                if self.meas_holder:
-                    i = 0
-                    task = None
-                    # Look for a measure not being currently edited.
-                    while i < len(self.meas_holder):
-                        aux = self.meas_holder[i]
-                        if aux.monitor.status == 'EDITING' or aux == meas:
-                            i += 1
-                            continue
-                        else:
-                            meas = self.meas_holder[i]
-                            task = meas.root_task
-                            monitor = meas.monitor
-                            name = meas.monitor.measure_name
-                            break
-
-                    # If one is found, stop the old monitor, if necessary start
-                    # a new one and send the measure in the pipe.
-                    if task is not None:
-                        meas.is_running = True
-                        # TODO here should get default header from panel
-
-                        task.update_preferences_from_members()
-
-                        # Here must walk the task tree to find the used profile
-                        # and ask a potential control panel to release the instrs
-                        # it is currently holding
-                        aux = task.walk(['selected_profile'])
-                        profiles = extract_profiles(aux)
-                        # TODO pass this to the control panel
-
-                        if self.current_monitor:
-                            self.current_monitor.stop()
-                            self.current_monitor = None
-
-                        self.current_monitor = monitor
-                        deferred_call(setattr, monitor, 'status', 'RUNNING')
-                        # Leave a chance to the system to update the display
-                        sleep(0.05)
-
-                        monitor_values = None
-                        if meas.use_monitor:
-                            monitor.start(self.monitor_queue)
-                            deferred_call(self._update_monitor_display_model,
-                                          monitor)
-                            monitor_values = \
-                                self.current_monitor.database_values.keys()
-                        else:
-                            deferred_call(self.monitor_display.close)
-
-                        self.pipe.send((name, task.task_preferences,
-                                        monitor_values))
-
-                        print 'Measurement sent'
-
-                    # If there is no measurement which can be sent, stop the
-                    # measurement process.
-                    else:
-                        self.process_stop.set()
-                        print 'The only task is the queue is being edited'
-                        self.pipe.send(('', 'STOP', ''))
-                        self.pipe.poll(None)
-                        self.pipe.close()
-                        self.process.join()
-                        self.log_thread.join()
-                        self.running = False
-                        break
-
-                # If there is no measurement in the queue, stop the
-                # measurement process.
-                else:
-                    self.process_stop.set()
-                    print 'All measurements have been sent'
-                    self.pipe.send((None, 'STOP', None))
-                    self.pipe.poll(None)
-                    self.pipe.close()
-                    self.process.join()
-                    self.log_thread.join()
-                    self.running = False
-                    break
-
-            elif mess == 'Task processed':
-                deferred_call(self.meas_holder.remove, meas)
-                sleep(0.1)
-
-            # If the measurement process sent a different message,
-            # it means it will stop so we can clean up.
-            else:
-                self.pipe.close()
-                self.process.join()
-                self.log_thread.join()
-                self.running = False
-                break
-
-        # Upon exit close the monitor if it is still opened.
-        if self.current_monitor:
-            deferred_call(setattr, self.current_monitor, 'status', 'STOPPED')
-            self.current_monitor.stop()
+        self._pipe.close()
+        if process:
+            self._process.join()
+        self._log_thread.join()
+        self._monitor_thread.join()
+        self.running = False

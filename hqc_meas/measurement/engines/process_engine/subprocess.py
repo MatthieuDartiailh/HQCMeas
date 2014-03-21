@@ -9,10 +9,13 @@ import logging
 import logging.config
 import warnings
 import sys
+# TODO write my own rotating file handler to work under windows
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process
+
+from hqc_meas.log_facility import (StreamToLogRedirector)
+from hqc_meas.task_management.config.api import IniConfigTask
 from ..tools import MeasureSpy
-from ..log_facility import (StreamToLogRedirector)
 
 
 class TaskProcess(Process):
@@ -20,8 +23,8 @@ class TaskProcess(Process):
 
     When started this process sets up a logger redirecting all records to a
     queue. It then redirects stdout and stderr to the logging system. Then as
-    long as there is measures to perform  it asks the main process to send it
-    measures through a pipe. Upon reception of the `ConfigObj` object
+    long as it is not stopped it waits for the main process to send a
+    measures through the pipe. Upon reception of the `ConfigObj` object
     describing the measure it rebuilds it, set up a logger for that specific
     measure and if necessary starts a spy transmitting the value of all
     monitored entries to the main process. It finally run the checks of the
@@ -87,81 +90,107 @@ class TaskProcess(Process):
 
         logger.info('Process running')
         while not self.process_stop.is_set():
+
+            # Prevent us from crash if the pipe is closed at the wrong moment.
             try:
-                # Request a new measure to perform from the main process
-                logger.info('Need task')
-                self.pipe.send('Need task')
 
-                # Get the answer
-                self.pipe.poll(None)
-                name, config, monitored_entries = self.pipe.recv()
+                # Wait for a measurement.
+                while not self.pipe.poll(2):
+                    if self.process_stop.is_set():
+                        break
 
-                if config != 'STOP':
-                    # If a real measurement was sent, build it.
-                # TODO refactor this to work with collected datas
-                    task = IniConfigTask().build_task_from_config(config)
-                    logger.info('Task built')
+                # Get the measure.
+                name, config, runtimes, monitored_entries = self.pipe.recv()
 
-                    # There are entries in the database we are supposed to
-                    # monitor start a spy to do it.
-                    if monitored_entries is not None:
-                        spy = MeasureSpy(
-                            self.monitor_queue, monitored_entries,
-                            task.task_database)
+                # Build it by first extracting task classes from runtimes.
+                tasks = runtimes.pop('task_classes')
+                builder = IniConfigTask(task_classes=tasks)
+                root = builder.build_task_from_config(config)
 
-                    # Set up the logger for this specific measurement.
-                    if self.meas_log_handler is not None:
-                        logger.removeHandler(self.meas_log_handler)
-                        self.meas_log_handler.close()
-                        self.meas_log_handler = None
+                # Give all runtime dependencies to the root task.
+                root.run_time = runtimes
 
-                    log_path = os.path.join(
-                        task.get_from_database('default_path'),
-                        name + '.log')
-                    if os.path.isfile(log_path):
-                        os.remove(log_path)
-                    self.meas_log_handler = RotatingFileHandler(log_path,
-                                                                mode='w',
-                                                                maxBytes=10**6,
-                                                                backupCount=10)
-                    aux = '%(asctime)s | %(levelname)s | %(message)s'
-                    formatter = logging.Formatter(aux)
-                    self.meas_log_handler.setFormatter(formatter)
-                    logger.addHandler(self.meas_log_handler)
+                logger.info('Task built')
 
-                    # Clear the event signaling the task it should stop, pass
-                    # it to the task and make the database ready.
-                    self.task_stop.clear()
-                    task.should_stop = self.task_stop
-                    task.task_database.prepare_for_running()
+                # There are entries in the database we are supposed to
+                # monitor start a spy to do it.
+                if monitored_entries:
+                    spy = MeasureSpy(
+                        self.monitor_queue, monitored_entries,
+                        root.task_database)
 
-                    # Perform the checks.
-                    check = task.check(test_instr=True)
-                    if check[0]:
-                        logger.info('Check successful')
-                        # Perform the measure
-                        task.process()
-                        self.pipe.send('Task processed')
-                        if self.task_stop.is_set():
-                            logger.info('Task interrupted')
-                        else:
-                            logger.info('Task processed')
+                # Set up the logger for this specific measurement.
+                if self.meas_log_handler is not None:
+                    logger.removeHandler(self.meas_log_handler)
+                    self.meas_log_handler.close()
+                    self.meas_log_handler = None
+
+                log_path = os.path.join(
+                    root.get_from_database('default_path'),
+                    name + '.log')
+                if os.path.isfile(log_path):
+                    os.remove(log_path)
+                self.meas_log_handler = RotatingFileHandler(log_path,
+                                                            mode='w',
+                                                            maxBytes=10**6,
+                                                            backupCount=10)
+                aux = '%(asctime)s | %(levelname)s | %(message)s'
+                formatter = logging.Formatter(aux)
+                self.meas_log_handler.setFormatter(formatter)
+                logger.addHandler(self.meas_log_handler)
+
+                # Clear the event signaling the task it should stop, pass
+                # it to the task and make the database ready.
+                self.task_stop.clear()
+                root.should_stop = self.task_stop
+                root.task_database.prepare_for_running()
+
+                # Perform the checks.
+                check, errors = root.check(test_instr=True)
+
+                # They pass perform the measure.
+                if check:
+                    logger.info('Check successful')
+                    meas_result = root.process()
+                    result = ['', '', '']
+                    if self.task_stop.is_set():
+                        result[0] = 'STOPPED'
+                        result[2] = 'Measure {} was stopped'.format(name)
                     else:
-                        fails = check[1].iteritems()
-                        message = '\n'.join('{} : {}'.format(path, mes)
-                                            for path, mes in fails)
-                        logger.critical(message)
+                        if meas_result:
+                            result[0] = 'SUCCEEDED'
+                            result[2] = 'Measure {} succeeded'.format(name)
+                        else:
+                            result[0] = 'FAILED'
+                            result[2] = 'Measure {} failed'.format(name)
 
-                    # If a spy was started kill it
-                    if monitored_entries is not None:
-                        spy.close()
-                        del spy
+                    if self.process_stop.is_set():
+                        result[1]('STOPPING')
+                    else:
+                        result[1]('READY')
+
+                    self.pipe.send(tuple(result))
+
+                # They fail, mark the measure as failed and go on.
+                else:
+                    mes = 'Tests failed see log for full records.'
+                    self.pipe.send(('FAILED', 'READY', mes))
+
+                    # Log the tests that failed.
+                    fails = errors.iteritems()
+                    message = '\n'.join('{} : {}'.format(path, mes)
+                                        for path, mes in fails)
+                    logger.critical(message)
+
+                # If a spy was started kill it
+                if monitored_entries:
+                    spy.close()
+                    del spy
 
             except IOError:
                 pass
 
         # Clean up before closing.
-        self.pipe.send('Closing')
         logger.info('Process shuting down')
         if self.meas_log_handler:
             self.meas_log_handler.close()

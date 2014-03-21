@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from atom.api import (Atom, Instance, Bool, Dict, Unicode, Typed, Str)
+from atom.api import (Atom, Instance, Bool, Dict, Unicode, Typed, Str, Int)
 from textwrap import fill
 from configobj import ConfigObj
 
@@ -21,11 +21,17 @@ class Measure(Atom):
     # Flag indicating the measure status.
     status = Str()
 
+    # Detailed information about the measure status.
+    infos = Str()
+
     # Root task holding the measure logic.
     root_task = Instance(RootTask, ())
 
     # Dict of active monitor for this measure.
     monitors = Dict(Unicode())
+
+    # Counter keeping track of the active monitors.
+    active_monitors = Int()
 
     # Dict of checks for this measure
     checks = Dict(Unicode())
@@ -96,7 +102,7 @@ class Measure(Atom):
         return result, full_report
 
     def collect_headers(self, workbench):
-        """ Get all the contribution to the default_header.
+        """ Set the default_header of the root task using all contributions.
 
         """
         header = ''
@@ -107,6 +113,21 @@ class Measure(Atom):
             header = fill(header[3:], 79)
 
         self.root_task.default_header = header
+
+    def collect_entries_to_observe(self):
+        """ Get all the entries the monitor ask to be notified about.
+
+        Returns
+        -------
+        entries : list
+            List of the entries the engine will to observe.
+
+        """
+        entries = []
+        for monitor in self.monitors:
+            entries.extend(monitor.database_entries)
+
+        return entries
 
     def _observe_root_task(self, change):
         """ Observer ensuring that the monitors observe the right database.
