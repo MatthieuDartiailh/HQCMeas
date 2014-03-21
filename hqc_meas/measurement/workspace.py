@@ -21,6 +21,8 @@ with enaml.imports():
 
 
 class MeasureSpace(Workspace):
+    """
+    """
 
     _plugin = Typed(MeasurePlugin)
 
@@ -28,7 +30,7 @@ class MeasureSpace(Workspace):
         """
         """
         self._plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        # TODO vv
+        # TODO create content
 
     def stop(self):
         """
@@ -39,16 +41,19 @@ class MeasureSpace(Workspace):
         """
         """
         pass
+        # TODO vv
 
     def save_measure(self, mode):
         """
         """
         pass
+        # TODO vv
 
     def load_measure(self, mode):
         """
         """
         pass
+        # TODO vv
 
     def enqueue_measure(self, measure):
         """Put a measure in the queue if it pass the tests.
@@ -139,6 +144,10 @@ class MeasureSpace(Workspace):
         Measure will be processed in their order of appearance in the queue.
 
         """
+        if not self._plugin.selected_engine:
+            pass
+            # TODO open dialog (use content as parent)
+
         self._plugin.flags.clear()
 
         measure = self._plugin.find_next_measure()
