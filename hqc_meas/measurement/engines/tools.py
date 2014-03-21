@@ -11,8 +11,8 @@ from hqc_meas.tasks.tools.task_database import TaskDatabase
 
 
 class MeasureSpy(Atom):
+    """ Spy observing a task database and sending values update into a queue.
 
-    """
     """
     observed_entries = Coerced(set)
     observed_database = Typed(TaskDatabase)
@@ -35,23 +35,23 @@ class MeasureSpy(Atom):
 
 
 class ThreadMeasureMonitor(Thread):
+    """ Thread sending a queue content to the news signal of a engine.
 
     """
-    """
 
-    def __init__(self, queue, monitor):
+    def __init__(self, queue, engine):
         super(ThreadMeasureMonitor, self).__init__()
         self.queue = queue
-        self.monitor = monitor
+        self.engine = engine
 
     def run(self):
         while True:
             try:
                 pass
-#                news = self.queue.get()
-#                if news != (None, None):
-#                    deferred_call(self.monitor.map_news, news)
-#                else:
-#                    break
+                news = self.queue.get()
+                if news != (None, None):
+                    self.engine.news = news
+                else:
+                    break
             except Queue.Empty:
                 continue
