@@ -65,6 +65,7 @@ def simple_member_from_str(member, str_value):
 
     elif isinstance(member, Enum) and isinstance(member.items[0], basestring):
         value = str_value
+
     # Otherwise, we eval it!
     else:
         value = eval(str_value)
