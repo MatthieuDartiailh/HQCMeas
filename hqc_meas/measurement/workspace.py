@@ -10,53 +10,20 @@ import enaml
 from atom.api import Instance, Typed
 from enaml.workbench.ui.api import Workspace
 from inspect import cleandoc
-from collections import defaultdict
 
 from .measure import Measure
 from .engines.base_engine import BaseEngine
 from .plugin import MeasurePlugin
 
+from ..tasks.tools.walks import flatten_walk
+
 with enaml.imports():
     from .checks_display import ChecksDisplay
-
-
-def extract_runtimes(walk, runtimes):
-    """ Extract the runtime dependencies of a measurement from a walk.
-
-    Parameters
-    ----------
-    walk : dict
-        The nested dictionary returned by the walk method of the root task.
-
-    runtimes : list(str)
-        The list of runtime dependencies to look for.
-
-    Returns
-    -------
-    results : dict(str: set)
-        Dict containing the runtimes dependencies as sets. This dict can then
-        be used to gather function and or classes needed at runtime.
-
-    """
-    results = defaultdict(set)
-    for step in walk:
-        if isinstance(step, list):
-            aux = extract_runtimes(step)
-            for key in aux:
-                results[key].update(aux[key])
-        else:
-            for runtime in runtimes:
-                if runtime in step:
-                    results[runtime].add(step[runtime])
-
-    return results
 
 
 class MeasureSpace(Workspace):
 
     _plugin = Typed(MeasurePlugin)
-    _engine = Instance(BaseEngine)
-    _running_measure = Typed(Measure)
 
     def start(self):
         """
@@ -91,8 +58,8 @@ class MeasureSpace(Workspace):
 
         # First of all build the runtime dependencies
         walk = measure.root_task.walk(['selected_driver', 'selected_profile'])
-        res = extract_runtimes(walk, ['selected_driver',
-                                      'selected_profile'])
+        res = flatten_walk(walk, ['selected_driver',
+                                  'selected_profile'])
         drivs = res['selected_driver']
         profs = res['selected_profile']
 
@@ -158,9 +125,9 @@ class MeasureSpace(Workspace):
         # Here reset all flags concerning stopping, etc.
         # TODO xx
 
-        measure = self._find_next_measure()
+        measure = self._plugin.find_next_measure()
         if measure is not None:
-            self._start_measure()
+            self._plugin.start_measure()
 
     def process_single_measure(self, index=0):
         """ Performs a single measurement and then stops.
@@ -183,17 +150,17 @@ class MeasureSpace(Workspace):
             measure = None
 
         if measure is not None:
-            self._start_measure(measure)
+            self._plugin.start_measure(measure)
 
     def stop_current_measure(self):
         """
         """
-        self._engine.stop()
+        # TODO call plugin method
 
     def stop_processing_measures(self):
         """
         """
-        self._engine.exit()
+        # TODO call plugin method
 
     def force_stop_measure(self):
         """
@@ -210,66 +177,3 @@ class MeasureSpace(Workspace):
 
         """
         pass
-
-    def _start_measure(self, measure):
-        """ Start a new measure.
-
-        """
-        logger = logging.getLogger(__name__)
-
-        # Requesting profiles.
-        profiles = measure.store('profiles')
-        core = self.workbench.get_plugin('enaml.workbench.core')
-
-        com = u'hqc_meas.instr_manager.profiles_request'
-        res, profiles = core.invoke_command(com, {'profiles': list(profiles)},
-                                            self._plugin)
-        if not res:
-            mes = cleandoc('''The profiles requested for the measurement {} are
-                           not available, the measurement cannot be performed
-                           '''.format(measure.name))
-            logger.info(mes)
-            # TODO here call the function listening the engine to try to run
-            # the next measure if there is one.
-
-        measure.root_task.run_time.update({'profiles': profiles})
-
-        # Collect headers.
-        measure.collect_headers(self.workbench)
-
-        # Start the engine if it has not already been done.
-
-        # Call engine prepare to run method.
-
-        # Discard old monitors if there is any remaining.
-
-        # Start new monitors, connect them and show.
-
-        # Connect signal handlers to engine.
-
-        # Ask the engine to start the measure.
-
-    def _find_next_measure(self):
-        """ Find the next runnable measure in the queue.
-
-        Returns
-        -------
-        measure : Measure
-            First valid measurement in the queue (ie not being edited), or None
-            if there is no available measure.
-
-        """
-        enqueued_measures = self._plugin.enqueued_measures
-        i = 0
-        measure = None
-        # Look for a measure not being currently edited. (Can happen if the
-        # user is editing the second measure when the first measure ends).
-        while i < len(enqueued_measures):
-            measure = enqueued_measures[i]
-            if measure.status == 'EDITING':
-                i += 1
-                measure = None
-            else:
-                break
-
-        return measure
