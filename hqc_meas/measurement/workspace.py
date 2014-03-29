@@ -127,6 +127,7 @@ class MeasureSpace(Workspace):
             # Here don't keep the profiles in the runtime as it will defeat the
             # purpose of the manager.
             meas.root_task.run_time = {'drivers': drivers}
+            # Keep only a list of profiles to request (avoid to re-walk)
             meas.store['profiles'] = profs
             meas.status = 'READY'
             meas.infos = 'The measure is ready to be performed by an engine.'
@@ -137,6 +138,21 @@ class MeasureSpace(Workspace):
         else:
             ChecksDisplay(errors=errors).exec_()
             return False
+
+    def reenqueue_measure(self, measure):
+        """ Mark a measure already in queue as fitted to be executed.
+
+        This method can be used to re-enqueue a measure that previously failed,
+        for example becuse a profile was missing, the measure can then be
+        edited again and will be executed in its turn.
+
+        Parameters
+        ----------
+        measure : Measure
+            The measure to re-enqueue
+
+        """
+        measure.enter_edition_state()
 
     def start_processing_measures(self):
         """ Starts to perform the measurement in the queue.

@@ -5,7 +5,13 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import (Atom, Str,Dict)
+from atom.api import (Atom, Str, Dict, observe)
+from enaml.widgets.api import (Dialog, Container, Label, MultilineField,
+                               PushButton)
+from enaml.layout.api import vbox, grid, hbox, align
+
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+
 
 class _TaskCheckModel(Atom):
 
@@ -56,10 +62,10 @@ enamldef TaskCheckDisplay(Dialog): dial:
     attr errors
     attr model << _TaskCheckModel(errors)
     Container:
-        constraints = [vbox(grid([lis_lab, che_lab],[lis, che]),
-                            hbox(spacer,close)),
-                        align('left', lis_lab, lis),
-                        align('left', che_lab, che)]
+        constraints = [vbox(grid([lis_lab, che_lab], [lis, che]),
+                            hbox(spacer, close)),
+                       align('left', lis_lab, lis),
+                       align('left', che_lab, che)]
         Label: lis_lab:
             text = 'Failed tests'
         QtListStrWidget: lis:

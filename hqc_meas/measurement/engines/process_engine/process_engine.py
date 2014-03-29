@@ -88,7 +88,7 @@ class ProcessEngine(BaseEngine):
 
         # Get ConfigObj describing measure.
         root.update_preferences_from_members()
-        config = root.preferences
+        config = root.task_preferences
 
         # Make infos tuple to send to the subprocess.
         self._temp = (name, config, runtimes, monitored_entries)

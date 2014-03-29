@@ -33,6 +33,8 @@ MODULE_ANCHOR = 'hqc_meas.instruments'
 class InstrManagerPlugin(HasPrefPlugin):
     """
     """
+    #--- Public API -----------------------------------------------------------
+
     # Directories in which the profiles are looked for.
     profiles_folders = List(Unicode(),
                             [os.path.join(MODULE_PATH,
@@ -52,8 +54,6 @@ class InstrManagerPlugin(HasPrefPlugin):
 
     # Name of the currently available profiles.
     available_profiles = List()
-
-    #--- Public API -----------------------------------------------------------
 
     def start(self):
         """ Start the plugin life-cycle.
@@ -448,6 +448,7 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         failed : list
             A list in which failed imports will be stored.
+
         """
         for mod in modules:
             try:
@@ -496,7 +497,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         self._users = new_users
 
     def _load_user(self, extension):
-        """ Load the user object for the gicen extension.
+        """ Load the user object for the given extension.
 
         Parameters
         ----------
@@ -507,6 +508,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         -------
         user : User
             The first InstrUser object declared by the extension
+
         """
         workbench = self.workbench
         users = extension.get_children(InstrUser)

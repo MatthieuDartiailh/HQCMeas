@@ -15,6 +15,7 @@ from .engines.base_engine import BaseEngine, Engine
 from .monitors.base_monitor import Monitor
 from .headers.base_header import Header
 from .checks.base_checks import Check
+from .editors.base_editor import Editor
 from .measure import Measure
 
 
@@ -29,8 +30,9 @@ HEADERS_POINT = u'hqc_meas.measure.headers'
 
 CHECKS_POINT = u'hqc_meas.measure.checks'
 
+EDITORS_POINT = u'hqc_meas.measure.editors'
 
-# TODO handle extensions points
+
 class MeasurePlugin(HasPrefPlugin):
     """
     """
@@ -51,7 +53,7 @@ class MeasurePlugin(HasPrefPlugin):
     running_measure = Typed(Measure)
 
     # Dict holding the contributed Engine declarations.
-    engines = Dict(Unicode(), Engine())
+    engines = Dict(Unicode(), Typed(Engine))
 
     # Currently selected engine represented by its manifest id.
     # TODO in refresh should check this engine exists, otherwise warn and put
@@ -62,22 +64,25 @@ class MeasurePlugin(HasPrefPlugin):
     engine_instance = Instance(BaseEngine)
 
     # Dict holding the contributed Monitor declarations.
-    monitors = Dict(Unicode(), Monitor())
+    monitors = Dict(Unicode(), Typed(Monitor))
 
     # Default monitors to use for new measures.
     default_monitors = List(Unicode()).tag(pref=True)
 
     # Dict holding the contributed Header declarations.
-    headers = Dict(Unicode(), Header())
+    headers = Dict(Unicode(), Typed(Header))
 
     # Default headers to use for new measures.
     default_headers = List(Unicode()).tag(pref=True)
 
     # Dict holding the contributed Check declarations.
-    checks = Dict(Unicode(), Check())
+    checks = Dict(Unicode(), Typed(Check))
 
     # Default checks to use for new measures.
     default_checks = List(Unicode()).tag(pref=True)
+
+    # Dict holding the contributed Editor declarations
+    editors = Dict(Unicode(), Typed(Editor))
 
     # Internal flags.
     flags = Dict()
@@ -105,6 +110,7 @@ class MeasurePlugin(HasPrefPlugin):
         self._refresh_monitors()
         self._refresh_headers()
         self._refresh_checks()
+        self._refresh_editors()
         self._bind_observers()
 
     def stop(self):
@@ -118,10 +124,11 @@ class MeasurePlugin(HasPrefPlugin):
             self.workbench.unregister(manifest_id)
 
         # Clear ressources.
-        self._engines.clear()
-        self._monitors.clear()
-        self._headers.clear()
-        self._checks.clear()
+        self.engines.clear()
+        self.monitors.clear()
+        self.headers.clear()
+        self.checks.clear()
+        self.editors.clear()
 
     def start_measure(self, measure):
         """ Start a new measure.
@@ -131,8 +138,9 @@ class MeasurePlugin(HasPrefPlugin):
 
         # Discard old monitors if there is any remaining.
         for monitor in self.running_measure.monitors:
-            monitor.shutdown()
+            monitor.stop()
 
+        measure.enter_running_state()
         self.running_measure = measure
 
         # Requesting profiles.
@@ -174,10 +182,12 @@ class MeasurePlugin(HasPrefPlugin):
         measure.status = 'RUNNING'
         measure.infos = 'The measure is running'
 
+        # Get a ref to the main window.
+        ui_plugin = self.workbench.get_plugin('enaml.workbench.ui')
         # Connect new monitors, and start them.
         for monitor in measure.monitors:
             engine.observe('news', monitor.process_news)
-            monitor.start()
+            monitor.start(ui_plugin.window)
 
         # Ask the engine to start the measure.
         engine.run()
@@ -470,6 +480,56 @@ class MeasurePlugin(HasPrefPlugin):
 
         return check
 
+    def _refresh_editors(self):
+        """ Refresh the list of known editors.
+
+        """
+        workbench = self.workbench
+        point = workbench.get_extension_point(EDITORS_POINT)
+        extensions = point.extensions
+        if not extensions:
+            self.editors.clear()
+            return
+
+        new_editors = {}
+        old_editors = self.editors
+        for extension in extensions:
+            plugin_id = extension.plugin_id
+            if plugin_id in old_editors:
+                editor = old_editors[plugin_id]
+            else:
+                editor = self._load_monitor(extension)
+            new_editors[plugin_id] = editor
+
+        self.editors = new_editors
+
+    def _load_editors(self, extension):
+        """ Load the Check object for the given extension.
+
+        Parameters
+        ----------
+        extension : Extension
+            The extension object of interest.
+
+        Returns
+        -------
+        editor : Editor
+            The first Editor object declared by the extension.
+
+        """
+        workbench = self.workbench
+        editors = extension.get_children(Editor)
+        if extension.factory is not None and not editors:
+            editor = extension.factory(workbench)
+            if not isinstance(editor, Check):
+                msg = "extension '%s' created non-State of type '%s'"
+                args = (extension.qualified_id, type(editor).__name__)
+                raise TypeError(msg % args)
+        else:
+            editor = editors[0]
+
+        return editor
+
     def _bind_observers(self):
         """ Setup the observers for the plugin.
 
@@ -488,6 +548,9 @@ class MeasurePlugin(HasPrefPlugin):
         point = workbench.get_extension_point(CHECKS_POINT)
         point.observe('extensions', self._update_checks)
 
+        point = workbench.get_extension_point(EDITORS_POINT)
+        point.observe('extensions', self._update_editors)
+
     def _unbind_observers(self):
         """ Remove the observers for the plugin.
 
@@ -505,6 +568,9 @@ class MeasurePlugin(HasPrefPlugin):
 
         point = workbench.get_extension_point(CHECKS_POINT)
         point.unobserve('extensions', self._update_checks)
+
+        point = workbench.get_extension_point(EDITORS_POINT)
+        point.unobserve('extensions', self._update_editors)
 
     def _update_engines(self, change):
         """
@@ -525,3 +591,8 @@ class MeasurePlugin(HasPrefPlugin):
         """
         """
         self._refresh_checks()
+
+    def _update_editors(self, change):
+        """
+        """
+        self._refresh_editors()
