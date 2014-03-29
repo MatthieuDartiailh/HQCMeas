@@ -1,0 +1,29 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : text_monitor_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+import logging
+from atom.api import Str, List, Subclass, Dict
+
+from enaml.workbench.api import PluginManifest
+from ..base_monitor import Monitor
+
+
+def monitor_factory(workbench, raw=False):
+    """
+    """
+    plugin = workbench.get_plugin(u'hqc_meas.measure.monitors.text_monitor')
+    return plugin.create_monitor(raw)
+
+enamldef TextMonitorManifest(PluginManifest):
+    """
+    """
+    id = u'hqc_meas.measure.monitors.text_monitor'
+    Extension:
+        point = u'hqc_meas.measure.monitors'
+        Monitor:
+            factory = monitor_factory
+
+    # TODO add contribution to the menus.
