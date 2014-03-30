@@ -9,7 +9,9 @@ import os
 import enaml
 from atom.api import Typed
 from enaml.workbench.ui.api import Workspace
+from enaml.widgets.api import FileDialog
 from inspect import cleandoc
+from textwrap import fill
 
 from .measure import Measure
 from .plugin import MeasurePlugin
@@ -17,6 +19,7 @@ from .plugin import MeasurePlugin
 from ..tasks.tools.walks import flatten_walk
 
 with enaml.imports():
+    from enaml.stdlib.message_box import question
     from .checks_display import ChecksDisplay
 
 
@@ -24,12 +27,13 @@ class MeasureSpace(Workspace):
     """
     """
 
-    _plugin = Typed(MeasurePlugin)
+    plugin = Typed(MeasurePlugin)
 
     def start(self):
         """
         """
-        self._plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        self.plugin = self.workbench.getplugin(u'hqc_meas.measure')
+        # TODO setup logging handler to redirect log to panel.
         # TODO create content
 
     def stop(self):
@@ -40,20 +44,84 @@ class MeasureSpace(Workspace):
     def new_measure(self):
         """
         """
-        pass
-        # TODO vv
+        message = cleandoc("""The measurement you are editing is about to
+                        be destroyed to create a new one. Press OK to
+                        confirm, or Cancel to go back to editing and get a
+                        chance to save it.""")
 
-    def save_measure(self, mode):
+        result = question(self.content,
+                          'Old measurement suppression',
+                          fill(message.replace('\n', ' '), 79),
+                          )
+        if result is not None and result.action == 'accept':
+            # TODO create brand new measure using defaults from plugin
+            pass
+
+    def save_measure(self, measure, mode):
+        """ Save a measure in a file.
+
+        Parameters
+        ----------
+        measure : Measure
+            Measure to save.
+
+        mode : str
+            file: The user is asked to choose a file in which to save the
+                measure.
+            template: Save the whole measure as a template.
+
         """
-        """
-        pass
-        # TODO vv
+        if mode == 'file':
+            full_path = FileDialog(mode='save_file',
+                                   filters=[u'*.ini']).exec_()
+            if not full_path:
+                return
+
+            measure.save_measure(full_path)
+
+        elif mode == 'template':
+            message = cleandoc("""You are going to save the whole measurement
+                                you are editing as a template. If you want to
+                                save only a part of it, use the contextual
+                                menu.""")
+
+            result = question(self.content,
+                              'Saving measurement',
+                              fill(message.replace('\n', ' '), 79),
+                              )
+
+            if result is not None and result.action == 'accept':
+                core = self.workbench.get_plugin(u'enaml.workbnch.core')
+                cmd = u'hqc_meas.task_manager.save_task'
+                core.invoke_command(cmd,
+                                    {'task': measure.root_task,
+                                     'mode': 'template'},
+                                    self)
 
     def load_measure(self, mode):
+        """ Load a measure.
+
+        Parameters
+        ----------
+        mode : str
+            file: ask the user to specify a file from which to load a measure.
+            template: ask the user to choose a template and use default for the
+                rest.
+
         """
-        """
-        pass
-        # TODO vv
+        if mode == 'file':
+            full_path = FileDialog(mode='open_file',
+                                   filters=[u'*.ini']).exec_()
+            if not full_path:
+                return
+
+            self.plugin.edited_measure = Measure.load_measure(self.plugin,
+                                                              full_path)
+
+        elif mode == 'template':
+             # TODO create brand new measure using defaults from plugin and
+            # load template
+            pass
 
     def enqueue_measure(self, measure):
         """Put a measure in the queue if it pass the tests.
@@ -83,7 +151,7 @@ class MeasureSpace(Workspace):
         drivs = res['selected_driver']
         profs = res['selected_profile']
 
-        core = self.workbench.get_plugin('enaml.workbench.core')
+        core = self.workbench.getplugin('enaml.workbench.core')
         com = u'hqc_meas.instr_manager.drivers_request'
         res, drivers = core.invoke_command(com, {'drivers': list(drivs)}, self)
         if not res:
@@ -94,7 +162,7 @@ class MeasureSpace(Workspace):
 
         com = u'hqc_meas.instr_manager.profiles_request'
         res, profiles = core.invoke_command(com, {'profiles': list(profs)},
-                                            self._plugin)
+                                            self.plugin)
         if not res and profiles:
             mes = cleandoc('''Failed to get all profiles for the measure,
                            missing :{}'''.format(profiles))
@@ -116,7 +184,7 @@ class MeasureSpace(Workspace):
                                            test_instr=test_instr)
 
         core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
-                            {'profiles': profiles}, self._plugin)
+                            {'profiles': profiles}, self.plugin)
 
         if check:
             default_filename = measure.monitor.measure_name + '_last_run.ini'
@@ -131,7 +199,7 @@ class MeasureSpace(Workspace):
             meas.store['profiles'] = profs
             meas.status = 'READY'
             meas.infos = 'The measure is ready to be performed by an engine.'
-            self._plugin.enqueued_measures.append(meas)
+            self.plugin.enqueued_measures.append(meas)
 
             return True
 
@@ -153,6 +221,8 @@ class MeasureSpace(Workspace):
 
         """
         measure.enter_edition_state()
+        measure.status = 'READY'
+        measure.infos = 'Measure re-enqueued by the user'
 
     def start_processing_measures(self):
         """ Starts to perform the measurement in the queue.
@@ -160,15 +230,15 @@ class MeasureSpace(Workspace):
         Measure will be processed in their order of appearance in the queue.
 
         """
-        if not self._plugin.selected_engine:
+        if not self.plugin.selected_engine:
             pass
             # TODO open dialog (use content as parent)
 
-        self._plugin.flags.clear()
+        self.plugin.flags.clear()
 
-        measure = self._plugin.find_next_measure()
+        measure = self.plugin.find_next_measure()
         if measure is not None:
-            self._plugin.start_measure()
+            self.plugin.start_measure()
 
     def process_single_measure(self, measure):
         """ Performs a single measurement and then stops.
@@ -179,27 +249,27 @@ class MeasureSpace(Workspace):
             Index of the measurement to perform in the queue.
 
         """
-        self._plugin.flags.clear()
-        self._plugin.flags['stop_processing'] = True
+        self.plugin.flags.clear()
+        self.plugin.flags['stop_processing'] = True
 
-        self._plugin.start_measure(measure)
+        self.plugin.start_measure(measure)
 
     def stop_current_measure(self):
         """
         """
-        self._plugin.stop_measure()
+        self.plugin.stop_measure()
 
     def stop_processing_measures(self):
         """
         """
-        self._plugin.stop_processing()
+        self.plugin.stop_processing()
 
     def force_stop_measure(self):
         """
         """
-        self._plugin.force_stop_measure()
+        self.plugin.force_stop_measure()
 
     def force_stop_processing(self):
         """
         """
-        self._plugin.force_stop_processing()
+        self.plugin.force_stop_processing()

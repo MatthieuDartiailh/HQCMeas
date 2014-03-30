@@ -1,41 +1,53 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : edition_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from atom.api import Typed, ContainerList, Instance
 from enaml.stdlib.mapped_view import MappedView
 from enaml.layout.api import hbox, spacer, vbox, align
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
-                               Label, Field, CheckBox, GroupBox)
+                               Label, Field, CheckBox, GroupBox, Notebook,
+                               DockItem)
 from enaml.core.api import Conditional
 
-from ..enaml_util.qt_tree_widget import QtTreeWidget
-from ..enaml_util.tree_nodes import TreeNode
-from ..enaml_util.qt_tree_menu import (CopyAction, CutAction, PasteAction,
-                                        NewAction, RenameAction, DeleteAction)
+from hqc_meas.utils.widgets.qt_tree_widget import QtTreeWidget
+from hqc_meas.utils.widgets.tree_nodes import TreeNode
+from hqc_meas.utils.widgets.qt_tree_menu import \
+    (CopyAction, CutAction, PasteAction, NewAction, RenameAction, DeleteAction)
 
-from ..tasks import (BaseTask, SimpleTask, ComplexTask)
-from ..tasks.views import TASK_VIEW_MAPPING
-#from ..task_management.task_saving import save_task
-from ..task_management.task_building import build_task
+from hqc_meas.tasks.api import (BaseTask, SimpleTask, ComplexTask)
+from .editors.base_editor import BaseEditor
+from .workspace import MeasureSpace
 
-from .edition_handling import EditorHandler
-from .monitoring_views import EditMonitorView
 
 enamldef SaveAction(Action):
+
     text = 'Save template'
     attr action_context
     triggered ::
         widget, node, obj, nid = action_context['data']
-        save_task(obj, mode = 'template')
+        # TODO use core
+#        save_task(obj, mode='template')
+
 
 enamldef SimpleMenu(Menu): menu:
+    """ Menu for simple tasks.
+
+    """
     attr context
+
     NewAction:
         action_context << context
         factory = build_task
         mode = 'Add before'
-        kwargs = {'parent_ui' : menu}
+        kwargs = {'parent_ui': menu}
     NewAction:
         action_context << context
         factory = build_task
         mode = 'Add after'
-        kwargs = {'parent_ui' : menu}
+        kwargs = {'parent_ui': menu}
     Action:
         separator = True
     CutAction:
@@ -53,16 +65,22 @@ enamldef SimpleMenu(Menu): menu:
     RenameAction:
         action_context << context
 
+
 enamldef ComplexMenu(Menu): menu:
+    """ Menu for complex tasks.
+
+    """
     attr context
+    attr workspace
+
     NewAction:
         action_context << context
         factory = build_task
-        kwargs = {'parent_ui' : menu}
+        kwargs = {'parent_ui': menu}
     Action:
         separator = True
-    SaveAction:
-        action_context << context
+#    SaveAction:
+#        action_context << context
     Action:
         separator = True
     CutAction:
@@ -80,29 +98,64 @@ enamldef ComplexMenu(Menu): menu:
     RenameAction:
         action_context << context
 
-enamldef MeasView(GroupBox):
+
+class _MeasEditionModel(Atom):
+    """
+    """
+    # Instance of the workspace
+    workspace = Typed(MeasureSpace)
+
+    # Currently selected task.
+    selected_task = Instance(BaseTask)
+
+    # List of all editors which can be used given the selected_task
+    valid_editors = Dict(Unicode(), Instance(BaseEditor))
+
+    def _observe_selected_task(self, change):
+        """
+        """
+        editors = self.workspace.plugin.editors
+        new_task = change['value']
+        valid_editor_ids = []
+        for id, editor in editors.iteritems():
+            if editor.test(self.workspace, new_task):
+                valid_editor_ids.append(id)
+
+        if sorted(valid_editors.keys()) != sorted(valid_editor_ids):
+            self.valid_editors = {id, editors[id].factory(workspace.workbench)
+                                  for id in valid_editor_ids}
+
+
+enamldef MeasEditionView(GroupBox):
+    """ Main view for measurement edition
+
+    """
     title = 'Measure'
-    attr meas
-    attr selected_task << meas.root_task
+
+    attr workspace
+    attr selected_task << workspace.plugin.edited_measure.root_task
+    selected_task >> _internal.selected_task
+
+    attr _internal = _MeasEditionModel(workspace=workspace)
+
     constraints << [vbox(
-                        hbox(lab, name, use_mon, *ed_mon.items),
-                        hbox(tree, task_view)),
-                    align('v_center', lab, name),
-                    align('v_center', name, use_mon)]
+                        hbox(lab, name, edition),
+                        hbox(tree, task_view)
+                        ),
+                    align('v_center', lab, name)]
+
     Label: lab:
         text = 'Name'
     Field: name:
         hug_width = 'ignore'
         text := meas.monitor.measure_name
-    CheckBox: use_mon:
-        text = 'Use monitor'
-        checked := meas.use_monitor
-    Conditional: ed_mon:
-        condition << meas.use_monitor
-        PushButton:
-            text = 'Edit monitor'
-            clicked ::
-                EditMonitorView(monitor = meas.monitor).exec_()
+    PushButton: edition:
+        text = 'Edit'
+        tool_tip = 'Edit monitors, headers, and checks linked to the measure.'
+        clicked ::
+            #TODO implement
+            pass
+
     QtTreeWidget: tree:
         hug_height = 'ignore'
         root_node << meas.root_task
@@ -113,7 +166,7 @@ enamldef MeasView(GroupBox):
                     children  = 'children_task',
                     label     = 'task_label',
                     add = [BaseTask],
-                    menu = ComplexMenu()),
+                    menu = ComplexMenu(workspace=workspace)),
                 TreeNode(
                     node_for  = [SimpleTask],
                     auto_open = True,
@@ -121,52 +174,11 @@ enamldef MeasView(GroupBox):
                     label     = 'task_label',
                     menu      =  SimpleMenu()),
                     ]
-    Container: task_view:
-        MappedView:
-            model << selected_task
-            typemap = TASK_VIEW_MAPPING
-            modelkey = 'task'
-            kwargs = {'mapping' : TASK_VIEW_MAPPING}
 
-enamldef MeasEditorContainer(Container): widget:
-    alias meas : view.meas
-    alias selected : view.selected_task
-    attr handler = EditorHandler()
-    alias enqueue_clicked : enqueue_button.clicked
-    constraints = [vbox(view, 
-                        hbox(new, save, save_template, load, load_template,
-                            spacer, enqueue_button))]
-    MeasView: view:
-        pass
-    PushButton: new:
-        text = 'New'
-        hug_width  = 'strong'
-        hug_height = 'strong'
-        clicked :: handler.new_clicked(widget)
-    PushButton: save:
-        text = 'Save'
-        hug_width  = 'strong'
-        hug_height = 'strong'
-        clicked :: handler.save_clicked(widget)
-    PushButton: save_template:
-        text = 'Save as template'
-        hug_width  = 'strong'
-        hug_height = 'strong'
-        clicked :: handler.save_template_clicked(widget)
-    PushButton: load:
-        text = 'Load'
-        hug_width  = 'strong'
-        hug_height = 'strong'
-        clicked :: handler.load_clicked(widget)
-    PushButton: load_template:
-        text = 'Load template'
-        hug_width  = 'strong'
-        hug_height = 'strong'
-        clicked :: handler.load_template_clicked(widget)
-    PushButton: enqueue_button:
-        text = 'Enqueue'
-        hug_width  = 'strong'
-        hug_height = 'strong'
+    Notebook: editors:
+        Include:
+            objects << _internal.valid_editors.values()
+
 
 enamldef MeasEditorDialog(Dialog): widget:
     alias meas : view.meas
@@ -187,4 +199,4 @@ enamldef MeasEditorDialog(Dialog): widget:
             hug_width  = 'strong'
             hug_height = 'strong'
             clicked ::
-                handler.save_template_clicked(widget)   
+                handler.save_template_clicked(widget)
