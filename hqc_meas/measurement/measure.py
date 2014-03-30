@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from atom.api import (Atom, Instance, Bool, Dict, Unicode, Typed, Str, Int)
+from atom.api import (Atom, Instance, Dict, Unicode, Typed, Str)
 from textwrap import fill
 from configobj import ConfigObj
+import logging
 
-from ..task_management.saving import save_task
-from ..task_management.building import build_root
 from ..tasks.api import RootTask
 
 
@@ -25,13 +24,10 @@ class Measure(Atom):
     infos = Str()
 
     # Root task holding the measure logic.
-    root_task = Instance(RootTask, ())
+    root_task = Instance(RootTask)
 
     # Dict of active monitor for this measure.
     monitors = Dict(Unicode())
-
-    # Counter keeping track of the active monitors.
-    active_monitors = Int()
 
     # Dict of checks for this measure
     checks = Dict(Unicode())
@@ -42,34 +38,89 @@ class Measure(Atom):
     # Dict to store useful runtime infos
     store = Dict(Str())
 
-    use_monitor = Bool(True)
-
-# TODO update to new logic
-# =============================================================================
     def save_measure(self, path):
-        """
+        """ Save the measure as a ConfigObj object.
+
+        Parameters
+        ----------
+        path : unicode
+            Path of the file to which save the measure.
+
         """
         config = ConfigObj(path, indent_type='    ')
-        config['root_task'] = save_task(self.root_task, mode='config')
-        config['monitor'] = self.monitor.save_monitor_state()
+        core = self.plugin.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'hqc_meas.task_manager.save_task'
+        config['root_task'] = core.invoke_command(cmd,
+                                                  {'task': self.root_task,
+                                                   'mode': 'config'}, self)
+
+        i = 0
+        for id, monitor in self.monitors.iteritems():
+            state = monitor.get_state()
+            state['id'] = id
+            config['monitor_{}'.format(i)] = state
+            i += 1
+
+        config['monitors'] = repr(i)
+        config['checks'] = repr(self.checks.keys())
+        config['headers'] = repr(self.headers.keys())
+
         config.write()
 
-    # TODO make it a class method as it will need to request monitor, checks,
-    # ... from the plugin.
-    def load_measure(self, path):
-        """
-        """
-        config = ConfigObj(path)
-        if 'root_task' in config:
-            self.root_task = build_root(mode='config',
-                                        config=config['root_task'])
-            self.monitor.load_monitor_state(config['monitor'])
-        else:
-            #Assume this a raw root_task file without name or monitor
-            self.root_task = build_root(mode='config',
-                                        config=config)
+    @classmethod
+    def load_measure(cls, measure_plugin, path):
+        """ Build a measure from a ConfigObj file.
 
-# =============================================================================
+        Parameters
+        ----------
+        measure_plugin : MeasurePlugin
+            Instance of the MeasurePlugin storing all declarations.
+
+        path : unicode
+            Path of the file from which to load the measure.
+
+        """
+        logger = logging.getLogger(__name__)
+        measure = cls()
+        config = ConfigObj(path)
+        workbench = measure_plugin.workbench
+        core = workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'hqc_meas.task_manager.build_root'
+        kwarg = {'mode': 'config', 'config': config['root_task']}
+        measure.root_task = core.invoke_command(cmd, kwarg, measure)
+
+        for i in range(eval(config['monitors'])):
+            monitor_config = config['monitor_{}'.format(i)]
+            id = monitor_config.pop('id')
+            try:
+                monitor = measure_plugin.monitors[id].factory(workbench,
+                                                              raw=True)
+                monitor.set_state(monitor_config)
+                measure.add_monitor(id, monitor)
+
+            except KeyError:
+                mess = 'Requested monitor not found : {}'.format(id)
+                logger.warn(mess)
+
+        for check_id in eval(config['checks']):
+            try:
+                check = measure_plugin.checks[check_id]
+                measure.checks[check_id] = check
+
+            except KeyError:
+                mess = 'Requested check not found : {}'.format(check_id)
+                logger.warn(mess)
+
+        for header_id in eval(config['headers']):
+            try:
+                header = measure_plugin.headers[header_id]
+                measure.headers[header_id] = header
+
+            except KeyError:
+                mess = 'Requested check not found : {}'.format(header_id)
+                logger.warn(mess)
+
+        return measure
 
     def run_checks(self, workbench, test_instr=False, internal_only=False):
         """ Run the checks to see if everything is ok.
@@ -101,6 +152,65 @@ class Measure(Atom):
 
         return result, full_report
 
+    def enter_edition_state(self):
+        """ Make the the measure ready to be edited
+
+        """
+        root = self.root_task
+        for monitor in self.monitors:
+            root.task_database.observe('notifier',
+                                       monitor.database_modified)
+
+    def enter_running_state(self):
+        """ Make the measure ready to run.
+
+        """
+        root = self.root_task
+        for monitor in self.monitors:
+            root.task_database.unobserve('notifier',
+                                         monitor.database_modified)
+
+    def add_monitor(self, id, monitor):
+        """ Add a monitor, refresh its entries and connect observers.
+
+        Parameters
+        ----------
+        id : unicode
+            Id of the monitor being added.
+
+        monitor : BaseMonitor
+            Instance of the monitor being added.
+
+        """
+        if id in self.monitors:
+            logger = logging.getLogger(__name__)
+            logger.warn('Monitor already present : {}'.format(id))
+            return
+
+        database = self.root_task.task_database
+        self.monitors[id] = monitor
+        entries = database.list_all_entries()
+        monitor.refresh_monitored_entries(entries)
+        database.observe('notifier', monitor.database_modified)
+
+    def remove_monitor(self, id):
+        """ Remove a monitor and disconnect observers.
+
+        Parameters
+        ----------
+        id : unicode
+            Id of the monitor to remove.
+
+        """
+        if id not in self.monitors:
+            logger = logging.getLogger(__name__)
+            logger.warn('Monitor is not present : {}'.format(id))
+            return
+
+        database = self.root_task.task_database
+        monitor = self.monitors.pop(id)
+        database.unobserve('notifier', monitor.database_modified)
+
     def collect_headers(self, workbench):
         """ Set the default_header of the root task using all contributions.
 
@@ -115,7 +225,7 @@ class Measure(Atom):
         self.root_task.default_header = header
 
     def collect_entries_to_observe(self):
-        """ Get all the entries the monitor ask to be notified about.
+        """ Get all the entries the monitors ask to be notified about.
 
         Returns
         -------
@@ -146,17 +256,16 @@ class Measure(Atom):
             root.task_database.observe('notifier',
                                        monitor.database_modified)
 
-            monitor.database_entries = database.list_all_entries()
-            monitor.refresh_monitored_entries()
+            monitor.refresh_monitored_entries(database.list_all_entries())
 
-    def _observe_is_running(self, change):
+    def _observe_status(self, change):
         """ Observer updating the monitors' status when the measure is run.
 
         """
         new = change['value']
         if new:
             for monitor in self.monitors:
-                monitor.status = 'RUNNING'
+                monitor.status = new
 
     def _observe_name(self, change):
         """ Observer ensuring that the monitors know the name of the measure.
@@ -164,4 +273,4 @@ class Measure(Atom):
         """
         name = change['value']
         for monitor in self.monitors:
-                monitor.name = name
+                monitor.measure_name = name
