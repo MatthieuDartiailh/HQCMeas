@@ -18,10 +18,11 @@ process log emitted in the measure process.
     GuiConsoleHandler
         Logger handler adding the message of a record to a GUI panel.
     QueueLoggerThread
-        Thread getting log record from a queue and asking logging to handle them
+        Thread getting log record from a queue and asking logging to handle
+        them.
 """
 
-import logging, Queue, time, os, datetime, sys
+import logging, Queue, time, os, datetime
 from logging.handlers import TimedRotatingFileHandler
 from inspect import cleandoc
 from threading import Thread
@@ -30,6 +31,7 @@ try:
     import codecs
 except ImportError:
     codecs = None
+
 
 class StreamToLogRedirector(object):
     """Simple class to redirect a stream to a logger.
@@ -59,8 +61,8 @@ class StreamToLogRedirector(object):
         Useless method implemented for compatibilty
 
     """
-    def __init__(self, logger, stream_type = 'stdout'):
-        self.logger =  logger
+    def __init__(self, logger, stream_type='stdout'):
+        self.logger = logger
         if stream_type == 'stderr':
             self.level = logging.CRITICAL
         else:
@@ -69,27 +71,28 @@ class StreamToLogRedirector(object):
     def write(self, message):
         """Record the received message using the logger stored in `logger`
 
-        The received message is first strip of starting and trailing whitespaces
-        and line return. If `level` is `logging.CRITICAL` the message is
-        directly logged, otherwise the message is parsed to look for the
-        following markers, corresponding to logging levels : '<DEBUG>',
-        '<WARNING>', '<ERROR>', '<CRITICAL>'. This allows to use different
-        logging levels using print.
+        The received message is first strip of starting and trailing
+        whitespaces and line return. If `level` is `logging.CRITICAL` the
+        message is directly logged, otherwise the message is parsed to look
+        for the following markers, corresponding to logging levels :
+        '<DEBUG>', '<WARNING>', '<ERROR>', '<CRITICAL>'. This allows to use
+        different logging levels using print.
+
         """
         message = message.strip()
         if message != '':
             if self.level != logging.CRITICAL:
                 if '<DEBUG>' in message:
-                    message = message.replace('<DEBUG>','').strip()
+                    message = message.replace('<DEBUG>', '').strip()
                     self.logger.warning(message)
                 elif '<WARNING>' in message:
-                    message = message.replace('<WARNING>','').strip()
+                    message = message.replace('<WARNING>', '').strip()
                     self.logger.warning(message)
                 elif '<ERROR>' in message:
-                    message = message.replace('<ERROR>','').strip()
+                    message = message.replace('<ERROR>', '').strip()
                     self.logger.error(message)
                 elif '<CRITICAL>' in message:
-                    message = message.replace('<CRITICAL>','').strip()
+                    message = message.replace('<CRITICAL>', '').strip()
                     self.logger.critical(message)
                 else:
                     self.logger.log(self.level, message)
@@ -100,6 +103,7 @@ class StreamToLogRedirector(object):
         """Useless function implemented for compatibility
         """
         return None
+
 
 # Copied and pasted from the logging module of Python 3.3
 class QueueHandler(logging.Handler):
@@ -166,6 +170,7 @@ class QueueHandler(logging.Handler):
         except:
             self.handleError(record)
 
+
 class GuiConsoleHandler(logging.Handler):
     """Logger record sending the log message to a GUI panel
 
@@ -194,11 +199,11 @@ class GuiConsoleHandler(logging.Handler):
 
         """
         panel = self.process_panel_dict[record.processName]
-        
+
         try:
             if record.levelname == 'INFO':
-                 deferred_call(self._write_in_panel, panel,
-                               record.message + '\n')
+                deferred_call(self._write_in_panel, panel,
+                              record.message + '\n')
             elif record.levelname == 'CRITICAL':
                 deferred_call(self._write_in_panel, panel,
                               cleandoc('''An error occured please check the
@@ -210,8 +215,8 @@ class GuiConsoleHandler(logging.Handler):
             raise
         except:
             self.handleError(record)
-            
-    @staticmethod        
+
+    @staticmethod
     def _write_in_panel(panel, string):
         """
         """
@@ -244,14 +249,15 @@ class QueueLoggerThread(Thread):
             except Queue.Empty:
                 continue
 
+
 class DayRotatingTimeHandler(TimedRotatingFileHandler):
     """
     """
-    def __init__(self, filename, when = 'midnight', **kwargs):
+    def __init__(self, filename, when='midnight', **kwargs):
         self.when = when.upper()
-        super(DayRotatingTimeHandler, self).__init__(filename, when = when,
-                                                                     **kwargs)
-        
+        super(DayRotatingTimeHandler, self).__init__(filename, when=when,
+                                                     **kwargs)
+
     def _open(self):
         """
         Open the a file named accordingly to the base name and the time of
@@ -262,21 +268,20 @@ class DayRotatingTimeHandler(TimedRotatingFileHandler):
             today = str(datetime.datetime.today()).split(' ')[0]
         else:
             aux = str(datetime.datetime.today()).split('.')[0]
-            aux = aux.replace(' ','_')
+            aux = aux.replace(' ', '_')
             today = aux.replace(':', '-')
-        
+
         base_dir, base_filename = os.path.split(self.baseFilename)
         aux = base_filename.split('.')
         filename = aux[0] + today + '.' + aux[1]
         path = os.path.join(base_dir, filename)
-        
+
         if self.encoding is None:
             stream = open(path, self.mode)
         else:
             stream = codecs.open(path, self.mode, self.encoding)
         return stream
-        
-    
+
     def doRollover(self):
         """Do a rollover. Close old file and open a new one, no renaming is
         performed to avoid issues on window.
@@ -292,13 +297,13 @@ class DayRotatingTimeHandler(TimedRotatingFileHandler):
             os.remove(s)
 
         self.stream = self._open()
-        
+
         newRolloverAt = self.computeRollover(currentTime)
         while newRolloverAt <= currentTime:
             newRolloverAt = newRolloverAt + self.interval
         #If DST changes and midnight or weekly rollover, adjust for this.
         if ((self.when == 'MIDNIGHT' or self.when.startswith('W'))
-                                                            and not self.utc):
+                and not self.utc):
             dstAtRollover = time.localtime(newRolloverAt)[-1]
             if dstNow != dstAtRollover:
                 if not dstNow:  # DST kicks in before next rollover, so we need to deduct an hour

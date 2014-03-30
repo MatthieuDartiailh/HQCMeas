@@ -1,0 +1,87 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : monitor_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
+                               MultilineField)
+from enaml.layout.api import vbox, hbox, spacer
+from enaml.core.api import Include
+
+from hqc_meas.utils.widgets.qt_list_str_editor import QtListStrEditor
+
+# TODO rename as I must deal not only with monitors but also headers and checks
+
+enamldef MonitorSelector(Dialog): dial:
+    """ Simple dialog to select a monitor.
+
+    """
+    attr measure
+    attr monitors = measure.plugin.monitors
+    attr selected_id
+    attr selected_builder
+
+    attr _mapping = [monitor_id.split('.')[-1].capitalize(): monitor_id
+                     for monitor_id in monitors]
+
+    Container:
+        QtListStrEditor:
+            items << sorted([monitor.split('.')[-1].capitalize()
+                             for monitor in monitors
+                             if monitor not in measure.monitor])
+            selected_item::
+                new_val = change['value']
+                key = _mapping[new_val]
+                dial.selected_builder = monitors[key]
+                dial.selected_id = key
+
+        MultilineField:
+            text << selected_builder.description if selected_builder
+
+        PushButton:
+            text = 'Ok'
+            clicked ::
+                dial.accept()
+
+        PushButton:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()
+
+
+enamldef MonitorEditor(Container):
+    """
+    """
+    attr measure
+    attr pages << {monitor.get_editor_page(): id
+                   for id, monitor in measure.monitors.iteritems()}
+
+    constraints << [hbox(notebook,
+                         vbox(add, remove))
+                    ]
+
+    Notebook: notebook:
+        tabs_closable = False
+        Include:
+            objects << pages.items()
+
+    PushButton: add:
+        text = 'Add monitor'
+        enabled << not all([id in pages for id in measure.plugin.monitors])
+        clicked ::
+            selector = MonitorSelector(measure=measure)
+            if selector.exec_():
+                workbench = measure.plugin.workbench
+                monitor = selector.selected_builder.factory(workbench)
+                measure.add_monitor(selector.selected_id,
+                                    monitor)
+
+    PushButton: remove:
+        text = 'Remove monitor'
+        enabled << notebook.selected_tab
+        clicked ::
+            page = [page for page in pages
+                    if page.title == notebook.selected_tab][0]
+            id = pages[page]
+            measure.remove_monitor(id)

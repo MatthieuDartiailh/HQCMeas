@@ -1,23 +1,38 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : execution_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 from enaml.core.api import Looper
 from enaml.layout.api import hbox, spacer, vbox, grid, align
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Stack,
-                              StackItem, CheckBox, Border, DockPane, Dialog,
-                              Label, Form, Field, GroupBox, MultilineField)
+                               StackItem, CheckBox, Border, DockItem, Dialog,
+                               Label, Form, Field, GroupBox, MultilineField)
 import os
 
-from ..enaml_util.list_editor import ListEditor
-from ..enaml_util.qt_list_str_widget import QtListStrWidget
+from hqc_meas.utils.widgets.list_editor import ListEditor
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+
 from .monitoring_views import EditMonitorView
 from .edition_view import MeasEditorDialog
 
+
 enamldef MeasView(GroupBox): widget:
-    attr model
+    """ Simple visual summary of a measure.
+
+    """
+    attr measure
+
     constraints = [vbox(hbox(sta_lab, sta_val, spacer),
                         hbox(edit, spacer, use_mon, edit_mon))]
     Label: sta_lab:
         text = 'Status :'
     Label: sta_val:
-        text << model.monitor.status
+        text << measure.status
+        tool_tip << measure.infos
+
+    # TODO todo
     PushButton: edit:
         text = 'Edit measure'
         clicked ::
@@ -26,7 +41,7 @@ enamldef MeasView(GroupBox): widget:
             model.monitor.status = 'EDITING'
             default_path = model.root_task.default_path
             meas_editor.exec_()
-    
+
             task = model.root_task
             path = os.path.join(default_path,
                             model.monitor.measure_name + '_last_run.ini')
@@ -37,69 +52,69 @@ enamldef MeasView(GroupBox): widget:
                 path = os.path.join(task.default_path,
                             model.monitor.measure_name + '_last_run.ini')
                 model.save_measure(path)
-    
+
             model.monitor.status = 'READY'
-    CheckBox: use_mon:
-        text = 'Use monitor'
-        checked := model.use_monitor
+
+    # TODO create monitor edition view
     PushButton: edit_mon:
-        text = 'Edit monitor'
+        text = 'Edit'
         clicked ::
             EditMonitorView(monitor = model.monitor).exec_()
             path = os.path.join(default_path,
                             model.monitor.measure_name + '_last_run.ini')
             model.save_measure(path)
 
-enamldef ExecutionView(DockPane):
-    attr ex_model
+
+enamldef ExecutionView(DockItem):
+
+    attr workspace
     closable = False
+
     Container:
         constraints << [vbox(ed,
                             hbox(start, spacer, stop, stop_all),
                             hbox(spacer, mon))]
+
         ListEditor(MeasView): ed:
-            ed.model << ex_model
-            ed.iterable_name = 'meas_holder'
+            ed.model << workspace.plugin
+            ed.iterable_name = 'enqueued_measures'
             ed.operations = ['move', 'delete']
+
         PushButton: start:
             text = 'Start'
-            enabled << bool(ex_model.meas_holder) and not ex_model.running
+            enabled << bool(workspace.plugin.enqueued_measures) \
+                and not 'processing' in workspace.plugin.flags
             clicked ::
-                ex_model._start_button_clicked(start)
+                workspace.start_processing_measures()
         PushButton: stop:
             text = 'Stop task'
-            enabled << ex_model.running
+            enabled << 'processing' in workspace.plugin.flags
             clicked ::
-                ex_model._stop_button_clicked()
+                workspace.stop_current_measure()
+            Menu:
+                Action:
+                    text = 'Force measure stop'
+                    enabled << 'attempt_stop' in workspace.plugin.flags
+                    triggered::
+                        workspace.force_stop_measure()
         PushButton: stop_all:
             text = 'Stop all'
-            enabled << ex_model.running
-            clicked :: 
-                ex_model._stop_all_button_clicked()
-        PushButton: mon:
-            text = 'Open monitor'
-            enabled << bool(ex_model.running and ex_model.monitor_display 
-                                and not ex_model.monitor_display.visible)
-            clicked::
-                ex_model.monitor_display.show()
+            enabled << 'processing' in workspace.plugin.flags
+            clicked ::
+                workspace.stop_processing()
+            Menu:
+                Action:
+                    text = 'Force processing stop'
+                    enabled << 'attempt_stop' in workspace.plugin.flags
+                    triggered::
+                        workspace.force_stop_processing()
 
-enamldef TaskCheckDisplay(Dialog): dial:
-    attr model
-    Container:
-        constraints = [vbox(grid([lis_lab, che_lab],[lis, che]),
-                            hbox(spacer,close)),
-                        align('left', lis_lab, lis),
-                        align('left', che_lab, che)]
-        Label: lis_lab:
-            text = 'Failed tests'
-        QtListStrWidget: lis:
-            items << model.name_to_path_dict.keys()
-            selected_item >> model.selected_check
-        Label: che_lab:
-            text << model.full_path
-        MultilineField: che:
-            text << model.message
-            read_only = True
-        PushButton: close:
-            text = 'Close'
-            clicked :: dial.accept()
+        PushButton: mon:
+            text = 'Open monitors'
+            enabled << 'processing' in workspace.plugin.flags
+            clicked::
+                monitors = workspace.plugin.running_measure.monitors.values()
+                for monitor in monitors:
+                    monitor.show_monitor()
+
+

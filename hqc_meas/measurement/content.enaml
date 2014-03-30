@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : content.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.widgets.api import Container, DockArea
+
+
+enamldef MeasEditorContainer(DockItem): widget:
+    alias meas : view.meas
+    alias selected : view.selected_task
+    attr handler = EditorHandler()
+    alias enqueue_clicked : enqueue_button.clicked
+
+    Container:
+        constraints = [vbox(view,
+                            hbox(new, save, save_template, load, load_template,
+                                spacer, enqueue_button))]
+        MeasView: view:
+            pass
+        PushButton: new:
+            text = 'New'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.new_clicked(widget)
+        PushButton: save:
+            text = 'Save'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.save_clicked(widget)
+        PushButton: save_template:
+            text = 'Save as template'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.save_template_clicked(widget)
+        PushButton: load:
+            text = 'Load'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.load_clicked(widget)
+        PushButton: load_template:
+            text = 'Load template'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.load_template_clicked(widget)
+        PushButton: enqueue_button:
+            text = 'Enqueue'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+
+# Will also need to create the dock item for logging
+
+
+enamldef MeasureContent(Container):
+    """
+    """
+    attr workspace
+
+    DockArea:

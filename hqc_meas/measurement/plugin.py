@@ -32,6 +32,9 @@ CHECKS_POINT = u'hqc_meas.measure.checks'
 
 EDITORS_POINT = u'hqc_meas.measure.editors'
 
+# TODO do something
+DOCKITEMS_POINT = u'hqc_meas.measure.dock_items'
+
 
 class MeasurePlugin(HasPrefPlugin):
     """
@@ -56,8 +59,6 @@ class MeasurePlugin(HasPrefPlugin):
     engines = Dict(Unicode(), Typed(Engine))
 
     # Currently selected engine represented by its manifest id.
-    # TODO in refresh should check this engine exists, otherwise warn and put
-    # it to ''
     selected_engine = Unicode().tag(pref=True)
 
     # Instance of the currently used engine.
@@ -134,6 +135,8 @@ class MeasurePlugin(HasPrefPlugin):
         """ Start a new measure.
 
         """
+        self.flags['processing'] = True
+
         logger = logging.getLogger(__name__)
 
         # Discard old monitors if there is any remaining.
@@ -196,13 +199,16 @@ class MeasurePlugin(HasPrefPlugin):
         """ Stop the currently active measure.
 
         """
+        self.flags['stop_attempt'] = True
         self.engine_instance.stop()
 
     def stop_processing(self):
         """ Stop processing the enqueued measure.
 
         """
+        self.flags['stop_attempt'] = True
         self.flags['stop_processing'] = True
+        del self.flags['processing']
         self.engine_instance.exit()
 
     def force_stop_measure(self):
@@ -216,6 +222,7 @@ class MeasurePlugin(HasPrefPlugin):
 
         """
         self.flags['stop_processing'] = True
+        del self.flags['processing']
         self.engine_instance.force_exit()
 
     def find_next_measure(self):
@@ -269,6 +276,7 @@ class MeasurePlugin(HasPrefPlugin):
         else:
             meas = self.find_next_measure()
             if meas is not None:
+                self.flags.clear()
                 self.start_measure(meas)
             else:
                 self.stop_processing()
@@ -302,6 +310,13 @@ class MeasurePlugin(HasPrefPlugin):
             new_engines[plugin_id] = engine
 
         self.engines = new_engines
+
+        if self.selected_engine not in new_engines:
+            logger = logging.getLogger(__name__)
+            msg = cleandoc('''Old selected engine is not available anymore :
+                           {}'''.format(self.selected_engine))
+            logger.warn(msg)
+            self.selected_engine = ''
 
     def _load_engine(self, extension):
         """ Load the Engine object for the given extension.
