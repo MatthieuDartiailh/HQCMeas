@@ -24,6 +24,7 @@ enamldef TextMonitorManifest(PluginManifest):
     Extension:
         point = u'hqc_meas.measure.monitors'
         Monitor:
+            description = u'Monitor displaying infos as text.'
             factory = monitor_factory
 
     # TODO add contribution to the menus.

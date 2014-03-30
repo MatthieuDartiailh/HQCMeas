@@ -20,4 +20,8 @@ enamldef ProcessEngineManifest(PluginManifest):
         id = 'engine'
         point = u'hqc_meas.measure.engines'
         Engine:
+            description = u'Engine performing the measure in a subprocess'
             factory = ProcessEngine
+
+    # TODO should also contribute a dockItem for displaying process log + filter
+    # for main log display.

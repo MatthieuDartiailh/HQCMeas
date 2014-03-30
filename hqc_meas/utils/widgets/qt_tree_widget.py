@@ -69,22 +69,22 @@ class QtTreeWidget(RawWidget):
 
     # The event fired when the application wants to refresh the viewport.
     refresh = d_(Event())
-        
+
     hide_root = d_(Bool())
-    
+
     auto_expand = d_(Bool(True))
-    
+
     column_headers = d_(List(Unicode()))
-    
-    show_icons = d_(Bool(True))  
-    
+
+    show_icons = d_(Bool(True))
+
     selection_mode = d_(Unicode('single'))
-    
+
     nodes = d_(List(Typed(TreeNode)))
-    
+
     hug_height = 'ignore'
-    
-    _node_control = ForwardTyped(lambda : TreeNodeController) 
+
+    _node_control = ForwardTyped(lambda : TreeNodeController)
 
     #---------------------------------------------------------------------------
     #  Finishes initializing the editor by creating the underlying toolkit widget
@@ -93,7 +93,7 @@ class QtTreeWidget(RawWidget):
     def create_widget(self, parent):
         """ Finishes initializing the editor by creating the underlying toolkit
             widget.
-        """        
+        """
         # Create tree Widget and connect signal
         tree = _TreeWidget(parent)
         column_count = len(self.column_headers)
@@ -105,7 +105,7 @@ class QtTreeWidget(RawWidget):
             tree.setHeaderHidden(True)
         if self.selection_mode == 'extended':
             tree.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
-        
+
         #Create the NodeController
         node_control = TreeNodeController(_tree = tree,
                                           column_headers = self.column_headers,
@@ -114,7 +114,7 @@ class QtTreeWidget(RawWidget):
                                           auto_expand = self.auto_expand,
                                           nodes = self.nodes)
         self._node_control = node_control
-        
+
         tree.itemExpanded.connect(node_control._on_item_expanded)
         tree.itemCollapsed.connect(node_control._on_item_collapsed)
         tree.itemSelectionChanged.connect(node_control._on_tree_sel_changed)
@@ -124,7 +124,7 @@ class QtTreeWidget(RawWidget):
 
         node_control.set_root_node(self.root_node)
         return tree
-        
+
     def destroy(self):
         """ Disposes of the contents of an editor.
         """
@@ -137,7 +137,7 @@ class QtTreeWidget(RawWidget):
             controller._delete_node(tree.invisibleRootItem())
 
         super( QtTreeWidget, self ).destroy()
-        
+
     @observe('selection')
     def _observe_selection(self, change):
         """ Handles the **selection** event.
@@ -161,11 +161,11 @@ class QtTreeWidget(RawWidget):
                 tree.setCurrentItem(node_control._object_info(selection)[2])
         except:
             raise
-    
-    @observe('_node_control.selected')    
+
+    @observe('_node_control.selected')
     def _control_selected_changed(self, change):
         self.selected = change['value']
-        
+
     @observe('root_node')
     def _update_proxy(self, change):
         if change['name'] == 'root_node':
@@ -175,35 +175,35 @@ class QtTreeWidget(RawWidget):
             super(QtTreeWidget, self)._update_proxy(change)
 
 class TreeNodeController(Atom):
-    
+
     # Root node being edited
     root_node = Value()
 
     # The currently selected object
     selected = Event()
-    
+
     # The currently selected object
     selection = Event()
 
     # The event fired when the application wants to veto an operation:
     veto = Event()
-        
+
     hide_root = Bool()
-    
+
     auto_expand = Bool(True)
-    
+
     column_headers = List(Unicode())
-    
+
     show_icons = Bool(True)
-    
+
     nodes = List(Typed(TreeNode))
-    
+
     multi_nodes = Dict()
-   
+
     selection_mode = Unicode('single')
-    
+
     _map = Dict()
-    
+
     _tree = ForwardTyped(lambda : _TreeWidget)
 
     #---------------------------------------------------------------------------
@@ -223,18 +223,18 @@ class TreeNodeController(Atom):
                     self.expand_levels(cnid, levels - 1)
 
     def set_root_node(self, model):
-        tree = self._tree        
+        tree = self._tree
         tree.clear()
-        
+
         self._map = {}
-        
+
         obj, node = self._node_for(model)
         if node is not None:
             if self.hide_root:
                 nid = tree.invisibleRootItem()
             else:
                 nid = self._create_item(tree, node, obj)
-                
+
             self._map[id(obj)] = [(node.get_children_id(obj), nid )]
             self._add_listeners( node, obj )
             self._set_node_data( nid, ( False, node, obj) )
@@ -244,12 +244,12 @@ class TreeNodeController(Atom):
                     nid.setExpanded(True)
                     tree.setCurrentItem(nid)
             self.expand_levels( nid, self.auto_expand, False )
-            
+
         ncolumns = tree.columnCount()
         if ncolumns > 1:
             for i in range(ncolumns):
                 tree.resizeColumnToContents(i)
-                
+
         self.selected = self.root_node
 
     def _get_brush(self, color) :
@@ -283,17 +283,17 @@ class TreeNodeController(Atom):
         else:
             cnid = QtGui.QTreeWidgetItem()
             nid.insertChild(index, cnid)
-        
+
         cnid.setText(0, node.get_label(obj))
         cnid.setIcon(0, self._get_icon(node, obj))
         cnid.setToolTip(0, node.get_tooltip(obj))
         self._set_column_labels(cnid, node.get_column_labels(obj))
 
         color = node.get_background(obj)
-        if color : 
+        if color :
             cnid.setBackground(0, self._get_brush(color))
         color = node.get_foreground(obj)
-        if color : 
+        if color :
             cnid.setForeground(0, self._get_brush(color))
 
         return cnid
@@ -854,14 +854,16 @@ class TreeNodeController(Atom):
         else:
 #            self._no_update_selected = True
             self.selected = selected
-#            self._no_update_selected = False    
+#            self._no_update_selected = False
 
     #---------------------------------------------------------------------------
     #  Handles the user right clicking on a tree node:
     #---------------------------------------------------------------------------
 
     def _on_context_menu(self, pos):
-        """ Handles the user requesting a context menuright clicking on a tree node.
+        """ Handles the user requesting a context menuright clicking on a tree
+        node.
+
         """
         tree = self._tree
         nid = tree.itemAt(pos)
@@ -885,7 +887,7 @@ class TreeNodeController(Atom):
                    'renamable' : self._is_renameable(obj, node, parent_node),
                    'deletable' : self._is_deletable(obj, node, parent_node),
                     'data' : (self, node, obj, nid)}
-                   
+
         menu = node.get_menu(context)
         if menu is not None:
             if not all((not action.visible or action.separator)
@@ -946,7 +948,7 @@ class TreeNodeController(Atom):
         if (new_object is not dropped_object) or (not make_copy):
             return new_object
 
-        return copy.deepcopy( new_object )    
+        return copy.deepcopy( new_object )
 
     def _on_nid_changed(self, nid, col):
         """ Handle changes to a widget item.
@@ -984,7 +986,7 @@ class TreeNodeController(Atom):
         """
         obj = change['object']
         name = change['name']
-        
+
         for expanded, node, nid in self._object_info_for( obj, name ):
             children = node.get_children( obj )
 
@@ -1101,7 +1103,7 @@ class _TreeWidget(QtGui.QTreeWidget):
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
-        
+
         self._dragging = None
         self._controller = None
 
@@ -1201,7 +1203,7 @@ class _TreeWidget(QtGui.QTreeWidget):
                 data = control._drop_object( to_node, to_object, data, True )
                 if data is not None:
                     control._undoable_append( to_node, to_object, data, False )
-                    
+
         elif action == 'insert':
             if dragging is not None:
                 data = control._drop_object( to_node, to_object, data, False )

@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Callable, List, Str, Bool
+from atom.api import Callable, List, Str, Bool, Unicode
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -152,6 +152,8 @@ class Monitor(Declarative):
     """ Extension for the 'monitors' extension point of a MeasurePlugin.
 
     """
+    # Description of the monitor.
+    description = d_(Unicode())
 
     # Factory function returning an instance of the monitor.
     factory = d_(Callable())

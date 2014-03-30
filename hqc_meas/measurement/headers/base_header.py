@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Callable
+from atom.api import Callable, Unicode
 from enaml.core.declarative import Declarative, d_
 
 
@@ -12,6 +12,8 @@ class Header(Declarative):
     """ Extension for the 'engines' extension point of a MeasurePlugin.
 
     """
+    # Header description.
+    description = d_(Unicode())
 
     # Function returning the contributed header.
     build_header = d_(Callable())

@@ -16,7 +16,7 @@ from hqc_meas.utils.widgets.list_editor import PopupListMenu
 
 
 def _views_helper(core, tasks):
-    """ A helper function for the _TaskView component.
+    """ A helper function.
 
     This helper instantiates the view for the given task of
     a _TaskView component.
@@ -24,7 +24,7 @@ def _views_helper(core, tasks):
     """
     t_classes = [type(task) for task in tasks]
     views = core.invoke_command('hqc_meas.task_manager.views_request',
-                               parameters={'task_classes': [t_class]})
+                                parameters={'task_classes': [t_class]})
     return views
 
 

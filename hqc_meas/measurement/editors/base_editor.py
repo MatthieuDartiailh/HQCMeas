@@ -5,24 +5,28 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Atom, Callable
+from atom.api import Atom, Callable, Unicode, Instance
 from enaml.core.declarative import Declarative, d_
+
+from hqc_meas.tasks.api import BaseTask
 
 
 class BaseEditor(Atom):
-    """ Base class for all engines.
-
-    An engine is responsible for performing a measurement given a hierarchical
-    ensemble of tasks.
-
     """
-    pass
+    """
+    selected_task = Instance(BaseTask)
 
 
 class Editor(Declarative):
-    """ Extension for the 'engines' extension point of a MeasurePlugin.
+    """ Extension for the 'editors' extension point of a MeasurePlugin.
 
     """
+    # Editor description.
+    description = d_(Unicode())
 
     # Factory function returning an instance of the editor.
     factory = d_(Callable())
+
+    # Test function determining if the editor is fit to be used for the
+    # selected task.
+    test = d_(Callable())

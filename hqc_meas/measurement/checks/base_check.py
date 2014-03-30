@@ -13,6 +13,8 @@ class Check(Declarative):
     """ Extension for the 'engines' extension point of a MeasurePlugin.
 
     """
+    # Checks description.
+    description = d_(Unicode())
 
     # Function running the checks on the task. The expected signature is:
     # perform_check(workbench, root_task) -> result as dict

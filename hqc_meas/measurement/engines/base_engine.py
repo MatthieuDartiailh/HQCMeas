@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Atom, Event, Callable, Bool
+from atom.api import Atom, Event, Callable, Bool, Unicode
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -97,6 +97,8 @@ class Engine(Declarative):
     """ Extension for the 'engines' extension point of a MeasurePlugin.
 
     """
+    # Description of the engine
+    description = d_(Unicode())
 
     # Factory function returning an instance of the engine.
     factory = d_(Callable())
