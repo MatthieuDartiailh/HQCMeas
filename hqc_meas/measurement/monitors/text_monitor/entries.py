@@ -5,6 +5,7 @@
 # license : MIT license
 #==============================================================================
 from atom.api import (Str, List)
+from enaml.application import deferred_call
 from hqc_meas.utils.atom_util import HasPrefAtom
 
 
@@ -34,4 +35,5 @@ class MonitoredEntry(HasPrefAtom):
         """
         # TODO handle evaluation delimited by $
         vals = {d: database_vals[d] for d in self.depend_on}
-        self.value = self.formatting.format(**vals)
+        new_val = self.formatting.format(**vals)
+        deferred_call(setattr, self, 'value', new_val)

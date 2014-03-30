@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Event, Callable, Bool, List, Str
+from atom.api import Callable, List, Str, Bool
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -20,8 +20,14 @@ class BaseMonitor(PrefAtom):
     # Name of the monitored measure.
     measure_name = Str().tag(pref=True)
 
+    # Status of the current measure.
+    measure_status = Str()
+
     # List of database which should be observed
     database_entries = List(Str())
+
+    # Whether or not to show the monitor on start-up
+    auto_show = Bool(True).tag(pref=True)
 
     def start(self, parent_ui):
         """ Start the activity of the monitor.
@@ -113,6 +119,33 @@ class BaseMonitor(PrefAtom):
         mess = cleandoc('''This method should be implemented by subclasses of
                         BaseMonitor''')
         raise NotImplementedError(mess)
+
+    def get_editor_page(self):
+        """ Access the notebook page which can be used to edit the monitor.
+
+        Returns
+        -------
+        page : enaml.widgets.Page
+            Notebook page which can be used to edit the monitor.
+
+        """
+        mess = cleandoc('''This method should be implemented by subclasses of
+                        BaseMonitor''')
+        raise NotImplementedError(mess)
+
+    def show_monitor(self, parent_ui):
+        """ Show the monitor if pertinent using the provided parent.
+
+        By default this is a no-op assuming the monitor has no ui. If a ui is
+        already active it should be a no-op or restore the monitor.
+
+        Parameters
+        ----------
+        parent_ui : enaml.widgets.Widget
+            Parent to use for the display.
+
+        """
+        pass
 
 
 class Monitor(Declarative):

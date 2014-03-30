@@ -7,7 +7,7 @@
 """
 """
 from atom.api import (Instance, Value, Str, List, Dict, ForwardTyped,
-                      Callable, ContainerList)
+                      Callable, ContainerList, Typed)
 import enaml
 with enaml.imports():
     from enaml.stdlib.message_box import information
@@ -17,6 +17,8 @@ from inspect import cleandoc
 from ..base_monitor import BaseMonitor
 from .entries import MonitoredEntry
 from .rules import AbstractMonitorRule
+with enaml.imports():
+    from .monitor_views import (MonitorPage, MonitorView)
 
 
 def import_monitor_plugin():
@@ -54,12 +56,12 @@ class TextMonitor(BaseMonitor):
     custom_entries = List(Instance(MonitoredEntry))
 
     def start(self, parent_ui):
-        pass
-        # TODO implement when the dialog is ready.
+        if self.auto_show:
+            self.show_monitor(parent_ui)
 
     def stop(self):
-        pass
-        # TODO implement when the dialog is ready.
+        if self._view.proxy_is_active:
+            self.view.close()
 
     def process_news(self, news):
         values = self._database_values
@@ -139,8 +141,6 @@ class TextMonitor(BaseMonitor):
         return prefs
 
     def set_state(self, config):
-        """
-        """
         # Request all the rules class from the plugin.
         rules_config = [conf for name, conf in config.iteritems()
                         if name.startswith('rule_')]
@@ -188,6 +188,17 @@ class TextMonitor(BaseMonitor):
         self.hidden_entries = hidden
         self.measure_name = config['measure_name']
 
+    def get_editor_page(self):
+        return MonitorPage(monitor=self)
+
+    def show_monitor(self, parent_ui):
+        if self._view and self._view.proxy_is_active:
+            self._view.restore()
+        else:
+            view = MonitorView(monitor=self, parent=parent_ui)
+            view.show()
+            self._view = view
+
     @property
     def all_database_entries(self):
         """ Getter returning all known database entries.
@@ -227,6 +238,9 @@ class TextMonitor(BaseMonitor):
 
     # Reference to the monitor plugin handling the rules persistence.
     _plugin = ForwardTyped(import_monitor_plugin)
+
+    # Reference to the current display
+    _view = Typed(MonitorView)
 
     @staticmethod
     def _create_default_entry(entry_path):

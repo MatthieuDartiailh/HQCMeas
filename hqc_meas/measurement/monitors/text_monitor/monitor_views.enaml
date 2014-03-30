@@ -9,7 +9,7 @@
 from enaml.core.api import Looper, Conditional
 from enaml.layout.api import hbox, spacer, vbox
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Window,
-                               CheckBox, ObjectCombo, Dialog,
+                               CheckBox, ObjectCombo, Dialog, Page,
                                Label, Form, Field, GroupBox)
 from enaml.stdlib.message_box import question
 
@@ -19,17 +19,19 @@ from inspect import cleandoc
 from ..utils.widgets.qt_list_str_widget import QtListStrWidget
 from ..utils.widgets.qt_line_completer import QtLineCompleter
 from ..utils.widgets.list_editor import ListEditor
-from .monitoring_entries import (MonitoredEntry, EntryBuilder, Entry)
+from .entries import MonitoredEntry
+from .custom_entries_building import EntryDialog
 from .monitoring_rules_view import EditRulesView
 
-# TODO check that everything fit inthe new system. (mainly edition of rules)
-enamldef EditMonitorView(Dialog): dial:
-    """
+
+enamldef MonitorPage(Page): dial:
+    """ Notebook page which can be used to edit a TextMonnitor.
+
     """
     attr monitor
     attr selected
 
-    title = 'Select the monitored entries'
+    title = 'Text monitor'
 
     Container:
         constraints << [vbox(
@@ -50,6 +52,7 @@ enamldef EditMonitorView(Dialog): dial:
         # Undisplayed entries.
         Label: undisp_lab:
             text = 'Undisplayed entries'
+
         QtListStrWidget: undisp:
             items << [e.name for e in sorted(monitor.undisplayed_entries,
                                              key=attrgetter('path'))]
@@ -60,6 +63,7 @@ enamldef EditMonitorView(Dialog): dial:
         # Displayed entries.
         Label: disp_lab:
             text = 'Displayed entries'
+
         QtListStrWidget: disp:
             items << [e.name for e in sorted(monitor.displayed_entries,
                                              key=attrgetter('path'))]
@@ -75,6 +79,7 @@ enamldef EditMonitorView(Dialog): dial:
                 monitor.displayed_entries += monitor.undisplayed_entries
                 monitor.undisplayed_entries = []
                 disp.refresh_items()
+
         PushButton: disp_one:
             text = '>'
             hug_width = 'strong'
@@ -85,6 +90,7 @@ enamldef EditMonitorView(Dialog): dial:
                     monitor.displayed_entries += e
                     monitor.undisplayed_entries.remove(e[0])
                     disp.refresh_items()
+
         PushButton: hide_all:
             text = '<<'
             hug_width = 'strong'
@@ -92,6 +98,7 @@ enamldef EditMonitorView(Dialog): dial:
                 monitor.undisplayed_entries += monitor.displayed_entries
                 monitor.displayed_entries = []
                 undisp.refresh_items()
+
         PushButton: hide_one:
             text = '<'
             hug_width = 'strong'
@@ -102,6 +109,7 @@ enamldef EditMonitorView(Dialog): dial:
                     monitor.undisplayed_entries.append(e[0])
                     monitor.displayed_entries.remove(e[0])
                     undisp.refresh_items()
+
         CheckBox: show_hidden:
             text = 'Show hidden entries'
             checked ::
@@ -114,28 +122,35 @@ enamldef EditMonitorView(Dialog): dial:
                             if e not in monitor.hidden_entries]:
 
         # Special edition buttons.
+# TODO refactor
         PushButton: edit_rules:
             text = 'Edit rules'
-            clicked ::
-                d = EditRulesView(parent = dial, monitor = monitor)
-                d.exec_()
-                if d.edition_performed:
-                    monitor.save_rules()
-                    monitor.refresh_monitored_entries()
+            enabled = False
+#            clicked ::
+#                d = EditRulesView(parent = dial, monitor = monitor)
+#                d.exec_()
+#                if d.edition_performed:
+#                    monitor.save_rules()
+#                    monitor.refresh_monitored_entries()
+
         PushButton: manual_entries:
             text = 'Add entry'
             clicked ::
-                ent = EntryDialog(parent = dial, monitor = monitor)
+                ent = EntryDialog(parent=dial,
+                                  monitor=monitor)
                 if ent.exec_():
                     monitor.custom_entries.append(ent.new_entry)
                     monitor.displayed_entries.append(ent.new_entry)
+
         Conditional: cond:
             condition << selected in monitor.custom_entries
             PushButton:
                 text = 'Edit entry'
                 clicked ::
-                    EntryDialog(parent = dial, monitor = monitor,
-                                new_entry = selected).exec_()
+                    EntryDialog(parent=dial,
+                                monitor=monitor,
+                                new_entry=selected).exec_()
+
             PushButton:
                 text = 'Delete entry'
                 clicked::
@@ -161,7 +176,6 @@ enamldef MonitorView(Window):
     """
     attr monitor
 
-    destroy_on_close = False
     title = 'Text monitor'
 
     Container:
@@ -172,7 +186,7 @@ enamldef MonitorView(Window):
         Label: sta_lab:
             text = 'Status : '
         Label: sta:
-            text << monitor.status
+            text << monitor.measure_status
         Form: form:
             Looper:
                 iterable << sorted(monitor.displayed_entries,
