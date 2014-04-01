@@ -73,7 +73,8 @@ def _handle_close(self, view, is_ok):
                 and connection_form.check()):
             connection_dict = connection_form.connection_dict()
             try:
-                driver = manager.request_driver([model.driver])[0]
+                drivers, _ = manager.request_driver([model.driver])
+                driver = drivers[model.driver]
                 instr = driver(connection_dict)
                 instr.close_connection()
             except InstrIOError:

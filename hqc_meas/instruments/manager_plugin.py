@@ -93,22 +93,21 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        result : bool
-            Whether or not the manager found all the requested driver types.
+        driver_types : dict
+            The required driver types that have been found as a dict
+            {name: class}.
 
-        driver_types : dict or list
-            The required driver types as a dict {name: class},  or list of
-            missing driver types.
+        missing : list
+            The list of drivers that was not found.
 
         """
         missing = [driver_type for driver_type in driver_types
                    if driver_type not in self.driver_types]
 
-        if missing:
-            return False, missing
-        else:
-            return {key: val for key, val in self._driver_types.iteritems()
-                    if key in driver_types}
+        found = {key: val for key, val in self._driver_types.iteritems()
+                 if key in driver_types}
+
+        return found, missing
 
     def drivers_request(self, drivers):
         """ Give access to the driver type implementation
@@ -120,21 +119,20 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        result : bool
-            Whether or not the manager found all the requested drivers.
-        drivers : dict or list
-            The required drivers as a dict {name: class}, or list of missing
-            drivers.
+        drivers : dict
+            The required driver that have been found as a dict {name: class}.
+
+        missing : list
+            The list of drivers that was not found.
 
         """
         missing = [driver for driver in drivers
                    if driver not in self.drivers]
 
-        if missing:
-            return False, missing
-        else:
-            return {key: val for key, val in self._drivers.iteritems()
-                    if key in drivers}
+        found = {key: val for key, val in self._drivers.iteritems()
+                 if key in drivers}
+
+        return found, missing
 
     def profile_path(self, profile):
         """ Request the path of the file storing a profile
@@ -174,19 +172,19 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        result : bool
-            Whether or not the manager grant the user the privilege to use
-            the profiles.
         profiles : dict or list
-            The required profiles as a dict {name: profile}, or a list of
-            missing profiles.
+            The required profiles as a dict {name: profile}, can be empty if
+            a profile is missing or if the manager failed to release a profile.
+
+        missing : list
+            The list of profiles that was not found.
 
         """
         missing = [prof for prof in profiles
                    if prof not in self.all_profiles]
 
         if missing:
-            return False, missing
+            return {}, missing
 
         to_release = defaultdict(list)
         # Identify the profiles which need to be released
@@ -195,7 +193,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 old_owner = self._used_profiles[prof]
                 decl = self._users[old_owner]
                 if decl.default_policy == 'unreleasable':
-                    return False, {}
+                    return {}, []
 
                 to_release[decl.release_method].append(prof)
 
@@ -203,7 +201,7 @@ class InstrManagerPlugin(HasPrefPlugin):
             for meth, profs in to_release.iteritems():
                 res = meth(self.workbench, profiles=profs)
                 if not res:
-                    return False, {}
+                    return {}, []
 
         # Now that we are sure that the profiles can be sent to the users,
         # remove them from the available_profiles list, register who is using
@@ -219,7 +217,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         profile_objects = {prof: open_profile(mapping[prof])
                            for prof in profiles}
 
-        return True, profile_objects
+        return profile_objects, {}
 
     def profiles_released(self, owner, profiles):
         """ Notify the manager that the specified are not used anymore
@@ -304,7 +302,7 @@ class InstrManagerPlugin(HasPrefPlugin):
     _profiles_map = Dict(Str(), Unicode())
 
     # Mapping between profile names and user id.
-    _used_profiles = Dict(Str(), Unicode())
+    _used_profiles = Dict(Unicode(), Unicode())
 
     # Mapping between plugin_id and InstrUser declaration.
     _users = Dict(Unicode(), Typed(InstrUser))
