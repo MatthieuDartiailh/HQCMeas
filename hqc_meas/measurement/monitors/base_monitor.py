@@ -16,6 +16,8 @@ class BaseMonitor(PrefAtom):
     """ Base class for all monitors.
 
     """
+    # Id of the builder which created this monitor.
+    id = Unicode()
 
     # Name of the monitored measure.
     measure_name = Str().tag(pref=True)

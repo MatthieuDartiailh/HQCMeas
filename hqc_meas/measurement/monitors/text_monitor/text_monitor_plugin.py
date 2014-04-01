@@ -64,7 +64,8 @@ class TextMonitorPlugin(HasPrefPlugin):
             New text monitor.
 
         """
-        monitor = TextMonitor(_plugin=self)
+        monitor = TextMonitor(_plugin=self,
+                              id=self.manifest.id)
 
         if not raw:
             rules = []
