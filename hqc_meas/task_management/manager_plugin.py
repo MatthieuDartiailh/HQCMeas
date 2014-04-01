@@ -114,6 +114,12 @@ class TaskManagerPlugin(HasPrefPlugin):
         answer = {}
 
         if not use_class_names:
+            missing_py = set([name for name in tasks
+                              if name not in self._py_tasks.keys()])
+            missing_temp = set([name for name in tasks
+                                if name not in self._template_tasks.keys()])
+            missing = list(set.intersection(missing_py, missing_temp))
+
             answer.update({key: val for key, val in self._py_tasks.iteritems()
                            if key in tasks})
 
@@ -121,11 +127,16 @@ class TaskManagerPlugin(HasPrefPlugin):
                            for key, val in self._template_tasks.iteritems()
                            if key in tasks})
         else:
-            answer.update({val.__name__: val
-                           for key, val in self._py_tasks.iteritems()
-                           if val.__name__ in tasks})
+            class_names = {val.__name__: val
+                           for val in self._py_tasks.values()}
 
-        return answer
+            missing = [name for name in tasks
+                       if name not in class_names]
+
+            answer.update({key: val for key, val in class_names.iteritems()
+                           if key in tasks})
+
+        return answer, missing
 
     def views_request(self, task_classes):
         """ Give acces to task views.
@@ -133,7 +144,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         Parameters
         ----------
         task_classes : list
-            List of classes for which a view should be returned.
+            List of class names for which a view should be returned.
 
         Returns
         -------
@@ -142,7 +153,10 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         views = self._task_views
-        return {t_class: views[t_class.__name__] for t_class in task_classes}
+        missing = [t_class for t_class in task_classes
+                   if t_class not in views]
+        return {t_class: view for t_class, view in views.iteritems()
+                if t_class in task_classes}, missing
 
     def filter_tasks(self, filter):
         """ Filter the known tasks using the specified filter.
@@ -154,12 +168,13 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        tasks : list(str)
-            Tasks selected by the filter
+        tasks : list(str) or None
+            Tasks selected by the filter, or None if the filter does not exist.
 
         """
-        t_filter = self._filters[filter]
-        return t_filter.filter_tasks(self._py_tasks, self._template_tasks)
+        t_filter = self._filters.get(filter)
+        if t_filter:
+            return t_filter.filter_tasks(self._py_tasks, self._template_tasks)
 
     def config_request(self, task):
         """ Access the proper config for a task.

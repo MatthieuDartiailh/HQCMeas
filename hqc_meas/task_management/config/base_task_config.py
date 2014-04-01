@@ -233,5 +233,6 @@ class IniConfigTask(AbstractConfigTask):
         if self.task_classes:
             return self.task_classes[name]
         else:
-            tasks = self.manager.tasks_request([name], use_class_names=True)
+            tasks, _ = self.manager.tasks_request([name],
+                                                  use_class_names=True)
             return tasks.values()[0]

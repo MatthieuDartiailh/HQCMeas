@@ -164,36 +164,40 @@ class Test(object):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.tasks_request'
-        tasks = core.invoke_command(com, {'tasks': ['Complex', 'Sleep']},
-                                    self)
+        tasks, miss = core.invoke_command(com, {'tasks': ['Complex', 'Sleep',
+                                                          'XXXX']},
+                                          self)
         from hqc_meas.tasks.api import ComplexTask
         assert_equal(sorted(tasks.keys()), sorted(['Complex', 'Sleep']))
         assert_in(ComplexTask, tasks.values())
+        assert_equal(miss, ['XXXX'])
 
     def test_tasks_request2(self):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.tasks_request'
-        tasks = core.invoke_command(com, {'tasks': ['ComplexTask',
-                                                    'SleepTask'],
-                                          'use_class_names': True},
-                                    self)
+        tasks, miss = core.invoke_command(com, {'tasks': ['ComplexTask',
+                                                          'SleepTask'],
+                                                'use_class_names': True},
+                                          self)
         from hqc_meas.tasks.api import ComplexTask
         assert_equal(sorted(tasks.keys()), sorted(['ComplexTask',
                      'SleepTask']))
         assert_in(ComplexTask, tasks.values())
+        assert_equal(miss, [])
 
     def test_views_request(self):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.views_request'
-        from hqc_meas.tasks.api import ComplexTask
         with enaml.imports():
             from hqc_meas.tasks.views.base_task_views import ComplexView
-        views = core.invoke_command(com, {'task_classes': [ComplexTask]},
-                                    self)
-        assert_in(ComplexTask, views)
-        assert_equal(views[ComplexTask], ComplexView)
+        views, miss = core.invoke_command(com,
+                                          {'task_classes': ['ComplexTask']},
+                                          self)
+        assert_in('ComplexTask', views)
+        assert_equal(views['ComplexTask'], ComplexView)
+        assert_equal(miss, [])
 
     def test_filter_tasks(self):
         self.workbench.register(TaskManagerManifest())

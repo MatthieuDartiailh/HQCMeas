@@ -104,7 +104,8 @@ enamldef TemplateSelectorView(Dialog): dial:
         Label: name:
             text << manager.selected_task
             text ::
-                new_path, _, new_doc = self.manager.request_task(text)
+                tasks, _ = self.manager.tasks_request([text])
+                new_path, _, new_doc = tasks[text]
                 path = new_path
                 doc.text = new_doc
         MultilineField: doc:
