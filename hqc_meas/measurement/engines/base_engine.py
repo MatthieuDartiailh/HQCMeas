@@ -17,6 +17,8 @@ class BaseEngine(Atom):
     ensemble of tasks.
 
     """
+    # Id of the builder which created this engine.
+    id = Unicode()
 
     # Event used to pass news about the measurement progress.
     news = Event()

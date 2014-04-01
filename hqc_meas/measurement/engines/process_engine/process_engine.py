@@ -78,9 +78,9 @@ class ProcessEngine(BaseEngine):
         # Get core plugin to request tasks.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.tasks_request'
-        task_classes = core.invoke_command(com, {'tasks': task_names,
-                                                 'use_class_names': True},
-                                           self)
+        task_classes, _ = core.invoke_command(com, {'tasks': task_names,
+                                                    'use_class_names': True},
+                                              self)
 
         # Gather all runtime dependencies in a single dict.
         runtimes = root.run_time
@@ -174,14 +174,14 @@ class ProcessEngine(BaseEngine):
 
         while not self._pipe.poll(2):
             if not self._process.is_alive():
-                self.done = ('FAILED', 'Subprocess started to fail')
+                self.done = ('FAILED', 'Subprocess failed to start')
                 self._stop.set()
                 self._cleanup(process=False)
                 return
 
         mess = self._pipe.recv()
         if mess != 'READY':
-            self.done = ('FAILED', 'Subprocess started to fail')
+            self.done = ('FAILED', 'Subprocess failed to start')
             self._cleanup()
             return
 

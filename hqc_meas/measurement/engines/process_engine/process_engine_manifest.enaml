@@ -11,17 +11,28 @@ from ..base_engine import Engine
 from .process_engine import ProcessEngine
 
 
+PROCESS_ENGINE_ID = u'hqc_meas.measure.engines.process_engine'
+
+
+def engine_factory(workbench):
+    """ Create a process engine.
+
+    """
+    return ProcessEngine(workbench=workbench,
+                         id=PROCESS_ENGINE_ID)
+
+
 enamldef ProcessEngineManifest(PluginManifest):
     """ Manifest contributing the ProcessEngine to the MeasurePlugin.
 
     """
-    id = u'hqc_meas.measure.engines.process_engine'
+    id = PROCESS_ENGINE_ID
     Extension:
         id = 'engine'
         point = u'hqc_meas.measure.engines'
         Engine:
             description = u'Engine performing the measure in a subprocess'
-            factory = ProcessEngine
+            factory = engine_factory
 
     # TODO should also contribute a dockItem for displaying process log + filter
     # for main log display.
