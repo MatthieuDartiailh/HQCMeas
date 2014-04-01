@@ -37,6 +37,7 @@ enamldef SimpleMenu(Menu): menu:
 
     """
     attr context
+    attr workspace
 
     NewAction:
         action_context << context
@@ -109,29 +110,77 @@ class _MeasEditionModel(Atom):
     selected_task = Instance(BaseTask)
 
     # List of all editors which can be used given the selected_task
-    valid_editors = Dict(Unicode(), Instance(BaseEditor))
+    valid_editors = ContainerList(Instance(BaseEditor))
+
+    # Currently selected editor.
+    selected_editor = Instance(BaseEditor)
+
+    # Should the tree be enabled given the currenlty selected editor.
+    tree_enabled = Bool(True)
+
+    # Should the tree be visible given the currently selected editor.
+    tree_visible = Bool(True)
 
     def _observe_selected_task(self, change):
-        """
+        """ Keep the list of valid editors up to date and update editor.
+
         """
         editors = self.workspace.plugin.editors
         new_task = change['value']
-        valid_editor_ids = []
+        valid_editor_ids = set()
+
+        # Find all valid editors.
         for id, editor in editors.iteritems():
             if editor.test(self.workspace, new_task):
-                valid_editor_ids.append(id)
+                valid_editor_ids.add(id)
 
-        if sorted(valid_editors.keys()) != sorted(valid_editor_ids):
-            self.valid_editors = {id, editors[id].factory(workspace.workbench)
-                                  for id in valid_editor_ids}
+        # If there are some changes apply them by append remove so that if the
+        # the currently selected editor remains nothing changes.
+        current_editor_ids = set([editor.id for editor in self.valid_editors])
+        if valid_editor_ids != current_editor_ids:
+            to_remove = current_editor_ids - valid_editor_ids
+            to_add = valid_editor_ids - current_editor_ids
+            for editor in self.valid_editors[:]:
+                if editor.id in to_remove:
+                    self.valid_editors.remove(editor)
+
+            for id in to_add:
+                editor = editors[id].factory(workspace.workbench)
+                self.valid_editors.append(editor)
+
+        # Update selected editor with new selected task. If the editor changed
+        # notifications will have taken care of that.
+        self.selected_editor.selected_task = new_task
+
+    def _observe_selected_editor(self, change):
+        """ Update infos for newly selected editor.
+
+        """
+        editor = change['value']
+        # Update selected task.
+        editor.selected_task = self.selected_task
+
+        # Get tree preferences.
+        self.tree_enabled = editor.tree_enabled
+        self.tree_visible = editor.tree_visible
 
 
-enamldef MeasEditionView(GroupBox):
+def _selected_page_finder(pages, selected_tab):
+    """ Helper function to get the selected page in a notebook.
+
+    WARNING : Qt specific.
+
+    """
+    for page in pages:
+        if page.titleproxy_is_active \
+                and page.proxy.objectName() == selected_tab:
+            return page
+
+
+enamldef MeasEditionView(Container):
     """ Main view for measurement edition
 
     """
-    title = 'Measure'
-
     attr workspace
     attr selected_task << workspace.plugin.edited_measure.root_task
     selected_task >> _internal.selected_task
@@ -156,10 +205,13 @@ enamldef MeasEditionView(GroupBox):
             #TODO implement
             pass
 
+
     QtTreeWidget: tree:
         hug_height = 'ignore'
         root_node << meas.root_task
         selected >> selected_task
+        visible << _internal.tree_enabled
+        enabled << _internal.tree_visible
         nodes = [TreeNode(
                     node_for  = [ComplexTask],
                     auto_open = True,
@@ -172,13 +224,61 @@ enamldef MeasEditionView(GroupBox):
                     auto_open = True,
                     children  = '',
                     label     = 'task_label',
-                    menu      =  SimpleMenu()),
+                    menu      =  SimpleMenu(workspace=workspace))),
                     ]
 
     Notebook: editors:
+        # Update the selected editor when the user click a tab or when the
+        # previously selected editor is removed.
+        selected_tab ::
+            _internal.selected_editor = _selected_page_finder(pages,
+                                                              selected_tab)
         Include:
             objects << _internal.valid_editors.values()
 
+
+# Still TODO above is ok
+enamldef MeasEditorContainer(DockItem): widget:
+    alias meas : view.meas
+    alias selected : view.selected_task
+    attr handler = EditorHandler()
+    alias enqueue_clicked : enqueue_button.clicked
+
+    Container:
+        constraints = [vbox(view,
+                            hbox(new, save, save_template, load, load_template,
+                                spacer, enqueue_button))]
+        MeasView: view:
+            pass
+        PushButton: new:
+            text = 'New'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.new_clicked(widget)
+        PushButton: save:
+            text = 'Save'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.save_clicked(widget)
+        PushButton: save_template:
+            text = 'Save as template'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.save_template_clicked(widget)
+        PushButton: load:
+            text = 'Load'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.load_clicked(widget)
+        PushButton: load_template:
+            text = 'Load template'
+            hug_width  = 'strong'
+            hug_height = 'strong'
+            clicked :: handler.load_template_clicked(widget)
+        PushButton: enqueue_button:
+            text = 'Enqueue'
+            hug_width  = 'strong'
+            hug_height = 'strong'
 
 enamldef MeasEditorDialog(Dialog): widget:
     alias meas : view.meas

@@ -1,0 +1,34 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : editor_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.workbench.api import PluginManifest, Extension
+
+from ..base_editor import Editor
+from .editor import StandardEditor
+
+
+STANDARD_EDITOR_ID = u'hqc_meas.measure.editors.standard_editor'
+
+
+def editor_factory(workbench):
+    """ Create a standard editor.
+
+    """
+    return StandardEditor(workbench=workbench,
+                          id=STANDARD_EDITOR_ID)
+
+
+enamldef StandardEditorManifest(PluginManifest):
+    """ Manifest contributing the ProcessEngine to the MeasurePlugin.
+
+    """
+    id = STANDARD_EDITOR_ID
+    Extension:
+        id = 'editor'
+        point = u'hqc_meas.measure.editors'
+        Editor:
+            description = u'Standard editor relying on task views.'
+            factory = editor_factory
