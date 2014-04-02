@@ -20,7 +20,8 @@ from ..tasks.tools.walks import flatten_walk
 
 with enaml.imports():
     from enaml.stdlib.message_box import question
-    from .checks_display import ChecksDisplay
+    from .checks.checks_display import ChecksDisplay
+    from .engines.selection import EngineSelector
 
 
 class MeasureSpace(Workspace):
@@ -231,8 +232,16 @@ class MeasureSpace(Workspace):
 
         """
         if not self.plugin.selected_engine:
-            pass
-            # TODO open dialog (use content as parent)
+            dial = EngineSelector(plugin=self.plugin)
+            dial.exec_()
+            if dial.selected_id:
+                self.plugin.selected_engine = dial.selected_id
+            else:
+                logger = logging.getLogger(__name__)
+                msg = cleandoc('''The user did not select an engine to run the
+                               measure''')
+                logger.warn(msg)
+                return
 
         self.plugin.flags.clear()
 

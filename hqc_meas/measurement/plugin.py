@@ -9,6 +9,7 @@ from inspect import cleandoc
 from atom.api import Typed, Unicode, Dict, ContainerList, List, Instance, Tuple
 from time import sleep
 from importlib import import_module
+import enaml
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
 from .engines.base_engine import BaseEngine, Engine
@@ -95,16 +96,7 @@ class MeasurePlugin(HasPrefPlugin):
 
         # Register contributed plugin.
         for path, manifest_name in self.manifests:
-            try:
-                module = import_module(path)
-                manifest = getattr(module, manifest_name)
-                plugin = manifest()
-                self.workbench.register(plugin)
-                self._manifest_ids.append(plugin.id)
-
-            except Exception:
-                logger = logging.getLogger(__name__)
-                logger.error('Failed to register manifest: {}'.format(path))
+            self._register_manifest(path, manifest_name)
 
         # Refresh contribution and start observers.
         self._refresh_engines()
@@ -284,9 +276,22 @@ class MeasurePlugin(HasPrefPlugin):
                     sleep(0.5)
 
     def _register_manifest(self, path, manifest_name):
+        """ Register a manifest given its module name and its name.
+
+        NB : the path should be a dot separated string referring to a package
+        in sys.path.
         """
-        """
-        pass
+        try:
+            with enaml.imports():
+                module = import_module(path)
+            manifest = getattr(module, manifest_name)
+            plugin = manifest()
+            self.workbench.register(plugin)
+            self._manifest_ids.append(plugin.id)
+
+        except Exception:
+            logger = logging.getLogger(__name__)
+            logger.error('Failed to register manifest: {}'.format(path))
 
     def _refresh_engines(self):
         """ Refresh the list of known engines.
