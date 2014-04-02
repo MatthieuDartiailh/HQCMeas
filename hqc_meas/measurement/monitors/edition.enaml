@@ -16,34 +16,46 @@ enamldef MonitorSelector(Dialog): dial:
     """ Simple dialog to select a monitor.
 
     """
+    # Measure for which a new monitor is being chosen.
     attr measure
-    attr monitors = measure.plugin.monitors
-    attr selected_id
-    attr selected_builder
 
-    attr _mapping = [monitor_id.split('.')[-1].capitalize(): monitor_id
-                     for monitor_id in monitors]
+    # Dict {id: declaration} of all the monitors.
+    attr monitors = measure.plugin.monitors
+
+    # Id of the currently selected monitor.
+    attr selected_id
+
+    # Declaration for the currently selected monitor.
+    attr selected_decl
+
+    # Mapping between monitor name and id.
+    attr _mapping = {monitor.name: monitor_id
+                     for monitor_id, monitor in monitors.iteritems()}
 
     Container:
-        QtListStrEditor:
-            items << sorted([monitor.split('.')[-1].capitalize()
-                             for monitor in monitors
-                             if monitor not in measure.monitor])
+        constaints << [vbox(list_ed, desc, hbox(cancel, ok))]
+
+        QtListStrEditor: list_ed:
+            items << sorted([monitor.name
+                             for monitor_id, monitor in monitors.iteritems()
+                             if monitor_id not in measure.monitors])
             selected_item::
                 new_val = change['value']
-                key = _mapping[new_val]
-                dial.selected_builder = monitors[key]
-                dial.selected_id = key
+                if new_val:
+                    key = _mapping[new_val]
+                    dial.selected_decl = monitors[key]
+                    dial.selected_id = key
 
-        MultilineField:
-            text << selected_builder.description if selected_builder
+        MultilineField: desc:
+            text << selected_decl.description if selected_decl
 
-        PushButton:
+        PushButton: ok:
             text = 'Ok'
+            enabled << dial.selected_decl
             clicked ::
                 dial.accept()
 
-        PushButton:
+        PushButton: cancel:
             text = 'Cancel'
             clicked ::
                 dial.reject()
@@ -60,12 +72,18 @@ def _selected_page_finder(pages, selected_tab):
                 and page.proxy.objectName() == selected_tab:
             return page
 
-enamldef MonitorEditor(Container):
+enamldef MonitorsEditor(Container):
+    """ Widget used to edit the monitors parameters of a measure.
+
     """
-    """
+    # Measure whose editors are being edited.
     attr measure
+
+    # Notebook pages for each monitor associated with this measure.
     attr nb_pages << {monitor.get_editor_page(): id
-                   for id, monitor in measure.monitors.iteritems()}:
+                      for id, monitor in measure.monitors.iteritems()}:
+
+    # Currently selected notebook page.
     attr selected_page << _selected_page_finder(nb.pages, nb.selected_tab)
 
     constraints << [hbox(notebook,
@@ -84,7 +102,7 @@ enamldef MonitorEditor(Container):
             selector = MonitorSelector(measure=measure)
             if selector.exec_():
                 workbench = measure.plugin.workbench
-                monitor = selector.selected_builder.factory(workbench)
+                monitor = selector.selected_decl.factory(workbench)
                 measure.add_monitor(selector.selected_id,
                                     monitor)
 
