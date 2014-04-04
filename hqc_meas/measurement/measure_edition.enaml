@@ -6,11 +6,13 @@
 #==============================================================================
 from atom.api import Typed, ContainerList, Instance
 from enaml.stdlib.mapped_view import MappedView
-from enaml.layout.api import hbox, spacer, vbox, align
+from enaml.layout.api import hbox, spacer, vbox, align, InsertTab
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
                                Label, Field, CheckBox, GroupBox, Notebook,
                                DockItem)
-from enaml.core.api import Conditional
+
+from inspect import cleandoc
+from textwrap import fill
 
 from hqc_meas.utils.widgets.qt_tree_widget import QtTreeWidget
 from hqc_meas.utils.widgets.tree_nodes import TreeNode
@@ -20,12 +22,16 @@ from hqc_meas.utils.widgets.qt_tree_menu import \
 from hqc_meas.tasks.api import (BaseTask, SimpleTask, ComplexTask)
 from .editors.base_editor import BaseEditor
 from .workspace import MeasureSpace
+from .tools_edition import ToolsEditorDockItem, ToolsEditorDialog
 
 
 enamldef SaveAction(Action):
+    """ Action used to save task as a template.
 
+    """
     text = 'Save template'
     attr action_context
+    attr core
     triggered ::
         widget, node, obj, nid = action_context['data']
         # TODO use core
@@ -80,8 +86,11 @@ enamldef ComplexMenu(Menu): menu:
         kwargs = {'parent_ui': menu}
     Action:
         separator = True
-#    SaveAction:
-#        action_context << context
+    SaveAction:
+        # TODO enable when implemented
+        enabled = False
+        action_context << context
+        core = workspace.workbench.get_plugin(u'enaml.workbench.core')
     Action:
         separator = True
     CutAction:
@@ -101,7 +110,12 @@ enamldef ComplexMenu(Menu): menu:
 
 
 class _MeasEditionModel(Atom):
-    """
+    """ Model for the MeasureEditorView.
+
+    This model ensures that only the editors fitting the currently selected
+    task are displayed, that the selected editor get the selected task and that
+    the editor preferences are applied to the tree.
+
     """
     # Instance of the workspace
     workspace = Typed(MeasureSpace)
@@ -127,7 +141,8 @@ class _MeasEditionModel(Atom):
         """
         editors = self.workspace.plugin.editors
         new_task = change['value']
-        valid_editor_ids = set()
+        valid_editor_ids = set()_tip('''Save the root task of the measure as a
+                                    template, the tools state is not saved.''')
 
         # Find all valid editors.
         for id, editor in editors.iteritems():
@@ -182,7 +197,9 @@ enamldef MeasEditionView(Container):
 
     """
     attr workspace
-    attr selected_task << workspace.plugin.edited_measure.root_task
+    attr measure
+    attr dock : bool
+    attr selected_task << measure.root_task
     selected_task >> _internal.selected_task
 
     attr _internal = _MeasEditionModel(workspace=workspace)
@@ -197,14 +214,29 @@ enamldef MeasEditionView(Container):
         text = 'Name'
     Field: name:
         hug_width = 'ignore'
-        text := meas.monitor.measure_name
+        text := measure.name
     PushButton: edition:
         text = 'Edit'
         tool_tip = 'Edit monitors, headers, and checks linked to the measure.'
         clicked ::
-            #TODO implement
-            pass
+            # If dock_area is not None, it means this editor is the main one
+            # and should display the tools editor as a DockItem.
+            if dock:
+                dock_area = workspace.dock_area
+                if not any([item.name == u'tools_editor'
+                        for item in dock_area.dock_items]):
+                    # The editor does not exists so create it.
+                    ToolsEditorDockItem(dock_area, name=u'tools_editor'
+                                        measure=measure)
 
+                # Now insert the item in a tab with the measure editor.
+                dock_area.update_layout(InsertTab(item=u'tools_editor',
+                                                  targer=u'meas_editor'))
+
+            # This is not the main editor so open a dialog.
+            else:
+                ToolsEditorDialog(parent=edition,
+                                  measure=measure).exec_()
 
     QtTreeWidget: tree:
         hug_height = 'ignore'
@@ -237,66 +269,108 @@ enamldef MeasEditionView(Container):
             objects << _internal.valid_editors.values()
 
 
-# Still TODO above is ok
-enamldef MeasEditorContainer(DockItem): widget:
-    alias meas : view.meas
-    alias selected : view.selected_task
-    attr handler = EditorHandler()
-    alias enqueue_clicked : enqueue_button.clicked
+enamldef MeasEditorDockItem(DockItem): main:
+    """ DockItem used for editing a measure, main component of the workspace
+    content.
+
+    """
+    # Reference to the workspace.
+    attr workspace
+
+    # Reference to the edited measure.
+    attr measure << workspace.plugin.edited_measure
+    measure >> editor.measure
+
+    # Name of the DockItem
+    name = u'meas_editor'
+
+    closable = False
 
     Container:
-        constraints = [vbox(view,
-                            hbox(new, save, save_template, load, load_template,
-                                spacer, enqueue_button))]
-        MeasView: view:
-            pass
+        constraints = [vbox(editor,
+                            hbox(new, save, load, spacer, enqueue_button))]
+
+        MeasEditionView: editor:
+            workspace = main.workspace
+            dock = True
+
         PushButton: new:
             text = 'New'
             hug_width  = 'strong'
             hug_height = 'strong'
-            clicked :: handler.new_clicked(widget)
+            clicked :: workspace.new_measure()
+
         PushButton: save:
             text = 'Save'
             hug_width  = 'strong'
             hug_height = 'strong'
-            clicked :: handler.save_clicked(widget)
-        PushButton: save_template:
-            text = 'Save as template'
-            hug_width  = 'strong'
-            hug_height = 'strong'
-            clicked :: handler.save_template_clicked(widget)
+            Menu:
+                Action:
+                    text = 'Save measure'
+                    tool_tip = 'Save the measure.'
+                    triggered ::
+                        workspace.save_measure(measure, mode='file')
+                Action:
+                    text = 'Save root as template'
+                    enabled = False
+                    tool_tip = fill(cleandoc('''Save the root task of the
+                                    measure as a template, the tools state is
+                                    not saved.'''), 50)
+                    triggered ::
+                        workspace.save_measure(measure, mode='template')
+
         PushButton: load:
             text = 'Load'
             hug_width  = 'strong'
             hug_height = 'strong'
-            clicked :: handler.load_clicked(widget)
-        PushButton: load_template:
-            text = 'Load template'
-            hug_width  = 'strong'
-            hug_height = 'strong'
-            clicked :: handler.load_template_clicked(widget)
+            Menu:
+                Action:
+                    text = 'Load measure'
+                    triggered ::
+                        workspace.load_measure(mode='file')
+                Action:
+                    text = 'Load template'
+                    enabled = False
+                    tool_tip = fill(cleandoc('''Load a template task as a
+                                    measure using the default parameters
+                                    concerning the  tools.'''), 50)
+                    triggered ::
+                        workspace.load_measure(mode='template')
+
         PushButton: enqueue_button:
             text = 'Enqueue'
             hug_width  = 'strong'
             hug_height = 'strong'
+            workspace.enqueu_measure(measure)
 
-enamldef MeasEditorDialog(Dialog): widget:
-    alias meas : view.meas
-    attr handler = EditorHandler()
-    always_on_top = True
+enamldef MeasEditorDialog(Dialog): main:
+    """ Dialog allowing to re-edit a measure once it is in the queue.
+
+    """
+    attr workspace
+    attr measure
+
     Container:
-        constraints = [vbox(view, hbox(save, save_template, spacer))]
-        MeasView: view:
-            meas << widget.meas
+        constraints = [contents_left == save.left]
+        MeasEditionView: editor:
+            workspace = workspace
+            measure = measure
+
         PushButton: save:
             text = 'Save'
             hug_width  = 'strong'
             hug_height = 'strong'
-            clicked ::
-                handler.save_clicked(widget)
-        PushButton: save_template:
-            text = 'Save as template'
-            hug_width  = 'strong'
-            hug_height = 'strong'
-            clicked ::
-                handler.save_template_clicked(widget)
+            Menu:
+                Action:
+                    text = 'Save measure'
+                    tool_tip = 'Save the measure.'
+                    triggered ::
+                        workspace.save_measure(measure, mode='file')
+                Action:
+                    text = 'Save root as template'
+                    enabled = False
+                    tool_tip = fill(cleandoc('''Save the root task of the
+                                    measure as a template, the tools state is
+                                    not saved.'''), 50)
+                    triggered ::
+                        workspace.save_measure(measure, mode='template')

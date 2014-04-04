@@ -14,8 +14,9 @@ import os
 from hqc_meas.utils.widgets.list_editor import ListEditor
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
-from .monitoring_views import EditMonitorView
+from .tools_edition import ToolsEditorDialog
 from .edition_view import MeasEditorDialog
+from .engines.selection import EngineSelector
 
 
 enamldef MeasView(GroupBox): widget:
@@ -25,50 +26,52 @@ enamldef MeasView(GroupBox): widget:
     attr measure
 
     constraints = [vbox(hbox(sta_lab, sta_val, spacer),
-                        hbox(edit, spacer, use_mon, edit_mon))]
+                        hbox(edit, spacer, use_mon, edit_tools))]
     Label: sta_lab:
         text = 'Status :'
     Label: sta_val:
         text << measure.status
         tool_tip << measure.infos
 
-    # TODO todo
     PushButton: edit:
         text = 'Edit measure'
         clicked ::
-            meas_editor = MeasEditorDialog(parent = widget,
-                                            meas = model)
-            model.monitor.status = 'EDITING'
-            default_path = model.root_task.default_path
+            meas_editor = MeasEditorDialog(parent=widget,
+                                           measure=measure,
+                                           workspace=measure.plugin.workspace)
+            measure.status = 'EDITING'
+            default_path = measure.root_task.default_path
             meas_editor.exec_()
 
-            task = model.root_task
+            task = measure.root_task
             path = os.path.join(default_path,
-                            model.monitor.measure_name + '_last_run.ini')
+                                measure.name + '_last_run.ini')
             if task.default_path == default_path:
                 model.save_measure(path)
             else:
                 os.remove(path)
                 path = os.path.join(task.default_path,
-                            model.monitor.measure_name + '_last_run.ini')
+                                    measure.name + '_last_run.ini')
                 model.save_measure(path)
 
-            model.monitor.status = 'READY'
+            measure.status = 'READY'
 
-    # TODO create monitor edition view
-    PushButton: edit_mon:
-        text = 'Edit'
+    PushButton: edit_tools:
+        text = 'Edit measure tools.'
         clicked ::
-            EditMonitorView(monitor = model.monitor).exec_()
+            ToolsEditorDialog(parent=widget,
+                              measure=measure).exec_()
+            default_path = measure.root_task.default_path
             path = os.path.join(default_path,
-                            model.monitor.measure_name + '_last_run.ini')
-            model.save_measure(path)
+                                measure.name + '_last_run.ini')
+            measure.save_measure(path)
 
 
-enamldef ExecutionView(DockItem):
+enamldef ExecutionDockItem(DockItem):
 
     attr workspace
     closable = False
+    name = u'meas_exec'
 
     Container:
         constraints << [vbox(ed,
@@ -86,23 +89,31 @@ enamldef ExecutionView(DockItem):
                 and not 'processing' in workspace.plugin.flags
             clicked ::
                 workspace.start_processing_measures()
+
         PushButton: stop:
-            text = 'Stop task'
+            text = 'Stop measure'
             enabled << 'processing' in workspace.plugin.flags
-            clicked ::
-                workspace.stop_current_measure()
             Menu:
+                Action:
+                    text = 'Stop measure'
+                    triggered ::
+                        workspace.stop_current_measure()
                 Action:
                     text = 'Force measure stop'
                     enabled << 'attempt_stop' in workspace.plugin.flags
                     triggered::
                         workspace.force_stop_measure()
+
         PushButton: stop_all:
             text = 'Stop all'
             enabled << 'processing' in workspace.plugin.flags
             clicked ::
                 workspace.stop_processing()
             Menu:
+                Action:
+                    text = 'Stop engine'
+                    triggered ::
+                        workspace.stop_processing()
                 Action:
                     text = 'Force processing stop'
                     enabled << 'attempt_stop' in workspace.plugin.flags
@@ -116,5 +127,3 @@ enamldef ExecutionView(DockItem):
                 monitors = workspace.plugin.running_measure.monitors.values()
                 for monitor in monitors:
                     monitor.show_monitor()
-
-
