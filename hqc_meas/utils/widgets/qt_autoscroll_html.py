@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
-from atom.api import Str, observe
+from atom.api import Unicode, observe
 from enaml.core.declarative import d_
 from enaml.qt import QtGui
 from enaml.widgets.api import RawWidget
 
 
-class QtAutoScrollMultilineDisplay(RawWidget):
-    """ Simple style text editor, which displays a text field.
+class QtAutoscrollHtml(RawWidget):
+    """ Custom Html display which scrolls down to the last line on update.
+
     """
-    text = d_(Str())
+    text = d_(Unicode())
     hug_width = 'ignore'
 
     def create_widget(self, parent):
@@ -18,15 +19,15 @@ class QtAutoScrollMultilineDisplay(RawWidget):
         """
         widget = QtGui.QTextEdit(parent)
         widget.setReadOnly(True)
-        widget.setText(self.text)
+        widget.setHtml(self.text)
         return widget
-            
+
     @observe('text')
-    def update_widget (self, change):
+    def update_widget(self, change):
         """ Updates the editor when the object trait changes externally to the
             editor.
         """
         widget = self.get_widget()
-        if  widget:
-            widget.setText(change['value'])
+        if widget:
+            widget.setHtml(change['value'])
             widget.moveCursor(QtGui.QTextCursor.End)
