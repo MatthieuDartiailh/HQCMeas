@@ -4,7 +4,8 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Callable, Unicode, Instance, Bool, Event
+from atom.api import (Callable, Unicode, Instance, Bool, Event, Str,
+                      ForwardTyped)
 from enaml.core.declarative import Declarative, d_
 from enaml.widgets.api import Page
 
@@ -15,8 +16,8 @@ class BaseEditor(Page):
     """ Base class for all editors.
 
     """
-    # Id of the builder which created this editor.
-    id = Unicode()
+    # Declaration defining this editor.
+    declaration = ForwardTyped(lambda: Editor)
 
     # Currently selected task in the tree.
     selected_task = Instance(BaseTask)
@@ -36,14 +37,22 @@ class Editor(Declarative):
     """ Extension for the 'editors' extension point of a MeasurePlugin.
 
     """
+    # Id of the editor, this can be different from the id of the plugin
+    # declaring it but does not have to.
+    id = d_(Unicode())
+
+    # Name of the editor. This should an easily understandable name for the
+    # user.
+    name = d_(Str())
+
     # Editor description.
     description = d_(Unicode())
 
     # Factory function returning an instance of the editor. This callable
-    # should take as single arguiment a reference to the workbench.
+    # should take as arguments the editor declaration and the workbench.
     factory = d_(Callable())
 
     # Test function determining if the editor is fit to be used for the
     # selected task. This function should take as arguments the workbench and
     # the selected task and return a boolean.
-    test = d_(Callable())
+    test = d_(Callable(lambda workbench, selected_task: True))

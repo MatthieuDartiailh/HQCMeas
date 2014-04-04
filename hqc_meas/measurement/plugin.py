@@ -5,8 +5,10 @@
 # license : MIT license
 #==============================================================================
 import logging
+from collections import defaultdict
 from inspect import cleandoc
-from atom.api import Typed, Unicode, Dict, ContainerList, List, Instance, Tuple
+from atom.api import (Typed, Unicode, Dict, ContainerList, List, Instance,
+                      Tuple, ForwardTyped)
 from time import sleep
 from importlib import import_module
 import enaml
@@ -37,6 +39,11 @@ EDITORS_POINT = u'hqc_meas.measure.editors'
 DOCKITEMS_POINT = u'hqc_meas.measure.dock_items'
 
 
+def _workspace():
+    from .workspace import MeasureSpace
+    return MeasureSpace
+
+
 class MeasurePlugin(HasPrefPlugin):
     """
     """
@@ -46,6 +53,9 @@ class MeasurePlugin(HasPrefPlugin):
     # List of (module_path, manifest_name) which should be regitered on
     # startup.
     manifests = List(Tuple()).tag(pref=True)
+
+    # Reference to the workspace if any.
+    workspace = ForwardTyped(_workspace)
 
     # Currently edited measure.
     edited_measure = Typed(Measure)
@@ -247,6 +257,21 @@ class MeasurePlugin(HasPrefPlugin):
     # Manifests ids of the plugin registered at start up.
     _manifest_ids = List(Unicode())
 
+    # Dict storing which extension declared which editor.
+    _editor_extensions = Typed(defaultdict, (list,))
+
+    # Dict storing which extension declared which engine.
+    _engine_extensions = Typed(defaultdict, (list,))
+
+    # Dict storing which extension declared which header.
+    _header_extensions = Typed(defaultdict, (list,))
+
+    # Dict storing which extension declared which check.
+    _check_extensions = Typed(defaultdict, (list,))
+
+    # Dict storing which extension declared which monitor.
+    _monitor_extensions = Typed(defaultdict, (list,))
+
     def _listen_to_engine(self, change):
         """ Observer for the engine notifications.
 
@@ -304,26 +329,39 @@ class MeasurePlugin(HasPrefPlugin):
             self.engines.clear()
             return
 
-        new_engines = {}
-        old_engines = self.engines
+        # Get the engines declarations for all extensions.
+        new_extensions = {}
+        old_extensions = self._engine_extensions
         for extension in extensions:
-            plugin_id = extension.plugin_id
-            if plugin_id in old_engines:
-                engine = old_engines[plugin_id]
+            if extensions in old_extensions:
+                engines = old_extensions[extension]
             else:
-                engine = self._load_engine(extension)
-            new_engines[plugin_id] = engine
+                engines = self._load_engines(extension)
+            new_extensions[extension].extend(engines)
 
-        self.engines = new_engines
+        # Create mapping between engine id and declaration.
+        engines = {}
+        for extension in extensions:
+            for engine in new_extensions[extension]:
+                if engine.id in engines:
+                    msg = "engine '%s' is already registered"
+                    raise ValueError(msg % engine.id)
+                if engine.factory is None:
+                    msg = "engine '%s' does not declare a factory"
+                    raise ValueError(msg % engine.id)
+                engines[engine.id] = engine
 
-        if self.selected_engine not in new_engines:
+        self.engines = engines
+
+        # Check whether the selected default engine still exists.
+        if self.selected_engine not in engines:
             logger = logging.getLogger(__name__)
-            msg = cleandoc('''Old selected engine is not available anymore :
-                           {}'''.format(self.selected_engine))
+            msg = cleandoc('''Previously selected engine is not available
+                            anymore : {}'''.format(self.selected_engine))
             logger.warn(msg)
             self.selected_engine = ''
 
-    def _load_engine(self, extension):
+    def _load_engines(self, extension):
         """ Load the Engine object for the given extension.
 
         Parameters
@@ -333,22 +371,21 @@ class MeasurePlugin(HasPrefPlugin):
 
         Returns
         -------
-        engine : Engine
-            The first Engine object declared by the extension.
+        engines : list(Engine)
+            The Engine object declared by the extension.
 
         """
         workbench = self.workbench
         engines = extension.get_children(Engine)
         if extension.factory is not None and not engines:
-            engine = extension.factory(workbench)
-            if not isinstance(engine, Engine):
-                msg = "extension '%s' created non-State of type '%s'"
-                args = (extension.qualified_id, type(engine).__name__)
-                raise TypeError(msg % args)
-        else:
-            engine = engines[0]
+            for engine in extension.factory(workbench):
+                if not isinstance(engine, Engine):
+                    msg = "extension '%s' created non-Engine."
+                    args = (extension.qualified_id)
+                    raise TypeError(msg % args)
+                engines.append(engine)
 
-        return engine
+        return engines
 
     def _refresh_monitors(self):
         """ Refresh the list of known monitors.
@@ -361,19 +398,31 @@ class MeasurePlugin(HasPrefPlugin):
             self.monitors.clear()
             return
 
-        new_monitors = {}
-        old_monitors = self.monitors
+        # Get the monitors declarations for all extensions.
+        new_extensions = {}
+        old_extensions = self._monitor_extensions
         for extension in extensions:
-            plugin_id = extension.plugin_id
-            if plugin_id in old_monitors:
-                monitor = old_monitors[plugin_id]
+            if extensions in old_extensions:
+                monitors = old_extensions[extension]
             else:
-                monitor = self._load_monitor(extension)
-            new_monitors[plugin_id] = monitor
+                monitors = self._load_monitors(extension)
+            new_extensions[extension].extend(monitors)
 
-        self.monitors = new_monitors
+        # Create mapping between monitor id and declaration.
+        monitors = {}
+        for extension in extensions:
+            for monitor in new_extensions[extension]:
+                if monitor.id in monitors:
+                    msg = "monitor '%s' is already registered"
+                    raise ValueError(msg % monitor.id)
+                if monitor.factory is None:
+                    msg = "monitor '%s' does not declare a factory"
+                    raise ValueError(msg % monitor.id)
+                monitors[monitor.id] = monitor
 
-    def _load_monitor(self, extension):
+        self.monitors = monitors
+
+    def _load_monitors(self, extension):
         """ Load the Monitor object for the given extension.
 
         Parameters
@@ -383,22 +432,21 @@ class MeasurePlugin(HasPrefPlugin):
 
         Returns
         -------
-        monitor : Monitor
-            The first Monitor object declared by the extension.
+        monitor : list(Monitor)
+            The list of Monitor declared by the extension.
 
         """
         workbench = self.workbench
         monitors = extension.get_children(Monitor)
         if extension.factory is not None and not monitors:
-            monitor = extension.factory(workbench)
-            if not isinstance(monitor, Monitor):
-                msg = "extension '%s' created non-State of type '%s'"
-                args = (extension.qualified_id, type(monitor).__name__)
-                raise TypeError(msg % args)
-        else:
-            monitor = monitors[0]
+            for monitor in extension.factory(workbench):
+                if not isinstance(monitor, Monitor):
+                    msg = "extension '%s' created non-Monitor."
+                    args = (extension.qualified_id)
+                    raise TypeError(msg % args)
+                monitors.append(monitor)
 
-        return monitor
+        return monitors
 
     def _refresh_headers(self):
         """ Refresh the list of known headers.
@@ -411,17 +459,29 @@ class MeasurePlugin(HasPrefPlugin):
             self.headers.clear()
             return
 
-        new_headers = {}
-        old_headers = self.headers
+        # Get the headers declarations for all extensions.
+        new_extensions = {}
+        old_extensions = self._header_extensions
         for extension in extensions:
-            plugin_id = extension.plugin_id
-            if plugin_id in old_headers:
-                header = old_headers[plugin_id]
+            if extensions in old_extensions:
+                headers = old_extensions[extension]
             else:
-                header = self._load_monitor(extension)
-            new_headers[plugin_id] = header
+                headers = self._load_headers(extension)
+            new_extensions[extension].extend(headers)
 
-        self.headers = new_headers
+        # Create mapping between header id and declaration.
+        headers = {}
+        for extension in extensions:
+            for header in new_extensions[extension]:
+                if header.id in headers:
+                    msg = "header '%s' is already registered"
+                    raise ValueError(msg % header.id)
+                if header.build_header is None:
+                    msg = "header '%s' does not declare a build_header"
+                    raise ValueError(msg % header.id)
+                headers[header.id] = header
+
+        self.headers = headers
 
     def _load_headers(self, extension):
         """ Load the Header object for the given extension.
@@ -433,22 +493,21 @@ class MeasurePlugin(HasPrefPlugin):
 
         Returns
         -------
-        header : Header
-            The first Header object declared by the extension.
+        header : list(Header)
+            The list of Header declared by the extension.
 
         """
         workbench = self.workbench
         headers = extension.get_children(Header)
         if extension.factory is not None and not headers:
-            header = extension.factory(workbench)
-            if not isinstance(header, Header):
-                msg = "extension '%s' created non-State of type '%s'"
-                args = (extension.qualified_id, type(header).__name__)
-                raise TypeError(msg % args)
-        else:
-            header = headers[0]
+            for header in extension.factory(workbench):
+                if not isinstance(header, Header):
+                    msg = "extension '%s' created non-Header."
+                    args = (extension.qualified_id)
+                    raise TypeError(msg % args)
+                headers.append(header)
 
-        return header
+        return headers
 
     def _refresh_checks(self):
         """ Refresh the list of known checks.
@@ -461,17 +520,29 @@ class MeasurePlugin(HasPrefPlugin):
             self.checks.clear()
             return
 
-        new_checks = {}
-        old_checks = self.checks
+        # Get the checks declarations for all extensions.
+        new_extensions = {}
+        old_extensions = self._check_extensions
         for extension in extensions:
-            plugin_id = extension.plugin_id
-            if plugin_id in old_checks:
-                check = old_checks[plugin_id]
+            if extensions in old_extensions:
+                checks = old_extensions[extension]
             else:
-                check = self._load_monitor(extension)
-            new_checks[plugin_id] = check
+                checks = self._load_checks(extension)
+            new_extensions[extension].extend(checks)
 
-        self.checks = new_checks
+        # Create mapping between check id and declaration.
+        checks = {}
+        for extension in extensions:
+            for check in new_extensions[extension]:
+                if check.id in checks:
+                    msg = "check '%s' is already registered"
+                    raise ValueError(msg % check.id)
+                if check.perform_check is None:
+                    msg = "check '%s' does not declare a perform_check"
+                    raise ValueError(msg % check.id)
+                checks[check.id] = check
+
+        self.checks = checks
 
     def _load_checks(self, extension):
         """ Load the Check object for the given extension.
@@ -483,22 +554,21 @@ class MeasurePlugin(HasPrefPlugin):
 
         Returns
         -------
-        check : Check
-            The first Check object declared by the extension.
+        check : list(Check)
+            The list of Check declared by the extension.
 
         """
         workbench = self.workbench
         checks = extension.get_children(Check)
         if extension.factory is not None and not checks:
-            check = extension.factory(workbench)
-            if not isinstance(check, Check):
-                msg = "extension '%s' created non-State of type '%s'"
-                args = (extension.qualified_id, type(check).__name__)
-                raise TypeError(msg % args)
-        else:
-            check = checks[0]
+            for check in extension.factory(workbench):
+                if not isinstance(check, Check):
+                    msg = "extension '%s' created non-Check."
+                    args = (extension.qualified_id)
+                    raise TypeError(msg % args)
+                checks.append(check)
 
-        return check
+        return checks
 
     def _refresh_editors(self):
         """ Refresh the list of known editors.
@@ -511,17 +581,29 @@ class MeasurePlugin(HasPrefPlugin):
             self.editors.clear()
             return
 
-        new_editors = {}
-        old_editors = self.editors
+        # Get the editors declarations for all extensions.
+        new_extensions = {}
+        old_extensions = self._editor_extensions
         for extension in extensions:
-            plugin_id = extension.plugin_id
-            if plugin_id in old_editors:
-                editor = old_editors[plugin_id]
+            if extensions in old_extensions:
+                editors = old_extensions[extension]
             else:
-                editor = self._load_monitor(extension)
-            new_editors[plugin_id] = editor
+                editors = self._load_editors(extension)
+            new_extensions[extension].extend(editors)
 
-        self.editors = new_editors
+        # Create mapping between editor id and declaration.
+        editors = {}
+        for extension in extensions:
+            for editor in new_extensions[extension]:
+                if editor.id in editors:
+                    msg = "editor '%s' is already registered"
+                    raise ValueError(msg % editor.id)
+                if editor.factory is None:
+                    msg = "editor '%s' does not declare a factory"
+                    raise ValueError(msg % editor.id)
+                editors[editor.id] = editor
+
+        self.editors = editors
 
     def _load_editors(self, extension):
         """ Load the Check object for the given extension.
@@ -533,22 +615,21 @@ class MeasurePlugin(HasPrefPlugin):
 
         Returns
         -------
-        editor : Editor
-            The first Editor object declared by the extension.
+        editor : list(Editor)
+            The list of Editor declared by the extension.
 
         """
         workbench = self.workbench
         editors = extension.get_children(Editor)
         if extension.factory is not None and not editors:
-            editor = extension.factory(workbench)
-            if not isinstance(editor, Check):
-                msg = "extension '%s' created non-State of type '%s'"
-                args = (extension.qualified_id, type(editor).__name__)
-                raise TypeError(msg % args)
-        else:
-            editor = editors[0]
+            for editor in extension.factory(workbench):
+                if not isinstance(editor, Editor):
+                    msg = "extension '%s' created non-Editor."
+                    args = (extension.qualified_id)
+                    raise TypeError(msg % args)
+                editors.append(editor)
 
-        return editor
+        return editors
 
     def _bind_observers(self):
         """ Setup the observers for the plugin.

@@ -7,7 +7,7 @@
 import logging
 import os
 import enaml
-from atom.api import Typed
+from atom.api import Typed, Value
 from enaml.workbench.ui.api import Workspace
 from enaml.widgets.api import FileDialog
 from inspect import cleandoc
@@ -22,25 +22,31 @@ with enaml.imports():
     from enaml.stdlib.message_box import question
     from .checks.checks_display import ChecksDisplay
     from .engines.selection import EngineSelector
+    from .content import MeasureContent
 
 
 class MeasureSpace(Workspace):
     """
     """
-
+    # Reference to the plugin to which the workspace is linked.
     plugin = Typed(MeasurePlugin)
+
+    # Reference to the log panel model received from the log plugin.
+    log_model = Value()
 
     def start(self):
         """
         """
         self.plugin = self.workbench.getplugin(u'hqc_meas.measure')
+        self.plugin.workspace = self
         # TODO setup logging handler to redirect log to panel.
-        # TODO create content
+        self.content = MeasureContent(workspace=self)
 
     def stop(self):
         """
         """
-        # TODO vv
+        # TODO remove log handler
+        self.plugin.workspace = None
 
     def new_measure(self):
         """
@@ -73,7 +79,9 @@ class MeasureSpace(Workspace):
 
         """
         if mode == 'file':
-            full_path = FileDialog(mode='save_file',
+            # TODO use new API
+            full_path = FileDialog(parent=self.content,
+                                   mode='save_file',
                                    filters=[u'*.ini']).exec_()
             if not full_path:
                 return
@@ -282,3 +290,11 @@ class MeasureSpace(Workspace):
         """
         """
         self.plugin.force_stop_processing()
+
+    @property
+    def dock_area(self):
+        """ Getter for the dock_area of the content.
+
+        """
+        if self.content:
+            return self.content.children[0]

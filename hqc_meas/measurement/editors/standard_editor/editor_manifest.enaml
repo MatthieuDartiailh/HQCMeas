@@ -13,12 +13,12 @@ from .editor import StandardEditor
 STANDARD_EDITOR_ID = u'hqc_meas.measure.editors.standard_editor'
 
 
-def editor_factory(workbench):
+def editor_factory(declaration, workbench):
     """ Create a standard editor.
 
     """
     return StandardEditor(workbench=workbench,
-                          id=STANDARD_EDITOR_ID)
+                          declaration=declaration)
 
 
 enamldef StandardEditorManifest(PluginManifest):
@@ -30,5 +30,7 @@ enamldef StandardEditorManifest(PluginManifest):
         id = 'editor'
         point = u'hqc_meas.measure.editors'
         Editor:
+            id = STANDARD_EDITOR_ID
+            name = 'Standard editor'
             description = u'Standard editor relying on task views.'
             factory = editor_factory

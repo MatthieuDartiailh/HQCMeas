@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
-# module : measure_manifest.enaml
+# module : manifest.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
@@ -12,8 +12,6 @@ enamldef MeasureManifest(PluginManifest):
     """
     id = u'hqc_meas.measure'
 
-    attr workspace_active
-
     ExtensionPoint:
         id = u'engines'
     ExtensionPoint:
@@ -24,3 +22,6 @@ enamldef MeasureManifest(PluginManifest):
         id = u'headers'
     Extension:
         # TODO UI
+        # NB this is probably not the right way to do this, it woulkd be better
+        # for the workspace to register a new manifest on startup contributing
+        # the menus.

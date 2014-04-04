@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Callable, List, Str, Bool, Unicode
+from atom.api import Callable, List, Str, Bool, Unicode, ForwardTyped
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -16,8 +16,8 @@ class BaseMonitor(PrefAtom):
     """ Base class for all monitors.
 
     """
-    # Id of the builder which created this monitor.
-    id = Unicode()
+    # Declaration defining this editor.
+    declaration = ForwardTyped(lambda: Monitor)
 
     # Name of the monitored measure.
     measure_name = Str().tag(pref=True)
@@ -154,8 +154,17 @@ class Monitor(Declarative):
     """ Extension for the 'monitors' extension point of a MeasurePlugin.
 
     """
+    # Id of the monitor, this can be different from the id of the plugin
+    # declaring it but does not have to.
+    id = d_(Unicode())
+
+    # Name of the monitor. This should an easily understandable name for the
+    # user.
+    name = d_(Str())
+
     # Description of the monitor.
     description = d_(Unicode())
 
-    # Factory function returning an instance of the monitor.
+    # Factory function returning an instance of the monitor. This callable
+    # should take as arguments the monitor declaration and the workbench.
     factory = d_(Callable())

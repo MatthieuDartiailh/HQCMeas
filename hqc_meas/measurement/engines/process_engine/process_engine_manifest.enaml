@@ -14,7 +14,7 @@ from .process_engine import ProcessEngine
 PROCESS_ENGINE_ID = u'hqc_meas.measure.engines.process_engine'
 
 
-def engine_factory(workbench):
+def engine_factory(declaration, workbench):
     """ Create a process engine.
 
     """
@@ -31,6 +31,8 @@ enamldef ProcessEngineManifest(PluginManifest):
         id = 'engine'
         point = u'hqc_meas.measure.engines'
         Engine:
+            id = PROCESS_ENGINE_ID
+            name = 'Process engine'
             description = u'Engine performing the measure in a subprocess'
             factory = engine_factory
 

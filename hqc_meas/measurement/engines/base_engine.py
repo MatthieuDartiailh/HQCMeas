@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Atom, Event, Callable, Bool, Unicode
+from atom.api import Atom, Event, Callable, Bool, Unicode, Str, ForwardTyped
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -17,8 +17,8 @@ class BaseEngine(Atom):
     ensemble of tasks.
 
     """
-    # Id of the builder which created this engine.
-    id = Unicode()
+    # Declaration defining this engine.
+    declaration = ForwardTyped(lambda: Engine)
 
     # Event used to pass news about the measurement progress.
     news = Event()
@@ -99,8 +99,17 @@ class Engine(Declarative):
     """ Extension for the 'engines' extension point of a MeasurePlugin.
 
     """
+    # Id of the engine, this can be different from the id of the plugin
+    # declaring it but does not have to.
+    id = d_(Unicode())
+
+    # Name of the engine. This should an easily understandable name for the
+    # user.
+    name = d_(Str())
+
     # Description of the engine
     description = d_(Unicode())
 
-    # Factory function returning an instance of the engine.
+    # Factory function returning an instance of the engine. This callable
+    # should take as arguments the engine declaration and the workbench.
     factory = d_(Callable())
