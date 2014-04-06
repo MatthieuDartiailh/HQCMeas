@@ -24,10 +24,11 @@ from .custom_entries_building import EntryDialog
 from .monitoring_rules_view import EditRulesView
 
 
-enamldef MonitorPage(Page): dial:
+enamldef TextMonitorPage(Page): dial:
     """ Notebook page which can be used to edit a TextMonnitor.
 
     """
+    name = 'text_monitor'
     attr monitor
     attr selected
 
@@ -171,8 +172,9 @@ enamldef MonitorPage(Page): dial:
                 dial.accept()
 
 
-enamldef MonitorView(Window):
-    """
+enamldef TextMonitorView(Window):
+    """ View used to diaply the monitor infos about the measure.
+
     """
     attr monitor
 

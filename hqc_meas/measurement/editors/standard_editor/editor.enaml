@@ -24,6 +24,7 @@ enamldef FailureView(BaseTaskView):
         text = cleandoc('''No matching view was found for the selected
                            task.''')
 
+
 class _StandardEditorModel(Atom):
     """ Model for the standard editor.
 
@@ -87,6 +88,7 @@ enamldef StandardEditor(BaseEditor):
     """ Standard editor displaying the selected task using the task view.
 
     """
+    name = 'standard_editor'
     selected_task >> _internal.selected_task
     new_measure ::
         _internal.prepare_for_new_measure(change['value'])

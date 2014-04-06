@@ -180,18 +180,6 @@ class _MeasEditionModel(Atom):
         self.tree_visible = editor.tree_visible
 
 
-def _selected_page_finder(pages, selected_tab):
-    """ Helper function to get the selected page in a notebook.
-
-    WARNING : Qt specific.
-
-    """
-    for page in pages:
-        if page.titleproxy_is_active \
-                and page.proxy.objectName() == selected_tab:
-            return page
-
-
 enamldef MeasEditionView(Container):
     """ Main view for measurement edition
 
@@ -263,8 +251,7 @@ enamldef MeasEditionView(Container):
         # Update the selected editor when the user click a tab or when the
         # previously selected editor is removed.
         selected_tab ::
-            _internal.selected_editor = _selected_page_finder(pages,
-                                                              selected_tab)
+            _internal.selected_editor = self.find(selected_tab)
         Include:
             objects << _internal.valid_editors.values()
 

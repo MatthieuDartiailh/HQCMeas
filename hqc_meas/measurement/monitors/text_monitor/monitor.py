@@ -18,7 +18,7 @@ from ..base_monitor import BaseMonitor
 from .entries import MonitoredEntry
 from .rules import AbstractMonitorRule
 with enaml.imports():
-    from .monitor_views import (MonitorPage, MonitorView)
+    from .monitor_views import (TextMonitorPage, TextMonitorView)
 
 
 def import_monitor_plugin():
@@ -189,13 +189,13 @@ class TextMonitor(BaseMonitor):
         self.measure_name = config['measure_name']
 
     def get_editor_page(self):
-        return MonitorPage(monitor=self)
+        return TextMonitorPage(monitor=self)
 
     def show_monitor(self, parent_ui):
         if self._view and self._view.proxy_is_active:
             self._view.restore()
         else:
-            view = MonitorView(monitor=self, parent=parent_ui)
+            view = TextMonitorView(monitor=self, parent=parent_ui)
             view.show()
             self._view = view
 
@@ -240,7 +240,7 @@ class TextMonitor(BaseMonitor):
     _plugin = ForwardTyped(import_monitor_plugin)
 
     # Reference to the current display
-    _view = Typed(MonitorView)
+    _view = Typed(TextMonitorView)
 
     @staticmethod
     def _create_default_entry(entry_path):

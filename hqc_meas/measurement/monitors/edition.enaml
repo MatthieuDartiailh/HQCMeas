@@ -61,18 +61,7 @@ enamldef MonitorSelector(Dialog): dial:
                 dial.reject()
 
 
-def _selected_page_finder(pages, selected_tab):
-    """ Helper function to get the selected page in a notebook.
-
-    WARNING : Qt specific.
-
-    """
-    for page in pages:
-        if page.titleproxy_is_active \
-                and page.proxy.objectName() == selected_tab:
-            return page
-
-enamldef MonitorsEditor(Container):
+enamldef MonitorsEditor(Container): main:
     """ Widget used to edit the monitors parameters of a measure.
 
     """
@@ -81,10 +70,10 @@ enamldef MonitorsEditor(Container):
 
     # Notebook pages for each monitor associated with this measure.
     attr nb_pages << {monitor.get_editor_page(): id
-                      for id, monitor in measure.monitors.iteritems()}:
+                      for id, monitor in measure.monitors.iteritems()}
 
     # Currently selected notebook page.
-    attr selected_page << _selected_page_finder(nb.pages, nb.selected_tab)
+    attr selected_page
 
     constraints << [hbox(notebook,
                          vbox(add, remove))
@@ -92,6 +81,8 @@ enamldef MonitorsEditor(Container):
 
     Notebook: nb:
         tabs_closable = False
+        selected_tab ::
+            main.selected_tab = self.find(selected_tab)
         Include:
             objects << nb_pages.items()
 
