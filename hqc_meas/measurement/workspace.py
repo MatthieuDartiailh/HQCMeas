@@ -24,6 +24,8 @@ with enaml.imports():
     from .engines.selection import EngineSelector
     from .content import MeasureContent
 
+LOG_ID = u'hqc_meas.measure.workspace'
+
 
 class MeasureSpace(Workspace):
     """
@@ -39,13 +41,25 @@ class MeasureSpace(Workspace):
         """
         self.plugin = self.workbench.getplugin(u'hqc_meas.measure')
         self.plugin.workspace = self
-        # TODO setup logging handler to redirect log to panel.
+
+        # Add handler to the root logger to display messages in panel.
+        core = self.workbench.get_plugin(u'enaml.workbenh.core')
+        cmd = u'hqc_meas.logging.add_handler'
+        self.log_model = core.invoke_command(cmd,
+                                             {'id': LOG_ID, 'mode': 'ui'},
+                                             self)
+
+        # Create content.
         self.content = MeasureContent(workspace=self)
 
     def stop(self):
         """
         """
-        # TODO remove log handler
+        # remove handler from the root logger.
+        core = self.workbench.get_plugin(u'enaml.workbenh.core')
+        cmd = u'hqc_meas.logging.remove_handler'
+        self.log_model = core.invoke_command(cmd, {'id': LOG_ID}, self)
+
         self.plugin.workspace = None
 
     def new_measure(self):

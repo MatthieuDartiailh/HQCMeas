@@ -13,7 +13,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from multiprocessing import Process
 
-from hqc_meas.log_facility import (StreamToLogRedirector)
+from hqc_meas.log_system.tools import (StreamToLogRedirector)
 from hqc_meas.task_management.config.api import IniConfigTask
 from ..tools import MeasureSpy
 
@@ -208,7 +208,7 @@ class TaskProcess(Process):
             'disable_existing_loggers': True,
             'handlers': {
                 'queue': {
-                    'class': 'hqc_meas.log_facility.QueueHandler',
+                    'class': 'hqc_meas.log_system.tools.QueueHandler',
                     'queue': self.log_queue,
                 },
             },

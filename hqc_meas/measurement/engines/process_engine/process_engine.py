@@ -13,7 +13,7 @@ from threading import Thread
 from threading import Event as tEvent
 import logging
 
-from hqc_meas.log_facility import QueueLoggerThread
+from hqc_meas.log_system.tools import QueueLoggerThread
 from hqc_meas.tasks.tools.walks import flatten_walk
 
 from ..base_engine import BaseEngine

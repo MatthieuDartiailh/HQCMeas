@@ -13,6 +13,7 @@ from .monitors.edition import MonitorsEditor
 from .headers.edition import HeadersEditor
 from .checks.edition import ChecksEditor
 
+
 enamldef _MeasureToolsEditor(Container): tool_ed:
     """ Base widget for editing the tools of a measure.
 
@@ -41,6 +42,7 @@ enamldef _MeasureToolsEditor(Container): tool_ed:
             ChecksMonitor:
                 measure << tool_ed.measure
 
+
 enamldef ToolsEditorDockItem(DockItem):
     """ DockItem for editing the tools attached to the edited measure.
 
@@ -49,6 +51,7 @@ enamldef ToolsEditorDockItem(DockItem):
 
     _MeasureToolsEditor: ed:
         pass
+
 
 enamldef ToolsEditorDialog(Dialog):
     """ Dialog for editing the tools attached to a measure.

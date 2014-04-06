@@ -27,6 +27,7 @@ from logging.handlers import TimedRotatingFileHandler
 from inspect import cleandoc
 from threading import Thread
 from enaml.application import deferred_call
+from atom.api import Atom, Unicode
 try:
     import codecs
 except ImportError:
@@ -171,45 +172,49 @@ class QueueHandler(logging.Handler):
             self.handleError(record)
 
 
-class GuiConsoleHandler(logging.Handler):
+class PanelModel(Atom):
+    """ Simple model which can be used for a GuiHandler.
+
+    """
+
+    text = Unicode()
+
+
+class GuiHandler(logging.Handler):
     """Logger record sending the log message to a GUI panel
 
     Parameters
     ----------
-    process_panel_dict : dict(str, GUIPanel)
-        Dict mapping process names to GUIPanel (object with a string attribute)
-        where the message should be displayed.
+    model : Atom
+        Model object with a text member.
 
     Methods
     -------
     emit(record)
-        Handle a log record by appending the log message to the GUIPanel
+        Handle a log record by appending the log message to the model
 
     """
-    def __init__(self, process_panel_dict):
+    def __init__(self, model):
         logging.Handler.__init__(self)
-        self.process_panel_dict = process_panel_dict
+        self.model = model
 
     def emit(self, record):
         """
-        Write the log record message to the appropriate GUIPanel according to
-        the process they are issued from. Record with a critical level, likely
-        to have caused the program to crash, are not displayed but the user is
-        encouraged to check the log file.
+        Write the log record message to the model. Use Html encoding to add
+        colors, etc.
 
         """
-        panel = self.process_panel_dict[record.processName]
-
+        # TODO add coloring.
         try:
             if record.levelname == 'INFO':
-                deferred_call(self._write_in_panel, panel,
+                deferred_call(self._write_in_panel, self.model,
                               record.message + '\n')
             elif record.levelname == 'CRITICAL':
-                deferred_call(self._write_in_panel, panel,
+                deferred_call(self._write_in_panel, self.model,
                               cleandoc('''An error occured please check the
                                 log file for more details.''') + '\n')
             else:
-                deferred_call(self._write_in_panel, panel,
+                deferred_call(self._write_in_panel, self.model,
                               record.levelname + ':' + record.message + '\n')
         except (KeyboardInterrupt, SystemExit):
             raise
@@ -217,10 +222,10 @@ class GuiConsoleHandler(logging.Handler):
             self.handleError(record)
 
     @staticmethod
-    def _write_in_panel(panel, string):
+    def _write_in_panel(model, string):
         """
         """
-        panel.string += string
+        model.string += string
 
 
 class QueueLoggerThread(Thread):
@@ -251,7 +256,9 @@ class QueueLoggerThread(Thread):
 
 
 class DayRotatingTimeHandler(TimedRotatingFileHandler):
-    """
+    """ Custom implementation of the TimeRotatingHandler to avoid issues on
+    win32.
+
     """
     def __init__(self, filename, when='midnight', **kwargs):
         self.when = when.upper()

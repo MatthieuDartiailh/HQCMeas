@@ -173,7 +173,7 @@ enamldef TextMonitorPage(Page): dial:
 
 
 enamldef TextMonitorView(Window):
-    """ View used to diaply the monitor infos about the measure.
+    """ View used to display the monitor infos about the measure.
 
     """
     attr monitor

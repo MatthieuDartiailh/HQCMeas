@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
-# module : state_manifest.py
+# module : state_manifest.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
