@@ -10,6 +10,7 @@ from enaml.workbench.api import PluginManifest, Extension
 from enaml.workbench.core.api import Command
 
 from hqc_meas.utils.state import State
+from hqc_meas.utils.preferences import Preferences
 
 
 def log_plugin_factory():
@@ -92,7 +93,7 @@ enamldef LogManifest(PluginManifest):
     """ Manifest for the plugin handling logging for an application.
 
     """
-    id = 'hqc_meas.logging'
+    id = u'hqc_meas.logging'
     factory = log_plugin_factory
 
     Extension:
@@ -101,6 +102,12 @@ enamldef LogManifest(PluginManifest):
         State:
             id = 'logging'
             sync_members = ['handler_ids', 'filter_ids']
+
+    Extension:
+        id = 'prefs'
+        point = u'hqc_meas.preferences.pref_plugin'
+        Preferences:
+            pass
 
     Extension:
         id = 'commands'

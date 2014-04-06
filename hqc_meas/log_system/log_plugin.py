@@ -88,6 +88,7 @@ class LogPlugin(HasPrefPlugin):
         logger.addHandler(handler)
 
         self._handlers[id] = (handler, name)
+        self.handler_ids = self._handlers.keys()
 
         if refs:
             return refs
@@ -107,9 +108,13 @@ class LogPlugin(HasPrefPlugin):
             handler, logger_name = handlers.pop(id)
             logger = logging.getLogger(logger_name)
             logger.removeHandler(handler)
-            for filter_id, infos in self._filters.values():
+            for filter_id in self._filters.keys():
+                infos = self._filters[filter_id]
                 if infos[1] == id:
                     del self._filters[filter_id]
+
+            self.filter_ids = self._filters.keys()
+            self.handler_ids = self._handlers.keys()
 
     def add_filter(self, id, filter, handler_id):
         """ Add a filter to the specified handler.
@@ -127,12 +132,20 @@ class LogPlugin(HasPrefPlugin):
             Id of the handler to which this filter should be added
 
         """
+        if not hasattr(filter, 'filter'):
+            logger = logging.getLogger(__name__)
+            logger.warn('Filter does not implemet a filter method')
+            return
+
         handlers = self._handlers
         id = unicode(id)
+        handler_id = unicode(handler_id)
         if handler_id in handlers:
-            handler = handlers[handler_id]
+            handler, _ = handlers[handler_id]
             handler.addFilter(filter)
             self._filters[id] = (filter, handler_id)
+
+            self.filter_ids = self._filters.keys()
 
         else:
             logger = logging.getLogger(__name__)
@@ -151,8 +164,9 @@ class LogPlugin(HasPrefPlugin):
         id = unicode(id)
         if id in filters:
             filter, handler_id = filters.pop(id)
-            handler = self._handlers[handler_id]
+            handler, _ = self._handlers[handler_id]
             handler.removeFilter(filter)
+            self.filter_ids = self._filters.keys()
 
     def set_formatter(self, handler_id, formatter):
         """ Set the formatter of the specified handler.
@@ -169,8 +183,8 @@ class LogPlugin(HasPrefPlugin):
         handlers = self._handlers
         handler_id = unicode(handler_id)
         if handler_id in handlers:
-            handler = handlers[handler_id]
-            handler.setFormatter(filter)
+            handler, _ = handlers[handler_id]
+            handler.setFormatter(formatter)
 
         else:
             logger = logging.getLogger(__name__)

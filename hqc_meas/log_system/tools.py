@@ -25,6 +25,7 @@ process log emitted in the measure process.
 import logging, Queue, time, os, datetime
 from logging.handlers import TimedRotatingFileHandler
 from inspect import cleandoc
+from textwrap import fill
 from threading import Thread
 from enaml.application import deferred_call
 from atom.api import Atom, Unicode
@@ -85,10 +86,10 @@ class StreamToLogRedirector(object):
             if self.level != logging.CRITICAL:
                 if '<DEBUG>' in message:
                     message = message.replace('<DEBUG>', '').strip()
-                    self.logger.warning(message)
+                    self.logger.debug(message)
                 elif '<WARNING>' in message:
                     message = message.replace('<WARNING>', '').strip()
-                    self.logger.warning(message)
+                    self.logger.warn(message)
                 elif '<ERROR>' in message:
                     message = message.replace('<ERROR>', '').strip()
                     self.logger.error(message)
@@ -98,7 +99,7 @@ class StreamToLogRedirector(object):
                 else:
                     self.logger.log(self.level, message)
             else:
-                self.logger.error(message)
+                self.logger.critical(message)
 
     def flush(self):
         """Useless function implemented for compatibility
@@ -204,18 +205,19 @@ class GuiHandler(logging.Handler):
         colors, etc.
 
         """
-        # TODO add coloring.
+        # TODO add coloring. Better to create a custom formatter
+        msg = self.format(record)
         try:
             if record.levelname == 'INFO':
                 deferred_call(self._write_in_panel, self.model,
-                              record.message + '\n')
+                              msg + '\n')
             elif record.levelname == 'CRITICAL':
                 deferred_call(self._write_in_panel, self.model,
-                              cleandoc('''An error occured please check the
-                                log file for more details.''') + '\n')
+                              fill(cleandoc('''An error occured please check
+                                  the log file for more details.''')) + '\n')
             else:
                 deferred_call(self._write_in_panel, self.model,
-                              record.levelname + ':' + record.message + '\n')
+                              record.levelname + ': ' + msg + '\n')
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
@@ -225,7 +227,7 @@ class GuiHandler(logging.Handler):
     def _write_in_panel(model, string):
         """
         """
-        model.string += string
+        model.text += string
 
 
 class QueueLoggerThread(Thread):
