@@ -6,11 +6,18 @@
 #==============================================================================
 
 from enaml.workbench.api import PluginManifest, ExtensionPoint, Extension
+from hqc_meas.utils.preferences import Preferences
+
+
+def measure_plugin_factory():
+    from .plugin import MeasurePlugin
+    return MeasurePlugin()
 
 enamldef MeasureManifest(PluginManifest):
     """
     """
     id = u'hqc_meas.measure'
+    factory = measure_plugin_factory
 
     ExtensionPoint:
         id = u'engines'
@@ -20,8 +27,17 @@ enamldef MeasureManifest(PluginManifest):
         id = u'checks'
     ExtensionPoint:
         id = u'headers'
+    ExtensionPoint:
+        id = u'editors'
+
     Extension:
-        # TODO UI
-        # NB this is probably not the right way to do this, it woulkd be better
-        # for the workspace to register a new manifest on startup contributing
-        # the menus.
+        id = 'prefs'
+        point = u'hqc_meas.preferences.pref_plugin'
+        Preferences:
+            pass
+
+#    Extension:
+#        # TODO UI
+#        # NB this is probably not the right way to do this, it woulkd be better
+#        # for the workspace to register a new manifest on startup contributing
+#        # the menus.

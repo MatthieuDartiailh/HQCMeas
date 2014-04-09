@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from atom.api import (Atom, Instance, Dict, Unicode, Typed, Str)
+from atom.api import (Atom, Instance, Dict, Unicode, ForwardTyped, Str)
 from textwrap import fill
 from configobj import ConfigObj
 import logging
@@ -7,12 +7,17 @@ import logging
 from ..tasks.api import RootTask
 
 
+def measure_plugin():
+    from .plugin import MeasurePlugin
+    return MeasurePlugin
+
+
 class Measure(Atom):
     """
 
     """
     # Reference to the measure plugin managing this measure.
-    plugin = Typed()
+    plugin = ForwardTyped(measure_plugin)
 
     # Name of the measure.
     name = Str()
