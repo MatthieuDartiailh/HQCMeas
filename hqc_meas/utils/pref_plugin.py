@@ -115,10 +115,12 @@ class PrefPlugin(Plugin):
         prefs = ConfigObj(path)
         for plugin_id in prefs:
             if plugin_id in self._pref_decls:
-                plugin = self.workbench.get_plugin(plugin_id)
-                decl = self._pref_decls[plugin_id]
-                load_method = getattr(plugin, decl.loading_method)
-                load_method(**prefs[plugin_id])
+                plugin = self.workbench.get_plugin(plugin_id,
+                                                   force_create=False)
+                if plugin:
+                    decl = self._pref_decls[plugin_id]
+                    load_method = getattr(plugin, decl.loading_method)
+                    load_method(**prefs[plugin_id])
 
     def plugin_init_complete(self, plugin_id):
         """ Notify the preference plugin that a plugin has started properly.
