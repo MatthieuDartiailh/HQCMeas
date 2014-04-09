@@ -17,7 +17,7 @@ from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
 from .engines.base_engine import BaseEngine, Engine
 from .monitors.base_monitor import Monitor
 from .headers.base_header import Header
-from .checks.base_checks import Check
+from .checks.base_check import Check
 from .editors.base_editor import Editor
 from .measure import Measure
 
@@ -34,9 +34,6 @@ HEADERS_POINT = u'hqc_meas.measure.headers'
 CHECKS_POINT = u'hqc_meas.measure.checks'
 
 EDITORS_POINT = u'hqc_meas.measure.editors'
-
-# TODO do something
-DOCKITEMS_POINT = u'hqc_meas.measure.dock_items'
 
 
 def _workspace():
@@ -115,6 +112,7 @@ class MeasurePlugin(HasPrefPlugin):
         self._refresh_checks()
         self._refresh_editors()
         self._bind_observers()
+        self._update_selected_engine({'value': self.selected_engine})
 
     def stop(self):
         """
@@ -304,7 +302,7 @@ class MeasurePlugin(HasPrefPlugin):
         """ Register a manifest given its module name and its name.
 
         NB : the path should be a dot separated string referring to a package
-        in sys.path.
+        in sys.path. It should be an absolute path.
         """
         try:
             with enaml.imports():
@@ -327,10 +325,15 @@ class MeasurePlugin(HasPrefPlugin):
         extensions = point.extensions
         if not extensions:
             self.engines.clear()
+            logger = logging.getLogger(__name__)
+            msg = cleandoc('''Previously selected engine is not available
+                            anymore : {}'''.format(self.selected_engine))
+            logger.warn(msg)
+            self.selected_engine = ''
             return
 
         # Get the engines declarations for all extensions.
-        new_extensions = {}
+        new_extensions = defaultdict(list)
         old_extensions = self._engine_extensions
         for extension in extensions:
             if extensions in old_extensions:
@@ -351,15 +354,15 @@ class MeasurePlugin(HasPrefPlugin):
                     raise ValueError(msg % engine.id)
                 engines[engine.id] = engine
 
-        self.engines = engines
-
-        # Check whether the selected default engine still exists.
-        if self.selected_engine not in engines:
+        # Check whether the selected engine still exists.
+        if self.selected_engine and self.selected_engine not in engines:
             logger = logging.getLogger(__name__)
             msg = cleandoc('''Previously selected engine is not available
                             anymore : {}'''.format(self.selected_engine))
             logger.warn(msg)
             self.selected_engine = ''
+
+        self.engines = engines
 
     def _load_engines(self, extension):
         """ Load the Engine object for the given extension.
@@ -387,6 +390,22 @@ class MeasurePlugin(HasPrefPlugin):
 
         return engines
 
+    def _update_selected_engine(self, change):
+        """ Observer ensuring that the selected engine is informed when it is
+        selected and deselected.
+
+        """
+        if 'oldvalue' in change:
+            old = change['oldvalue']
+            if old in self.engines:
+                engine = self.engines[old]
+                engine.post_deselection(self.workbench, engine)
+
+        new = change['value']
+        if new and new in self.engines:
+            engine = self.engines[new]
+            engine.post_selection(self.workbench, engine)
+
     def _refresh_monitors(self):
         """ Refresh the list of known monitors.
 
@@ -399,7 +418,7 @@ class MeasurePlugin(HasPrefPlugin):
             return
 
         # Get the monitors declarations for all extensions.
-        new_extensions = {}
+        new_extensions = defaultdict(list)
         old_extensions = self._monitor_extensions
         for extension in extensions:
             if extensions in old_extensions:
@@ -460,7 +479,7 @@ class MeasurePlugin(HasPrefPlugin):
             return
 
         # Get the headers declarations for all extensions.
-        new_extensions = {}
+        new_extensions = defaultdict(list)
         old_extensions = self._header_extensions
         for extension in extensions:
             if extensions in old_extensions:
@@ -521,7 +540,7 @@ class MeasurePlugin(HasPrefPlugin):
             return
 
         # Get the checks declarations for all extensions.
-        new_extensions = {}
+        new_extensions = defaultdict(list)
         old_extensions = self._check_extensions
         for extension in extensions:
             if extensions in old_extensions:
@@ -582,7 +601,7 @@ class MeasurePlugin(HasPrefPlugin):
             return
 
         # Get the editors declarations for all extensions.
-        new_extensions = {}
+        new_extensions = defaultdict(list)
         old_extensions = self._editor_extensions
         for extension in extensions:
             if extensions in old_extensions:
@@ -651,6 +670,11 @@ class MeasurePlugin(HasPrefPlugin):
 
         point = workbench.get_extension_point(EDITORS_POINT)
         point.observe('extensions', self._update_editors)
+
+        # Start this observer only now as I don't want it to run when the
+        # preferences updates the selected_engine as no engine is known yet
+        # (but I want to register auto-registering manifests before refreshing)
+        self.observe('selected_engine', self._update_selected_engine)
 
     def _unbind_observers(self):
         """ Remove the observers for the plugin.

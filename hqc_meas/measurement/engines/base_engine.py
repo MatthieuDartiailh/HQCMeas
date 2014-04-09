@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Atom, Event, Callable, Bool, Unicode, Str, ForwardTyped
+from atom.api import Atom, Event, Callable, Bool, Unicode, ForwardTyped
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -98,14 +98,13 @@ class BaseEngine(Atom):
 class Engine(Declarative):
     """ Extension for the 'engines' extension point of a MeasurePlugin.
 
+    The name member inherited from Object should always be set to an easily
+    understandable name for the user.
+
     """
     # Id of the engine, this can be different from the id of the plugin
     # declaring it but does not have to.
     id = d_(Unicode())
-
-    # Name of the engine. This should an easily understandable name for the
-    # user.
-    name = d_(Str())
 
     # Description of the engine
     description = d_(Unicode())
@@ -113,3 +112,21 @@ class Engine(Declarative):
     # Factory function returning an instance of the engine. This callable
     # should take as arguments the engine declaration and the workbench.
     factory = d_(Callable())
+
+    # Callable called by the framework when this engine is selected. The
+    # callable should take two arguments : the workbench and the engine.
+    post_selection = d_(Callable(lambda workbench: None))
+
+    # Callable called by the framework when the engine is deselected. The
+    # callable should take two arguments : the workbench and the engine.
+    post_deselection = d_(Callable(lambda workbench: None))
+
+    # Callable called by the framework when the workspace is active and the
+    # engine selected. The callable should take two arguments : the workspace
+    # and the engine.
+    contribute_workspace = d_(Callable(lambda workspace: None))
+
+    # Callable called by the framework when the workspace is active and the
+    # engine deselected. The callable should take  two arguments : the
+    # workspace and the engine.
+    remove_contribution = d_(Callable(lambda workspace: None))

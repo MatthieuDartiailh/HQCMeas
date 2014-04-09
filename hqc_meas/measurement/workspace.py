@@ -24,12 +24,15 @@ with enaml.imports():
     from .engines.selection import EngineSelector
     from .content import MeasureContent
 
+
 LOG_ID = u'hqc_meas.measure.workspace'
 
 
 class MeasureSpace(Workspace):
     """
     """
+    #--- Public API -----------------------------------------------------------
+
     # Reference to the plugin to which the workspace is linked.
     plugin = Typed(MeasurePlugin)
 
@@ -39,8 +42,8 @@ class MeasureSpace(Workspace):
     def start(self):
         """
         """
-        self.plugin = self.workbench.getplugin(u'hqc_meas.measure')
-        self.plugin.workspace = self
+        plugin = self.workbench.getplugin(u'hqc_meas.measure')
+        plugin.workspace = self
 
         # Add handler to the root logger to display messages in panel.
         core = self.workbench.get_plugin(u'enaml.workbenh.core')
@@ -52,9 +55,25 @@ class MeasureSpace(Workspace):
         # Create content.
         self.content = MeasureContent(workspace=self)
 
+        # Check whether or not an engine can contribute.
+        if plugin.selected_engine:
+            engine = plugin.engines[plugin.selected_engine]
+            engine.contribute_workspace(self, engine)
+
+        plugin.observe('selected_engine', self._update_engine_contribution)
+
+        self.plugin = plugin
+
     def stop(self):
         """
         """
+        self.plugin.unobserve('selected_engine',
+                              self._update_engine_contribution)
+
+        if self.plugin.selected_engine:
+            engine = self.plugin.engines[self.plugin.selected_engine]
+            engine.remove_contribution(self, engine)
+
         # remove handler from the root logger.
         core = self.workbench.get_plugin(u'enaml.workbenh.core')
         cmd = u'hqc_meas.logging.remove_handler'
@@ -312,3 +331,19 @@ class MeasureSpace(Workspace):
         """
         if self.content:
             return self.content.children[0]
+
+    #--- Private API ----------------------------------------------------------
+
+    def _update_engine_contribution(self, change):
+        """
+        """
+        if 'oldvalue' in change:
+            old = change['oldvalue']
+            if old in self.plugin.engines:
+                engine = self.plugin.engines[old]
+                engine.remove_contribution(self, engine)
+
+        new = change['value']
+        if new and new in self.plugin.engines:
+            engine = self.plugin.engines[new]
+            engine.contribute_workspace(self, engine)
