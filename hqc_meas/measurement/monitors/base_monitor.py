@@ -9,10 +9,10 @@ from atom.api import Callable, List, Str, Bool, Unicode, ForwardTyped
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
-from hqc_meas.utils.atom_util import PrefAtom
+from hqc_meas.utils.atom_util import HasPrefAtom
 
 
-class BaseMonitor(PrefAtom):
+class BaseMonitor(HasPrefAtom):
     """ Base class for all monitors.
 
     """
@@ -153,14 +153,13 @@ class BaseMonitor(PrefAtom):
 class Monitor(Declarative):
     """ Extension for the 'monitors' extension point of a MeasurePlugin.
 
+    The name member inherited from Object should always be set to an easily
+    understandable name for the user.
+
     """
     # Id of the monitor, this can be different from the id of the plugin
     # declaring it but does not have to.
     id = d_(Unicode())
-
-    # Name of the monitor. This should an easily understandable name for the
-    # user.
-    name = d_(Str())
 
     # Description of the monitor.
     description = d_(Unicode())

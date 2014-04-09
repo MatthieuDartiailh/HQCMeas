@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (Callable, Unicode, Instance, Bool, Event, Str,
+from atom.api import (Callable, Unicode, Instance, Bool, Event,
                       ForwardTyped)
 from enaml.core.declarative import Declarative, d_
 from enaml.widgets.api import Page
@@ -36,14 +36,13 @@ class BaseEditor(Page):
 class Editor(Declarative):
     """ Extension for the 'editors' extension point of a MeasurePlugin.
 
+    The name member inherited from Object should always be set to an easily
+    understandable name for the user.
+
     """
     # Id of the editor, this can be different from the id of the plugin
     # declaring it but does not have to.
     id = d_(Unicode())
-
-    # Name of the editor. This should an easily understandable name for the
-    # user.
-    name = d_(Str())
 
     # Editor description.
     description = d_(Unicode())
