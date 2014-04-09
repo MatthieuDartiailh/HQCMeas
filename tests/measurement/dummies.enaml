@@ -1,0 +1,336 @@
+# -*- coding: utf-8 -*-
+from atom.api import Atom, Str
+from enaml.workbench.api import PluginManifest, Plugin, Extension
+
+from hqc_meas.measurement.checks.base_check import Check
+from hqc_meas.measurement.headers.base_header import Header
+from hqc_meas.measurement.editors.base_editor import Editor
+from hqc_meas.measurement.monitors.base_monitor import Monitor
+from hqc_meas.measurement.engines.base_engine import Engine
+
+#--- Checks dummies -----------------------------------------------------------
+enamldef DummyCheck1(PluginManifest):
+    """
+    """
+    id = u'dummy.check1'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.checks'
+        Check:
+            id = 'dummy.check1'
+            name = 'Check1'
+            perform_check = lambda: True
+
+enamldef DummyCheck1bis(PluginManifest):
+    """
+    """
+    id = u'dummy.check1bis'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.checks'
+        Check:
+            id = 'dummy.check1'
+            name = 'Check1'
+            perform_check = lambda: True
+
+
+enamldef DummyCheck2(PluginManifest):
+    """
+    """
+    id = u'dummy.check2'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.checks'
+        Check:
+            id = 'dummy.check2'
+            name = 'Check2'
+
+enamldef DummyCheck3(PluginManifest):
+    """
+    """
+    id = u'dummy.check3'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.checks'
+        factory = lambda workbench: [Check(**{'id': 'dummy.check3',
+                                              'name': 'Check3',
+                                              'perform_check': lambda: True})]
+
+enamldef DummyCheck4(PluginManifest):
+    """
+    """
+    id = u'dummy.check4'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.checks'
+        factory = lambda workbench: [None]
+
+#--- Headers dummies ----------------------------------------------------------
+
+enamldef DummyHeader1(PluginManifest):
+    """
+    """
+    id = u'dummy.header1'
+
+    Extension:
+        id = 'headers'
+        point = u'hqc_meas.measure.headers'
+        Header:
+            id = 'dummy.header1'
+            name = 'Header1'
+            build_header = lambda: ''
+
+enamldef DummyHeader1bis(PluginManifest):
+    """
+    """
+    id = u'dummy.header1bis'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.headers'
+        Header:
+            id = 'dummy.header1'
+            name = 'Header1'
+            build_header = lambda: ''
+
+
+enamldef DummyHeader2(PluginManifest):
+    """
+    """
+    id = u'dummy.header2'
+
+    Extension:
+        id = 'headers'
+        point = u'hqc_meas.measure.headers'
+        Header:
+            id = 'dummy.header2'
+            name = 'Header2'
+
+enamldef DummyHeader3(PluginManifest):
+    """
+    """
+    id = u'dummy.header3'
+
+    Extension:
+        id = 'headers'
+        point = u'hqc_meas.measure.headers'
+        factory = lambda workbench: [Header(**{'id': 'dummy.header3',
+                                               'name': 'Header3',
+                                               'build_header': lambda: ''})]
+
+enamldef DummyHeader4(PluginManifest):
+    """
+    """
+    id = u'dummy.header4'
+
+    Extension:
+        id = 'headers'
+        point = u'hqc_meas.measure.headers'
+        factory = lambda workbench: [None]
+
+#--- Editors dummies ----------------------------------------------------------
+
+enamldef DummyEditor1(PluginManifest):
+    """
+    """
+    id = u'dummy.editor1'
+
+    Extension:
+        id = 'editors'
+        point = u'hqc_meas.measure.editors'
+        Editor:
+            id = 'dummy.editor1'
+            name = 'Editor1'
+            factory = lambda: None
+
+enamldef DummyEditor1bis(PluginManifest):
+    """
+    """
+    id = u'dummy.editor1bis'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.editors'
+        Editor:
+            id = 'dummy.editor1'
+            name = 'Editor1'
+            factory = lambda: None
+
+
+enamldef DummyEditor2(PluginManifest):
+    """
+    """
+    id = u'dummy.editor2'
+
+    Extension:
+        id = 'editors'
+        point = u'hqc_meas.measure.editors'
+        Editor:
+            id = 'dummy.editor2'
+            name = 'Editor2'
+
+enamldef DummyEditor3(PluginManifest):
+    """
+    """
+    id = u'dummy.editor3'
+
+    Extension:
+        id = 'editors'
+        point = u'hqc_meas.measure.editors'
+        factory = lambda workbench: [Editor(**{'id': 'dummy.editor3',
+                                               'name': 'Editor3',
+                                               'factory': lambda: None})]
+
+enamldef DummyEditor4(PluginManifest):
+    """
+    """
+    id = u'dummy.editor4'
+
+    Extension:
+        id = 'editors'
+        point = u'hqc_meas.measure.editors'
+        factory = lambda workbench: [None]
+
+#--- Monitors dummies ---------------------------------------------------------
+
+enamldef DummyMonitor1(PluginManifest):
+    """
+    """
+    id = u'dummy.monitor1'
+
+    Extension:
+        id = 'monitors'
+        point = u'hqc_meas.measure.monitors'
+        Monitor:
+            id = 'dummy.monitor1'
+            name = 'Monitor1'
+            factory = lambda: None
+
+enamldef DummyMonitor1bis(PluginManifest):
+    """
+    """
+    id = u'dummy.monitor1bis'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.monitors'
+        Monitor:
+            id = 'dummy.monitor1'
+            name = 'Monitor1'
+            factory = lambda: None
+
+
+enamldef DummyMonitor2(PluginManifest):
+    """
+    """
+    id = u'dummy.monitor2'
+
+    Extension:
+        id = 'monitors'
+        point = u'hqc_meas.measure.monitors'
+        Monitor:
+            id = 'dummy.monitor2'
+            name = 'Monitor2'
+
+enamldef DummyMonitor3(PluginManifest):
+    """
+    """
+    id = u'dummy.monitor3'
+
+    Extension:
+        id = 'monitors'
+        point = u'hqc_meas.measure.monitors'
+        factory = lambda workbench: [Monitor(**{'id': 'dummy.monitor3',
+                                             'name': 'Monitor3',
+                                             'factory': lambda: None})]
+
+enamldef DummyMonitor4(PluginManifest):
+    """
+    """
+    id = u'dummy.monitor4'
+
+    Extension:
+        id = 'monitors'
+        point = u'hqc_meas.measure.monitors'
+        factory = lambda workbench: [None]
+
+#--- Engine dummies -----------------------------------------------------------
+
+
+def _post_selection(workbench, engine):
+    engine.post_selected = True
+    print engine.post_selected
+
+
+def _post_deselection(workbench, engine):
+    engine.post_deselected = True
+
+enamldef DummyEngine1(PluginManifest):
+    """
+    """
+    id = u'dummy.engine1'
+
+    Extension:
+        id = 'engines'
+        point = u'hqc_meas.measure.engines'
+        Engine:
+            attr post_selected
+            attr post_deselected
+            id = 'dummy.engine1'
+            name = 'Engine1'
+            factory = lambda: None
+            post_selection = _post_selection
+            post_deselection = _post_deselection
+
+enamldef DummyEngine1bis(PluginManifest):
+    """
+    """
+    id = u'dummy.engine1bis'
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.engines'
+        Engine:
+            id = 'dummy.engine1'
+            name = 'Engine1'
+            factory = lambda: None
+
+
+enamldef DummyEngine2(PluginManifest):
+    """
+    """
+    id = u'dummy.engine2'
+
+    Extension:
+        id = 'engines'
+        point = u'hqc_meas.measure.engines'
+        Engine:
+            id = 'dummy.engine2'
+            name = 'Engine2'
+
+enamldef DummyEngine3(PluginManifest):
+    """
+    """
+    id = u'dummy.engine3'
+
+    Extension:
+        id = 'engines'
+        point = u'hqc_meas.measure.engines'
+        factory = lambda workbench: [Engine(**{'id': 'dummy.engine3',
+                                               'name': 'Engine3',
+                                               'factory': lambda: None})]
+
+enamldef DummyEngine4(PluginManifest):
+    """
+    """
+    id = u'dummy.engine4'
+
+    Extension:
+        id = 'engines'
+        point = u'hqc_meas.measure.engines'
+        factory = lambda workbench: [None]
