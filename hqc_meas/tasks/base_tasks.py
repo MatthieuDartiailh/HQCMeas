@@ -612,7 +612,11 @@ class ComplexTask(BaseTask):
             # Register preferences.
             meta = members[name].metadata
             if meta and 'pref' in meta:
-                self.task_preferences[name] = repr(getattr(self, name))
+                val = getattr(self, name)
+                if isinstance(val, basestring):
+                    self.task_preferences[name] = val
+                else:
+                    self.task_preferences[name] = repr(val)
 
             # Find all tagged children.
             elif meta and 'child' in meta:
@@ -638,7 +642,11 @@ class ComplexTask(BaseTask):
 
         """
         for name in tagged_members(self, 'pref'):
-            self.task_preferences[name] = repr(getattr(self, name))
+            val = getattr(self, name)
+            if isinstance(val, basestring):
+                self.task_preferences[name] = val
+            else:
+                self.task_preferences[name] = repr(val)
 
         for name in tagged_members(self, 'child'):
             child = getattr(self, name)
@@ -881,8 +889,8 @@ class RootTask(ComplexTask):
                                          'default_path': ''})
 
     def __init__(self, *args, **kwargs):
-        super(RootTask, self).__init__(*args, **kwargs)
         self.task_database = TaskDatabase()
+        super(RootTask, self).__init__(*args, **kwargs)
         self.register_in_database()
         self.root_task = self
 
