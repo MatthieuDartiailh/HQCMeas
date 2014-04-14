@@ -35,7 +35,8 @@ class BaseMonitor(HasPrefAtom):
         """ Start the activity of the monitor.
 
         It is the reponsability of the monitor to display any widget,
-        the provided widget can be used as parent.
+        the provided widget can be used as parent. The auto-show member value
+        should be respected.
 
         Parameters
         ----------
@@ -94,6 +95,12 @@ class BaseMonitor(HasPrefAtom):
                         BaseMonitor''')
         raise NotImplementedError(mess)
 
+    def clear_state(self):
+        """ Clear the monitor state.
+
+        """
+        pass
+
     def get_state(self):
         """ Get all necessary informations to rebuild the monitor.
 
@@ -104,9 +111,7 @@ class BaseMonitor(HasPrefAtom):
             monitor.
 
         """
-        mess = cleandoc('''This method should be implemented by subclasses of
-                        BaseMonitor''')
-        raise NotImplementedError(mess)
+        return self.preferences_from_members()
 
     def set_state(self, state):
         """ Use dict to restore the monitor state.
@@ -118,9 +123,7 @@ class BaseMonitor(HasPrefAtom):
             monitor.
 
         """
-        mess = cleandoc('''This method should be implemented by subclasses of
-                        BaseMonitor''')
-        raise NotImplementedError(mess)
+        self.update_members_from_preferences(**state)
 
     def get_editor_page(self):
         """ Access the notebook page which can be used to edit the monitor.
@@ -165,5 +168,7 @@ class Monitor(Declarative):
     description = d_(Unicode())
 
     # Factory function returning an instance of the monitor. This callable
-    # should take as arguments the monitor declaration and the workbench.
+    # should take as arguments the workbench, the monitor declaration and the
+    # optionnal keyword raw signaling whether or not to initialize the monitor
+    # with default values (False by default).
     factory = d_(Callable())

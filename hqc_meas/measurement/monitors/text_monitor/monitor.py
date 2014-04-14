@@ -76,7 +76,7 @@ class TextMonitor(BaseMonitor):
             self._database_values = dict.fromkeys(entries)
 
         custom = self.custom_entries[:]
-        self._clear_state()
+        self.clear_state()
         self.custom_entries = custom
         for entry in entries:
             self.database_modified({'value': (entry, 1)})
@@ -121,9 +121,21 @@ class TextMonitor(BaseMonitor):
 
             if entry[0] in self.database_entries:
                 self.database_entries.remove(entry[0])
+                
+    def clear_state(self):
+        """ Clear the monitor state.
+
+        """
+        with self.suppress_notifications():
+            self.displayed_entries = []
+            self.undisplayed_entries = []
+            self.hidden_entries = []
+            self.updaters = {}
+            self.custom_entries = []
+            self.database_entries = []
 
     def get_state(self):
-        prefs = {}
+        prefs = self.preferences_from_members()
         # Save the definitions of the custom entries.
         for i, custom_entry in enumerate(self.custom_entries):
             aux = 'custom_{}'.format(i)
@@ -187,6 +199,7 @@ class TextMonitor(BaseMonitor):
         self.undisplayed_entries = undisp
         self.hidden_entries = hidden
         self.measure_name = config['measure_name']
+        self.auto_show = eval(config['auto_show'])
 
     def get_editor_page(self):
         return TextMonitorPage(monitor=self)
@@ -261,18 +274,6 @@ class TextMonitor(BaseMonitor):
         formatting = '{' + entry_path + '}'
         return MonitoredEntry(name=name, path=entry_path,
                               formatting=formatting, depend_on=[entry_path])
-
-    def _clear_state(self):
-        """ Clear the monitor state.
-
-        """
-        with self.suppress_notifications():
-            self.displayed_entries = []
-            self.undisplayed_entries = []
-            self.hidden_entries = []
-            self.updaters = {}
-            self.custom_entries = []
-            self.database_entries = []
 
     def _observe_displayed_entries(self, change):
         """ Observer updating internals when the displayed entries change.

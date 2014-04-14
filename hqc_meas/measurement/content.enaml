@@ -9,8 +9,7 @@ from enaml.layout.api import HSplitLayout, VSplitLayout
 
 from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
 from .measure_edition import MeasureEditorDockItem
-from .measure_execution import ExecutionDockIem
-# Will also need to create the dock item for logging
+from .measure_execution import ExecutionDockItem
 
 
 enamldef MeasureContent(Container): main:
@@ -33,6 +32,6 @@ enamldef MeasureContent(Container): main:
         DockItem:
             name = 'main_log'
             Container:
-                QtAutoScrollHtml:
+                QtAutoscrollHtml:
                     text << workspace.log_model.text
 

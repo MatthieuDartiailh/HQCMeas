@@ -10,7 +10,7 @@ from enaml.core.api import Looper, Conditional
 from enaml.layout.api import hbox, spacer, vbox
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Window,
                                CheckBox, ObjectCombo, Dialog, Page,
-                               Label, Form, Field, GroupBox)
+                               Label, Form, Field, GroupBox, CheckBox)
 from enaml.stdlib.message_box import question
 
 from operator import attrgetter
@@ -49,6 +49,11 @@ enamldef TextMonitorPage(Page): dial:
                         disp_all.width == disp_one.width,
                         disp_one.width == hide_one.width,
                         hide_one.width == hide_all.width]
+
+        # Auto-show parameter.
+        CheckBox: auto:
+            text = 'Show monitor on start-up'
+            checked := monitor.auto_show
 
         # Undisplayed entries.
         Label: undisp_lab:

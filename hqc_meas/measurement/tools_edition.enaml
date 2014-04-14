@@ -6,7 +6,8 @@
 #==============================================================================
 """
 """
-from enaml.widgets.api import DockItem, Notebbok, Page, Dialog, PushButton
+from enaml.widgets.api import (DockItem, Notebook, Page, Dialog, PushButton,
+                               Container)
 from enaml.layout.api import hbox, vbox, spacer
 
 from .monitors.edition import MonitorsEditor
@@ -34,12 +35,12 @@ enamldef _MeasureToolsEditor(Container): tool_ed:
 
         Page:
             title = 'Headers'
-            HeadersMonitor:
+            HeadersEditor:
                 measure << tool_ed.measure
 
         Page:
             title = 'Checks'
-            ChecksMonitor:
+            ChecksEditor:
                 measure << tool_ed.measure
 
 

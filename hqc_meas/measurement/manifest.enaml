@@ -13,6 +13,10 @@ def measure_plugin_factory():
     from .plugin import MeasurePlugin
     return MeasurePlugin()
 
+def workspace_factory(workbench):
+    from .workspace import MeasureSpace
+    return MeasureSpace()
+
 enamldef MeasureManifest(PluginManifest):
     """
     """
@@ -35,6 +39,11 @@ enamldef MeasureManifest(PluginManifest):
         point = u'hqc_meas.preferences.pref_plugin'
         Preferences:
             pass
+
+    Extension:
+        id = 'workspace'
+        point = u'enaml.workbench.ui.workspaces'
+        factory = workspace_factory
 
 #    Extension:
 #        # TODO UI

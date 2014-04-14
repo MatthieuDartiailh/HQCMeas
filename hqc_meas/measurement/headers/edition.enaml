@@ -9,7 +9,7 @@ from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
 from enaml.layout.api import vbox, hbox, spacer
 from enaml.core.api import Include
 
-from hqc_meas.utils.widgets.qt_list_str_editor import QtListStrEditor
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
 
 enamldef HeaderSelector(Dialog): dial:
@@ -29,13 +29,13 @@ enamldef HeaderSelector(Dialog): dial:
     attr selected_decl
 
     # Mapping between header name and id.
-    attr _mapping = [header.name: header_id
-                     for header_id, header in headers]
+    attr _mapping =  {header.name: header_id
+                      for header_id, header in headers}
 
     Container:
-        constaints << [vbox(list_ed, desc, hbox(cancel, ok))]
+        constraints << [vbox(list_ed, desc, hbox(cancel, ok))]
 
-        QtListStrEditor: list_ed:
+        QtListStrWidget: list_ed:
             items << sorted([name for name, header_id in _mapping
                              if header_id not in measure.headers])
             selected_item::
@@ -46,7 +46,7 @@ enamldef HeaderSelector(Dialog): dial:
                     dial.selected_id = key
 
         MultilineField: desc:
-            text << selected_decl.description if selected_decl
+            text << selected_decl.description if selected_decl else ''
 
         PushButton: ok:
             text = 'Ok'
@@ -71,14 +71,14 @@ enamldef HeadersEditor(Container): ed:
     attr selected_header
 
     # Mapping between header name and id.
-    attr _mapping << [header.name: header_id
-                     for header_id, header in measure.headers]
+    attr _mapping << {header.name: header_id
+                      for header_id, header in measure.headers}
 
     constraints << [hbox(list_ed,
                          vbox(add, remove))
                     ]
 
-    QtListStrEditor: list_ed:
+    QtListStrWidget: list_ed:
         items << sorted(_mapping.keys())
         selected_item ::
             new_val = change['value']
@@ -87,7 +87,7 @@ enamldef HeadersEditor(Container): ed:
                 ed.selected_header = measure.headers[key]
 
     MultilineField: desc:
-        text << ed.selected_header.description
+        text << ed.selected_header.description if ed.selected_header else ''
 
     PushButton: add:
         text = 'Add header'

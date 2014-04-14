@@ -12,7 +12,7 @@ from enaml.layout.api import vbox, grid, hbox, align
 
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
-
+# TODO fix to work with the output of measure.perform_checks
 class _TaskCheckModel(Atom):
 
     """Simple dialog displaying the errors messages resulting from a failed
@@ -58,9 +58,12 @@ class _TaskCheckModel(Atom):
         self.full_path = self.name_to_path_dict[new]
         self.message = self.check_dict_result[self.full_path]
 
-enamldef TaskCheckDisplay(Dialog): dial:
+enamldef ChecksDisplay(Dialog): dial:
+    """
+    """
     attr errors
     attr model << _TaskCheckModel(errors)
+
     Container:
         constraints = [vbox(grid([lis_lab, che_lab], [lis, che]),
                             hbox(spacer, close)),

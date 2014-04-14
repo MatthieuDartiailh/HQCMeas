@@ -4,8 +4,9 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Typed, ContainerList, Instance
+from atom.api import Atom, ForwardTyped, ContainerList, Instance, Bool
 from enaml.stdlib.mapped_view import MappedView
+from enaml.core.api import Include
 from enaml.layout.api import hbox, spacer, vbox, align, InsertTab
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
                                Label, Field, CheckBox, GroupBox, Notebook,
@@ -21,8 +22,7 @@ from hqc_meas.utils.widgets.qt_tree_menu import \
 
 from hqc_meas.tasks.api import (BaseTask, SimpleTask, ComplexTask)
 from .editors.base_editor import BaseEditor
-from .workspace import MeasureSpace
-from .tools_edition import ToolsEditorDockItem, ToolsEditorDialog
+from .tools_edition import (ToolsEditorDockItem, ToolsEditorDialog)
 
 
 enamldef SaveAction(Action):
@@ -109,6 +109,11 @@ enamldef ComplexMenu(Menu): menu:
         action_context << context
 
 
+def _workspace():
+    from .workspace import MeasureSpace
+    return MeasureSpace
+
+
 class _MeasEditionModel(Atom):
     """ Model for the MeasureEditorView.
 
@@ -118,7 +123,7 @@ class _MeasEditionModel(Atom):
 
     """
     # Instance of the workspace
-    workspace = Typed(MeasureSpace)
+    workspace = ForwardTyped(_workspace)
 
     # Currently selected task.
     selected_task = Instance(BaseTask)
@@ -141,8 +146,7 @@ class _MeasEditionModel(Atom):
         """
         editors = self.workspace.plugin.editors
         new_task = change['value']
-        valid_editor_ids = set()_tip('''Save the root task of the measure as a
-                                    template, the tools state is not saved.''')
+        valid_editor_ids = set()
 
         # Find all valid editors.
         for id, editor in editors.iteritems():
@@ -214,7 +218,7 @@ enamldef MeasEditionView(Container):
                 if not any([item.name == u'tools_editor'
                         for item in dock_area.dock_items]):
                     # The editor does not exists so create it.
-                    ToolsEditorDockItem(dock_area, name=u'tools_editor'
+                    ToolsEditorDockItem(dock_area, name=u'tools_editor',
                                         measure=measure)
 
                 # Now insert the item in a tab with the measure editor.
@@ -244,7 +248,7 @@ enamldef MeasEditionView(Container):
                     auto_open = True,
                     children  = '',
                     label     = 'task_label',
-                    menu      =  SimpleMenu(workspace=workspace))),
+                    menu      =  SimpleMenu(workspace=workspace)),
                     ]
 
     Notebook: editors:
@@ -256,7 +260,7 @@ enamldef MeasEditionView(Container):
             objects << _internal.valid_editors.values()
 
 
-enamldef MeasEditorDockItem(DockItem): main:
+enamldef MeasureEditorDockItem(DockItem): main:
     """ DockItem used for editing a measure, main component of the workspace
     content.
 
@@ -328,9 +332,10 @@ enamldef MeasEditorDockItem(DockItem): main:
             text = 'Enqueue'
             hug_width  = 'strong'
             hug_height = 'strong'
-            workspace.enqueu_measure(measure)
+            clicked::
+                workspace.enqueue_measure(measure)
 
-enamldef MeasEditorDialog(Dialog): main:
+enamldef MeasureEditorDialog(Dialog): main:
     """ Dialog allowing to re-edit a measure once it is in the queue.
 
     """

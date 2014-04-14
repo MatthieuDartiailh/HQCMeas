@@ -9,7 +9,7 @@ from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
 from enaml.layout.api import vbox, hbox, spacer
 from enaml.core.api import Include
 
-from hqc_meas.utils.widgets.qt_list_str_editor import QtListStrEditor
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
 
 enamldef MonitorSelector(Dialog): dial:
@@ -33,9 +33,9 @@ enamldef MonitorSelector(Dialog): dial:
                      for monitor_id, monitor in monitors.iteritems()}
 
     Container:
-        constaints << [vbox(list_ed, desc, hbox(cancel, ok))]
+        constraints << [vbox(list_ed, desc, hbox(cancel, ok))]
 
-        QtListStrEditor: list_ed:
+        QtListStrWidget: list_ed:
             items << sorted([monitor.name
                              for monitor_id, monitor in monitors.iteritems()
                              if monitor_id not in measure.monitors])
@@ -47,7 +47,7 @@ enamldef MonitorSelector(Dialog): dial:
                     dial.selected_id = key
 
         MultilineField: desc:
-            text << selected_decl.description if selected_decl
+            text << selected_decl.description if selected_decl else ''
 
         PushButton: ok:
             text = 'Ok'

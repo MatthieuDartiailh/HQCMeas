@@ -9,7 +9,7 @@ from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
 from enaml.layout.api import vbox, hbox, spacer
 from enaml.core.api import Include
 
-from hqc_meas.utils.widgets.qt_list_str_editor import QtListStrEditor
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
 
 enamldef EngineSelector(Dialog): dial:
@@ -29,13 +29,13 @@ enamldef EngineSelector(Dialog): dial:
     attr selected_decl
 
     # Mapping between header name and id.
-    attr _mapping = [engine.name: engine_id
-                     for engine_id, engine in engine]
+    attr _mapping = {engine.name: engine_id
+                     for engine_id, engine in engine}
 
     Container:
-        constaints << [vbox(list_ed, desc, hbox(cancel, ok))]
+        constraints << [vbox(list_ed, desc, hbox(cancel, ok))]
 
-        QtListStrEditor: list_ed:
+        QtListStrWidget: list_ed:
             items << sorted(_mapping.keys())
             selected_item::
                 new_val = change['value']
@@ -45,7 +45,7 @@ enamldef EngineSelector(Dialog): dial:
                     dial.selected_id = key
 
         MultilineField: desc:
-            text << selected_decl.description if selected_decl
+            text << selected_decl.description if selected_decl else ''
 
         PushButton: ok:
             text = 'Ok'

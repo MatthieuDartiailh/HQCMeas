@@ -17,6 +17,7 @@ from .measure import Measure
 from .plugin import MeasurePlugin
 
 from ..tasks.tools.walks import flatten_walk
+from ..tasks.api import RootTask
 
 with enaml.imports():
     from enaml.stdlib.message_box import question
@@ -42,15 +43,19 @@ class MeasureSpace(Workspace):
     def start(self):
         """
         """
-        plugin = self.workbench.getplugin(u'hqc_meas.measure')
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
         plugin.workspace = self
 
         # Add handler to the root logger to display messages in panel.
-        core = self.workbench.get_plugin(u'enaml.workbenh.core')
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.logging.add_handler'
         self.log_model = core.invoke_command(cmd,
                                              {'id': LOG_ID, 'mode': 'ui'},
                                              self)
+
+        # Check whether or not a measure is already being edited.
+        if not plugin.edited_measure:
+            self._new_measure()
 
         # Create content.
         self.content = MeasureContent(workspace=self)
@@ -94,8 +99,7 @@ class MeasureSpace(Workspace):
                           fill(message.replace('\n', ' '), 79),
                           )
         if result is not None and result.action == 'accept':
-            # TODO create brand new measure using defaults from plugin
-            pass
+            self._new_measure()
 
     def save_measure(self, measure, mode):
         """ Save a measure in a file.
@@ -333,6 +337,35 @@ class MeasureSpace(Workspace):
             return self.content.children[0]
 
     #--- Private API ----------------------------------------------------------
+
+    def _new_measure(self):
+        """ Create a new measure using the default tools.
+
+        """
+        logger = logging.getLogger(__name__)
+
+        measure = Measure()
+        measure.root_task = RootTask()
+        for check_id in self.plugin.default_checks:
+            if check_id in self.plugin.checks:
+                measure.checks[check_id] = self.plugin.checks[check_id]
+            else:
+                logger.warn("Default check {} not found".format(check_id))
+
+        for header_id in self.plugin.default_headers:
+            if header_id in self.plugin.headers:
+                measure.headers[header_id] = self.plugin.headers[header_id]
+            else:
+                logger.warn("Default header {} not found".format(header_id))
+
+        for monitor_id in self.plugin.default_monitors:
+            if monitor_id in self.plugin.monitors:
+                monitor_decl = self.plugin.monitors[monitor_id]
+                measure.add_monitor(monitor_id,
+                                    monitor_decl.factory(self.workbench,
+                                                         monitor_decl))
+            else:
+                logger.warn("Default monitor {} not found".format(monitor_id))
 
     def _update_engine_contribution(self, change):
         """

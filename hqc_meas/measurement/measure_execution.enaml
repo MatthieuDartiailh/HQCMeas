@@ -15,7 +15,7 @@ from hqc_meas.utils.widgets.list_editor import ListEditor
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
 from .tools_edition import ToolsEditorDialog
-from .edition_view import MeasEditorDialog
+from .measure_edition import MeasureEditorDialog
 from .engines.selection import EngineSelector
 
 
@@ -24,6 +24,7 @@ enamldef MeasView(GroupBox): widget:
 
     """
     attr measure
+    attr model >> measure
 
     constraints = [vbox(hbox(sta_lab, sta_val, spacer),
                         hbox(edit, spacer, use_mon, edit_tools))]
