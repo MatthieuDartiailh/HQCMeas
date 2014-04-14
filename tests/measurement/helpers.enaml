@@ -1,0 +1,106 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : helpers.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from atom.api import (Str, List, Dict, Int, Bool)
+from enaml.workbench.api import PluginManifest, Extension
+
+from hqc_meas.measurement.monitors.base_monitor import Monitor, BaseMonitor
+from hqc_meas.measurement.headers.base_header import Header
+from hqc_meas.measurement.checks.base_check import Check
+
+
+class TestMonitor(BaseMonitor):
+    """ Monitor only used for testing purposes.
+
+    """
+    updated = Dict(Str(), Int())
+
+    # Simple memeber for testing thta reload does update the monitor after
+    # creation.
+    save_test = Bool().tag(pref=True)
+
+    def refresh_monitored_entries(self, entries):
+        """
+        """
+        self.updated.clear()
+        self.database_entries = []
+        for entry in entries:
+            self.database_modified({'value': (entry, 1)})
+
+    def database_modified(self, change):
+        """ Keep a dict recording the number of update received for each entry.
+
+        """
+        name = change['value'][0]
+        if name in self.updated:
+            self.updated[name] += 1
+        else:
+            self.updated[name] = 1
+            self.database_entries.append(name)
+
+    def clear_state(self):
+        """
+        """
+        self.database_entries = []
+        self.updated.clear()
+
+
+def build_test_monitor(workbench, declaration, raw=False):
+    """
+    """
+    return TestMonitor(declaration=declaration)
+
+def build_test_header(workbench):
+    """
+    """
+    return 'Test header'
+
+
+class Checker(object):
+
+    test_pass = False
+
+    @classmethod
+    def perform_test_checks(cls, workbench, task):
+        """
+        """
+        if cls.test_pass:
+            return True, {}
+
+        else:
+            return False, {'test' : 'Failed'}
+
+
+enamldef TestSuiteManifest(PluginManifest):
+    """ Plugin providing all the extesnions needed for testing.
+
+    """
+    id = u'tests.suite'
+
+    Extension:
+        id = 'headers'
+        point = u'hqc_meas.measure.headers'
+        Header:
+            id = u'header1'
+            build_header = build_test_header
+
+        Header:
+            id = u'header2'
+            build_header = build_test_header
+
+    Extension:
+        id = 'checks'
+        point = u'hqc_meas.measure.checks'
+        Check:
+            id = u'check1'
+            perform_check = Checker.perform_test_checks
+
+    Extension:
+        id = 'monitors'
+        point = u'hqc_meas.measure.monitors'
+        Monitor:
+            id = u'monitor1'
+            factory = build_test_monitor

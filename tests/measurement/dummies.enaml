@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from atom.api import Atom, Str
-from enaml.workbench.api import PluginManifest, Plugin, Extension
+from enaml.workbench.api import PluginManifest, Extension
 
 from hqc_meas.measurement.checks.base_check import Check
 from hqc_meas.measurement.headers.base_header import Header

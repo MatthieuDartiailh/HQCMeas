@@ -170,8 +170,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         # Start the engine if it has not already been done.
         if not self.engine_instance:
-            maker = self.engines[self.selected_engine]
-            self.engine_instance = maker(self.workbench)
+            decl = self.engines[self.selected_engine]
+            self.engine_instance = decl.factory(self.workbench)
 
             # Connect signal handler to engine.
             self.engine_instance.observe('done', self._listen_to_engine)
@@ -325,11 +325,12 @@ class MeasurePlugin(HasPrefPlugin):
         extensions = point.extensions
         if not extensions:
             self.engines.clear()
-            logger = logging.getLogger(__name__)
-            msg = cleandoc('''Previously selected engine is not available
-                            anymore : {}'''.format(self.selected_engine))
-            logger.warn(msg)
-            self.selected_engine = ''
+            if self.selected_engine:
+                logger = logging.getLogger(__name__)
+                msg = cleandoc('''Previously selected engine is not available
+                                anymore : {}'''.format(self.selected_engine))
+                logger.warn(msg)
+                self.selected_engine = ''
             return
 
         # Get the engines declarations for all extensions.

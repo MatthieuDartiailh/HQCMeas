@@ -20,7 +20,8 @@ class DatabaseNode(dict):
 class TaskDatabase(Atom):
     """
     """
-    # Event used to notify a value changed in the database.
+    # Event used to notify a value changed in the database. Thye update is
+    # passed as a tuple (path, value)
     notifier = Event()
 
     # List of root entries which should not be listed.
