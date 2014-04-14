@@ -226,7 +226,11 @@ class SimpleTask(BaseTask):
         """
         self.task_preferences.clear()
         for name in tagged_members(self, 'pref'):
-            self.task_preferences[name] = repr(getattr(self, name))
+            val = getattr(self, name)
+            if isinstance(val, basestring):
+                self.task_preferences[name] = val
+            else:
+                self.task_preferences[name] = repr(val)
 
     update_preferences_from_members = register_preferences
 
