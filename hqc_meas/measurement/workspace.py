@@ -45,6 +45,7 @@ class MeasureSpace(Workspace):
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
         plugin.workspace = self
+        self.plugin = plugin
 
         # Add handler to the root logger to display messages in panel.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
@@ -60,14 +61,15 @@ class MeasureSpace(Workspace):
         # Create content.
         self.content = MeasureContent(workspace=self)
 
+        # Contribute menus.
+        # TODO by registering a new plugin (Manifest only)
+
         # Check whether or not an engine can contribute.
         if plugin.selected_engine:
             engine = plugin.engines[plugin.selected_engine]
             engine.contribute_workspace(self, engine)
 
         plugin.observe('selected_engine', self._update_engine_contribution)
-
-        self.plugin = plugin
 
     def stop(self):
         """
@@ -80,7 +82,7 @@ class MeasureSpace(Workspace):
             engine.remove_contribution(self, engine)
 
         # remove handler from the root logger.
-        core = self.workbench.get_plugin(u'enaml.workbenh.core')
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.logging.remove_handler'
         self.log_model = core.invoke_command(cmd, {'id': LOG_ID}, self)
 
@@ -98,6 +100,8 @@ class MeasureSpace(Workspace):
                           'Old measurement suppression',
                           fill(message.replace('\n', ' '), 79),
                           )
+
+        print result, result.action
         if result is not None and result.action == 'accept':
             self._new_measure()
 
@@ -196,27 +200,27 @@ class MeasureSpace(Workspace):
                                   'selected_profile'])
         drivs = res['selected_driver']
         profs = res['selected_profile']
-
-        core = self.workbench.getplugin('enaml.workbench.core')
+        core = self.workbench.get_plugin('enaml.workbench.core')
         com = u'hqc_meas.instr_manager.drivers_request'
-        res, drivers = core.invoke_command(com, {'drivers': list(drivs)}, self)
-        if not res:
+        drivers, missing = core.invoke_command(com, {'drivers': list(drivs)},
+                                               self)
+        if missing:
             mes = cleandoc('''Failed to get all drivers for the measure,
-                           missing :{}'''.format(drivers))
-            logger.info(mes)
+                           missing :{}'''.format(missing))
+            logger.warn(mes)
             return False
 
         com = u'hqc_meas.instr_manager.profiles_request'
-        res, profiles = core.invoke_command(com, {'profiles': list(profs)},
-                                            self.plugin)
-        if not res and profiles:
+        profiles, missing = core.invoke_command(com, {'profiles': list(profs)},
+                                                self.plugin)
+        if not profiles and missing:
             mes = cleandoc('''Failed to get all profiles for the measure,
-                           missing :{}'''.format(profiles))
-            logger.info(mes)
+                           missing :{}'''.format(missing))
+            logger.warn(mes)
             return False
 
-        test_instr = res
-        if not test_instr and not profiles:
+        test_instr = bool(profiles)
+        if not test_instr and profs:
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, instr tests will be skipped and
                            performed before actually starting the
@@ -229,15 +233,17 @@ class MeasureSpace(Workspace):
         check, errors = measure.run_checks(self.workbench,
                                            test_instr=test_instr)
 
+        measure.root_task.run_time.clear()
+
         core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
-                            {'profiles': profiles}, self.plugin)
+                            {'profiles': profiles.keys()}, self.plugin)
 
         if check:
-            default_filename = measure.monitor.measure_name + '_last_run.ini'
+            default_filename = measure.name + '_last_run.ini'
             path = os.path.join(measure.root_task.default_path,
                                 default_filename)
             measure.save_measure(path)
-            meas = Measure.load_measure(self.workbench, path)
+            meas = Measure.load_measure(self.plugin, path)
             # Here don't keep the profiles in the runtime as it will defeat the
             # purpose of the manager.
             meas.root_task.run_time = {'drivers': drivers}
@@ -366,6 +372,8 @@ class MeasureSpace(Workspace):
                                                          monitor_decl))
             else:
                 logger.warn("Default monitor {} not found".format(monitor_id))
+
+        self.plugin.edited_measure = measure
 
     def _update_engine_contribution(self, change):
         """

@@ -14,8 +14,6 @@ from ..util import complete_line
 
 def setup_module():
     print complete_line(__name__ + ': setup_module()', '~', 78)
-    if not QtApplication.instance():
-        QtApplication()
 
 
 def teardown_module():

@@ -6,13 +6,19 @@ from configobj import ConfigObj
 from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
                         assert_false)
 
+from hqc_meas.measurement.measure import Measure
+from hqc_meas.measurement.workspace import LOG_ID
+from hqc_meas.tasks.base_tasks import RootTask
+
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from enaml.workbench.ui.ui_manifest import UIManifest
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
+    from hqc_meas.log_system.log_manifest import LogManifest
     from hqc_meas.measurement.manifest import MeasureManifest
     from hqc_meas.task_management.manager_manifest import TaskManagerManifest
+    from hqc_meas.instruments.manager_manifest import InstrManagerManifest
 
     from .helpers import TestSuiteManifest
 
@@ -27,7 +33,7 @@ def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
-class TestPluginCoreFunctionalities(object):
+class TestMeasureSpace(object):
 
     test_dir = ''
 
@@ -90,14 +96,20 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(UIManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
+        self.workbench.register(LogManifest())
         self.workbench.register(TaskManagerManifest())
+        self.workbench.register(InstrManagerManifest())
         self.workbench.register(MeasureManifest())
         self.workbench.register(TestSuiteManifest())
 
     def teardown(self):
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
         self.workbench.unregister(u'tests.suite')
         self.workbench.unregister(u'hqc_meas.measure')
         self.workbench.unregister(u'hqc_meas.task_manager')
+        self.workbench.unregister(u'hqc_meas.instr_manager')
+        self.workbench.unregister(u'hqc_meas.logging')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')
         self.workbench.unregister(u'enaml.workbench.ui')
@@ -113,9 +125,81 @@ class TestPluginCoreFunctionalities(object):
                             self)
 
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        log_plugin = self.workbench.get_plugin(u'hqc_meas.logging')
 
+        # Check the plugin got the workspace
         assert_true(plugin.workspace)
+        workspace = plugin.workspace
+
+        # Check the workspace registration.
+        assert_true(workspace.log_model)
+        assert_in(LOG_ID, log_plugin.handler_ids)
+
+        # Check a blank measure was created.
+        assert_true(plugin.edited_measure)
+
+        # TODO check engine contribution
+
+        # Check the workspace is observing the selected_engine
+        observer = workspace._update_engine_contribution
+        assert_true(plugin.has_observer('selected_engine', observer))
 
         cmd = u'enaml.workbench.ui.close_workspace'
+        core.invoke_command(cmd, {}, self)
+
+        # Check the workspace is not observing anymore the selected_engine
+        assert_false(plugin.has_observer('selected_engine', observer))
+
+        # Check the workspace removed its log handler.
+        assert_not_in(LOG_ID, log_plugin.handler_ids)
+
+        # Check the reference to the workspace was destroyed.
+        assert_equal(plugin.workspace, None)
+
+    def test_enqueue_measure1(self):
+        """ Test enqueueing a measure passing the tests.
+
+        """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
                             self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        measure = Measure(plugin=plugin, name='Test')
+        measure.root_task = RootTask(default_path=self.test_dir)
+        plugin.edited_measure = measure
+
+        res = plugin.workspace.enqueue_measure(plugin.edited_measure)
+
+        assert_true(res)
+        assert_false(measure.root_task.run_time)
+        assert_true(plugin.enqueued_measures)
+        en_meas = plugin.enqueued_measures[0]
+        assert_equal(en_meas.status, 'READY')
+        assert_equal(en_meas.infos,
+                     'The measure is ready to be performed by an engine.')
+        assert_in('drivers', en_meas.root_task.run_time)
+        assert_in('profiles', en_meas.store)
+
+    def test_enqueue_measure2(self):
+        """ Test enqueueing a measure failing the tests.
+
+        """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        measure = Measure(plugin=plugin, name='Test')
+        measure.root_task = RootTask()
+        plugin.edited_measure = measure
+
+        res = plugin.workspace.enqueue_measure(plugin.edited_measure)
+
+        assert_false(res)
+        assert_false(measure.root_task.run_time)
+        assert_false(plugin.enqueued_measures)

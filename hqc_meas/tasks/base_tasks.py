@@ -485,6 +485,8 @@ class ComplexTask(BaseTask):
     def walk(self, members=[], callables={}):
         """ Explore the tasks hierarchy looking.
 
+        Missing values will be filled with None.
+
         Parameters
         ----------
         members : list(str)
@@ -496,8 +498,8 @@ class ComplexTask(BaseTask):
 
         Returns
         -------
-        result : dict
-            Dict summarizing the result of the exploration.
+        answer : list
+            List summarizing the result of the exploration.
 
         """
         answer = [self._answer(self, members, callables)]

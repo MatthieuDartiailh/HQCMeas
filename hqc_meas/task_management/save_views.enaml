@@ -28,7 +28,8 @@ class TemplateTaskSaver(Atom):
     manager = ForwardTyped(task_manager)
     template_filenames = List(Unicode())
 
-    template_filename = Str()
+    template_folder = Unicode()
+    template_filename = Unicode()
     template_doc = Str()
     ok_ready = Bool(False)
 
@@ -36,6 +37,7 @@ class TemplateTaskSaver(Atom):
 
     def __init__(self, **kwargs):
         super(TemplateTaskSaver, self).__init__(**kwargs)
+        self.template_folder = self.manager.template_folders[0]
         paths = self.manager._template_tasks.values()
         self.template_filenames = [os.path.split(path)[1] for path in paths]
         self.manager.observe('_template_tasks', self._update_filenames)

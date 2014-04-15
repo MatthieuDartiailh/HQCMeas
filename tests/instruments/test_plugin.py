@@ -30,7 +30,7 @@ def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
-class Test_TaskManagement(BaseClass):
+class Test_DriverManagement(BaseClass):
 
     mod = __name__
 

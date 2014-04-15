@@ -14,8 +14,8 @@ def flatten_walk(walk, entries):
 
     Parameters
     ----------
-    walk : dict
-        The nested dictionary returned by the walk method of the root task.
+    walk : list
+        The nested list returned by the walk method of the root task.
 
     entries : list(str)
         The list of entries to look for in the walk.
@@ -35,7 +35,7 @@ def flatten_walk(walk, entries):
                 results[key].update(aux[key])
         else:
             for entry in entries:
-                if entry in step:
+                if entry in step and step[entry] is not None:
                     results[entry].add(step[entry])
 
     return results

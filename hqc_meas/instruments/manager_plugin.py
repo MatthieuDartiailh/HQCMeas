@@ -217,7 +217,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         profile_objects = {prof: open_profile(mapping[prof])
                            for prof in profiles}
 
-        return profile_objects, {}
+        return profile_objects, []
 
     def profiles_released(self, owner, profiles):
         """ Notify the manager that the specified are not used anymore
