@@ -7,11 +7,11 @@
 """
 """
 import textwrap
-from math import atan2
-from cmath import (cos, sin, tan, acos, asin, atan,
-                exp, log, cosh, sinh, tanh, phase)
+from math import (cos, sin, tan, acos, asin, atan,
+                exp, log, cosh, sinh, tanh, atan2)
 from cmath import pi as Pi
 import numpy as np
+import cmath
 
 COMPLETER_TOOLTIP = textwrap.fill("""In this field you can enter a text and
                         include fields which will be replaced by database
