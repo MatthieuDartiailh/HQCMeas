@@ -25,49 +25,11 @@ class ProcessEngine(BaseEngine):
     """ An engine executing the measurement it is sent in a different process.
 
     """
+
+    #--- Public API -----------------------------------------------------------
+
     # Reference to the workbench got at __init__
     workbench = Typed(Workbench)
-
-    # Interprocess event used to stop the subprocess current measure.
-    _meas_stop = Typed(Event, ())
-
-    # Interprocess event used to stop the subprocess.
-    _stop = Typed(Event, ())
-
-    # Flag signaling that a forced exit has been requested
-    _force_stop = Value(tEvent())
-
-    # Flag indicating the communication thread it can send the next measure.
-    _starting_allowed = Value(tEvent())
-
-    # Temporary tuple to store the data to be sent to the process when a
-    # new measure is ready.
-    _temp = Tuple()
-
-    # Current subprocess.
-    _process = Typed(TaskProcess)
-
-    # Connection used to send and receive messages about execution (type
-    # ambiguous when the OS is not known)
-    _pipe = Value()
-
-    # Thread in charge of transferring measure to the process.
-    _com_thread = Typed(Thread)
-
-    # Inter-process queue used by the subprocess to transmit its log records.
-    _log_queue = Typed(Queue, ())
-
-    # Thread in charge of collecting the log message coming from the
-    # subprocess.
-    _log_thread = Typed(Thread)
-
-    # Inter-process queue used by the subprocess to send the values of the
-    # observed database entries.
-    _monitor_queue = Typed(Queue, ())
-
-    # Thread in charge of collecting the values of the observed database
-    # entries.
-    _monitor_thread = Typed(Thread)
 
     def prepare_to_run(self, name, root, monitored_entries):
         # Get all the tasks classes we need to rebuild the measure in the
@@ -162,6 +124,49 @@ class ProcessEngine(BaseEngine):
 
     def force_exit(self):
         self.force_stop()
+
+    #--- Private API ----------------------------------------------------------
+
+    # Interprocess event used to stop the subprocess current measure.
+    _meas_stop = Typed(Event, ())
+
+    # Interprocess event used to stop the subprocess.
+    _stop = Typed(Event, ())
+
+    # Flag signaling that a forced exit has been requested
+    _force_stop = Value(tEvent())
+
+    # Flag indicating the communication thread it can send the next measure.
+    _starting_allowed = Value(tEvent())
+
+    # Temporary tuple to store the data to be sent to the process when a
+    # new measure is ready.
+    _temp = Tuple()
+
+    # Current subprocess.
+    _process = Typed(TaskProcess)
+
+    # Connection used to send and receive messages about execution (type
+    # ambiguous when the OS is not known)
+    _pipe = Value()
+
+    # Thread in charge of transferring measure to the process.
+    _com_thread = Typed(Thread)
+
+    # Inter-process queue used by the subprocess to transmit its log records.
+    _log_queue = Typed(Queue, ())
+
+    # Thread in charge of collecting the log message coming from the
+    # subprocess.
+    _log_thread = Typed(Thread)
+
+    # Inter-process queue used by the subprocess to send the values of the
+    # observed database entries.
+    _monitor_queue = Typed(Queue, ())
+
+    # Thread in charge of collecting the values of the observed database
+    # entries.
+    _monitor_thread = Typed(Thread)
 
     def _process_listener(self):
         """ Handle the communications with the worker process.

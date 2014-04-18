@@ -77,7 +77,8 @@ class BaseMonitor(HasPrefAtom):
         """ Handle news received from the engine.
 
         This method should be connected to the news event of the engine when
-        the measure is started.
+        the measure is started. The value received will be a tuple containing
+        the name of the updated database entry and its new value.
 
         """
         mess = cleandoc('''This method should be implemented by subclasses of

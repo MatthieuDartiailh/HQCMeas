@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from enaml.qt.qt_application import QtApplication
+from enaml.widgets.api import Window
 
 
 def complete_line(string, char, length=79):
@@ -7,3 +9,19 @@ def complete_line(string, char, length=79):
         return string + ' ' + ''.join([char for i in range(length-1-str_len)])
     else:
         return string
+
+
+def process_app_events():
+    qapp = QtApplication.instance()._qapp
+    qapp.flush()
+    qapp.processEvents()
+
+
+def close_all_windows():
+    qapp = QtApplication.instance()._qapp
+    qapp.flush()
+    qapp.processEvents()
+    for window in Window.windows:
+        window.close()
+    qapp.flush()
+    qapp.processEvents()

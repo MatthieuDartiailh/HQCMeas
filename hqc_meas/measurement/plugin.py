@@ -94,7 +94,7 @@ class MeasurePlugin(HasPrefPlugin):
     editors = Dict(Unicode(), Typed(Editor))
 
     # Internal flags.
-    flags = Dict()
+    flags = ContainerList()
 
     def start(self):
         """
@@ -135,25 +135,27 @@ class MeasurePlugin(HasPrefPlugin):
         """ Start a new measure.
 
         """
-        self.flags['processing'] = True
+        self.flags.append('processing')
 
         logger = logging.getLogger(__name__)
 
         # Discard old monitors if there is any remaining.
-        for monitor in self.running_measure.monitors:
-            monitor.stop()
+        if self.running_measure:
+            for monitor in self.running_measure.monitors.values():
+                monitor.stop()
 
         measure.enter_running_state()
         self.running_measure = measure
 
         # Requesting profiles.
-        profiles = measure.store('profiles')
+        profs = measure.store.get('profiles', set())
         core = self.workbench.get_plugin('enaml.workbench.core')
 
         com = u'hqc_meas.instr_manager.profiles_request'
-        res, profiles = core.invoke_command(com, {'profiles': list(profiles)},
-                                            self._plugin)
-        if not res:
+        profiles, missing = core.invoke_command(com,
+                                                {'profiles': list(profs)},
+                                                self)
+        if profs and not profiles:
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, the measurement cannot be performed
                            '''.format(measure.name))
@@ -161,9 +163,30 @@ class MeasurePlugin(HasPrefPlugin):
 
             # Simulate a message coming from the engine.
             done = {'value': ('SKIPPED', 'Failed to get requested profiles')}
-            self._listen_to_engine(done)
+
+            # Break a potential high statck as this function will not exit
+            # if a new measure is started.
+            enaml.application.deferred_call(self._listen_to_engine, done)
+            return
 
         measure.root_task.run_time.update({'profiles': profiles})
+
+        # Run internal test to check communication.
+        res, errors = measure.run_checks(self.workbench, True, True)
+        if not res:
+            mes = cleandoc('''The measure failed to pass the built-in tests,
+                           this is likely related to a connection error to an
+                           instrument.
+                           '''.format(measure.name))
+            logger.warn(mes)
+
+            # Simulate a message coming from the engine.
+            done = {'value': ('FAILED', 'Failed to pass the built in tests')}
+
+            # Break a potential high statck as this function will not exit
+            # if a new measure is started.
+            enaml.application.deferred_call(self._listen_to_engine, done)
+            return
 
         # Collect headers.
         measure.collect_headers(self.workbench)
@@ -171,7 +194,7 @@ class MeasurePlugin(HasPrefPlugin):
         # Start the engine if it has not already been done.
         if not self.engine_instance:
             decl = self.engines[self.selected_engine]
-            self.engine_instance = decl.factory(self.workbench)
+            self.engine_instance = decl.factory(self.workbench, decl)
 
             # Connect signal handler to engine.
             self.engine_instance.observe('done', self._listen_to_engine)
@@ -188,7 +211,7 @@ class MeasurePlugin(HasPrefPlugin):
         # Get a ref to the main window.
         ui_plugin = self.workbench.get_plugin('enaml.workbench.ui')
         # Connect new monitors, and start them.
-        for monitor in measure.monitors:
+        for monitor in measure.monitors.values():
             engine.observe('news', monitor.process_news)
             monitor.start(ui_plugin.window)
 
@@ -199,16 +222,17 @@ class MeasurePlugin(HasPrefPlugin):
         """ Stop the currently active measure.
 
         """
-        self.flags['stop_attempt'] = True
+        self.flags.append('stop_attempt')
         self.engine_instance.stop()
 
     def stop_processing(self):
         """ Stop processing the enqueued measure.
 
         """
-        self.flags['stop_attempt'] = True
-        self.flags['stop_processing'] = True
-        del self.flags['processing']
+        self.flags.append('stop_attempt')
+        self.flags.append('stop_processing')
+        if 'processing' in self.flags:
+            self.flags.remove('processing')
         self.engine_instance.exit()
 
     def force_stop_measure(self):
@@ -221,8 +245,9 @@ class MeasurePlugin(HasPrefPlugin):
         """ Force the engine to exit and stop processing measures.
 
         """
-        self.flags['stop_processing'] = True
-        del self.flags['processing']
+        self.flags.append('stop_processing')
+        if 'processing' in self.flags:
+            self.flags.remove('processing')
         self.engine_instance.force_exit()
 
     def find_next_measure(self):
@@ -235,7 +260,7 @@ class MeasurePlugin(HasPrefPlugin):
             available measure.
 
         """
-        enqueued_measures = self._plugin.enqueued_measures
+        enqueued_measures = self.enqueued_measures
         i = 0
         measure = None
         # Look for a measure not being currently edited. (Can happen if the
@@ -279,24 +304,37 @@ class MeasurePlugin(HasPrefPlugin):
         self.running_measure.infos = infos
 
         # Disconnect monitors.
-        self.engine_instance.unobserve('news')
+        engine = self.engine_instance
+        if engine:
+            engine.unobserve('news')
 
         # If we are supposed to stop, stop.
-        if 'stop_processing' in self.flags:
+        if engine and'stop_processing' in self.flags:
             self.stop_processing()
-            while not self.engine_instance.active:
-                sleep(0.5)
+            i = 0
+            while engine and engine.active:
+                sleep(0.2)
+                i += 1
+                if i > 10:
+                    self.force_stop_processing()
+            self.flags = []
 
         # Otherwise find the next measure, if there is none stop the engine.
         else:
             meas = self.find_next_measure()
             if meas is not None:
-                self.flags.clear()
+                self.flags = []
                 self.start_measure(meas)
             else:
-                self.stop_processing()
-                while not self.engine_instance.active:
-                    sleep(0.5)
+                if engine:
+                    self.stop_processing()
+                    i = 0
+                    while engine.active:
+                        sleep(0.2)
+                        i += 1
+                        if i > 10:
+                            self.force_stop_processing()
+                self.flags = []
 
     def _register_manifest(self, path, manifest_name):
         """ Register a manifest given its module name and its name.

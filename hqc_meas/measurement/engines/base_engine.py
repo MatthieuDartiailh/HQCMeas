@@ -39,7 +39,7 @@ class BaseEngine(Atom):
         root : RootTask
             The root task representing the measure to perform.
 
-        monitored : iterable
+        monitored_entries : iterable
             The database entries to observe. Any change of one of these entries
             will be notified by the news event.
 
@@ -49,6 +49,8 @@ class BaseEngine(Atom):
 
     def run(self):
         """ Start the execution of the measure by the engine.
+
+        This method must not wait for the measure to complete to return.
 
         """
         mes = cleandoc('''''')
@@ -114,19 +116,21 @@ class Engine(Declarative):
     factory = d_(Callable())
 
     # Callable called by the framework when this engine is selected. The
-    # callable should take two arguments : the workbench and the engine.
-    post_selection = d_(Callable(lambda workbench: None))
+    # callable should take two arguments : the workbench and the engine
+    # declaration.
+    post_selection = d_(Callable(lambda workbench, declaration: None))
 
     # Callable called by the framework when the engine is deselected. The
-    # callable should take two arguments : the workbench and the engine.
-    post_deselection = d_(Callable(lambda workbench: None))
+    # callable should take two arguments : the workbench and and the engine
+    # declaration.
+    post_deselection = d_(Callable(lambda workbench, declaration: None))
 
     # Callable called by the framework when the workspace is active and the
     # engine selected. The callable should take two arguments : the workspace
-    # and the engine.
-    contribute_workspace = d_(Callable(lambda workspace: None))
+    # and the engine declaration.
+    contribute_workspace = d_(Callable(lambda workspace, declaration: None))
 
     # Callable called by the framework when the workspace is active and the
     # engine deselected. The callable should take  two arguments : the
-    # workspace and the engine.
-    remove_contribution = d_(Callable(lambda workspace: None))
+    # workspace and the engine declaration.
+    remove_contribution = d_(Callable(lambda workspace, declaration: None))

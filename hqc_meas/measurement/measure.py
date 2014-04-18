@@ -171,19 +171,20 @@ class Measure(Atom):
         """ Make the the measure ready to be edited
 
         """
-        root = self.root_task
+        database = self.root_task.task_database
         for monitor in self.monitors.values():
-            root.task_database.observe('notifier',
-                                       monitor.database_modified)
+            if not database.has_observer('notifier',
+                                         monitor.database_modified):
+                database.observe('notifier', monitor.database_modified)
 
     def enter_running_state(self):
         """ Make the measure ready to run.
 
         """
-        root = self.root_task
+        database = self.root_task.task_database
         for monitor in self.monitors.values():
-            root.task_database.unobserve('notifier',
-                                         monitor.database_modified)
+            if database.has_observer('notifier', monitor.database_modified):
+                database.unobserve('notifier', monitor.database_modified)
 
     def add_monitor(self, id, monitor):
         """ Add a monitor, refresh its entries and connect observers.

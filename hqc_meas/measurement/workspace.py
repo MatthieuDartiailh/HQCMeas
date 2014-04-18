@@ -74,6 +74,11 @@ class MeasureSpace(Workspace):
     def stop(self):
         """
         """
+        # Close all remaining monitor if any.
+        if self.plugin.running_measure:
+            for monitor in self.plugin.running_measure.monitors.values():
+                monitor.stop()
+
         self.plugin.unobserve('selected_engine',
                               self._update_engine_contribution)
 
@@ -294,23 +299,23 @@ class MeasureSpace(Workspace):
                 logger.warn(msg)
                 return
 
-        self.plugin.flags.clear()
+        self.plugin.flags = []
 
         measure = self.plugin.find_next_measure()
         if measure is not None:
-            self.plugin.start_measure()
+            self.plugin.start_measure(measure)
 
     def process_single_measure(self, measure):
         """ Performs a single measurement and then stops.
 
         Parameters
         ----------
-        index : int
-            Index of the measurement to perform in the queue.
+        measure : Measure
+            Measure to perform.
 
         """
-        self.plugin.flags.clear()
-        self.plugin.flags['stop_processing'] = True
+        self.plugin.flags = []
+        self.plugin.flags.append('stop_processing')
 
         self.plugin.start_measure(measure)
 

@@ -4,11 +4,13 @@ import os
 import shutil
 from configobj import ConfigObj
 from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
-                        assert_false)
+                        assert_false, assert_is, assert_is_not)
 
 from hqc_meas.measurement.measure import Measure
 from hqc_meas.measurement.workspace import LOG_ID
 from hqc_meas.tasks.base_tasks import RootTask
+
+from ..util import process_app_events, close_all_windows
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
@@ -119,12 +121,14 @@ class TestMeasureSpace(object):
         """ Test that workspace starting/closing goes well
 
         """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        plugin.selected_engine = u'engine1'
+
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
                             self)
 
-        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
         log_plugin = self.workbench.get_plugin(u'hqc_meas.logging')
 
         # Check the plugin got the workspace
@@ -138,7 +142,8 @@ class TestMeasureSpace(object):
         # Check a blank measure was created.
         assert_true(plugin.edited_measure)
 
-        # TODO check engine contribution
+        # Check the engine engine is contributing.
+        assert_true(plugin.engines[u'engine1'].contributing)
 
         # Check the workspace is observing the selected_engine
         observer = workspace._update_engine_contribution
@@ -155,6 +160,26 @@ class TestMeasureSpace(object):
 
         # Check the reference to the workspace was destroyed.
         assert_equal(plugin.workspace, None)
+
+        # Check the engine contribution was removed.
+        assert_false(plugin.engines[u'engine1'].contributing)
+
+    def test_engine_contribution_observer(self):
+        """ Test the contribution of the selected engine is correctly handled.
+
+        """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        plugin.selected_engine = u'engine1'
+        assert_true(plugin.engines[u'engine1'].contributing)
+
+        plugin.selected_engine = u''
+        assert_false(plugin.engines[u'engine1'].contributing)
 
     def test_enqueue_measure1(self):
         """ Test enqueueing a measure passing the tests.
@@ -177,6 +202,7 @@ class TestMeasureSpace(object):
         assert_false(measure.root_task.run_time)
         assert_true(plugin.enqueued_measures)
         en_meas = plugin.enqueued_measures[0]
+        assert_is_not(en_meas, measure)
         assert_equal(en_meas.status, 'READY')
         assert_equal(en_meas.infos,
                      'The measure is ready to be performed by an engine.')
@@ -203,3 +229,467 @@ class TestMeasureSpace(object):
         assert_false(res)
         assert_false(measure.root_task.run_time)
         assert_false(plugin.enqueued_measures)
+
+        close_all_windows()
+
+    def test_reenqueue_measure(self):
+        """ Test re-enqueueing a measure.
+
+        """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        measure = self._create_measure(plugin)
+        measure.enter_running_state()
+
+        plugin.workspace.reenqueue_measure(measure)
+
+        assert_equal(measure.status, 'READY')
+        assert_equal(measure.infos,
+                     'Measure re-enqueued by the user')
+        assert_true(measure.root_task.task_database.has_observers('notifier'))
+
+    def test_plugin_find_next_measure1(self):
+        """ Test plugin.find_next_measure, first measure is ok.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure = Measure(plugin=plugin, name='Test')
+        measure.root_task = RootTask()
+        plugin.enqueued_measures.append(measure)
+
+        meas = plugin.find_next_measure()
+        assert_is(measure, meas)
+
+    def test_plugin_find_next_measure2(self):
+        """ Test plugin.find_next_measure when measures should be skipped.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = Measure(plugin=plugin, name='Test1')
+        measure1.root_task = RootTask()
+        measure1.status = 'SKIPPED'
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = Measure(plugin=plugin, name='Test2')
+        measure2.root_task = RootTask()
+        measure2.status = 'EDITING'
+        plugin.enqueued_measures.append(measure2)
+
+        measure3 = Measure(plugin=plugin, name='Test3')
+        measure3.root_task = RootTask()
+        measure3.status = 'READY'
+        plugin.enqueued_measures.append(measure3)
+
+        meas = plugin.find_next_measure()
+        assert_is(measure3, meas)
+
+    def test_plugin_find_next_measure3(self):
+        """ Test plugin.find_next_measure when no measures can be sent.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = Measure(plugin=plugin, name='Test1')
+        measure1.root_task = RootTask()
+        measure1.status = 'SKIPPED'
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = Measure(plugin=plugin, name='Test2')
+        measure2.root_task = RootTask()
+        measure2.status = 'EDITING'
+        plugin.enqueued_measures.append(measure2)
+
+        meas = plugin.find_next_measure()
+        assert_is(None, meas)
+
+    def test_measure_processing1(self):
+        """ Test the processing of a single measure.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        # Check the right flag is set in the plugin.
+        assert_in('processing', plugin.flags)
+
+        # Check an engine instance was created and is processing the measure.
+        assert_true(plugin.engine_instance)
+        engine = plugin.engine_instance
+        assert_true(engine.ready)
+        assert_true(engine.running)
+        # Check the plugin observe the done event.
+        assert_true(engine.has_observer('done', plugin._listen_to_engine))
+
+        # Check the measure has been registered as running and its status been
+        # updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_equal(measure.status, 'RUNNING')
+        assert_equal(measure.infos, 'The measure is running')
+
+        # Check the monitors connections, that it started and received notif.
+        monitor = measure.monitors.values()[0]
+        assert_true(engine.has_observer('news', monitor.process_news))
+        assert_equal(monitor.black_box, ['Started'])
+        assert_equal(monitor.engine_news, {'root/default_path': 'test'})
+
+        # Make the engine send the done event.
+        engine.complete_measure()
+
+        # Check engine state.
+        assert_false(engine.active)
+        assert_false(engine.has_observers('news'))
+
+        # Check measure state.
+        assert_equal(measure.status, 'COMPLETED')
+        assert_equal(measure.infos, 'Measure successfully completed')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+
+        # Closing workspace.
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
+
+        # Check monitors stopped properly.
+        assert_equal(monitor.black_box, ['Started', 'Stopped'])
+
+    def test_measure_processing2(self):
+        """ Test the processing of a two measures in a row.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure2)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        # Check the right flag is set in the plugin.
+        assert_in('processing', plugin.flags)
+
+         # Check an engine instance was created and is processing the measure.
+        assert_true(plugin.engine_instance)
+        engine = plugin.engine_instance
+
+        # Check the measure has been registered as running and its status been
+        # updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_is(measure, measure1)
+
+        # Make the engine send the done event.
+        engine.complete_measure()
+
+        # Check measure1 state.
+        assert_equal(measure1.status, 'COMPLETED')
+        assert_equal(measure1.infos, 'Measure successfully completed')
+
+         # Check the measure has been registered as running and its status been
+        # updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_is(measure, measure2)
+
+        # Make the engine send the done event.
+        engine.complete_measure()
+
+        # Check engine state.
+        assert_false(engine.active)
+        assert_false(engine.has_observers('news'))
+
+        # Check measure state.
+        assert_equal(measure2.status, 'COMPLETED')
+        assert_equal(measure2.infos, 'Measure successfully completed')
+
+    def test_measure_processing3(self):
+        """ Test the processing of a measure failing the tests.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        measure1.root_task.default_path = ''
+        plugin.enqueued_measures.append(measure1)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        process_app_events()
+
+        # Check the right flag is set in the plugin.
+        assert_not_in('processing', plugin.flags)
+
+        # Check the measure status has been updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_equal(measure.status, 'FAILED')
+        assert_equal(measure.infos, 'Failed to pass the built in tests')
+
+    def test_measure_processing4(self):
+        """ Test the processing of a measure failing to get some profiles.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        measure1.store['profiles'] = ['Test']
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        process_app_events()
+
+        # Check the right flag is set in the plugin.
+        assert_not_in('processing', plugin.flags)
+
+        # Check the measure status has been updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_equal(measure.status, 'SKIPPED')
+        assert_equal(measure.infos, 'Failed to get requested profiles')
+
+    def test_processing_single_measure(self):
+        """ Test processing only a specific measure.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure2)
+
+        measure3 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure3)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.process_single_measure(measure2)
+
+        # Check the right flag is set in the plugin.
+        assert_in('processing', plugin.flags)
+        assert_in('stop_processing', plugin.flags)
+
+        # Check the measure has been registered as running and its status been
+        # updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_equal(measure.status, 'RUNNING')
+        assert_equal(measure.infos, 'The measure is running')
+        assert_is(measure, measure2)
+
+        # Make the engine send the done event.
+        plugin.engine_instance.complete_measure()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'READY')
+
+        assert_equal(measure2.status, 'COMPLETED')
+
+        assert_equal(measure3.status, 'READY')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+
+        assert_false(plugin.engine_instance.running)
+
+    def test_stop_measure(self):
+        """ Test stopping a measure but allowing to process next one.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure2)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        # Stop the measure before it completes.
+        workspace.stop_current_measure()
+
+        # Complete the second measure.
+        plugin.engine_instance.complete_measure()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'INTERRUPTED')
+
+        assert_equal(measure2.status, 'COMPLETED')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+        assert_false(plugin.engine_instance.running)
+
+    def test_stop_processing(self):
+        """ Test stopping the whole processing loop.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure2)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        # Stop the measure before it completes.
+        workspace.stop_processing_measures()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'INTERRUPTED')
+
+        assert_equal(measure2.status, 'READY')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+        assert_false(plugin.engine_instance.running)
+
+    def test_exit_measure(self):
+        """ Test stopping a measure (force) but allowing to process next one.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure2)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        plugin.engine_instance.allow_stop = False
+        workspace.stop_current_measure()
+
+        # Check the plugin flags.
+        assert_in('stop_attempt', plugin.flags)
+
+        # Force stop the measure before it completes.
+        workspace.force_stop_measure()
+
+        # Complete the second measure.
+        plugin.engine_instance.allow_stop = True
+        plugin.engine_instance.complete_measure()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'INTERRUPTED')
+
+        assert_equal(measure2.status, 'COMPLETED')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+        assert_false(plugin.engine_instance.running)
+
+    def test_exit_processing(self):
+        """ Test stopping the whole processing loop (force).
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        measure2 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure2)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        plugin.engine_instance.allow_stop = False
+        workspace.stop_current_measure()
+
+        # Check the plugin flags.
+        assert_in('stop_attempt', plugin.flags)
+
+        # Force stop the processing.
+        workspace.force_stop_processing()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'INTERRUPTED')
+
+        assert_equal(measure2.status, 'READY')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+        assert_false(plugin.engine_instance.running)
+
+    def _create_measure(self, plugin):
+        """ Create a measure.
+
+        """
+        measure = Measure(plugin=plugin, name='Test1')
+        measure.root_task = RootTask(default_path=self.test_dir)
+        measure.status = 'READY'
+        monitor_decl = plugin.monitors[u'monitor1']
+        measure.add_monitor(monitor_decl.id,
+                            monitor_decl.factory(self.workbench,
+                                                 monitor_decl))
+        return measure

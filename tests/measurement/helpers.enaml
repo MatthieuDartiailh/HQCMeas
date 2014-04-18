@@ -5,20 +5,29 @@
 # license : MIT license
 #==============================================================================
 from atom.api import (Str, List, Dict, Int, Bool)
-from enaml.workbench.api import PluginManifest, Extension
+from enaml.workbench.api import PluginManifest, Extension, Plugin
+from time import sleep
 
 from hqc_meas.measurement.monitors.base_monitor import Monitor, BaseMonitor
 from hqc_meas.measurement.headers.base_header import Header
 from hqc_meas.measurement.checks.base_check import Check
+from hqc_meas.measurement.engines.base_engine import Engine, BaseEngine
 
 
 class TestMonitor(BaseMonitor):
     """ Monitor only used for testing purposes.
 
     """
+    # Dict storing how many time an entry was modified in the database.
     updated = Dict(Str(), Int())
 
-    # Simple memeber for testing thta reload does update the monitor after
+    # Dict holding the message received from the engine.
+    engine_news = Dict(Str())
+
+    # List keeping trace of the action performed by the monitor.
+    black_box = List()
+
+    # Simple member for testing that reload does update the monitor after
     # creation.
     save_test = Bool().tag(pref=True)
 
@@ -46,6 +55,95 @@ class TestMonitor(BaseMonitor):
         """
         self.database_entries = []
         self.updated.clear()
+
+    def start(self, parent_ui):
+        self.black_box.append('Started')
+
+    def stop(self):
+        self.black_box.append('Stopped')
+
+    def process_news(self, change):
+        news = change['value']
+        self.engine_news[news[0]] = news[1]
+
+    def get_editor_page(self):
+        pass
+
+    def show_monitor(self, parent_ui):
+        pass
+
+def post_engine_selection(workbench, declaration):
+    declaration.selected = True
+
+def post_engine_deselection(workbench, declaration):
+    declaration.selected = False
+
+def engine_contribution(workspace, declaration):
+    declaration.contributing = True
+    workspace.dock_area
+
+def engine_uncontribution(workspace, declaration):
+    declaration.contributing = False
+
+
+class TestEngine(BaseEngine):
+    """ Engine only used for testing purposes.
+
+    """
+    allow_stop = Bool(True)
+    running = Bool()
+    ready = Bool()
+
+    def prepare_to_run(self, root, monitored_entries):
+        if not self.ready:
+            self.ready = True
+
+    def run(self):
+        self.running = True
+        self.active = True
+        sleep(0.1)
+        self.news = ('root/default_path', 'test')
+
+    def stop(self):
+        state = self.running
+        if self.allow_stop:
+            self.running = False
+            if state:
+                self.done = ('INTERRUPTED', 'The user stopped the measure')
+
+    def exit(self):
+        state = self.running
+        if self.allow_stop:
+            self.running = False
+            self.ready = False
+            self.active = False
+            if state:
+                self.done = ('INTERRUPTED', 'The user stopped the process')
+
+    def force_stop(self):
+        sleep(0.1)
+        state = self.running
+        self.running = False
+        if state:
+            self.done = ('INTERRUPTED', 'The user forced the system to stop')
+
+    def force_exit(self):
+        sleep(0.1)
+        state = self.running
+        self.running = False
+        self.ready = False
+        self.active = False
+        if state:
+            self.done = ('INTERRUPTED', 'The user forced the system to stop')
+
+    def complete_measure(self):
+        self.running = False
+        self.done = ('COMPLETED', 'Measure successfully completed')
+
+def build_test_engine(workbench, declaration):
+    """
+    """
+    return TestEngine(declaration=declaration)
 
 
 def build_test_monitor(workbench, declaration, raw=False):
@@ -104,3 +202,16 @@ enamldef TestSuiteManifest(PluginManifest):
         Monitor:
             id = u'monitor1'
             factory = build_test_monitor
+
+    Extension:
+        id = 'engines'
+        point = u'hqc_meas.measure.engines'
+        Engine:
+            attr selected
+            attr contributing
+            id = u'engine1'
+            factory = build_test_engine
+            post_selection = post_engine_selection
+            post_deselection = post_engine_deselection
+            contribute_workspace = engine_contribution
+            remove_contribution = engine_uncontribution
