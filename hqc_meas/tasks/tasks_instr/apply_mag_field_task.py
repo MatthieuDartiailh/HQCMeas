@@ -56,6 +56,8 @@ class ApplyMagFieldTask(InstrumentTask):
         self.driver.go_to_field(target_value, self.rate, self.auto_stop_heater)
         self.write_in_database('Bfield', target_value)
 
+        return True
+
     def check(self, *args, **kwargs):
         """
         """

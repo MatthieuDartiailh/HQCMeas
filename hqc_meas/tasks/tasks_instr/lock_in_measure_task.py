@@ -59,6 +59,8 @@ class LockInMeasureTask(InstrumentTask):
             self.write_in_database('amplitude', amplitude)
             self.write_in_database('phase', phase)
 
+        return True
+
     def _observe_mode(self, change):
         """ Update the database entries acording to the mode.
 

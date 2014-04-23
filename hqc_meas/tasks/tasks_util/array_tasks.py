@@ -48,6 +48,8 @@ class ArrayExtremaTask(SimpleTask):
             self.write_in_database('min_ind', ind)
             self.write_in_database('min_value', val)
 
+        return True
+
     def check(self, *args, **kwargs):
         """ Check the target array can be found and has the right column.
 

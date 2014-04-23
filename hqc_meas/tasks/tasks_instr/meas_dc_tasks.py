@@ -37,4 +37,6 @@ class MeasDCVoltageTask(InstrumentTask):
         value = self.driver.read_voltage_dc()
         self.write_in_database('voltage', value)
 
+        return True
+
 KNOWN_PY_TASKS = [MeasDCVoltageTask]

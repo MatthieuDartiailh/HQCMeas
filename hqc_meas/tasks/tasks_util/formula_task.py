@@ -42,6 +42,8 @@ class FormulaTask(SimpleTask):
                                            self.task_database)
             self.write_in_database(formula.label, value)
 
+        return True
+
     def check(self, *args, **kwargs):
         """
         """

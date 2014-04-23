@@ -19,9 +19,9 @@ def make_stoppable(function_to_decorate):
     """
     def decorator(*args, **kwargs):
         if args[0].root_task.should_stop.is_set():
-            return
+            return False
 
-        function_to_decorate(*args, **kwargs)
+        return function_to_decorate(*args, **kwargs)
 
     decorator.__name__ = function_to_decorate.__name__
     decorator.__doc__ = function_to_decorate.__doc__
@@ -39,12 +39,13 @@ def smooth_instr_crash(function_to_decorate):
         obj = args[0]
 
         try:
-            function_to_decorate(*args, **kwargs)
+            return function_to_decorate(*args, **kwargs)
         except (InstrIOError) as error:
             log = logging.getLogger()
             log.error('Instrument crashed')
             log.exception(error.message)
             obj.root_task.should_stop.set()
+            return False
 
     decorator.__name__ = function_to_decorate.__name__
     decorator.__doc__ = function_to_decorate.__doc__

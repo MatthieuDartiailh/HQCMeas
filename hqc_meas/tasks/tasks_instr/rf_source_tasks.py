@@ -43,6 +43,8 @@ class RFSourceSetFrequencyTask(InstrumentTask):
         self.driver.frequency = frequency
         self.write_in_database('frequency', frequency)
 
+        return True
+
     def check(self, *args, **kwargs):
         """
         """
@@ -92,6 +94,8 @@ class RFSourceSetPowerTask(InstrumentTask):
         self.driver.power = power
         self.write_in_database('power', power)
 
+        return True
+
     def check(self, *args, **kwargs):
         """
         """
@@ -137,6 +141,8 @@ class RFSourceSetOnOffTask(InstrumentTask):
         else:
             self.driver.output = 'Off'
             self.write_in_database('output', 0)
+
+        return True
 
     def check(self, *args, **kwargs):
         """

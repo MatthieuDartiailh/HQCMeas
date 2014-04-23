@@ -78,10 +78,13 @@ class SetDCVoltageTask(InstrumentTask):
 
         if abs(last_value - value) < 1e-12:
             self.write_in_database('voltage', value)
-            return
+            return True
+
         elif self.back_step == 0:
+            self.write_in_database('voltage', value)
             self.driver.voltage = value
-            return
+            return True
+
         else:
             if (value - last_value)/self.back_step > 0:
                 step = self.back_step
@@ -101,6 +104,7 @@ class SetDCVoltageTask(InstrumentTask):
         self.driver.voltage = value
         self.last_value = value
         self.write_in_database('voltage', value)
+        return True
 
     def check(self, *args, **kwargs):
         """

@@ -34,6 +34,7 @@ class PrintTask(SimpleTask):
                                     self.task_database)
         self.write_in_database('message', mess)
         print mess
+        return True
 
     def check(self, *args, **kwargs):
         """ Check that the message can be correctly formatted.
@@ -63,6 +64,7 @@ class SleepTask(SimpleTask):
         """ Sleep.
         """
         sleep(self.time)
+        return True
 
     def check(self, *args, **kwargs):
         return True, {}
@@ -85,7 +87,7 @@ class DefinitionTask(SimpleTask):
     def process(self):
         """ Do nothing.
         """
-        return
+        return True
 
     def check(self, *args, **kwargs):
         """ Write all values in database.

@@ -40,9 +40,10 @@ class BaseTask(Atom):
     process_ = Callable()
 
     def process(self):
-        """The main method of any task as it is this one which is called when
+        """ The main method of any task as it is this one which is called when
         the measurement is performed. This method should always be decorated
-        with make_stoppable.
+        with make_stoppable, and return True if things went well.
+
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
@@ -50,8 +51,9 @@ class BaseTask(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
     def check(self, *args, **kwargs):
-        """Method used to check that everything is alright before starting a
-        measurement
+        """ Method used to check that everything is alright before starting a
+        measurement.
+
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
@@ -59,7 +61,8 @@ class BaseTask(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
     def register_in_database(self):
-        """Method used to create entries in the database
+        """ Method used to create entries in the database.
+
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
@@ -67,7 +70,8 @@ class BaseTask(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
     def unregister_from_database(self):
-        """Method used to delete entries from the database
+        """ Method used to delete entries from the database.
+
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
@@ -75,7 +79,8 @@ class BaseTask(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
     def register_preferences(self):
-        """Method used to create entries in the preferences object
+        """ Method used to create entries in the preferences object.
+
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
@@ -83,8 +88,9 @@ class BaseTask(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
     def update_preferences_from_members(self):
-        """Method used to update the entries in the preference object before
-        saving
+        """ Method used to update the entries in the preference object before
+        saving.
+
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
@@ -92,12 +98,13 @@ class BaseTask(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
     def update_members_from_preferences(self, **parameters):
-        """Method used to update the trait values using the info extracted from
+        """ Method used to update the trait values using the info extracted from
         a config file.
 
         Parameters:
         ----------
         parameters : dict
+
         """
         err_str = 'This method should be implemented by subclasses of\
         AbstractTask. This method is called when the program requires the task\
@@ -147,7 +154,7 @@ class BaseTask(Atom):
 
 
 class SimpleTask(BaseTask):
-    """Task with no child task, written in pure Python.
+    """ Task with no child task, written in pure Python.
 
     """
     #Class attribute specifying if instances of that class can be used in loop
@@ -458,8 +465,11 @@ class ComplexTask(BaseTask):
         """ Run sequentially all child tasks.
 
         """
+        result = True
         for child in self.children_task:
-            child.process_(child)
+            result &= child.process_(child)
+
+        return result
 
     def check(self, *args, **kwargs):
         """ Run test of all child tasks.
@@ -920,8 +930,9 @@ class RootTask(ComplexTask):
         """ Run sequentially all child tasks, and close ressources.
 
         """
+        result = True
         for child in self.children_task:
-            child.process_(child)
+            result &= child.process_(child)
         pools = self.task_database.get_value('root', 'threads')
         for pool in pools.items():
             for thread in pool:
@@ -929,6 +940,8 @@ class RootTask(ComplexTask):
         instrs = self.task_database.get_value('root', 'instrs')
         for instr_profile in instrs:
             instrs[instr_profile].close_connection()
+
+        return result
 
     def register_in_database(self):
         """ Create a node in the database and register all entries.

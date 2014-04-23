@@ -147,6 +147,8 @@ class SaveTask(SimpleTask):
             self.file_object.close()
             self.initialized = False
 
+        return True
+
     def check(self, *args, **kwargs):
         """
         """

@@ -180,7 +180,7 @@ class PNASinglePointMeasureTask(PNATasks):
     Wait for any parallel operation before execution.
     """
     channel = Int(1).tag(pref = True)
-    measures = ContainerList(Typed(PNAMeasure)).tag(pref = True)
+    measures = ContainerList(Typed(PNAMeasure)).tag(pref=True)
     measure_format = List(Bool()).tag(pref = True)
 
     if_bandwidth = Int(2).tag(pref = True)
