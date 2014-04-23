@@ -7,21 +7,22 @@
 from atom.api import Atom, Dict, Str, Value, Instance, Typed, Callable
 from enaml.workbench.api import Workbench
 from enaml.workbench.core.core_plugin import CorePlugin
-from enaml.widgets.api import Html, Container
+from enaml.widgets.api import Html, Container, GroupBox
 from enaml.core.api import Include
 from inspect import cleandoc
 
 from hqc_meas.tasks.api import BaseTask
-from hqc_meas.tasks.views.api import BaseTaskView
 from ..base_editor import BaseEditor
 
 
-enamldef FailureView(BaseTaskView):
+enamldef FailureView(GroupBox):
     """ View displayed when a view, matching the selected task, was not found.
 
     """
+    attr task
+
     Html:
-        text = cleandoc('''No matching view was found for the selected
+        source = cleandoc('''No matching view was found for the selected
                            task.''')
 
 
@@ -65,23 +66,26 @@ class _StandardEditorModel(Atom):
 
         """
         t_class = type(change['value']).__name__
-        cmd = u'hqc_meas.task_manager.request_views'
+        cmd = u'hqc_meas.task_manager.views_request'
         invoke = self._core.invoke_command
         views, missing = invoke(cmd, {'task_classes': [t_class]}, self)
         if missing:
             self.current_view = FailureView()
         else:
-            kwargs = {'core': self._invoker,
-                      'cache': self.cache,
-                      'task': change['value']}
+            view = views[t_class]
+            kwargs = {'task': change['value']}
+            if hasattr(view, 'core'):
+                kwargs['core'] = self._core
+            if hasattr(view, 'cache'):
+                kwargs['cache'] = self.cache
             self.current_view = views[t_class](**kwargs)
 
-    def _default__invoker(self):
+    def _default__core(self):
         """ Default value for the _invoker member.
 
         """
         core = self.workbench.get_plugin(u'enaml.workbench.core')
-        return core.invoke_command
+        return core
 
 
 enamldef StandardEditor(BaseEditor):
@@ -93,8 +97,8 @@ enamldef StandardEditor(BaseEditor):
     new_measure ::
         _internal.prepare_for_new_measure(change['value'])
 
-    alias workbench : _internal.workbench
-    attr _internal = _StandardEditorModel()
+    attr workbench
+    attr _internal = _StandardEditorModel(workbench=workbench)
 
     Container:
         Include:

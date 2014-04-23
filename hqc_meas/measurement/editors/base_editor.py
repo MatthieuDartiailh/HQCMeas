@@ -20,7 +20,7 @@ class BaseEditor(Page):
     declaration = ForwardTyped(lambda: Editor)
 
     # Currently selected task in the tree.
-    selected_task = Instance(BaseTask)
+    selected_task = d_(Instance(BaseTask))
 
     # Should the tree be visible when this editor is selected.
     tree_visible = d_(Bool(True))
@@ -28,6 +28,7 @@ class BaseEditor(Page):
     # Should the tree be enabled when this editor is selected.
     tree_enabled = d_(Bool(True))
 
+    # DEPRECATE better to destroy editor on new measure to release ressources.
     # Event receiving the new measure being edited when it changes. This event
     # can be handled to clear any cached infos hold by the editor.
     new_measure = d_(Event())
