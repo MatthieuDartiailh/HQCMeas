@@ -39,7 +39,7 @@ class LogPlugin(HasPrefPlugin):
 
         # Add day rotating handler to the root logger.
         handler = DayRotatingTimeHandler(os.path.join(log_dir, 'hqc_log.log'))
-        self.add_handler(u'standard', handler)
+        self.add_handler(u'hqc_meas.standard_log', handler)
 
         # XXXX add auto redirection
 
@@ -69,9 +69,8 @@ class LogPlugin(HasPrefPlugin):
 
         Returns
         -------
-        refs :
-            None save if a mode was selected, in this case see the mode
-            description.
+        refs : list
+            List of useful reference, empty if no mode is selected.
 
         """
         refs = []

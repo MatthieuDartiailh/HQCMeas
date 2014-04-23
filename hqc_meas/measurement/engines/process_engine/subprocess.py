@@ -89,6 +89,7 @@ class TaskProcess(Process):
         logger.info('Logger parametrised')
 
         logger.info('Process running')
+        self.pipe.send('READY')
         while not self.process_stop.is_set():
 
             # Prevent us from crash if the pipe is closed at the wrong moment.
@@ -98,6 +99,9 @@ class TaskProcess(Process):
                 while not self.pipe.poll(2):
                     if self.process_stop.is_set():
                         break
+
+                if self.process_stop.is_set():
+                    break
 
                 # Get the measure.
                 name, config, runtimes, monitored_entries = self.pipe.recv()
@@ -165,9 +169,9 @@ class TaskProcess(Process):
                             result[2] = 'Measure {} failed'.format(name)
 
                     if self.process_stop.is_set():
-                        result[1]('STOPPING')
+                        result[1] = 'STOPPING'
                     else:
-                        result[1]('READY')
+                        result[1] = 'READY'
 
                     self.pipe.send(tuple(result))
 
@@ -195,6 +199,7 @@ class TaskProcess(Process):
         if self.meas_log_handler:
             self.meas_log_handler.close()
         self.log_queue.put_nowait(None)
+        self.monitor_queue.put_nowait((None, None))
         self.pipe.close()
 
     def _config_log(self):

@@ -5,6 +5,7 @@
 # license : MIT license
 #==============================================================================
 from threading import Thread
+from Queue import Empty
 from multiprocessing.queues import Queue
 from atom.api import Atom, Coerced, Typed
 from hqc_meas.tasks.tools.task_database import TaskDatabase
@@ -39,7 +40,7 @@ class ThreadMeasureMonitor(Thread):
 
     """
 
-    def __init__(self, queue, engine):
+    def __init__(self, engine, queue):
         super(ThreadMeasureMonitor, self).__init__()
         self.queue = queue
         self.engine = engine
@@ -47,11 +48,10 @@ class ThreadMeasureMonitor(Thread):
     def run(self):
         while True:
             try:
-                pass
                 news = self.queue.get()
                 if news != (None, None):
                     self.engine.news = news
                 else:
                     break
-            except Queue.Empty:
+            except Empty:
                 continue

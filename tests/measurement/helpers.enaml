@@ -72,17 +72,17 @@ class TestMonitor(BaseMonitor):
     def show_monitor(self, parent_ui):
         pass
 
-def post_engine_selection(workbench, declaration):
+def post_engine_selection(declaration, workbench):
     declaration.selected = True
 
-def post_engine_deselection(workbench, declaration):
+def post_engine_deselection(declaration, workbench):
     declaration.selected = False
 
-def engine_contribution(workspace, declaration):
+def engine_contribution(declaration, workspace):
     declaration.contributing = True
     workspace.dock_area
 
-def engine_uncontribution(workspace, declaration):
+def engine_uncontribution(declaration, workspace):
     declaration.contributing = False
 
 
@@ -94,7 +94,7 @@ class TestEngine(BaseEngine):
     running = Bool()
     ready = Bool()
 
-    def prepare_to_run(self, root, monitored_entries):
+    def prepare_to_run(self, name, root, monitored_entries):
         if not self.ready:
             self.ready = True
 
@@ -140,13 +140,13 @@ class TestEngine(BaseEngine):
         self.running = False
         self.done = ('COMPLETED', 'Measure successfully completed')
 
-def build_test_engine(workbench, declaration):
+def build_test_engine(declaration, workbench):
     """
     """
     return TestEngine(declaration=declaration)
 
 
-def build_test_monitor(workbench, declaration, raw=False):
+def build_test_monitor(declaration, workbench, raw=False):
     """
     """
     return TestMonitor(declaration=declaration)

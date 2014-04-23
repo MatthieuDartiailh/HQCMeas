@@ -4,8 +4,11 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-
+from atom.api import Atom, Bool, Str
 from enaml.workbench.api import PluginManifest, Extension
+from enaml.widgets.api import DockItem, Container
+from enaml.layout.api import InsertItem, RemoveItem
+from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
 
 from ..base_engine import Engine
 from .process_engine import ProcessEngine
@@ -19,8 +22,87 @@ def engine_factory(declaration, workbench):
 
     """
     return ProcessEngine(workbench=workbench,
-                         id=PROCESS_ENGINE_ID)
+                         declaration=declaration)
 
+
+class ProcFilter(Atom):
+    """ Filter accepting or rejecting a log according to its process of origin.
+
+    """
+    process_name = Str('MeasureProcess')
+
+    # Bool indicating whether to reject if the process name is wrong (False),
+    # or reject if the process name is right (True).
+    reject_if_equal = Bool()
+
+    def filter(self, record):
+        """
+        """
+        res = record.processName == self.process_name
+        return not res if self.reject_if_equal else res
+
+enamldef SubprocessLogPanel(DockItem):
+    """
+    """
+    attr model
+    Container:
+        QtAutoscrollHtml:
+            text << model.text
+
+def add_log_panel(declaration, workspace):
+    """ Add a log panel for the subprocess.
+
+    """
+    core = workspace.workbench.get_plugin(u'enaml.workbench.core')
+    # First add a filter removing log from the subprocess from the main panel
+    # log.
+    core.invoke_command(u'hqc_meas.logging.add_filter',
+                        {'id' : u'hqc_meas.measure.workspace.process_engine',
+                         'filter': ProcFilter(reject_if_equal=True),
+                         'handler_id' : u'hqc_meas.measure.workspace'},
+                        None)
+
+    # Second add a new handler and its filter.
+    handler_id = u'hqc_meas.measure.engines.process_engine'
+
+    model = core.invoke_command(u'hqc_meas.logging.add_handler',
+                                {'id': handler_id, 'mode': 'ui'},
+                               None)[0]
+    core.invoke_command(u'hqc_meas.logging.add_filter',
+                        {'id' : u'hqc_meas.measure.engines.process_engine',
+                         'filter': ProcFilter(reject_if_equal=False),
+                         'handler_id' : handler_id},
+                        None)
+
+    # Add the log panel to the dock area at the right of the main log panel.
+    area = workspace.dock_area
+    SubprocessLogPanel(area, title='Subprocess panel (Process engine)',
+                       name='subprocess_log', model=model)
+    area.update_layout(InsertItem(item='subprocess_log', target='main_log',
+                                  position='right'))
+
+
+def remove_log_panel(declaration, workspace):
+    """ Remove the log panel from the workspace content.
+
+    """
+    # Remove the log panel from the dock area.
+    area = workspace.dock_area
+    for item in area.dock_items():
+        if item.name == 'subprocess_log':
+            item.destroy()
+
+    core = workspace.workbench.get_plugin(u'enaml.workbench.core')
+    # Second remove the added handler (filter automaticallt removed).
+    handler_id = u'hqc_meas.measure.engines.process_engine'
+    core.invoke_command(u'hqc_meas.logging.remove_handler',
+                        {'id': handler_id},
+                        None)
+
+    # Finally remove the filter  from the main panel log.
+    core.invoke_command(u'hqc_meas.logging.remove_filter',
+                        {'id' : u'hqc_meas.measure.workspace.process_engine'},
+                        None)
 
 enamldef ProcessEngineManifest(PluginManifest):
     """ Manifest contributing the ProcessEngine to the MeasurePlugin.
@@ -35,6 +117,5 @@ enamldef ProcessEngineManifest(PluginManifest):
             name = 'Process engine'
             description = u'Engine performing the measure in a subprocess'
             factory = engine_factory
-
-    # TODO should also contribute a dockItem for displaying process log + filter
-    # for main log display.
+            contribute_workspace = add_log_panel
+            remove_contribution = remove_log_panel

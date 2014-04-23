@@ -6,6 +6,7 @@
 #==============================================================================
 from atom.api import Typed, Value, Tuple
 from enaml.workbench.api import Workbench
+from enaml.application import deferred_call
 from multiprocessing import Pipe
 from multiprocessing.queues import Queue
 from multiprocessing.synchronize import Event
@@ -35,7 +36,7 @@ class ProcessEngine(BaseEngine):
         # Get all the tasks classes we need to rebuild the measure in the
         # process.
         walk = root.walk(['task_class'])
-        task_names = flatten_walk(walk)
+        task_names = flatten_walk(walk, ['task_class'])['task_class']
 
         # Get core plugin to request tasks.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
@@ -46,7 +47,7 @@ class ProcessEngine(BaseEngine):
 
         # Gather all runtime dependencies in a single dict.
         runtimes = root.run_time
-        runtimes['task_classes', task_classes]
+        runtimes['task_classes'] = task_classes
 
         # Get ConfigObj describing measure.
         root.update_preferences_from_members()
@@ -98,13 +99,16 @@ class ProcessEngine(BaseEngine):
         self._meas_stop.set()
 
     def exit(self):
+        self._meas_stop.set()
         self._stop.set()
-        # Everything else handled by the _com_thread.
+        # Everything else handled by the _com_thread and the process.
 
     def force_stop(self):
         # Just in case the user calls this directly. Will signal all threads to
         # stop (save _com_thread).
         self._stop.set()
+        self._log_queue.put(None)
+        self._monitor_queue.put((None, None))
 
         # Set _force_stop to stop _com_thread.
         self._force_stop.set()
@@ -115,7 +119,9 @@ class ProcessEngine(BaseEngine):
         self._monitor_thread.join()
         self._com_thread.join()
         self.active = False
-        self.done = ('INTERRUPTED', 'The user forced the system to stop')
+        if self._processing.is_set():
+            self.done = ('INTERRUPTED', 'The user forced the system to stop')
+            self._processing.clear()
 
         # Discard the queues as they may have been corrupted when the process
         # was terminated.
@@ -135,6 +141,9 @@ class ProcessEngine(BaseEngine):
 
     # Flag signaling that a forced exit has been requested
     _force_stop = Value(tEvent())
+
+    # Flag indicating the process is processing for a measure.
+    _processing = Value(tEvent())
 
     # Flag indicating the communication thread it can send the next measure.
     _starting_allowed = Value(tEvent())
@@ -179,13 +188,17 @@ class ProcessEngine(BaseEngine):
 
         while not self._pipe.poll(2):
             if not self._process.is_alive():
-                self.done = ('FAILED', 'Subprocess failed to start')
+                logger.critical('Subprocess was found dead unexpectedly')
                 self._stop.set()
+                self._log_queue.put(None)
+                self._monitor_queue.put((None, None))
                 self._cleanup(process=False)
+                self.done = ('FAILED', 'Subprocess failed to start')
                 return
 
         mess = self._pipe.recv()
         if mess != 'READY':
+            logger.critical('Subprocess was found dead unexpectedly')
             self.done = ('FAILED', 'Subprocess failed to start')
             self._cleanup()
             return
@@ -194,16 +207,18 @@ class ProcessEngine(BaseEngine):
         while not self._stop.is_set():
 
             # Wait for measure and check for stopping.
-            while not self._starting_allowed.wait(2):
+            while not self._starting_allowed.wait(1):
                 if self._stop.is_set():
                     self._cleanup()
                     return
 
+            self._processing.set()
+
             # Send the measure.
-            self.pipe.send(self._temp)
+            self._pipe.send(self._temp)
 
             # Empty _temp and reset flag.
-            self._temp = None
+            self._temp = tuple()
             self._starting_allowed.clear()
 
             logger.info('Measurement sent')
@@ -218,9 +233,17 @@ class ProcessEngine(BaseEngine):
             # Here get message from process and react
             meas_status, int_status, mess = self._pipe.recv()
 
-            self.done = (meas_status, mess)
             if int_status == 'STOPPING':
                 self._cleanup()
+
+            # This event should be handled in the main thread so thta this one
+            # can stay responsive otherwise the engine will be unable to
+            # shutdown.
+            deferred_call(setattr, self, 'done', (meas_status, mess))
+
+            self._processing.clear()
+
+        self._cleanup()
 
     def _cleanup(self, process=True):
         """ Helper method taking care of making sure that everybody stops.
@@ -232,9 +255,14 @@ class ProcessEngine(BaseEngine):
             termintaed abruptly.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Cleaning up')
         self._pipe.close()
         if process:
             self._process.join()
+            logger.debug('Subprocess joined')
         self._log_thread.join()
+        logger.debug('Log thread joined')
         self._monitor_thread.join()
+        logger.debug('Monitor thread joined')
         self.active = False

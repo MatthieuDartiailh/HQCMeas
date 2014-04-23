@@ -194,7 +194,7 @@ class MeasurePlugin(HasPrefPlugin):
         # Start the engine if it has not already been done.
         if not self.engine_instance:
             decl = self.engines[self.selected_engine]
-            self.engine_instance = decl.factory(self.workbench, decl)
+            self.engine_instance = decl.factory(decl, self.workbench)
 
             # Connect signal handler to engine.
             self.engine_instance.observe('done', self._listen_to_engine)
@@ -203,7 +203,7 @@ class MeasurePlugin(HasPrefPlugin):
 
         # Call engine prepare to run method.
         entries = measure.collect_entries_to_observe()
-        engine.prepare_to_run(measure.root_task, entries)
+        engine.prepare_to_run(measure.name, measure.root_task, entries)
 
         measure.status = 'RUNNING'
         measure.infos = 'The measure is running'
@@ -313,7 +313,7 @@ class MeasurePlugin(HasPrefPlugin):
             self.stop_processing()
             i = 0
             while engine and engine.active:
-                sleep(0.2)
+                sleep(0.5)
                 i += 1
                 if i > 10:
                     self.force_stop_processing()
@@ -330,7 +330,7 @@ class MeasurePlugin(HasPrefPlugin):
                     self.stop_processing()
                     i = 0
                     while engine.active:
-                        sleep(0.2)
+                        sleep(0.5)
                         i += 1
                         if i > 10:
                             self.force_stop_processing()
@@ -438,12 +438,12 @@ class MeasurePlugin(HasPrefPlugin):
             old = change['oldvalue']
             if old in self.engines:
                 engine = self.engines[old]
-                engine.post_deselection(self.workbench, engine)
+                engine.post_deselection(engine, self.workbench)
 
         new = change['value']
         if new and new in self.engines:
             engine = self.engines[new]
-            engine.post_selection(self.workbench, engine)
+            engine.post_selection(engine, self.workbench)
 
     def _refresh_monitors(self):
         """ Refresh the list of known monitors.

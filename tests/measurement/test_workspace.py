@@ -2,6 +2,7 @@ from enaml.workbench.api import Workbench
 import enaml
 import os
 import shutil
+import logging
 from configobj import ConfigObj
 from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
                         assert_false, assert_is, assert_is_not)
@@ -9,8 +10,6 @@ from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
 from hqc_meas.measurement.measure import Measure
 from hqc_meas.measurement.workspace import LOG_ID
 from hqc_meas.tasks.base_tasks import RootTask
-
-from ..util import process_app_events, close_all_windows
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
@@ -24,7 +23,7 @@ with enaml.imports():
 
     from .helpers import TestSuiteManifest
 
-from ..util import complete_line
+from ..util import complete_line, process_app_events, close_all_windows
 
 
 def setup_module():
@@ -138,6 +137,11 @@ class TestMeasureSpace(object):
         # Check the workspace registration.
         assert_true(workspace.log_model)
         assert_in(LOG_ID, log_plugin.handler_ids)
+
+        logger = logging.getLogger(__name__)
+        logger.info('test')
+        process_app_events()
+        assert_in('test', workspace.log_model.text)
 
         # Check a blank measure was created.
         assert_true(plugin.edited_measure)
@@ -690,6 +694,6 @@ class TestMeasureSpace(object):
         measure.status = 'READY'
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
         return measure

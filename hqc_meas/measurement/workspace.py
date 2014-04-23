@@ -52,7 +52,7 @@ class MeasureSpace(Workspace):
         cmd = u'hqc_meas.logging.add_handler'
         self.log_model = core.invoke_command(cmd,
                                              {'id': LOG_ID, 'mode': 'ui'},
-                                             self)
+                                             self)[0]
 
         # Check whether or not a measure is already being edited.
         if not plugin.edited_measure:
@@ -67,7 +67,7 @@ class MeasureSpace(Workspace):
         # Check whether or not an engine can contribute.
         if plugin.selected_engine:
             engine = plugin.engines[plugin.selected_engine]
-            engine.contribute_workspace(self, engine)
+            engine.contribute_workspace(engine, self)
 
         plugin.observe('selected_engine', self._update_engine_contribution)
 
@@ -84,7 +84,7 @@ class MeasureSpace(Workspace):
 
         if self.plugin.selected_engine:
             engine = self.plugin.engines[self.plugin.selected_engine]
-            engine.remove_contribution(self, engine)
+            engine.remove_contribution(engine, self)
 
         # remove handler from the root logger.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
@@ -373,8 +373,8 @@ class MeasureSpace(Workspace):
             if monitor_id in self.plugin.monitors:
                 monitor_decl = self.plugin.monitors[monitor_id]
                 measure.add_monitor(monitor_id,
-                                    monitor_decl.factory(self.workbench,
-                                                         monitor_decl))
+                                    monitor_decl.factory(monitor_decl,
+                                                         self.workbench))
             else:
                 logger.warn("Default monitor {} not found".format(monitor_id))
 
@@ -387,9 +387,9 @@ class MeasureSpace(Workspace):
             old = change['oldvalue']
             if old in self.plugin.engines:
                 engine = self.plugin.engines[old]
-                engine.remove_contribution(self, engine)
+                engine.remove_contribution(engine, self)
 
         new = change['value']
         if new and new in self.plugin.engines:
             engine = self.plugin.engines[new]
-            engine.contribute_workspace(self, engine)
+            engine.contribute_workspace(engine, self)

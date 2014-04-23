@@ -116,21 +116,21 @@ class Engine(Declarative):
     factory = d_(Callable())
 
     # Callable called by the framework when this engine is selected. The
-    # callable should take two arguments : the workbench and the engine
-    # declaration.
-    post_selection = d_(Callable(lambda workbench, declaration: None))
+    # callable should take two arguments : the engine declaration. and
+    # the workbench
+    post_selection = d_(Callable(lambda declaration, workbench: None))
 
     # Callable called by the framework when the engine is deselected. The
-    # callable should take two arguments : the workbench and and the engine
-    # declaration.
-    post_deselection = d_(Callable(lambda workbench, declaration: None))
+    # callable should take two arguments : the engine declaration. and
+    # the workbench
+    post_deselection = d_(Callable(lambda declaration, workbench: None))
 
     # Callable called by the framework when the workspace is active and the
-    # engine selected. The callable should take two arguments : the workspace
-    # and the engine declaration.
-    contribute_workspace = d_(Callable(lambda workspace, declaration: None))
+    # engine selected. The callable should take two arguments : the engine
+    # declaration and the workspace.
+    contribute_workspace = d_(Callable(lambda declaration, workspace: None))
 
     # Callable called by the framework when the workspace is active and the
-    # engine deselected. The callable should take  two arguments : the
-    # workspace and the engine declaration.
-    remove_contribution = d_(Callable(lambda workspace, declaration: None))
+    # engine deselected. The callable should take  two arguments : the engine
+    # declaration and the workspace.
+    remove_contribution = d_(Callable(lambda declaration, workspace: None))

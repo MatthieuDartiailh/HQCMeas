@@ -169,7 +169,7 @@ class Monitor(Declarative):
     description = d_(Unicode())
 
     # Factory function returning an instance of the monitor. This callable
-    # should take as arguments the workbench, the monitor declaration and the
+    # should take as arguments the monitor declaration, the workbench and the
     # optionnal keyword raw signaling whether or not to initialize the monitor
     # with default values (False by default).
     factory = d_(Callable())
