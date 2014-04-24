@@ -4,7 +4,7 @@ from enaml.workbench.api import Workbench
 import os
 import shutil
 from configobj import ConfigObj
-from nose.tools import (assert_equal, assert_is_instance)
+from nose.tools import assert_is_instance
 
 from hqc_meas.tasks.base_tasks import RootTask
 
@@ -118,18 +118,6 @@ class TestProcessEngine(object):
         self.workbench.unregister(u'hqc_meas.state')
         self.workbench.unregister(u'enaml.workbench.ui')
         self.workbench.unregister(u'enaml.workbench.core')
-
-    def test_clearing(self):
-        """ Test clearing editor cache.
-
-        """
-        editor = StandardEditor(workbench=self.workbench)
-        editor._internal.cache = {'test': 1}
-        editor._internal._views_def_cache = {'test': 1}
-        editor.new_measure = True
-
-        assert_equal(editor._internal.cache, {})
-        assert_equal(editor._internal._views_def_cache, {})
 
     def test_find_view1(self):
         """ Test finding a view for an existing task.

@@ -22,5 +22,8 @@ class Header(Declarative):
     # Header description.
     description = d_(Unicode())
 
-    # Function returning the contributed header. No arguments.
+    # Function returning the contributed header. No arguments. This function
+    # will be called even if the plugin contributing the Header has not been
+    # started. If it is undesirable to start the plugin just to build the
+    # header one can use 'force_create=False' in workbench.get_plugin.
     build_header = d_(Callable())

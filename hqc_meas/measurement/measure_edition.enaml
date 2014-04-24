@@ -122,6 +122,8 @@ class _MeasEditionModel(Atom):
     the editor preferences are applied to the tree.
 
     """
+    #--- Public API -----------------------------------------------------------
+
     # Instance of the workspace
     workspace = ForwardTyped(_workspace)
 
@@ -139,6 +141,18 @@ class _MeasEditionModel(Atom):
 
     # Should the tree be visible given the currently selected editor.
     tree_visible = Bool(True)
+
+    def clear_state(self, ):
+        """ Destroy all previously used monitors.
+
+        """
+        self._unvalid_editors.clear()
+        self.valid_editors = []
+
+    #--- Private API ----------------------------------------------------------
+
+    # Dict storing editor started and then removed from the valid ones.
+    _unvalid_editors = Dict()
 
     def _observe_selected_task(self, change):
         """ Keep the list of valid editors up to date and update editor.
@@ -162,9 +176,13 @@ class _MeasEditionModel(Atom):
             for editor in self.valid_editors[:]:
                 if editor.id in to_remove:
                     self.valid_editors.remove(editor)
+                    self._unvalid_editors[editor.id] = editor
 
             for id in to_add:
-                editor = editors[id].factory(workspace.workbench)
+                if id not self._unvalid_editors:
+                    editor = editors[id].factory(workspace.workbench)
+                else:
+                    editor = self._unvalid_editors[id]
                 self.valid_editors.append(editor)
 
         # Update selected editor with new selected task. If the editor changed
@@ -189,9 +207,14 @@ enamldef MeasEditionView(Container):
 
     """
     attr workspace
+
     attr measure
+    measure ::
+        _internal.clear_state()
+        selected_task = change['value'].root_task
+
     attr dock : bool
-    attr selected_task << measure.root_task
+    attr selected_task
     selected_task >> _internal.selected_task
 
     attr _internal = _MeasEditionModel(workspace=workspace)

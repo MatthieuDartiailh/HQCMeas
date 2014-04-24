@@ -4,8 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (Callable, Unicode, Instance, Bool, Event,
-                      ForwardTyped)
+from atom.api import (Callable, Unicode, Instance, Bool, ForwardTyped)
 from enaml.core.declarative import Declarative, d_
 from enaml.widgets.api import Page
 
@@ -27,11 +26,6 @@ class BaseEditor(Page):
 
     # Should the tree be enabled when this editor is selected.
     tree_enabled = d_(Bool(True))
-
-    # DEPRECATE better to destroy editor on new measure to release ressources.
-    # Event receiving the new measure being edited when it changes. This event
-    # can be handled to clear any cached infos hold by the editor.
-    new_measure = d_(Event())
 
 
 class Editor(Declarative):

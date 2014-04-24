@@ -46,12 +46,8 @@ class _StandardEditorModel(Atom):
     selected_task = Instance(BaseTask)
 
     # Currently displayed view.
-    # TODO type this once the BaseTaskView declaration exists.
     current_view = Value()
 
-    def prepare_for_new_measure(self, measure):
-        self.cache.clear()
-        self._views_def_cache.clear()
 
     #--- Private API ----------------------------------------------------------
 
@@ -92,13 +88,11 @@ enamldef StandardEditor(BaseEditor):
     """ Standard editor displaying the selected task using the task view.
 
     """
-    name = 'standard_editor'
-    selected_task >> _internal.selected_task
-    new_measure ::
-        _internal.prepare_for_new_measure(change['value'])
-
     attr workbench
     attr _internal = _StandardEditorModel(workbench=workbench)
+
+    name = 'standard_editor'
+    selected_task >> _internal.selected_task
 
     Container:
         Include:
