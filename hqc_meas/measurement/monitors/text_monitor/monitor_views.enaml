@@ -16,11 +16,12 @@ from enaml.stdlib.message_box import question
 from operator import attrgetter
 from inspect import cleandoc
 
-from ..utils.widgets.qt_list_str_widget import QtListStrWidget
-from ..utils.widgets.qt_line_completer import QtLineCompleter
-from ..utils.widgets.list_editor import ListEditor
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.widgets.list_editor import ListEditor
+
 from .entries import MonitoredEntry
-from .custom_entries_building import EntryDialog
+from .custom_entry_building import EntryDialog
 from .monitoring_rules_view import EditRulesView
 
 
@@ -125,7 +126,7 @@ enamldef TextMonitorPage(Page): dial:
                 else:
                     monitor.undisplayed_entries[:] =\
                         [e for e in monitor.undisplayed_entries
-                            if e not in monitor.hidden_entries]:
+                            if e not in monitor.hidden_entries]
 
         # Special edition buttons.
 # TODO refactor

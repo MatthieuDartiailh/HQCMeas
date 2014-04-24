@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from enaml.workbench.api import Workbench
 import enaml
 import os

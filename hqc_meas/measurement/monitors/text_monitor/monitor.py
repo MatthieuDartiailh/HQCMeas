@@ -30,9 +30,11 @@ def import_monitor_plugin():
 
 
 class TextMonitor(BaseMonitor):
-    """ Simple monitor displaying entries as text in widget.
+    """ Simple monitor displaying entries as text in a widget.
 
     """
+    #--- Public API -----------------------------------------------------------
+
     # List of the entries which should be displayed when a measure is running.
     displayed_entries = ContainerList(Instance(MonitoredEntry))
 
@@ -121,7 +123,7 @@ class TextMonitor(BaseMonitor):
 
             if entry[0] in self.database_entries:
                 self.database_entries.remove(entry[0])
-                
+
     def clear_state(self):
         """ Clear the monitor state.
 

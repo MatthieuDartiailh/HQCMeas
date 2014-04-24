@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from atom.api import (Str, List, Bool, set_default)
-from .monitoring_entries import MonitoredEntry
+
 from hqc_meas.utils.atom_util import HasPrefAtom
+from .entries import MonitoredEntry
 
 
 class AbstractMonitorRule(HasPrefAtom):

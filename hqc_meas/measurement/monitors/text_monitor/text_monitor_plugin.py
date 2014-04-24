@@ -8,6 +8,7 @@ import logging
 from atom.api import Str, List, Subclass, Dict
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
+from ..base_monitor import Monitor
 from .rules import AbstractMonitorRule, TEXT_MONITOR_RULES
 from .monitor import TextMonitor
 
@@ -15,6 +16,9 @@ from .monitor import TextMonitor
 class TextMonitorPlugin(HasPrefPlugin):
     """
     """
+
+    #--- Public API -----------------------------------------------------------
+
     # List of rules which should be created automatically for new monitors.
     default_rules = List(Str()).tag(pref=True)
 
@@ -64,8 +68,9 @@ class TextMonitorPlugin(HasPrefPlugin):
             New text monitor.
 
         """
+        decl = self.manifest.extensions.get_child(Monitor)
         monitor = TextMonitor(_plugin=self,
-                              id=self.manifest.id)
+                              declaration=decl)
 
         if not raw:
             rules = []
@@ -82,6 +87,8 @@ class TextMonitorPlugin(HasPrefPlugin):
             monitor.rules = rules
 
         return monitor
+
+    #--- Private API ----------------------------------------------------------
 
     def _build_rule(self, rule_config):
         """ Build rule from a dict.

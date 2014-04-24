@@ -5,8 +5,11 @@
 # license : MIT license
 #==============================================================================
 from atom.api import (Atom, Str, List, ContainerList, Dict, Instance)
+from enaml.widgets.api import (ObjectCombo, Dialog, Container, Field, Label,
+                               PushButton)
 from collections import Counter
-
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.widgets.list_editor import ListEditor
 
 class _Entry(Atom):
     """ Simple place holder class.

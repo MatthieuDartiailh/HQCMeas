@@ -6,10 +6,10 @@ from enaml.stdlib.mapped_view import MappedView
 
 from operator import attrgetter
 
-from ..enaml_util.qt_list_str_widget import QtListStrWidget
-from ..enaml_util.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 
-from .monitoring_rules import (AbstractMonitorRule, RejectRule, FormatRule)
+from .rules import (AbstractMonitorRule, RejectRule, FormatRule)
 
 enamldef NoneView(Container):
     attr rule
@@ -100,7 +100,7 @@ enamldef CreateRuleDialog(Dialog): dial:
                         hbox(spacer, ok, cancel))
                         ]
         ObjectCombo: com:
-            items = sorted([r for r in RULES_VIEWS.keys() 
+            items = sorted([r for r in RULES_VIEWS.keys()
                                     if r is not type(None)])
             to_string = lambda obj : obj.__name__
             selected = None
@@ -142,7 +142,7 @@ enamldef EditRulesView(Dialog): dial:
     title = 'Rules'
     Container:
         constraints << [vbox(
-                            hbox(qlist, vbox(*map.objects), 
+                            hbox(qlist, vbox(*map.objects),
                                 vbox(add, edit, delete, spacer)),
                             hbox(spacer, close))]
         QtListStrWidget: qlist:
