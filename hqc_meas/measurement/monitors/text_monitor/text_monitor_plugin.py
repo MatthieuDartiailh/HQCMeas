@@ -28,69 +28,7 @@ class TextMonitorPlugin(HasPrefPlugin):
     # Dict holding the infos necessary to rebuild rules on demand.
     rules = Dict(Str(), Dict()).tag(pref=True)
 
-    def request_rules_class(self, class_names):
-        """ Access to known rule classes.
-
-        Parameters
-        ----------
-        class_names : list(str)
-            List of rule class names for which the class should be returned.
-
-        Returns
-        -------
-        classes : dict(str, class)
-            Dict mapping the requested names to the class.
-
-        """
-        rules = self.rules_classes
-        classes = {name: rule_class for name, rule_class in rules.iteritems()
-                   if name in class_names}
-        if len(classes) != len(class_names):
-            logger = logging.getLogger(__name__)
-            missing = [name for name in class_names
-                       if name not in classes]
-            mess = 'Missing rule classes : {}'.format(missing)
-            logger.warn(mess)
-
-        return classes
-
-    def create_monitor(self, raw=False):
-        """ Create a new monitor.
-
-        Parameters
-        ----------
-        raw : bool, optionnal
-            Whether or not to add the default rules to the new monitor.
-
-        Returns
-        -------
-        monitor : TextMonitor
-            New text monitor.
-
-        """
-        decl = self.manifest.extensions.get_child(Monitor)
-        monitor = TextMonitor(_plugin=self,
-                              declaration=decl)
-
-        if not raw:
-            rules = []
-            for rule_name in self.default_rules:
-                config = self.rules.get(rule_name)
-                if config is not None:
-                    rule = self._build_rule(config)
-                    rules.append(rule)
-                else:
-                    logger = logging.getLogger(__name__)
-                    mess = 'Requested rule not found : {}'.format(rule_name)
-                    logger.warn(mess)
-
-            monitor.rules = rules
-
-        return monitor
-
-    #--- Private API ----------------------------------------------------------
-
-    def _build_rule(self, rule_config):
+    def build_rule(self, rule_config):
         """ Build rule from a dict.
 
         Parameters
@@ -116,6 +54,43 @@ class TextMonitorPlugin(HasPrefPlugin):
             logger = logging.getLogger(__name__)
             mess = 'Requested rule class not found : {}'.format(class_name)
             logger.warn(mess)
+
+    def create_monitor(self, raw=False):
+        """ Create a new monitor.
+
+        Parameters
+        ----------
+        raw : bool, optionnal
+            Whether or not to add the default rules to the new monitor.
+
+        Returns
+        -------
+        monitor : TextMonitor
+            New text monitor.
+
+        """
+        exts = [e for e in self.manifest.extensions if e.id == 'monitors']
+        decl = exts[0].get_child(Monitor)
+        monitor = TextMonitor(_plugin=self,
+                              declaration=decl)
+
+        if not raw:
+            rules = []
+            for rule_name in self.default_rules:
+                config = self.rules.get(rule_name)
+                if config is not None:
+                    rule = self.build_rule(config)
+                    rules.append(rule)
+                else:
+                    logger = logging.getLogger(__name__)
+                    mess = 'Requested rule not found : {}'.format(rule_name)
+                    logger.warn(mess)
+
+            monitor.rules = rules
+
+        return monitor
+
+    #--- Private API ----------------------------------------------------------
 
     def _default_rules_classes(self):
         """ Default builder for the rules_classes.

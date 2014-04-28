@@ -63,7 +63,8 @@ class TextMonitor(BaseMonitor):
 
     def stop(self):
         if self._view.proxy_is_active:
-            self.view.close()
+            self._view.close()
+            self._view = None
 
     def process_news(self, news):
         values = self._database_values
@@ -71,17 +72,17 @@ class TextMonitor(BaseMonitor):
         for updater in self.updaters[news[0]]:
             updater(values)
 
-    def refresh_monitored_entries(self, entries):
+    def refresh_monitored_entries(self, entries={}):
         if not entries:
-            entries = self._database_values.keys()[:]
+            entries = self._database_values
         else:
-            self._database_values = dict.fromkeys(entries)
+            self._database_values = entries
 
         custom = self.custom_entries[:]
         self.clear_state()
         self.custom_entries = custom
-        for entry in entries:
-            self.database_modified({'value': (entry, 1)})
+        for entry, value in entries.iteritems():
+            self.database_modified({'value': (entry, value)})
 
     def database_modified(self, change):
         entry = change['value']
@@ -90,10 +91,10 @@ class TextMonitor(BaseMonitor):
         if len(entry) > 1:
 
             # Store the new value.
-            self._database_values.append(entry[1])
+            self._database_values[entry[0]] = entry[1]
 
             # Add a default entry to the displayed monitor entries.
-            self.displayed_entries.append(self._create_default_entry(entry[0]))
+            self.displayed_entries.append(self._create_default_entry(*entry))
 
             # Try to apply rules.
             for rule in self.rules:
@@ -123,6 +124,9 @@ class TextMonitor(BaseMonitor):
 
             if entry[0] in self.database_entries:
                 self.database_entries.remove(entry[0])
+
+            if entry[0] in self._database_values:
+                del self._database_values[entry[0]]
 
     def clear_state(self):
         """ Clear the monitor state.
@@ -154,19 +158,17 @@ class TextMonitor(BaseMonitor):
 
         return prefs
 
-    def set_state(self, config):
+    def set_state(self, config, entries):
         # Request all the rules class from the plugin.
         rules_config = [conf for name, conf in config.iteritems()
                         if name.startswith('rule_')]
-        class_names = [conf['class_name'] for conf in rules_config]
-        rule_classes = self._plugin.request_rules_class(class_names)
 
         # Rebuild all rules.
         rules = []
         for rule_config in rules_config:
-            rule = rule_classes[rule_config.pop('class_name')]()
-            rule.update_members_from_preferences(**rule_config)
-            rules.append(rule)
+            rule = self._plugin.build_rule(rule_config)
+            if rule is not None:
+                rules.append(rule)
 
         self.rules = rules
 
@@ -177,25 +179,27 @@ class TextMonitor(BaseMonitor):
             entry.update_members_from_preferences(**custom_config)
             self.custom_entries.append(entry)
 
-        entries = set(self.displayed_entries + self.undisplayed_entries +
-                      self.hidden_entries + self.custom_entries)
+        self.refresh_monitored_entries(entries)
+
+        m_entries = set(self.displayed_entries + self.undisplayed_entries +
+                        self.hidden_entries + self.custom_entries)
 
         pref_disp = config['displayed']
         pref_undisp = config['undisplayed']
         pref_hidden = config['hidden']
-        disp = [e for e in entries if e.path in pref_disp]
-        entries -= set(disp)
-        undisp = [e for e in entries if e.path in pref_undisp]
-        entries -= set(undisp)
-        hidden = [e for e in entries if e.path in pref_hidden]
-        entries -= set(hidden)
-        if entries:
+        disp = [e for e in m_entries if e.path in pref_disp]
+        m_entries -= set(disp)
+        undisp = [e for e in m_entries if e.path in pref_undisp]
+        m_entries -= set(undisp)
+        hidden = [e for e in m_entries if e.path in pref_hidden]
+        m_entries -= set(hidden)
+        if m_entries:
             information(parent=None,
                         title='Unhandled entries',
                         text=cleandoc('''The application of new rules lead
                         to the creation of new entries. These entries has been
                         added to the displayed ones.'''))
-            pref_disp += entries
+            pref_disp += m_entries
 
         self.displayed_entries = disp
         self.undisplayed_entries = undisp
@@ -231,7 +235,7 @@ class TextMonitor(BaseMonitor):
 
         """
         plugin = self._plugin
-        if rule_name in self._plugin:
+        if rule_name in self._plugin.rules:
             return
 
         config = {}
@@ -258,7 +262,7 @@ class TextMonitor(BaseMonitor):
     _view = Typed(TextMonitorView)
 
     @staticmethod
-    def _create_default_entry(entry_path):
+    def _create_default_entry(entry_path, value):
         """ Create a monitor entry for a database entry.
 
         Parameters
@@ -274,8 +278,10 @@ class TextMonitor(BaseMonitor):
         """
         name = entry_path.rsplit('/', 1)[-1]
         formatting = '{' + entry_path + '}'
-        return MonitoredEntry(name=name, path=entry_path,
-                              formatting=formatting, depend_on=[entry_path])
+        entry = MonitoredEntry(name=name, path=entry_path,
+                               formatting=formatting, depend_on=[entry_path])
+        entry.value = '{}'.format(value)
+        return entry
 
     def _observe_displayed_entries(self, change):
         """ Observer updating internals when the displayed entries change.

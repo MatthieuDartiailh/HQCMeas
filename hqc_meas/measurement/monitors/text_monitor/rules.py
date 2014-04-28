@@ -82,7 +82,7 @@ class FormatRule(AbstractMonitorRule):
 
                 # Getting the prefix of the entry (remove the found suffix)
                 prefix = entry_path + '/' + entry_name.replace('_' + suffix,
-                                                               '')
+                                                               '_')
                 # Find all entries with the same prefix.
                 prefixed_entries = [entry for entry in entries
                                     if entry.startswith(prefix)]
@@ -95,21 +95,23 @@ class FormatRule(AbstractMonitorRule):
                     # Create the name of the entry.
                     name_prefix = entry_name.replace('_' + suffix, '')
                     name = name_prefix + '_' + self.new_entry_suffix
+                    path = entry_path + '/' + name
 
                     # Create the right formatting by replacing the rule fields
                     # by the full name of the entries.
                     formatting = self.new_entry_formatting
                     for suffix in self.suffixes:
                         formatting = formatting.replace(suffix,
-                                                        prefix + '_' + suffix)
+                                                        prefix + suffix)
 
                     # Create a list of all the dependencies.
-                    depend = [prefix + '_' + suffix
+                    depend = [prefix + suffix
                               for suffix in self.suffixes]
 
                     # Create the monitor entry and add it to the list of
                     # displayed entries.
-                    entry = MonitoredEntry(name=name, formatting=formatting,
+                    entry = MonitoredEntry(name=name, path=path,
+                                           formatting=formatting,
                                            depend_on=depend)
                     monitor.displayed_entries.append(entry)
 

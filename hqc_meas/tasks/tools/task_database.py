@@ -178,7 +178,7 @@ class TaskDatabase(Atom):
 
         return sorted(entries)
 
-    def list_all_entries(self, path='root'):
+    def list_all_entries(self, path='root', values=False):
         """ List all entries in the database.
 
         Parameters
@@ -186,28 +186,42 @@ class TaskDatabase(Atom):
         path : str, optional
             Starting node. This parameters is for internal use only.
 
+        values : bool, optional
+            Whether or not to retun the values associated with the entries.
+
         Returns
         -------
-        paths : list(str)
+        paths : list(str) or dict is values
             List of all accessible entries with their full path.
 
         """
-        entries = []
+        entries = [] if not values else {}
         node = self._go_to_path(path)
         for entry in node.keys():
             if isinstance(node[entry], DatabaseNode):
-                entries += self.list_all_entries(path=path + '/' + entry)
+                aux = self.list_all_entries(path=path + '/' + entry,
+                                            values=values)
+                if not values:
+                    entries.extend(aux)
+                else:
+                    entries.update(aux)
             else:
                 # removing the leading underscore
-                entries.append(path + '/' + entry[1:])
+                if not values:
+                    entries.append(path + '/' + entry[1:])
+                else:
+                    entries[path + '/' + entry[1:]] = node[entry]
 
         if path == 'root':
             for entry in self.excluded:
                 aux = path + '/' + entry
                 if aux in entries:
-                    entries.remove(aux)
+                    if not values:
+                        entries.remove(aux)
+                    else:
+                        del entries[aux]
 
-        return sorted(entries)
+        return sorted(entries) if not values else entries
 
     def create_node(self, parent_path, node_name):
         """Method used to create a new node in the database

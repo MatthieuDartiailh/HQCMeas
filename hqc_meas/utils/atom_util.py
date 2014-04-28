@@ -138,8 +138,10 @@ def preferences_from_members(self):
             old_val = getattr(self, name)
             if issubclass(type(old_val), HasPrefAtom):
                 pref[name] = old_val.preferences_from_members()
+            elif isinstance(old_val, basestring):
+                pref[name] = old_val
             else:
-                pref[name] = str(getattr(self, name))
+                pref[name] = repr(old_val)
 
         return pref
 

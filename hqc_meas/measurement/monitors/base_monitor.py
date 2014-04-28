@@ -59,13 +59,13 @@ class BaseMonitor(HasPrefAtom):
                         BaseMonitor''')
         raise NotImplementedError(mess)
 
-    def refresh_monitored_entries(self, entries=[]):
+    def refresh_monitored_entries(self, entries={}):
         """ Refresh all the entries of the monitor.
 
         Parameters
         ----------
-        entries : list(str), optionnal
-            List of the database entries to consider, if empty the already
+        entries : dict(str), optionnal
+            Dict of the database entries to consider, if empty the already
             known entries will be used.
 
         """
@@ -114,14 +114,17 @@ class BaseMonitor(HasPrefAtom):
         """
         return self.preferences_from_members()
 
-    def set_state(self, state):
-        """ Use dict to restore the monitor state.
+    def set_state(self, state, entries):
+        """ Use state dict to restore the monitor state.
 
         Returns
         -------
         state : dict(str: str or dict)
-            Dict containing all the necessary information to rebuild the
-            monitor.
+            Dict containing all the necessary information to rebuild all the
+            monitor logic.
+
+        entries : dict
+            Known entries to use to rebuild the monitor.
 
         """
         self.update_members_from_preferences(**state)
