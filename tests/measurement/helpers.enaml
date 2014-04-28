@@ -37,7 +37,7 @@ class TestMonitor(BaseMonitor):
         self.updated.clear()
         self.database_entries = []
         for entry in entries:
-            self.database_modified({'value': (entry, 1)})
+            self.database_modified({'value': (entry, entries[entry])})
 
     def database_modified(self, change):
         """ Keep a dict recording the number of update received for each entry.

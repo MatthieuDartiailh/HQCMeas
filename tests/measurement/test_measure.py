@@ -119,8 +119,8 @@ class TestPluginCoreFunctionalities(object):
         # Adding a monitor.
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
         measure.monitors[u'monitor1'].save_test = True
 
         path = os.path.join(self.test_dir, 'saved_measure.ini')
@@ -167,8 +167,8 @@ class TestPluginCoreFunctionalities(object):
         # Adding a monitor.
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
         measure.monitors[u'monitor1'].save_test = True
 
         path = os.path.join(self.test_dir, 'saved_measure.ini')
@@ -289,8 +289,8 @@ class TestPluginCoreFunctionalities(object):
 
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
 
         # Check the monitor is now in the list of the measure monitors
         assert_in(u'monitor1', measure.monitors)
@@ -319,12 +319,12 @@ class TestPluginCoreFunctionalities(object):
 
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
 
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
 
     def test_remove_monitor1(self):
         """ Test removing a monitor.
@@ -339,8 +339,8 @@ class TestPluginCoreFunctionalities(object):
 
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
         measure.remove_monitor(u'monitor1')
 
         assert_not_in(u'monitor1', measure.monitors)
@@ -374,8 +374,8 @@ class TestPluginCoreFunctionalities(object):
 
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
 
         assert_true(measure.root_task.task_database.has_observers('notifier'))
 
@@ -400,8 +400,8 @@ class TestPluginCoreFunctionalities(object):
 
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
 
         measure.root_task = root_task2
 
@@ -422,8 +422,8 @@ class TestPluginCoreFunctionalities(object):
 
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
 
         measure.name = 'Test2'
 
@@ -439,8 +439,8 @@ class TestPluginCoreFunctionalities(object):
 
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,
-                            monitor_decl.factory(self.workbench,
-                                                 monitor_decl))
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
 
         measure.status = 'Test over'
 

@@ -100,15 +100,19 @@ class Measure(Atom):
         kwarg = {'mode': 'config', 'config': config['root_task']}
         measure.root_task = core.invoke_command(cmd, kwarg, measure)
 
+        database = measure.root_task.task_database
+        entries = database.list_all_entries(values=True)
+
         for i in range(eval(config['monitors'])):
             monitor_config = config['monitor_{}'.format(i)]
             id = monitor_config.pop('id')
             try:
                 monitor_decl = measure_plugin.monitors[id]
-                monitor = monitor_decl.factory(workbench, monitor_decl,
+                monitor = monitor_decl.factory(monitor_decl, workbench,
                                                raw=True)
-                monitor.set_state(monitor_config)
-                measure.add_monitor(id, monitor)
+                monitor.set_state(monitor_config, entries)
+                # Don't refresh as it has been done already
+                measure.add_monitor(id, monitor, False)
 
             except KeyError:
                 mess = 'Requested monitor not found : {}'.format(id)
@@ -186,8 +190,8 @@ class Measure(Atom):
             if database.has_observer('notifier', monitor.database_modified):
                 database.unobserve('notifier', monitor.database_modified)
 
-    def add_monitor(self, id, monitor):
-        """ Add a monitor, refresh its entries and connect observers.
+    def add_monitor(self, id, monitor, refresh=True):
+        """ Add a monitor, connect observers.
 
         Parameters
         ----------
@@ -208,8 +212,9 @@ class Measure(Atom):
 
         database = self.root_task.task_database
         self.monitors[id] = monitor
-        entries = database.list_all_entries()
-        monitor.refresh_monitored_entries(entries)
+        if refresh:
+            database_entries = database.list_all_entries(values=True)
+            monitor.refresh_monitored_entries(database_entries)
         database.observe('notifier', monitor.database_modified)
 
     def remove_monitor(self, id):
@@ -274,7 +279,8 @@ class Measure(Atom):
             root.task_database.observe('notifier',
                                        monitor.database_modified)
 
-            monitor.refresh_monitored_entries(database.list_all_entries())
+            database_entries = database.list_all_entries(values=True)
+            monitor.refresh_monitored_entries(database_entries)
 
     def _observe_status(self, change):
         """ Observer updating the monitors' status when the measure is run.
