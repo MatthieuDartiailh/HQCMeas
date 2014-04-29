@@ -4,6 +4,7 @@ import shutil
 from enaml.workbench.api import Workbench
 import enaml
 from configobj import ConfigObj
+from nose.tools import assert_equal
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
@@ -196,6 +197,9 @@ class Test_Prefs(object):
         assert ConfigObj(path).dict() == ref
 
     def test_load1(self):
+        """ Test loading default preferences.
+
+        """
         self.workbench.register(PreferencesManifest())
         self.workbench.register(PrefContributor())
 
@@ -213,6 +217,9 @@ class Test_Prefs(object):
         assert contrib.string == 'test'
 
     def test_load2(self):
+        """ Test loading preferences from non-existing file.
+
+        """
         self.workbench.register(PreferencesManifest())
         self.workbench.register(PrefContributor())
 
@@ -227,6 +234,9 @@ class Test_Prefs(object):
                             {'path': ''}, self)
 
     def test_load3(self):
+        """ Test loading preferences from non-default file.
+
+        """
         self.workbench.register(PreferencesManifest())
         self.workbench.register(PrefContributor())
 
@@ -236,9 +246,16 @@ class Test_Prefs(object):
         conf[u'test.prefs']['string'] = 'test'
         conf.write()
 
+        # Checks that when loading preferences no plugin is started if it does
+        # not already exist.
         core = self.workbench.get_plugin('enaml.workbench.core')
         core.invoke_command('hqc_meas.preferences.load',
                             {'path': path}, self)
         contrib = self.workbench.get_plugin(u'test.prefs')
 
-        assert contrib.string == 'test'
+        assert_equal(contrib.string, '')
+
+        core.invoke_command('hqc_meas.preferences.load',
+                            {'path': path}, self)
+
+        assert_equal(contrib.string, 'test')
