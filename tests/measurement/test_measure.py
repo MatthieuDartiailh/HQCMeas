@@ -194,6 +194,41 @@ class TestPluginCoreFunctionalities(object):
 
         self.workbench.register(TestSuiteManifest())
 
+    def test_override_saved_measure(self):
+        """ Test that overriding a measure does override evrything.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure.root_task = RootTask(default_path=self.test_dir)
+
+        # Needed because of Atom returning a _DictProxy
+        measure.checks = dict(plugin.checks)
+        # Needed because of Atom returning a _DictProxy
+        measure.headers = dict(plugin.headers)
+        # Adding a monitor.
+        monitor_decl = plugin.monitors[u'monitor1']
+        measure.add_monitor(monitor_decl.id,
+                            monitor_decl.factory(monitor_decl,
+                                                 self.workbench))
+        measure.monitors[u'monitor1'].save_test = True
+
+        path = os.path.join(self.test_dir, 'saved_measure.ini')
+        # Save measure.
+        measure.save_measure(path)
+
+        # Create a new measure without headers and checks and test that the old
+        # values are not in the config file.
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure.root_task = RootTask(default_path=self.test_dir)
+
+        measure.save_measure(path)
+
+        conf = ConfigObj(path)
+        assert_equal(conf['checks'], '[]')
+        assert_equal(conf['headers'], '[]')
+
     def test_run_checks1(self):
         """ Test running checks for a measure. Passing.
 

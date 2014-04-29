@@ -53,7 +53,8 @@ class Measure(Atom):
             Path of the file to which save the measure.
 
         """
-        config = ConfigObj(path, indent_type='    ')
+        config = ConfigObj(indent_type='    ')
+        config.filename = path
         core = self.plugin.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.save_task'
         config['root_task'] = {}
