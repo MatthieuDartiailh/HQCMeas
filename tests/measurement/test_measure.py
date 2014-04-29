@@ -97,7 +97,10 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(TestSuiteManifest())
 
     def teardown(self):
-        self.workbench.unregister(u'tests.suite')
+        try:
+            self.workbench.unregister(u'tests.suite')
+        except ValueError:
+            pass
         self.workbench.unregister(u'hqc_meas.measure')
         self.workbench.unregister(u'hqc_meas.task_manager')
         self.workbench.unregister(u'hqc_meas.preferences')

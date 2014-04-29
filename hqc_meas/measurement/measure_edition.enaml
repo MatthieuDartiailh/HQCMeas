@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Atom, ForwardTyped, ContainerList, Instance, Bool
+from atom.api import Atom, ForwardTyped, ContainerList, Instance, Bool, Dict
 from enaml.stdlib.mapped_view import MappedView
 from enaml.core.api import Include
 from enaml.layout.api import hbox, spacer, vbox, align, InsertTab
@@ -167,7 +167,7 @@ class _MeasEditionModel(Atom):
             if editor.test(self.workspace, new_task):
                 valid_editor_ids.add(id)
 
-        # If there are some changes apply them by append remove so that if the
+        # If there are some changes apply them by append/remove so that if the
         # the currently selected editor remains nothing changes.
         current_editor_ids = set([editor.id for editor in self.valid_editors])
         if valid_editor_ids != current_editor_ids:
@@ -179,7 +179,7 @@ class _MeasEditionModel(Atom):
                     self._unvalid_editors[editor.id] = editor
 
             for id in to_add:
-                if id not self._unvalid_editors:
+                if id not in self._unvalid_editors:
                     editor = editors[id].factory(workspace.workbench)
                 else:
                     editor = self._unvalid_editors[id]

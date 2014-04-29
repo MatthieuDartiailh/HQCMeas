@@ -23,7 +23,7 @@ with enaml.imports():
     from hqc_meas.instruments.manager_manifest import InstrManagerManifest
     from hqc_meas.measurement.engines.process_engine.process_engine_manifest\
         import ProcFilter
-    from hqc_meas.measurement.engines.process_engine.process_engine\
+    from hqc_meas.measurement.engines.process_engine.engine\
         import ProcessEngine
 
     from ..helpers import TestSuiteManifest
@@ -325,14 +325,21 @@ class TestProcessEngine(object):
         workspace = plugin.workspace
         plugin.selected_engine = u'hqc_meas.measure.engines.process_engine'
         workspace.start_processing_measures()
+        i = 0
         while not plugin.engine_instance._processing.is_set():
             sleep(0.01)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
 
         # Stop the measure before it completes.
         workspace.stop_current_measure()
 
         while plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
         process_app_events()
 
         # Check measures state.
@@ -357,14 +364,21 @@ class TestProcessEngine(object):
         workspace = plugin.workspace
         plugin.selected_engine = u'hqc_meas.measure.engines.process_engine'
         workspace.start_processing_measures()
+        i = 0
         while not plugin.engine_instance._processing.is_set():
             sleep(0.01)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
 
         # Stop the measure before it completes.
         workspace.stop_processing_measures()
 
         while plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
         process_app_events()
 
         # Check measures state.
@@ -388,14 +402,21 @@ class TestProcessEngine(object):
         workspace = plugin.workspace
         plugin.selected_engine = u'hqc_meas.measure.engines.process_engine'
         workspace.start_processing_measures()
+        i = 0
         while not plugin.engine_instance._processing.is_set():
             sleep(0.01)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
 
         # Force stop the measure before it completes.
         workspace.force_stop_measure()
 
         while plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
         process_app_events()
 
         # Check measures state.
@@ -417,14 +438,21 @@ class TestProcessEngine(object):
         workspace = plugin.workspace
         plugin.selected_engine = u'hqc_meas.measure.engines.process_engine'
         workspace.start_processing_measures()
+        i = 0
         while not plugin.engine_instance._processing.is_set():
             sleep(0.01)
+            i += 1
+            if i > 50:
+                raise Exception('Task took too long to complete.')
 
         # Force stop the processing.
         workspace.force_stop_processing()
 
         while plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
         process_app_events()
 
         # Check measures state.
@@ -436,7 +464,7 @@ class TestProcessEngine(object):
         """
         measure = Measure(plugin=plugin, name='Test1')
         measure.root_task = RootTask(default_path=self.test_dir)
-        children = [SleepTask(task_name='sleep1', time=0.5),
+        children = [SleepTask(task_name='sleep1', time=1),
                     PrintTask(task_name='print', message='test'),
                     SleepTask(task_name='sleep2', time=0.1)]
         measure.root_task.children_task.extend(children)

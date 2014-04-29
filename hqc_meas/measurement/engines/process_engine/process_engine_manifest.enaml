@@ -11,7 +11,7 @@ from enaml.layout.api import InsertItem, RemoveItem
 from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
 
 from ..base_engine import Engine
-from .process_engine import ProcessEngine
+from .engine import ProcessEngine
 
 
 PROCESS_ENGINE_ID = u'hqc_meas.measure.engines.process_engine'

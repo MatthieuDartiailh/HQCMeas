@@ -143,9 +143,8 @@ class TaskProcess(Process):
                 self.meas_log_handler.setFormatter(formatter)
                 logger.addHandler(self.meas_log_handler)
 
-                # Clear the event signaling the task it should stop, pass
-                # it to the task and make the database ready.
-                self.task_stop.clear()
+                # Pass the event signaling the task it should stop
+                # to the task and make the database ready.
                 root.should_stop = self.task_stop
                 root.task_database.prepare_for_running()
 

@@ -262,12 +262,12 @@ enamldef DummyMonitor4(PluginManifest):
 #--- Engine dummies -----------------------------------------------------------
 
 
-def _post_selection(workbench, engine):
+def _post_selection(engine, workbench):
     engine.post_selected = True
     print engine.post_selected
 
 
-def _post_deselection(workbench, engine):
+def _post_deselection(engine, workbench):
     engine.post_deselected = True
 
 enamldef DummyEngine1(PluginManifest):
