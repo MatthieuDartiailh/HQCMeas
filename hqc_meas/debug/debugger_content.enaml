@@ -1,0 +1,41 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : debugger_content.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.widgets.api import Container, DockArea, DockItem
+from enaml.workbench.api import PluginManifest, Extension
+from enaml.workbench.ui.api import ActionItem, MenuItem, MenuGroup
+
+from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
+from .measure_edition import MeasureEditorDockItem
+from .measure_execution import ExecutionDockItem
+
+
+enamldef DebuggerContent(Container): main:
+    """ Content for the debugger workspace.
+
+    """
+    attr workspace
+
+    DockArea:
+
+        DockItem:
+            name = 'main_log'
+            title = 'Main logger'
+            closable = False
+            stretch = 1
+
+            Container:
+                hug_height = 'strong'
+                QtAutoscrollHtml:
+                    text << workspace.log_model.text
+
+
+enamldef DebuggerMenus(PluginManifest):
+    """ Plugin contributing menu item to the main window.
+    
+    """
+    id = u'hqc_meas.debugger.menus'
+    

@@ -13,7 +13,8 @@ from textwrap import fill
 def f_c(str, length=80):
     return fill(cleandoc(str), length)
 
-from ..instruments.forms import FORMS_MAP_VIEWS
+# Hacky but will do for the time being.
+from hqc_meas.instruments.forms import FORMS_MAP_VIEWS
 
 
 def _method_call(model, meth, f_args, f_kwargs):

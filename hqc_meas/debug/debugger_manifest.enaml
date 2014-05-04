@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : debugger_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.workbench.api import PluginManifest, ExtensionPoint, Extension
+from enaml.workbench.ui.api import ActionItem
+from hqc_meas.utils.preferences import Preferences
+
+
+def debug_plugin_factory():
+    from .debugger_plugin import DebuggerPlugin
+    return DebuggerPlugin()
+
+def workspace_factory(workbench):
+    from .debugger_workspace import DebuggerSpace
+    return DebuggerSpace()
+
+
+enamldef DebuggerManifest(PluginManifest):
+    """
+    """
+    id = u'hqc_meas.debug'
+    factory = debug_plugin_factory
+
+    ExtensionPoint:
+        id = u'debuggers'
+
+    Extension:
+        id = 'prefs'
+        point = u'hqc_meas.preferences.pref_plugin'
+        Preferences:
+            pass
+
+    Extension:
+        id = 'workspace'
+        point = u'enaml.workbench.ui.workspaces'
+        factory = workspace_factory
+
+    Extension:
+        id = 'actions'
+        point = 'enaml.workbench.ui.actions'
+        ActionItem:
+                path = '/workspace/debug'
+                label = 'Debugger'
+                shortcut = 'Ctrl+2'
+                group = 'spaces'
+                command = 'enaml.workbench.ui.select_workspace'
+                parameters = {'workspace': 'hqc_meas.debug.workspace'}

@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
 
-from atom.api import (Atom, List, Dict, Str, Callable, Bool, Unicode,
-                      Instance, Value)
+from atom.api import (List, Dict, Str, Callable, Bool, Unicode,
+                      Instance, Value, Subclass)
 from inspect import getmembers, ismethod, getmodule, isclass
 from configobj import ConfigObj
 
-from ..atom_util import Subclass
-from ..instruments.drivers import BaseInstrument, DRIVERS, DRIVER_TYPES
-from ..instruments.drivers.driver_tools import instrument_property
-from ..instruments.forms import AbstractConnectionForm, FORMS
-from ..instruments.instrument_manager import matching_instr_list
+from hqc_meas.instruments.drivers import BaseInstrument
+from hqc_meas.instruments.drivers.driver_tools import instrument_property
+# XXXX hacky should find a better solution.
+from hqc_meas.instruments.forms import AbstractConnectionForm, FORMS
 
+from ..driver_debugger import BaseDebugger
 # TODO turn this into, a plugin using InstrManager.
 
 
-class DriverDebugger(Atom):
+class DriverDebugger(BaseDebugger):
     """
     """
 
     #--- Members --------------------------------------------------------------
-
-    drivers = Dict(Str(), Subclass(BaseInstrument), DRIVERS)
+    drivers = Dict(Str())
     driver = Subclass(BaseInstrument)
 
     driver_attributes = List(Str())
@@ -85,6 +84,7 @@ class DriverDebugger(Atom):
             self.connected = False
             self.errors += e.message + '\n'
 
+    # Should be made a command of the instr manager
     def reload_driver(self):
         """
         """
@@ -99,9 +99,9 @@ class DriverDebugger(Atom):
 
             self.driver_instance = None
 
-            for i, driver in enumerate(DRIVERS.values()):
-                if driver.__name__ == self.driver.__name__:
-                    DRIVERS[i] = self.driver
+#            for i, driver in enumerate(DRIVERS.values()):
+#                if driver.__name__ == self.driver.__name__:
+#                    DRIVERS[i] = self.driver
 
         except TypeError:
             self.errors += 'Failed to reload driver\n'
