@@ -212,7 +212,10 @@ class Measure(Atom):
         monitor.measure_status = self.status
 
         database = self.root_task.task_database
-        self.monitors[id] = monitor
+        # Work around not having a container dict
+        monitors = self.monitors.copy()
+        monitors[id] = monitor
+        self.monitors = monitors
         if refresh:
             database_entries = database.list_all_entries(values=True)
             monitor.refresh_monitored_entries(database_entries)

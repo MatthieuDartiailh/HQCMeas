@@ -6,6 +6,7 @@
 #==============================================================================
 """
 """
+import enaml
 from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
 from enaml.workbench.core.api import Command
 from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
@@ -27,7 +28,8 @@ def show_manager(event):
 
     """
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
-    from .manager_view import InstrManagerView
+    with enaml.imports():
+        from .manager_view import InstrManagerView
     InstrManagerView(manager=manager).show()
 
 
@@ -174,11 +176,11 @@ enamldef InstrManagerManifest(PluginManifest):
         id = 'menu'
         point = 'enaml.workbench.ui.actions'
         MenuItem:
-            path = '/instr'
+            path = 'tools/instr'
             label = 'Instr'
             ItemGroup:
                 id = 'user'
         ActionItem:
-            path = '/instr/show_manager'
+            path = 'tools/instr/show_manager'
             label = 'Manager'
             command = 'hqc_meas.instr_manager.show_manager'

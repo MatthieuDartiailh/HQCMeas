@@ -66,7 +66,7 @@ class MeasurePlugin(HasPrefPlugin):
     # Dict holding the contributed Engine declarations.
     engines = Dict(Unicode(), Typed(Engine))
 
-    # Currently selected engine represented by its manifest id.
+    # Currently selected engine represented by its id.
     selected_engine = Unicode().tag(pref=True)
 
     # Instance of the currently used engine.
@@ -104,7 +104,7 @@ class MeasurePlugin(HasPrefPlugin):
         # Register contributed plugin.
         for path, manifest_name in self.manifests:
             self._register_manifest(path, manifest_name)
-
+            
         # Refresh contribution and start observers.
         self._refresh_engines()
         self._refresh_monitors()

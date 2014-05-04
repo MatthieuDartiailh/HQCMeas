@@ -14,7 +14,7 @@ from inspect import cleandoc
 from enaml.widgets.api import (Window, Container, PushButton, Form,
                                ObjectCombo, Label, Field, Notebook, Page)
 from enaml.core.api import Conditional
-from enaml.layout.api import hbox, vbox, spacer
+from enaml.layout.api import hbox, vbox, spacer, align
 from enaml.stdlib.mapped_view import MappedView
 from enaml.stdlib.message_box import question
 
@@ -47,7 +47,7 @@ class _EditorModel(Atom):
         dialog by cicking the 'OK' button.
 
         """
-        form = ProfileForm()
+        form = ProfileForm(manager=self.manager)
         dial = ProfileDialog(model=form, mode='new')
         result = dial.exec_()
         if result:
@@ -86,8 +86,10 @@ class _EditorModel(Atom):
     def _observe_selected_profile(self, change):
         """Create a form for the selected instrument
         """
-        fullpath = self.manager.profile_path(change['value'])
+        profile = change['value']
+        fullpath = self.manager.profile_path(profile)
         profile_infos = open_profile(fullpath)
+        profile_infos.update({'manager': self.manager, 'name': profile})
         self.form = ProfileForm(**profile_infos)
 
 
@@ -95,9 +97,10 @@ def _layout(list_view, instr_form, *buttons):
     b = list(buttons)
     b.append(spacer)
     if instr_form:
-        return hbox(list_view, instr_form[0], vbox(*b))
+        return [hbox(list_view, instr_form[0], vbox(*b)),
+                align('top', list_view, instr_form[0])]
     else:
-        return hbox(list_view, vbox(*b))
+        return [hbox(list_view, vbox(*b))]
 
 
 enamldef InstrManagerView(Window): instr_manager_view:
@@ -107,46 +110,52 @@ enamldef InstrManagerView(Window): instr_manager_view:
     attr _internal = _EditorModel(manager=manager)
     title = 'Instrument manager'
 
-    Notebook:
-        tabs_closable = False
-        tabs_movable = False
-        Page:
-            title = 'Profile use'
-            Container:
-                # TODO
-                pass
-
-        Page:
-            title = 'Profile edition'
-            Container:
-                hug_height = 'strong'
-                constraints << [_layout(list_view, instr_form.items,
-                                       add, edit, delete)]
-                QtListStrWidget: list_view:
-                    hug_width = 'medium'
-                    hug_height = 'medium'
-                    items << sorted(manager.profiles)
-                    selected_item >> _internal.selected_profile
-                Conditional: instr_form:
-                    condition << bool(_internal.selected_profile)
-                    ProfileView:
-                        hug_width = 'weak'
+    Container:
+        Notebook:
+            tabs_closable = False
+            tabs_movable = False
+            
+            Page:
+                title = 'Profile edition'
+                Container:
+                    hug_height = 'strong'
+                    constraints << _layout(list_view, instr_form.items,
+                                           add, edit, delete)
+                    QtListStrWidget: list_view:
+                        hug_width = 'medium'
                         hug_height = 'medium'
-                        mode = 'static'
-                        form << _internal.form
-                PushButton: add:
-                    text = 'Add'
-                    clicked :: _internal.add_profile(instr_manager_view)
-                PushButton: edit:
-                    text = 'Edit'
-                    clicked :: _internal.edit_profile(instr_manager_view)
-                PushButton: delete:
-                    text = 'Delete'
-                    clicked :: _internal.del_profile(instr_manager_view)
-        Page:
-            title = 'Profile directories'
-            # TODO
+                        items << sorted(manager.all_profiles)
+                        selected_item >> _internal.selected_profile
+                    Conditional: instr_form:
+                        condition << bool(_internal.selected_profile)
+                        ProfileView:
+                            hug_width = 'weak'
+                            hug_height = 'medium'
+                            mode = 'static'
+                            form << _internal.form
+                    PushButton: add:
+                        text = 'Add'
+                        clicked :: _internal.add_profile(instr_manager_view)
+                    PushButton: edit:
+                        text = 'Edit'
+                        clicked :: _internal.edit_profile(instr_manager_view)
+                    PushButton: delete:
+                        text = 'Delete'
+                        clicked :: _internal.del_profile(instr_manager_view)
+                        
+            Page:
+                title = 'Profile use'
+                enabled = False
+                Container:
+                    # TODO
+                    pass
 
-        Page:
-            title = 'Driver loading'
-            # TODO should also appear in preferences
+            Page:
+                title = 'Profile directories'
+                enabled = False
+                # TODO
+
+            Page:
+                title = 'Driver loading'
+                enabled = False
+                # TODO should also appear in preferences

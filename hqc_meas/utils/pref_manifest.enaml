@@ -154,6 +154,8 @@ enamldef PreferencesManifest(PluginManifest):
         MenuItem:
             path = '/prefs'
             label = 'Preferences'
+            before = 'tools'
+            after = 'file'
             ItemGroup:
                 id = 'pref'
         ActionItem:

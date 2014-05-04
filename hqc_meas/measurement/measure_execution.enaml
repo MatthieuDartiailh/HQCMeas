@@ -73,6 +73,7 @@ enamldef ExecutionDockItem(DockItem):
     attr workspace
     closable = False
     name = u'meas_exec'
+    title = 'Enqueued measures'
 
     Container:
         constraints << [vbox(ed,

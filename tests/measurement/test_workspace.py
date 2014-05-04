@@ -145,6 +145,7 @@ class TestMeasureSpace(object):
 
         # Check a blank measure was created.
         assert_true(plugin.edited_measure)
+        assert_true(plugin.edited_measure.plugin)
 
         # Check the engine engine is contributing.
         assert_true(plugin.engines[u'engine1'].contributing)
@@ -429,6 +430,8 @@ class TestMeasureSpace(object):
         assert_equal(measure2.status, 'COMPLETED')
         assert_equal(measure2.infos, 'Measure successfully completed')
 
+        assert_false(plugin.flags)
+
     def test_measure_processing3(self):
         """ Test the processing of a measure failing the tests.
 
@@ -457,6 +460,8 @@ class TestMeasureSpace(object):
         measure = plugin.running_measure
         assert_equal(measure.status, 'FAILED')
         assert_equal(measure.infos, 'Failed to pass the built in tests')
+
+        assert_false(plugin.flags)
 
     def test_measure_processing4(self):
         """ Test the processing of a measure failing to get some profiles.
@@ -487,6 +492,8 @@ class TestMeasureSpace(object):
         measure = plugin.running_measure
         assert_equal(measure.status, 'SKIPPED')
         assert_equal(measure.infos, 'Failed to get requested profiles')
+
+        assert_false(plugin.flags)
 
     def test_processing_single_measure(self):
         """ Test processing only a specific measure.

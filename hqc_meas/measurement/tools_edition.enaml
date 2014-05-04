@@ -22,26 +22,30 @@ enamldef _MeasureToolsEditor(Container): tool_ed:
     # Measure whose tools are being edited.
     attr measure
 
-    constraints << [contents_right == close.right]
-
     Notebook:
         tabs_closable = False
         tabs_movable = False
 
         Page:
             title = 'Monitors'
-            MonitorsEditor:
-                measure << tool_ed.measure
+            Container:
+                constraints << [hbox(mon_ed, spacer)]
+                MonitorsEditor: mon_ed:
+                    measure << tool_ed.measure
 
         Page:
             title = 'Headers'
-            HeadersEditor:
-                measure << tool_ed.measure
+            Container:
+                constraints << [hbox(hea_ed, spacer)]
+                HeadersEditor: hea_ed:
+                    measure << tool_ed.measure
 
         Page:
             title = 'Checks'
-            ChecksEditor:
-                measure << tool_ed.measure
+            Container:
+                constraints << [hbox(che_ed, spacer)]
+                ChecksEditor: che_ed:
+                    measure << tool_ed.measure
 
 
 enamldef ToolsEditorDockItem(DockItem):
@@ -49,6 +53,7 @@ enamldef ToolsEditorDockItem(DockItem):
 
     """
     alias measure : ed.measure
+    title = 'Measure tools'
 
     _MeasureToolsEditor: ed:
         pass

@@ -31,6 +31,8 @@ enamldef MonitorSelector(Dialog): dial:
     # Mapping between monitor name and id.
     attr _mapping = {monitor.name: monitor_id
                      for monitor_id, monitor in monitors.iteritems()}
+                         
+    title = 'Select a monitor'
 
     Container:
         constraints << [vbox(list_ed, desc, hbox(cancel, ok))]
@@ -39,6 +41,7 @@ enamldef MonitorSelector(Dialog): dial:
             items << sorted([monitor.name
                              for monitor_id, monitor in monitors.iteritems()
                              if monitor_id not in measure.monitors])
+            selected_item = 'init'
             selected_item::
                 new_val = change['value']
                 if new_val:
@@ -51,7 +54,7 @@ enamldef MonitorSelector(Dialog): dial:
 
         PushButton: ok:
             text = 'Ok'
-            enabled << dial.selected_decl
+            enabled << bool(dial.selected_decl)
             clicked ::
                 dial.accept()
 
@@ -75,20 +78,20 @@ enamldef MonitorsEditor(Container): main:
     # Currently selected notebook page.
     attr selected_page
 
-    constraints << [hbox(notebook,
+    constraints << [hbox(nb,
                          vbox(add, remove))
                     ]
 
     Notebook: nb:
         tabs_closable = False
         selected_tab ::
-            main.selected_tab = self.find(selected_tab)
+            main.selected_page = self.find(selected_tab)
         Include:
-            objects << nb_pages.items()
+            objects << nb_pages.keys()
 
     PushButton: add:
         text = 'Add monitor'
-        enabled << not all([id in pages for id in measure.plugin.monitors])
+        enabled << not all([id in nb_pages for id in measure.plugin.monitors])
         clicked ::
             selector = MonitorSelector(measure=measure)
             if selector.exec_():
@@ -99,7 +102,7 @@ enamldef MonitorsEditor(Container): main:
 
     PushButton: remove:
         text = 'Remove monitor'
-        enabled << notebook.selected_tab
+        enabled << bool(nb.selected_tab)
         clicked ::
             id = pages[selected_page]
             measure.remove_monitor(id)

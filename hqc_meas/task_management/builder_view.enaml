@@ -20,7 +20,7 @@ from .config.api import AbstractConfigTask
 # Circular import protection
 def task_manager():
     from .manager_plugin import TaskManagerPlugin
-    return TaskManager
+    return TaskManagerPlugin
 
 class _TaskBuilderModel(Atom):
     """ Simple model for the TaskBuilder dialog.
@@ -46,7 +46,7 @@ class _TaskBuilderModel(Atom):
         self.ok_ready = False
         config, view = self.manager.config_request(change['value'])
         self.task_config = config
-        self.config_view = view(model=config, manager=self.manager)
+        self.config_view = view(model=config)
 
     @observe('task_config.config_ready')
     def _config_complete(self, change):
@@ -73,7 +73,7 @@ enamldef BuilderView(Dialog): dial:
             manager << dial.manager
             selected_task >> model.task_name
         Include: conf:
-            objects  << [model.config_view]
+            objects  << [model.config_view] if model.config_view else []
         PushButton: ok:
             text = 'Ok'
             enabled << model.ok_ready

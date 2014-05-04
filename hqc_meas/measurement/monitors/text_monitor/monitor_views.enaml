@@ -36,8 +36,8 @@ enamldef TextMonitorPage(Page): dial:
     title = 'Text monitor'
 
     Container:
-        constraints << [vbox(
-                            hbox(
+        constraints << [vbox(auto, 
+                             hbox(
                                 vbox(undisp_lab, undisp),
                                 vbox(disp_all, disp_one,
                                      hide_one, hide_all, spacer),

@@ -7,7 +7,8 @@
 import logging
 import os
 import enaml
-from atom.api import Typed, Value
+from atom.api import Typed, Value, set_default
+from enaml.application import deferred_call
 from enaml.workbench.ui.api import Workspace
 from enaml.widgets.api import FileDialog
 from inspect import cleandoc
@@ -40,6 +41,8 @@ class MeasureSpace(Workspace):
     # Reference to the log panel model received from the log plugin.
     log_model = Value()
 
+    window_title = set_default('Measure')
+
     def start(self):
         """
         """
@@ -67,7 +70,7 @@ class MeasureSpace(Workspace):
         # Check whether or not an engine can contribute.
         if plugin.selected_engine:
             engine = plugin.engines[plugin.selected_engine]
-            engine.contribute_workspace(engine, self)
+            deferred_call(engine.contribute_workspace, engine, self)
 
         plugin.observe('selected_engine', self._update_engine_contribution)
 
@@ -89,7 +92,7 @@ class MeasureSpace(Workspace):
         # remove handler from the root logger.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.logging.remove_handler'
-        self.log_model = core.invoke_command(cmd, {'id': LOG_ID}, self)
+        core.invoke_command(cmd, {'id': LOG_ID}, self)
 
         self.plugin.workspace = None
 
@@ -344,7 +347,7 @@ class MeasureSpace(Workspace):
         """ Getter for the dock_area of the content.
 
         """
-        if self.content:
+        if self.content and self.content.children:
             return self.content.children[0]
 
     #--- Private API ----------------------------------------------------------
@@ -355,7 +358,7 @@ class MeasureSpace(Workspace):
         """
         logger = logging.getLogger(__name__)
 
-        measure = Measure()
+        measure = Measure(plugin=self.plugin)
         measure.root_task = RootTask()
         for check_id in self.plugin.default_checks:
             if check_id in self.plugin.checks:

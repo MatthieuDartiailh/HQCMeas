@@ -20,6 +20,7 @@ enamldef LoopView(Container): view:
             text = 'Task name'
         Field:
             text >> model.task_name
+            submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
     GroupBox:
         title = 'Descritpion'
         hug_height = 'strong'

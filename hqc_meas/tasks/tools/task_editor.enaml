@@ -14,28 +14,67 @@ from enaml.stdlib.mapped_view import MappedView
 
 from hqc_meas.utils.widgets.list_editor import PopupListMenu
 
-
-def _views_helper(core, tasks):
-    """ A helper function.
-
-    This helper instantiates the view for the given task of
-    a _TaskView component.
+                
+def view_instantiater(task, map_views, attrs):
+    """ A helper function instantiating a task view.
+    
+    Parameters
+    ----------
+    task : BaseTask
+        Task instance for which to create a view.
+        
+    map_wiews : dict
+        Dict mapping task class to the associated view.
+        
+    attrs : dict
+        Dict of additional object which should be passed to the view if it
+        defines the attribute.
+        
+    Returns
+    -------
+    view : 
+        Created task view.
+    
+    """
+    view = map_views[type(task).__name__]
+    kwargs = {'task': task}
+    for key in attrs:
+        if hasattr(view, key):
+            kwargs[key] = attrs[key]
+    return view(**kwargs)
+    
+    
+def _views_getter(core, tasks):
+    """ A helper function retrieving the views associated with task.
 
     """
-    t_classes = [type(task) for task in tasks]
-    views = core.invoke_command('hqc_meas.task_manager.views_request',
-                                parameters={'task_classes': [t_class]})
-    return views
+    t_classes = set([type(task).__name__ for task in tasks])      
+    views, missing = core.invoke_command('hqc_meas.task_manager.views_request',
+                                         {'task_classes': t_classes})
+    
+    return {t_c_name: views[t_c_name]\
+            for t_c_name in t_classes}
+                
+    
+enamldef _MappedTaskView(Include):
+    """ Custom mapped view for the tasks.
+    
+    """
+    attr task
+    attr typemap: dict
+    attr attrs: dict = {}
+    objects << [view_instantiater(task, typemap, attrs)]
 
 
 enamldef _TaskListView(Container): list_view:
-    """ A base ustom container to edit the children of a task.
+    """ A base custom container to edit the children of a task.
 
     """
     attr task
     attr core
+    attr cache
     attr operations = ['add', 'remove', 'move']
-    attr views_map << _views_helper(core, task.children_task[:])
+    attr views_map << _views_getter(core, task.children_task[:])
 
     hug_height = 'strong'
     padding = 0
@@ -56,17 +95,17 @@ enamldef _TaskListView(Container): list_view:
                     menu = PopupListMenu(
                       model = edited_list,
                       index = edited_list.index(loop_item),
-                      factory = core.invoke_commad,
+                      factory = core.invoke_command,
                       operations = operations,
                       args = ('hqc_meas.task_manager.build_task',),
                       kwargs = {'parameters': {'parent_ui': button},
                                 'trigger': button})
                     menu.popup()
-            MappedView: view:
-                model = loop_item
-                typemap = views_map
-                kwargs = {'core': core}
-                modelkey = 'task'
+            _MappedTaskView: view:
+                task << loop_item
+                typemap << views_map
+                attrs << {'core': core, 'cache': cache}
+                
 
 enamldef TaskEditor(Container): view:
     """ A custom container to edit the children of a task. Support folding.
@@ -75,6 +114,7 @@ enamldef TaskEditor(Container): view:
 
     attr task
     attr core
+    attr cache
 
     padding = 2
     Conditional:
@@ -82,25 +122,28 @@ enamldef TaskEditor(Container): view:
         PushButton:
             text = 'Add first element'
             clicked ::
-                obj = factory(parent_ui = view)
+                obj = core.invoke_command('hqc_meas.task_manager.build_task',
+                                          {'parent_ui': view}, view)
                 if obj:
                     task.children_task.append(obj)
     Conditional:
         condition << bool(task.children_task)
         Container: box:
-            attr stack_index = 1
+            attr stack_index = cache.get(task.task_path, 1)
             constraints = [vbox(hbox(folding, foldable_content),spacer),
                            align('top', folding, foldable_content)]
             padding = (0,5,2,2)
             PushButton: folding:
-                text = '-'
+                text = '-' if stack_index == 1 else '+'
                 constraints = [width == 15, height == 20]
                 clicked ::
                     if folding.text == '-':
                         box.stack_index = 0
+                        cache[task.task_path] = 0
                         folding.text = '+'
                     else:
                        box.stack_index = 1
+                       cache[task.task_path] = 1
                        folding.text = '-'
             GroupBox: foldable_content:
                 padding = (0,5,2,2)
@@ -118,6 +161,7 @@ enamldef TaskEditor(Container): view:
                         _TaskListView:
                             task = view.task
                             core = view.core
+                            cache = view.cache
 
 enamldef NonFoldingTaskEditor(Container): view:
     """ A custom container to edit the children of a task.
@@ -125,13 +169,15 @@ enamldef NonFoldingTaskEditor(Container): view:
     """
     attr task
     attr core
+    attr cache
 
     Conditional:
         condition << not bool(task.children_task)
         PushButton:
             text = 'Add first element'
             clicked ::
-                obj = factory(parent_ui = view)
+                obj = core.invoke_command('hqc_meas.task_manager.build_task',
+                                          {'parent_ui': view}, view)
                 if obj:
                     task.children_task.append(obj)
     Conditional:
@@ -140,3 +186,4 @@ enamldef NonFoldingTaskEditor(Container): view:
             _TaskListView:
                 task = view.task
                 core = view.core
+                cache = view.cache

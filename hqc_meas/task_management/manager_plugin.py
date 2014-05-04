@@ -143,8 +143,8 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         Parameters
         ----------
-        task_classes : list
-            List of class names for which a view should be returned.
+        task_classes : iterable
+            Iterable of class names for which a view should be returned.
 
         Returns
         -------

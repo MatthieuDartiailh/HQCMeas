@@ -26,7 +26,7 @@ class _SelectorModel(Atom):
     """
     manager = ForwardTyped(task_manager)
 
-    selected_filter = Str()
+    selected_filter = Str('All')
     display_tasks = List(Str())
 
     def _observe_selected_filter(self, change):
@@ -35,9 +35,19 @@ class _SelectorModel(Atom):
         """
         fil = change['value']
         if fil:
-            self.diplay_tasks = self.manager.filter_tasks(fil)
+            tasks = self.manager.filter_tasks(fil)
+            if tasks:
+                self.display_tasks = tasks
+            else:
+                tasks = ['']
         else:
-            self.diplay_tasks = self.manager.filter_tasks('All')
+            self.display_tasks = self.manager.filter_tasks('All')
+            
+    def _default_display_tasks(self):
+        """ Default value for the display task member.
+        
+        """
+        return self.manager.filter_tasks('All')
 
 enamldef TaskSelector(Container):
     """ Simple task selector supporting filtering.
@@ -55,6 +65,7 @@ enamldef TaskSelector(Container):
         ObjectCombo:
             items << sorted(manager.filters)
             selected >> _internal.selected_filter
+            selected = 'All'
 
     QtListStrWidget: t_select:
-        items << sorted(model.display_tasks)
+        items << sorted(_internal.display_tasks)

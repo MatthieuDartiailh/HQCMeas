@@ -12,6 +12,7 @@ class QtAutoscrollHtml(RawWidget):
     """
     text = d_(Unicode())
     hug_width = 'ignore'
+    hug_height = 'ignore'
 
     def create_widget(self, parent):
         """ Finishes initializing the editor by creating the underlying toolkit

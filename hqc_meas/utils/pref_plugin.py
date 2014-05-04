@@ -41,7 +41,11 @@ class PrefPlugin(Plugin):
             self.default_folder = defaults['folder']
             self.default_file = defaults['file']
             pref_path = os.path.join(defaults['folder'], defaults['file'])
-            self._prefs = ConfigObj(pref_path)
+            self._prefs = ConfigObj()
+            self._prefs.update(defaults['preferences'])
+            if os.path.isfile(pref_path):
+                self._prefs.update(ConfigObj(pref_path))
+                self._prefs.filename = pref_path
 
         self._refresh_pref_decls()
         self._bind_observers()
@@ -149,7 +153,7 @@ class PrefPlugin(Plugin):
 
         Parameters
         ----------
-        plugin_id : str
+        plugin_id : unicode
             Id of the plugin whose preferences values should be returned.
 
         Returns
@@ -158,8 +162,9 @@ class PrefPlugin(Plugin):
             Preferences for the plugin as a dict.
 
         """
+        # XXXX Issue with key encoding
         if self._prefs:
-            return self._prefs.get(plugin_id, {})
+            return self._prefs.get(str(plugin_id), {})
         else:
             return {}
 

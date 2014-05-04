@@ -35,6 +35,7 @@ enamldef TextMonitorManifest(PluginManifest):
         id = 'monitors'
         point = u'hqc_meas.measure.monitors'
         Monitor:
+            name = 'Text monitor'
             description = u'Monitor displaying infos as text.'
             factory = monitor_factory
 

@@ -24,14 +24,21 @@ enamldef MeasureContent(Container): main:
                     'main_log')
 
         MeasureEditorDockItem:
+            stretch = 10
             workspace = main.workspace
 
         ExecutionDockItem:
+            stretch = 2
             workspace = main.workspace
 
         DockItem:
             name = 'main_log'
+            title = 'Main logger'
+            closable = False
+            stretch = 1
+
             Container:
+                hug_height = 'strong'
                 QtAutoscrollHtml:
                     text << workspace.log_model.text
 

@@ -37,6 +37,14 @@ enamldef SaveAction(Action):
         # TODO use core
 #        save_task(obj, mode='template')
 
+def build_task(workbench, parent_ui):
+    """ Call the Command responsible for building a task.
+
+    """
+    core = workbench.get_plugin('enaml.workbench.core')
+    return core.invoke_command('hqc_meas.task_manager.build_task',
+                               {'parent_ui': parent_ui}, workbench)    
+
 
 enamldef SimpleMenu(Menu): menu:
     """ Menu for simple tasks.
@@ -49,12 +57,12 @@ enamldef SimpleMenu(Menu): menu:
         action_context << context
         factory = build_task
         mode = 'Add before'
-        kwargs = {'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
     NewAction:
         action_context << context
         factory = build_task
         mode = 'Add after'
-        kwargs = {'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
     Action:
         separator = True
     CutAction:
@@ -83,7 +91,7 @@ enamldef ComplexMenu(Menu): menu:
     NewAction:
         action_context << context
         factory = build_task
-        kwargs = {'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
     Action:
         separator = True
     SaveAction:
@@ -141,6 +149,12 @@ class _MeasEditionModel(Atom):
 
     # Should the tree be visible given the currently selected editor.
     tree_visible = Bool(True)
+    
+    def __init__(self, workspace, selected_task):
+        # Avoid issue  when the worksapce is initilaized too late for the 
+        # observer to run
+        super(_MeasEditionModel, self).__init__(workspace=workspace)
+        self.selected_task = selected_task
 
     def clear_state(self, ):
         """ Destroy all previously used monitors.
@@ -169,7 +183,8 @@ class _MeasEditionModel(Atom):
 
         # If there are some changes apply them by append/remove so that if the
         # the currently selected editor remains nothing changes.
-        current_editor_ids = set([editor.id for editor in self.valid_editors])
+        current_editor_ids = set([editor.declaration.id\
+                                  for editor in self.valid_editors])
         if valid_editor_ids != current_editor_ids:
             to_remove = current_editor_ids - valid_editor_ids
             to_add = valid_editor_ids - current_editor_ids
@@ -180,11 +195,15 @@ class _MeasEditionModel(Atom):
 
             for id in to_add:
                 if id not in self._unvalid_editors:
-                    editor = editors[id].factory(workspace.workbench)
+                    decl = editors[id]
+                    editor = decl.factory(decl, self.workspace.workbench)
                 else:
                     editor = self._unvalid_editors[id]
                 self.valid_editors.append(editor)
-
+                
+        if not self.selected_editor:
+            self.selected_editor = self.valid_editors[0]
+            
         # Update selected editor with new selected task. If the editor changed
         # notifications will have taken care of that.
         self.selected_editor.selected_task = new_task
@@ -194,12 +213,13 @@ class _MeasEditionModel(Atom):
 
         """
         editor = change['value']
-        # Update selected task.
-        editor.selected_task = self.selected_task
-
-        # Get tree preferences.
-        self.tree_enabled = editor.tree_enabled
-        self.tree_visible = editor.tree_visible
+        if editor:
+            # Update selected task.
+            editor.selected_task = self.selected_task
+    
+            # Get tree preferences.
+            self.tree_enabled = editor.tree_enabled
+            self.tree_visible = editor.tree_visible
 
 
 enamldef MeasEditionView(Container):
@@ -208,20 +228,21 @@ enamldef MeasEditionView(Container):
     """
     attr workspace
 
-    attr measure
+    attr measure << workspace.plugin.edited_measure
     measure ::
         _internal.clear_state()
-        selected_task = change['value'].root_task
+        _internal.selected_task = change['value'].root_task
 
     attr dock : bool
-    attr selected_task
+    attr selected_task = measure.root_task
     selected_task >> _internal.selected_task
 
-    attr _internal = _MeasEditionModel(workspace=workspace)
+    attr _internal = _MeasEditionModel(workspace=workspace,
+                                       selected_task=selected_task)
 
     constraints << [vbox(
                         hbox(lab, name, edition),
-                        hbox(tree, task_view)
+                        hbox(tree, editors)
                         ),
                     align('v_center', lab, name)]
 
@@ -239,14 +260,14 @@ enamldef MeasEditionView(Container):
             if dock:
                 dock_area = workspace.dock_area
                 if not any([item.name == u'tools_editor'
-                        for item in dock_area.dock_items]):
+                        for item in dock_area.dock_items()]):
                     # The editor does not exists so create it.
                     ToolsEditorDockItem(dock_area, name=u'tools_editor',
                                         measure=measure)
 
                 # Now insert the item in a tab with the measure editor.
                 dock_area.update_layout(InsertTab(item=u'tools_editor',
-                                                  targer=u'meas_editor'))
+                                                  target=u'meas_editor'))
 
             # This is not the main editor so open a dialog.
             else:
@@ -255,7 +276,7 @@ enamldef MeasEditionView(Container):
 
     QtTreeWidget: tree:
         hug_height = 'ignore'
-        root_node << meas.root_task
+        root_node << measure.root_task
         selected >> selected_task
         visible << _internal.tree_enabled
         enabled << _internal.tree_visible
@@ -277,10 +298,11 @@ enamldef MeasEditionView(Container):
     Notebook: editors:
         # Update the selected editor when the user click a tab or when the
         # previously selected editor is removed.
-        selected_tab ::
-            _internal.selected_editor = self.find(selected_tab)
+        tabs_closable = False
+#        selected_tab ::
+#            _internal.selected_editor = self.find(selected_tab)
         Include:
-            objects << _internal.valid_editors.values()
+            objects << _internal.valid_editors
 
 
 enamldef MeasureEditorDockItem(DockItem): main:
@@ -288,15 +310,17 @@ enamldef MeasureEditorDockItem(DockItem): main:
     content.
 
     """
-    # Reference to the workspace.
+    #: Reference to the workspace.
     attr workspace
 
-    # Reference to the edited measure.
+    #: Reference to the edited measure.
     attr measure << workspace.plugin.edited_measure
     measure >> editor.measure
 
     # Name of the DockItem
     name = u'meas_editor'
+
+    title = 'Measure editor'
 
     closable = False
 

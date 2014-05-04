@@ -180,8 +180,9 @@ enamldef TaskManagerManifest(PluginManifest):
         id = 'menu'
         point = 'enaml.workbench.ui.actions'
         MenuItem:
-            path = '/tasks'
+            path = '/tools/tasks'
             label = 'Tasks'
+            after = 'instr'
             ItemGroup:
                 id = 'user'
 #        ActionItem:

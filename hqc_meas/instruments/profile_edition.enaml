@@ -13,6 +13,7 @@ from enaml.layout.api import vertical, horizontal, hbox, spacer, align, vbox
 from enaml.core.api import Conditional
 
 from .forms import FORMS_MAP_VIEWS
+from .drivers.driver_tools import InstrIOError
 
 
 enamldef ProfileView(Form): instr_form_view:
@@ -24,7 +25,7 @@ enamldef ProfileView(Form): instr_form_view:
     Label:
         text = 'Name'
     Field:
-        text := model.name
+        text := form.name
         read_only = bool(mode != 'new')
 
     Label:
@@ -32,26 +33,26 @@ enamldef ProfileView(Form): instr_form_view:
     Conditional:
         condition = bool(mode == 'static')
         Field:
-            text << model.driver_type
+            text << form.driver_type
             read_only = True
     Conditional:
         condition = bool(mode != 'static')
         ObjectCombo:
-            items << model.manager.driver_types
-            selected := model.driver_type
+            items << form.manager.driver_types
+            selected := form.driver_type
 
     Label:
         text = 'Driver'
     Conditional:
         condition = bool(mode == 'static')
         Field:
-            text << model.driver
+            text << form.driver
             read_only = True
     Conditional:
         condition = bool(mode != 'static')
         ObjectCombo:
-            items << model.drivers
-            selected := model.driver
+            items << form.drivers
+            selected := form.driver
 
     MappedView:
         model << form.connection_form
@@ -59,7 +60,7 @@ enamldef ProfileView(Form): instr_form_view:
         kwargs = {'mode': mode}
 
 
-def _handle_close(self, view, is_ok):
+def _handle_close(view, is_ok):
     """
 
     Before closing an InstrFormDialog ensures that the informations provided
@@ -100,7 +101,7 @@ def _handle_close(self, view, is_ok):
                         title='Missing information')
 
     else:
-        return False
+        return True
 
 
 # TODO allow to choose the folder if different ones exist
@@ -127,11 +128,11 @@ enamldef ProfileDialog(Dialog): instr_dialog:
             text = 'Cancel'
             hug_width = 'strong'
             clicked ::
-                if handler.close(instr_dialog, False):
+                if _handle_close(instr_dialog, False):
                     instr_dialog.reject()
         PushButton: ok:
             text = 'Ok'
             hug_width = 'strong'
             clicked ::
-                if handler.close(instr_dialog, True):
+                if _handle_close(instr_dialog, True):
                     instr_dialog.accept()

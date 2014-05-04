@@ -74,7 +74,7 @@ enamldef ChecksEditor(Container): ed:
     attr _mapping << {check.name: check_id
                       for check_id, check in measure.checks}
 
-    constraints << [hbox(list_ed,
+    constraints << [hbox(list_ed, desc,
                          vbox(add, remove))
                     ]
 
@@ -101,6 +101,6 @@ enamldef ChecksEditor(Container): ed:
 
     PushButton: remove:
         text = 'Remove check'
-        enabled << ed.selected_check
+        enabled << bool(ed.selected_check)
         clicked ::
             measure.headers.remove(ed.selected_check)

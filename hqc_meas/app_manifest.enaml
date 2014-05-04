@@ -1,0 +1,87 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : app_manifest.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.workbench.api import Extension, PluginManifest, ExtensionPoint
+from enaml.workbench.ui.api import ActionItem, Branding, MenuItem, ItemGroup
+from enaml.workbench.ui.workbench_window import WorkbenchWindow
+
+
+def app_plugin_factory():
+    from .app_plugin import HqcAppPlugin
+    return HqcAppPlugin()
+
+
+def allow_closing(window, event):
+    """ Perform all the checks contributed by the different plugin before
+    allowing to close the window.
+
+    """
+    plugin = window.workbench.get_plugin('hqc_meas.app')
+    plugin.validate_closing(window, event)
+
+
+# Custom window to perform checks upon closure.
+enamldef HqcAppWindow(WorkbenchWindow):
+    """
+    """
+    closing :: allow_closing(self, change['value'])
+    closed ::
+        core = workbench.get_plugin('enaml.workbench.core')
+        core.invoke_command('enaml.workbench.ui.close_workspace',
+                            {}, workbench)
+
+
+enamldef HqcAppManifest(PluginManifest):
+    """
+
+    """
+    id = 'hqc_meas.app'
+    factory = app_plugin_factory
+    ExtensionPoint:
+        id = 'closing'
+        description = ''
+
+    Extension:
+        id = 'branding'
+        point = 'enaml.workbench.ui.branding'
+        Branding:
+            title = 'HQC Meas App'
+
+    Extension:
+        id = 'window_factory'
+        point = 'enaml.workbench.ui.window_factory'
+        factory = lambda workbench: HqcAppWindow(workbench=workbench)
+
+    Extension:
+        id = 'actions'
+        point = 'enaml.workbench.ui.actions'
+        MenuItem:
+            path = '/file'
+            label = 'File'
+            ItemGroup:
+                id = 'user'
+        MenuItem:
+            path = '/tools'
+            label = 'Tools'
+            ItemGroup:
+                id = 'user'
+        MenuItem:
+            path = '/workspace'
+            label = 'Workspace'
+            after = 'tools'
+            ItemGroup:
+                id = 'spaces'
+        ActionItem:
+            path = '/file/close'
+            label = 'Close'
+            shortcut = 'Ctrl+Q'
+            command = 'enaml.workbench.ui.close_window'
+        ActionItem:
+            path = '/workspace/close'
+            label = 'Close Workspace'
+            shortcut = 'Ctrl+D'
+            command = 'enaml.workbench.ui.close_workspace'
+

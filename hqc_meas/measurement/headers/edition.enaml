@@ -74,7 +74,7 @@ enamldef HeadersEditor(Container): ed:
     attr _mapping << {header.name: header_id
                       for header_id, header in measure.headers}
 
-    constraints << [hbox(list_ed,
+    constraints << [hbox(list_ed, desc,
                          vbox(add, remove))
                     ]
 
@@ -101,6 +101,6 @@ enamldef HeadersEditor(Container): ed:
 
     PushButton: remove:
         text = 'Remove header'
-        enabled << ed.selected_header
+        enabled << bool(ed.selected_header)
         clicked ::
             measure.headers.remove(ed.selected_header)
