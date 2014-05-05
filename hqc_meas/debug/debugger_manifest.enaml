@@ -7,6 +7,7 @@
 from enaml.workbench.api import PluginManifest, ExtensionPoint, Extension
 from enaml.workbench.ui.api import ActionItem
 from hqc_meas.utils.preferences import Preferences
+from hqc_meas.instruments.instr_user import InstrUser
 
 
 def debug_plugin_factory():
@@ -32,6 +33,12 @@ enamldef DebuggerManifest(PluginManifest):
         point = u'hqc_meas.preferences.pref_plugin'
         Preferences:
             pass
+
+    Extension:
+        id = 'instr_user'
+        point = u'hqc_meas.instr_manager.users'
+        InstrUser:
+            default_policy = 'unreleasable'
 
     Extension:
         id = 'workspace'

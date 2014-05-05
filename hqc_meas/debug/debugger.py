@@ -4,21 +4,34 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (Atom, Callable, Unicode, Value, ForwardTyped,
-                      Typed)
+from atom.api import (Atom, Callable, Unicode, Value, ForwardTyped)
 from enaml.core.declarative import Declarative, d_
-from enaml.workbench.api import Workbench
+
+
+def _debugger_plugin():
+    from .debugger_plugin import DebuggerPlugin
+    return DebuggerPlugin
 
 
 class BaseDebugger(Atom):
     """ Base class for all debuggers.
-    
+
     """
     #: Refrence to the application workbench.
-    workbench = Typed(Workbench)    
-    
+    plugin = ForwardTyped(_debugger_plugin)
+
     #: Reference to the manifest used for cretaing this debugger.
     manifest = ForwardTyped(lambda: Debugger)
+
+    def release_ressources(self):
+        """ Ask the debugger to release all ressources it is actively using.
+
+        This method is called when the activity of the debugger is about to
+        stop.
+
+        """
+        pass
+
 
 class Debugger(Declarative):
     """ Extension for the 'debuggers' extension point of a DebuggerPlugin.
@@ -27,15 +40,17 @@ class Debugger(Declarative):
     understandable name for the user.
 
     """
-    # Id of the debugger, this can be different from the id of the plugin
-    # declaring it but does not have to.
+    #: Id of the debugger, this can be different from the id of the plugin
+    #: declaring it but does not have to.
     id = d_(Unicode())
 
-    # Debugger description.
+    #: Debugger description.
     description = d_(Unicode())
 
-    # Factory function returning an instance of the debugger. This callable
-    # should take as arguments the debugger declaration and the workbench.
+    #: Factory function returning an instance of the debugger. This callable
+    #: should take as arguments the debugger declaration and the debugger
+    #: plugin.
     factory = d_(Callable())
-    
+
+    #: View of the debugger.
     view = d_(Value())

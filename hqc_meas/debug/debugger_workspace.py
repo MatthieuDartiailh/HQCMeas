@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
-# module : workspace.py
+# module : debugger_workspace.py
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-import logging
-import os
 import enaml
-from atom.api import Typed, Value, set_default
+from atom.api import Typed, Value, set_default, Bool
 from enaml.application import deferred_call
 from enaml.workbench.ui.api import Workspace
+from enaml.layout.api import InsertItem
 
 from .debugger_plugin import DebuggerPlugin
 
@@ -25,11 +24,13 @@ class MeasureSpace(Workspace):
     """
     #--- Public API -----------------------------------------------------------
 
-    # Reference to the plugin to which the workspace is linked.
+    #: Reference to the plugin to which the workspace is linked.
     plugin = Typed(DebuggerPlugin)
 
-    # Reference to the log panel model received from the log plugin.
+    #: Reference to the log panel model received from the log plugin.
     log_model = Value()
+
+    enable_dock_events = Bool(True)
 
     window_title = set_default('Debug')
 
@@ -52,24 +53,56 @@ class MeasureSpace(Workspace):
 
         # Contribute menus.
         self.workbench.register(DebuggerMenus())
-        
-        # TODO create and dispose dock item for the existing debuggers
+
+        # If the workspace was previously opened restore its state.
+        if self.plugin.debuggers_instances and self.plugin.workspace_layout:
+            self.enable_dock_events = False
+            dock_area = self.dock_area
+            for debugger in self.plugin.debuggers_instances:
+                debugger.declaration.view(dock_area, model=debugger)
+            deferred_call(dock_area.apply_layout, self.plugin.workspace_layout)
+            self.enable_dock_events = True
 
     def stop(self):
         """
         """
+        # If the dock area still exists it means the main window was not
+        # destroyed        .
+        if self.dock_area:
+            self.plugin.workspace_layout = self.dock_area.save_layout()
+            # Prevent debugger from being destroyed when the dock_area is
+            # destroyed when swapping workspaces.
+            self.enable_dock_events = False
+
+        # Ask all the debuggers to release their ressources. (No debugger
+        # should run in the background).
+        for debugger in self.plugin.debuggers_instances:
+            debugger.release_ressources()
+
         # Remove handler from the root logger.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.logging.remove_handler'
         core.invoke_command(cmd, {'id': LOG_ID}, self)
 
         self.plugin.workspace = None
-        
-    def create_debugger(self):
+
+    def create_debugger(self, declaration):
         """ Create a debugger panel and add a reference to it in the plugin.
-        
+
         """
-        pass
+        # Find first unused name.
+        dock_numbers = sorted([pane.name[5]
+                               for pane in self.dock_area.dock_items()])
+        if dock_numbers and dock_numbers[-1] > len(dock_numbers):
+            first_free = min(set(xrange(len(dock_numbers))) - dock_numbers)
+            name = 'item_{}'.format(first_free)
+        else:
+            name = 'item_{}'.format(len(dock_numbers) + 1)
+
+        debugger = declaration.factory(declaration, self.plugin)
+        declaration.view(self.dock_area, debugger=debugger, name=name)
+        self.dock_area.apply_layout(InsertItem(item=name, target='main_log',
+                                               position='top'))
 
     @property
     def dock_area(self):
@@ -78,7 +111,3 @@ class MeasureSpace(Workspace):
         """
         if self.content and self.content.children:
             return self.content.children[0]
-
-    #--- Private API ----------------------------------------------------------
-
-

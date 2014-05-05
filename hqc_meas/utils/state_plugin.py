@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 import contextlib
-from atom.api import (Atom, Str, Dict, Instance, Bool, Tuple, Typed, Value,
+from atom.api import (Atom, Unicode, Dict, Instance, Bool, Tuple, Typed, Value,
                       Property)
 from enaml.workbench.api import Plugin, Extension
 from new import classobj
@@ -81,11 +81,11 @@ class StatePlugin(Plugin):
         """ Return the state associated to the state id
 
         """
-        return self._states[state_id]
+        return self._states[unicode(state_id)]
 
     #---- Private API ---------------------------------------------------------
 
-    _states = Dict(Str(), Instance(_StateHolder))
+    _states = Dict(Unicode(), Instance(_StateHolder))
 
     _state_extensions = Dict(Typed(Extension), Tuple())
 

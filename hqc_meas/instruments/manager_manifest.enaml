@@ -115,7 +115,7 @@ caller. """
 MANAGER_STATE_DESCRIPTION = \
 """ The instrument manager gives access to the known drivers ('drivers'),
 profiles ('all_profiles') defined for the current session, and to the
-currently available profiles available_profiles'). """
+currently available profiles ('available_profiles'). """
 
 
 enamldef InstrManagerManifest(PluginManifest):

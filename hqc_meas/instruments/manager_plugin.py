@@ -513,7 +513,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         if extension.factory is not None and not users:
             user = extension.factory(workbench)
             if not isinstance(user, InstrUser):
-                msg = "extension '%s' created non-State of type '%s'"
+                msg = "extension '%s' created non-InstrUser of type '%s'"
                 args = (extension.qualified_id, type(user).__name__)
                 raise TypeError(msg % args)
         else:

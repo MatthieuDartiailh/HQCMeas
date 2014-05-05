@@ -7,6 +7,7 @@
 from enaml.widgets.api import Container, DockArea, DockItem
 from enaml.workbench.api import PluginManifest, Extension
 from enaml.workbench.ui.api import ActionItem, MenuItem, MenuGroup
+from enaml.workbench.core.api import Command
 
 from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
 from .measure_edition import MeasureEditorDockItem
@@ -20,6 +21,17 @@ enamldef DebuggerContent(Container): main:
     attr workspace
 
     DockArea:
+        dock_events_enabled = workspace.enable_dock_events
+        # Remove the debugger from the list of active debugger when dockitem is
+        # closed and make sure it releases any ressources it was using.
+        dock_event ::
+            d_event = change['value']
+            if d_event.type == d_event.Closed:
+                debugger = [panel.model for panel in dock_area.children
+                            if panel.name == d_event.name][0]
+                if debugger in workspace.plugin.debugger_instances:
+                    workspace.plugin.debugger_instances.remove(debugger)
+                    debugger.release_ressources()
 
         DockItem:
             name = 'main_log'
@@ -33,9 +45,35 @@ enamldef DebuggerContent(Container): main:
                     text << workspace.log_model.text
 
 
+def create_debugger_handler(event):
+    """ Handler for the u'hqc_meas.debug.create_debugger' command.
+
+    """
+    plugin = event.workbench.get_plugin('hqc_meas.debug')
+    workspace = plugin.workspace
+    if workspace:
+        return workspace.create_debugger(**event.parameters)
+
 enamldef DebuggerMenus(PluginManifest):
     """ Plugin contributing menu item to the main window.
-    
+
     """
-    id = u'hqc_meas.debugger.menus'
-    
+    id = u'hqc_meas.debug.menus'
+
+    Extension:
+        id = 'commands'
+        Command:
+            id = u'hqc_meas.debug.create_debugger'
+            handler = create_debugger_handler
+            description = "Create a new debugger using a declaration"
+
+    Extension:
+        id = 'menus'
+        MenuItem:
+            path = '/debug'
+            label = 'Debug'
+        MenuItem:
+            path = '/debug/create'
+            label = 'Create debugger'
+            ItemGroup:
+                id = 'debuggers'

@@ -23,7 +23,7 @@ def _workspace():
     return DebuggerSpace
 
 
-class MeasurePlugin(HasPrefPlugin):
+class DebuggerPlugin(HasPrefPlugin):
     """
     """
     #--- Public API -----------------------------------------------------------
@@ -39,19 +39,19 @@ class MeasurePlugin(HasPrefPlugin):
 
     #: List of active debuggers.
     debuggers_instances = List()
-    
+
     #: Workspace layout used when reopening the workspace.
     workspace_layout = Value()
-    
+
     def start(self):
         """
         """
-        super(MeasurePlugin, self).start()
+        super(DebuggerPlugin, self).start()
 
         # Register contributed plugin.
         for path, manifest_name in self.manifests:
             self._register_manifest(path, manifest_name)
-            
+
         # Refresh contribution and start observers.
         self._refresh_debuggers()
 
@@ -68,7 +68,6 @@ class MeasurePlugin(HasPrefPlugin):
         # Clear ressources.
         self.debuggers.clear()
 
-
     #--- Private API ----------------------------------------------------------
 
     # Manifests ids of the plugin registered at start up.
@@ -76,7 +75,6 @@ class MeasurePlugin(HasPrefPlugin):
 
     # Dict storing which extension declared which editor.
     _debugger_extensions = Typed(defaultdict, (list,))
-
 
     def _register_manifest(self, path, manifest_name):
         """ Register a manifest given its module name and its name.
@@ -165,7 +163,6 @@ class MeasurePlugin(HasPrefPlugin):
 
         point = workbench.get_extension_point(DEBUGGERS_POINT)
         point.observe('extensions', self._update_debuggers)
-
 
     def _unbind_observers(self):
         """ Remove the observers for the plugin.

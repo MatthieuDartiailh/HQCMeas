@@ -13,9 +13,9 @@ from textwrap import fill
 def f_c(str, length=80):
     return fill(cleandoc(str), length)
 
-# Hacky but will do for the time being.
-from hqc_meas.instruments.forms import FORMS_MAP_VIEWS
 
+def _form_maker(form_tuple):
+    return [form_tuple[1](model=form_tuple[0], mode='new')]
 
 def _method_call(model, meth, f_args, f_kwargs):
     """
@@ -69,14 +69,14 @@ enamldef DriverDebuggerView(Window): main:
         Label: dr_lab:
             text = 'Driver'
         ObjectCombo: dr:
-            enabled << not model.connected
-            items << model.drivers.keys()
+            enabled << model.driver_instance is None
+            items << model.instr_managers_state.drivers
             selected = None
             selected ::
-                model.driver = model.drivers[selected]
+                model.driver = selected
                 clear.clicked()
         GroupBox: prof:
-            enabled << not model.connected
+            enabled << model.driver_instance is None
             hug_height = 'strong'
             title = 'Instrument profile'
             Notebook:
@@ -87,31 +87,29 @@ enamldef DriverDebuggerView(Window): main:
                     title = 'Predifined'
                     Container:
                         ObjectCombo:
-                            items << model.profiles.keys()
+                            items << model.instr_manager_state.all_profiles
                             items ::
                                 selected = None
-                            selected ::
-                                model.profile = model.profiles.get(selected,
-                                                                   None)
+                            selected >> model.profile
+
                 Page:
                     title = 'Custom'
                     Container:
-                        MappedView: form:
-                            typemap = FORMS_MAP_VIEWS
-                            model << main.model.custom_form
+                        Include: form:
+                            objects << _form_maker(model.custom_form)
                         PushButton: form_val:
                             text = 'Validate form'
                             background << 'green' if\
                                             isinstance(main.model.profile,
                                                        dict) else 'red'
                             clicked ::
-                                aux = main.model.custom_form
+                                aux = main.model.custom_form[0]
                                 if aux.check():
                                     main.model.profile = aux.connection_dict()
 
         PushButton: dr_start:
             text = 'Start driver'
-            enabled << not model.connected and model.driver_ready
+            enabled << model.driver_instance is None and model.driver_ready
             clicked ::
                 model.start_driver()
         PushButton: conn_o:
@@ -132,12 +130,12 @@ enamldef DriverDebuggerView(Window): main:
                 model.reopen_connection()
         PushButton: dr_reload:
             text = 'Reload driver'
-            enabled << bool(model.driver and not model.connected)
+            enabled << bool(model.driver and model.driver_instance is None)
             clicked ::
                 model.reload_driver()
 
         Conditional: cond:
-            condition << model.connected
+            condition << model.driver_instance is not None
             ScrollArea:
                 Container:
                     constraints << [grid(*loop.items)] +\
