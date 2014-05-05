@@ -54,6 +54,10 @@ class MeasureSpace(Workspace):
         # Contribute menus.
         self.workbench.register(DebuggerMenus())
 
+        # Add debugger contributions.
+        for debugger in self.plugin.debuggers.values():
+            debugger.contribute_workspace(self)
+
         # If the workspace was previously opened restore its state.
         if self.plugin.debuggers_instances and self.plugin.workspace_layout:
             self.enable_dock_events = False
@@ -78,6 +82,12 @@ class MeasureSpace(Workspace):
         # should run in the background).
         for debugger in self.plugin.debuggers_instances:
             debugger.release_ressources()
+
+        # Remove debugger contributions.
+        for debugger in self.plugin.debuggers.values():
+            debugger.remove_contribution(self)
+
+        self.workbench.unregister(u'hqc_meas.debug.menus')
 
         # Remove handler from the root logger.
         core = self.workbench.get_plugin(u'enaml.workbench.core')

@@ -52,5 +52,12 @@ class Debugger(Declarative):
     #: plugin.
     factory = d_(Callable())
 
-    #: View of the debugger.
+    #: View of the debugger or factory taking as single keyword 'model'.
     view = d_(Value())
+
+    #: Callable adding contribution to the main window take as single argument
+    #: the workspace.
+    contribute_workspace = d_(Callable())
+
+    #: Callable removing the contribution from the main window.
+    remove_contribution = d_(Callable())

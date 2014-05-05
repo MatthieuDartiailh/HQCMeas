@@ -130,7 +130,8 @@ enamldef DriverDebuggerView(Window): main:
                 model.reopen_connection()
         PushButton: dr_reload:
             text = 'Reload driver'
-            enabled << bool(model.driver and model.driver_instance is None)
+            # TODO reactivate later
+            enabled << bool(model.driver and model.driver_instance is None) and False
             clicked ::
                 model.reload_driver()
 
