@@ -36,16 +36,23 @@ class PrefPlugin(Plugin):
         """
         self._pref_decls = {}
         def_path = os.path.join(MODULE_PATH, 'default.ini')
+        def_pref_path = os.path.join(MODULE_PATH, 'default_prefs.ini')
+        self._prefs = ConfigObj()
         if os.path.isfile(def_path):
             defaults = ConfigObj(def_path)
             self.default_folder = defaults['folder']
             self.default_file = defaults['file']
             pref_path = os.path.join(defaults['folder'], defaults['file'])
-            self._prefs = ConfigObj()
-            self._prefs.update(defaults['preferences'])
             if os.path.isfile(pref_path):
                 self._prefs.update(ConfigObj(pref_path))
                 self._prefs.filename = pref_path
+            elif os.path.isfile(def_pref_path):
+                defaults = ConfigObj(def_pref_path)
+                self._prefs.update(defaults)
+
+        elif os.path.isfile(def_pref_path):
+            defaults = ConfigObj(pref_path)
+            self._prefs.update(defaults)
 
         self._refresh_pref_decls()
         self._bind_observers()
