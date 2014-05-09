@@ -48,6 +48,12 @@ def matching_profiles(event):
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     return manager.matching_profiles(**event.parameters)
 
+def matching_form(event):
+    """ Handler for the 'hqc_meas.instr_manager.matching_form' command
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    return manager.matching_form(**event.parameters)
 
 def driver_types_request(event):
     """ Handler for the 'hqc_meas.instr_manager.driver_types_request' command
@@ -96,6 +102,10 @@ MATCHING_DRIVERS_DESCRIPTION = \
 MATCHING_PROFILES_DESCRIPTION = \
 """ Return a list of profiles whose driver is in the provided list
 (kw = drivers)"""
+
+MATCHING_PROFILES_DESCRIPTION = \
+""" Return the adequate ConnectionForm to edit a profile for the given driver,
+can optionnaly return the view. (kw = 'driver', 'view')"""
 
 DRIVER_TYPES_REQUEST_DESCRIPTION = \
 """ Request the classes associated to a list of driver types. """
@@ -156,6 +166,10 @@ enamldef InstrManagerManifest(PluginManifest):
             id = 'hqc_meas.instr_manager.matching_profiles'
             description = MATCHING_PROFILES_DECRIPTION
             handler = matching_profiles
+        Command:
+            id = 'hqc_meas.instr_manager.matching_form'
+            description = MATCHING_FORM_DECRIPTION
+            handler = matching_form
         Command:
             id = 'hqc_meas.instr_manager.driver_types_request'
             description = DRIVER_TYPES_REQUEST_DESCRIPTION

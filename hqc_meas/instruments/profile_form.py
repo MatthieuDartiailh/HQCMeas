@@ -30,7 +30,7 @@ class ProfileForm(Atom):
         Name of the instrument used to identify him. Should be different from
         the driver name
     driver_type : str
-        Kind of driver to use, ie which kind of standard is used for
+        Kind of driver to use, ie which kind of standard is used to
         communicate
     driver_list : list(Unicodestr)
         List of known driver matching `driver_type`

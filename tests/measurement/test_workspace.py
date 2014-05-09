@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : test_workspace.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 from enaml.workbench.api import Workbench
 import enaml
 import os

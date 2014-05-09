@@ -21,6 +21,7 @@ from ..utils.has_pref_plugin import HasPrefPlugin
 from .drivers.driver_tools import BaseInstrument
 from .instr_user import InstrUser
 from .profile_utils import open_profile
+from .forms import FORMS, FORMS_MAP_VIEWS
 
 
 USERS_POINT = u'hqc_meas.instr_manager.users'
@@ -284,6 +285,51 @@ class InstrManagerPlugin(HasPrefPlugin):
             profiles.extend(profs)
 
         return profiles
+
+    def matching_form(self, driver, view=False):
+        """ Return the appropriate form to edit a profile for the given driver.
+
+        Parameters
+        ----------
+        driver : str
+            Name of the driver or driver type for which a form should be
+            returned.
+
+        view : bool, optionnal
+            Whether or not to return the matching view alongside the form.
+
+        Returns
+        -------
+        form : AbstractConnectionForm
+            Form allowing to edit a profile for the given driver.
+
+        view : Enamldef
+            View matching the form.
+
+        """
+        form = None
+        if driver in self._driver_types:
+            form = FORMS.get(driver, None)
+
+        elif driver in self._drivers:
+            driver_class = self._drivers[driver]
+            d_types = set(self._driver_types.values())
+            for d_type in type.mro(driver_class):
+                if d_type in d_types:
+                    d_type_name = [n for n in self._driver_types
+                                   if d_type == self._driver_types[n]][0]
+                    form = FORMS.get(d_type_name, None)
+
+        if form is None:
+            logger = logging.getLogger(__name__)
+            mes = "No matching form was found for the driver {}".format(driver)
+            logger.warn(mes)
+
+        if view:
+            view = FORMS_MAP_VIEWS.get(form, FORMS_MAP_VIEWS[type(None)])
+            return form, view
+        else:
+            return form
 
     def report(self):
         """ Give access to the failures which happened at startup.
