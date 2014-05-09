@@ -54,6 +54,7 @@ class DebuggerPlugin(HasPrefPlugin):
 
         # Refresh contribution and start observers.
         self._refresh_debuggers()
+        self._bind_observers()
 
     def stop(self):
         """
@@ -102,28 +103,32 @@ class DebuggerPlugin(HasPrefPlugin):
         point = workbench.get_extension_point(DEBUGGERS_POINT)
         extensions = point.extensions
         if not extensions:
-            self.engines.clear()
+            self.debuggers.clear()
+            self._debugger_extensions.clear()
             return
 
         # Get the engines declarations for all extensions.
         new_extensions = defaultdict(list)
-        old_extensions = self._engine_extensions
+        old_extensions = self._debugger_extensions
         for extension in extensions:
             if extensions in old_extensions:
                 engines = old_extensions[extension]
             else:
-                engines = self._load_engines(extension)
+                engines = self._load_debuggers(extension)
             new_extensions[extension].extend(engines)
 
         # Create mapping between engine id and declaration.
         debuggers = {}
         for extension in extensions:
             for debugger in new_extensions[extension]:
-                if debugger.id in debugger:
+                if debugger.id in debuggers:
                     msg = "debugger '%s' is already registered"
                     raise ValueError(msg % debugger.id)
                 if debugger.factory is None:
                     msg = "debugger '%s' does not declare a factory"
+                    raise ValueError(msg % debugger.id)
+                if debugger.view is None:
+                    msg = "debugger '%s' does not declare a view"
                     raise ValueError(msg % debugger.id)
                 debuggers[debugger.id] = debugger
 
@@ -151,7 +156,7 @@ class DebuggerPlugin(HasPrefPlugin):
                     msg = "extension '%s' created non-Debugger."
                     args = (extension.qualified_id)
                     raise TypeError(msg % args)
-                debugger.append(debugger)
+                debuggers.append(debugger)
 
         return debuggers
 
