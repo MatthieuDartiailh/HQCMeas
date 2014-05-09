@@ -104,7 +104,7 @@ class MeasurePlugin(HasPrefPlugin):
         # Register contributed plugin.
         for path, manifest_name in self.manifests:
             self._register_manifest(path, manifest_name)
-            
+
         # Refresh contribution and start observers.
         self._refresh_engines()
         self._refresh_monitors()
@@ -363,6 +363,7 @@ class MeasurePlugin(HasPrefPlugin):
         extensions = point.extensions
         if not extensions:
             self.engines.clear()
+            self._engine_extensions.clear()
             if self.selected_engine:
                 logger = logging.getLogger(__name__)
                 msg = cleandoc('''Previously selected engine is not available
@@ -454,6 +455,7 @@ class MeasurePlugin(HasPrefPlugin):
         extensions = point.extensions
         if not extensions:
             self.monitors.clear()
+            self._monitor_extensions.clear()
             return
 
         # Get the monitors declarations for all extensions.
@@ -515,6 +517,7 @@ class MeasurePlugin(HasPrefPlugin):
         extensions = point.extensions
         if not extensions:
             self.headers.clear()
+            self._header_extensions.clear()
             return
 
         # Get the headers declarations for all extensions.
@@ -576,6 +579,7 @@ class MeasurePlugin(HasPrefPlugin):
         extensions = point.extensions
         if not extensions:
             self.checks.clear()
+            self._check_extensions.clear()
             return
 
         # Get the checks declarations for all extensions.
@@ -637,6 +641,7 @@ class MeasurePlugin(HasPrefPlugin):
         extensions = point.extensions
         if not extensions:
             self.editors.clear()
+            self._editor_extensions.clear()
             return
 
         # Get the editors declarations for all extensions.

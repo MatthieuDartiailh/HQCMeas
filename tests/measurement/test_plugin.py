@@ -137,6 +137,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.unregister(u'dummy.check1')
 
         assert_not_in(u'dummy.check1', plugin.checks)
+        assert_equal(plugin._check_extensions, {})
 
     def test_check_registration2(self):
         """ Test checks update when a new plugin is registered.
@@ -209,6 +210,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.unregister(u'dummy.header1')
 
         assert_not_in(u'dummy.header1', plugin.headers)
+        assert_equal(plugin._header_extensions, {})
 
     def test_header_registration2(self):
         """ Test headers update when a new plugin is registered.
@@ -281,6 +283,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.unregister(u'dummy.editor1')
 
         assert_not_in(u'dummy.editor1', plugin.editors)
+        assert_equal(plugin._editor_extensions, {})
 
     def test_editor_registration2(self):
         """ Test editors update when a new plugin is registered.
@@ -353,6 +356,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.unregister(u'dummy.monitor1')
 
         assert_not_in(u'dummy.monitor1', plugin.monitors)
+        assert_equal(plugin._monitor_extensions, {})
 
     def test_monitor_registration2(self):
         """ Test monitors update when a new plugin is registered.
@@ -425,6 +429,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.unregister(u'dummy.engine1')
 
         assert_not_in(u'dummy.engine1', plugin.engines)
+        assert_equal(plugin._engine_extensions, {})
 
     def test_engine_registration2(self):
         """ Test engines update when a new plugin is registered.
