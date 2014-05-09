@@ -38,7 +38,7 @@ class DebuggerPlugin(HasPrefPlugin):
     debuggers = Dict(Unicode(), Typed(Debugger))
 
     #: List of active debuggers.
-    debuggers_instances = List()
+    debugger_instances = List()
 
     #: Workspace layout used when reopening the workspace.
     workspace_layout = Value()

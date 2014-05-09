@@ -1,0 +1,54 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : helpers.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from atom.api import (Str, List, Dict, Int, Bool)
+from enaml.workbench.api import PluginManifest, Extension, Plugin
+from enaml.widgets.api import DockItem, Container
+from time import sleep
+
+from hqc_meas.debug.debugger import Debugger, BaseDebugger
+
+
+class TestDebugger(BaseDebugger):
+    """ Debugger only used for testing purposes.
+
+    """
+    released = Bool()
+
+    def release_ressources(self):
+        self.released = True
+
+enamldef TestDebuggerView(DockItem):
+    attr debugger
+    Container:
+        pass
+
+def build_debugger(declaration, workbench):
+    """
+    """
+    return TestDebugger(declaration=declaration)
+
+
+def debug_view(dock_area, debugger, name):
+    """
+    """
+    return TestDebuggerView(dock_area, debugger=debugger, name=name)
+
+
+enamldef TestSuiteManifest(PluginManifest):
+    """ Plugin providing all the extesnions needed for testing.
+
+    """
+    id = u'tests.suite'
+
+    Extension:
+        id = 'debuggers'
+        point = u'hqc_meas.debug.debuggers'
+        Debugger:
+            attr contributing
+            id = u'debugger1'
+            factory = build_debugger
+            view = debug_view

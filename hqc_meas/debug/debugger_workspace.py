@@ -19,7 +19,7 @@ with enaml.imports():
 LOG_ID = u'hqc_meas.debug.workspace'
 
 
-class MeasureSpace(Workspace):
+class DebuggerSpace(Workspace):
     """
     """
     #--- Public API -----------------------------------------------------------
@@ -56,16 +56,12 @@ class MeasureSpace(Workspace):
 
         # Add debugger contributions.
         for debugger in self.plugin.debuggers.values():
-            debugger.contribute_workspace(self)
+            if debugger.contribute_workspace:
+                debugger.contribute_workspace(self)
 
         # If the workspace was previously opened restore its state.
-        if self.plugin.debuggers_instances and self.plugin.workspace_layout:
-            self.enable_dock_events = False
-            dock_area = self.dock_area
-            for debugger in self.plugin.debuggers_instances:
-                debugger.declaration.view(dock_area, model=debugger)
-            deferred_call(dock_area.apply_layout, self.plugin.workspace_layout)
-            self.enable_dock_events = True
+        if self.plugin.debugger_instances and self.plugin.workspace_layout:
+            deferred_call(self._restore_debuggers)
 
     def stop(self):
         """
@@ -80,12 +76,13 @@ class MeasureSpace(Workspace):
 
         # Ask all the debuggers to release their ressources. (No debugger
         # should run in the background).
-        for debugger in self.plugin.debuggers_instances:
+        for debugger in self.plugin.debugger_instances:
             debugger.release_ressources()
 
         # Remove debugger contributions.
         for debugger in self.plugin.debuggers.values():
-            debugger.remove_contribution(self)
+            if debugger.remove_contribution:
+                debugger.remove_contribution(self)
 
         self.workbench.unregister(u'hqc_meas.debug.menus')
 
@@ -101,18 +98,22 @@ class MeasureSpace(Workspace):
 
         """
         # Find first unused name.
-        dock_numbers = sorted([pane.name[5]
-                               for pane in self.dock_area.dock_items()])
+        dock_numbers = sorted([int(pane.name[5])
+                               for pane in self.dock_area.dock_items()
+                               if pane.name.startswith('item')])
+
         if dock_numbers and dock_numbers[-1] > len(dock_numbers):
-            first_free = min(set(xrange(len(dock_numbers))) - dock_numbers)
+            first_free = min(set(xrange(1, len(dock_numbers)+1))
+                             - set(dock_numbers))
             name = 'item_{}'.format(first_free)
         else:
             name = 'item_{}'.format(len(dock_numbers) + 1)
 
         debugger = declaration.factory(declaration, self.plugin)
+        self.plugin.debugger_instances.append(debugger)
         declaration.view(self.dock_area, debugger=debugger, name=name)
-        self.dock_area.apply_layout(InsertItem(item=name, target='main_log',
-                                               position='top'))
+        self.dock_area.update_layout(InsertItem(item=name, target='main_log',
+                                                position='top'))
 
     @property
     def dock_area(self):
@@ -121,3 +122,18 @@ class MeasureSpace(Workspace):
         """
         if self.content and self.content.children:
             return self.content.children[0]
+
+    #--- Private API ----------------------------------------------------------
+
+    def _restore_debuggers(self):
+        """ Restore debuggers from a previous use of the workspace.
+
+        """
+        self.enable_dock_events = False
+        dock_area = self.dock_area
+        for i, debugger in enumerate(self.plugin.debugger_instances):
+            name = 'item_{}'.format(i+1)
+            debugger.declaration.view(dock_area, debugger=debugger,
+                                      name=name)
+        dock_area.apply_layout(self.plugin.workspace_layout)
+        self.enable_dock_events = True

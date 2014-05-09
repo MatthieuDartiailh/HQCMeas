@@ -255,10 +255,10 @@ class DriverDebugger(BaseDebugger):
 
         core = self.workbench.get_plugin('enaml.workbench.core')
         cmd = 'hqc_meas.instr_manager.form_request'
-        forms = core.invoke_command(cmd, {'driver': self.driver, 'view': True},
-                                    self)
-        if forms:
-            self.custom_form = forms[0]
+        form = core.invoke_command(cmd, {'driver': self.driver, 'view': True},
+                                   self)
+        if form:
+            self.custom_form = form
 
         # Listing driver properties
         self.driver_properties = [m[0] for m in getmembers(driver,

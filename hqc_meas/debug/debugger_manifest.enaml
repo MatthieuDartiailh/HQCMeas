@@ -53,5 +53,6 @@ enamldef DebuggerManifest(PluginManifest):
                 label = 'Debugger'
                 shortcut = 'Ctrl+2'
                 group = 'spaces'
+                after = 'measure'
                 command = 'enaml.workbench.ui.select_workspace'
                 parameters = {'workspace': 'hqc_meas.debug.workspace'}

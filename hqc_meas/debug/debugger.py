@@ -21,7 +21,7 @@ class BaseDebugger(Atom):
     plugin = ForwardTyped(_debugger_plugin)
 
     #: Reference to the manifest used for cretaing this debugger.
-    manifest = ForwardTyped(lambda: Debugger)
+    declaration = ForwardTyped(lambda: Debugger)
 
     def release_ressources(self):
         """ Ask the debugger to release all ressources it is actively using.
@@ -52,7 +52,8 @@ class Debugger(Declarative):
     #: plugin.
     factory = d_(Callable())
 
-    #: View of the debugger or factory taking as single keyword 'model'.
+    #: View of the debugger or factory taking as args the dock_area,
+    #: the debugger and the name of the top widget.
     view = d_(Value())
 
     #: Callable adding contribution to the main window take as single argument
