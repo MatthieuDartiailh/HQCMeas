@@ -16,10 +16,12 @@ with enaml.imports():
     from hqc_meas.task_management.manager_manifest import TaskManagerManifest
     from hqc_meas.instruments.manager_manifest import InstrManagerManifest
     from hqc_meas.log_system.log_manifest import LogManifest
+    from hqc_meas.debug.debugger_manifest import DebuggerManifest
 
 if __name__ == '__main__':
 
-    WORKSPACES = {'measure': 'hqc_meas.measure.workspace'}
+    WORKSPACES = {'measure': 'hqc_meas.measure.workspace',
+                  'debug': 'hqc_meas.debug.workspace'}
 
     import argparse
     parser = argparse.ArgumentParser(description='Start the Hqc app')
@@ -37,6 +39,7 @@ if __name__ == '__main__':
     workbench.register(TaskManagerManifest())
     workbench.register(InstrManagerManifest())
     workbench.register(MeasureManifest())
+    workbench.register(DebuggerManifest())
 
     core = workbench.get_plugin('enaml.workbench.core')
     core.invoke_command('hqc_meas.logging.start_logging', {}, workbench)
@@ -48,6 +51,7 @@ if __name__ == '__main__':
     ui.window.maximize()
     ui.start_application()
 
+    workbench.unregister(u'hqc_meas.debug')
     workbench.unregister(u'hqc_meas.measure')
     workbench.unregister(u'hqc_meas.task_manager')
     workbench.unregister(u'hqc_meas.instr_manager')

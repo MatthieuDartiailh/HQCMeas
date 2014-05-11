@@ -109,11 +109,10 @@ class TestDebugSpace(object):
         self.workbench.register(TestSuiteManifest())
 
     def teardown(self):
-        close_all_windows()
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
-        self.workbench.unregister(u'tests.suite')
         self.workbench.unregister(u'hqc_meas.debug')
+        self.workbench.unregister(u'tests.suite')
         self.workbench.unregister(u'hqc_meas.task_manager')
         self.workbench.unregister(u'hqc_meas.instr_manager')
         self.workbench.unregister(u'hqc_meas.logging')
@@ -122,6 +121,7 @@ class TestDebugSpace(object):
         self.workbench.unregister(u'hqc_meas.app')
         self.workbench.unregister(u'enaml.workbench.ui')
         self.workbench.unregister(u'enaml.workbench.core')
+        close_all_windows()
 
     def test_life_cycle1(self):
         """ Test that workspace starting/closing goes well.

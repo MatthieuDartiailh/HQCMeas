@@ -6,6 +6,7 @@
 #==============================================================================
 from atom.api import (Str, List, Dict, Int, Bool)
 from enaml.workbench.api import PluginManifest, Extension, Plugin
+from enaml.workbench.ui.api import ActionItem
 from enaml.widgets.api import DockItem, Container
 from time import sleep
 
@@ -52,3 +53,14 @@ enamldef TestSuiteManifest(PluginManifest):
             id = u'debugger1'
             factory = build_debugger
             view = debug_view
+
+    # Avoid bug.
+    Extension:
+        id = 'actions'
+        point = 'enaml.workbench.ui.actions'
+        ActionItem:
+                path = '/workspace/measure'
+                label = 'Measure'
+                shortcut = 'Ctrl+1'
+                group = 'spaces'
+                command = 'enaml.workbench.ui.select_workspace'

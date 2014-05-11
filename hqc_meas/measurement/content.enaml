@@ -19,9 +19,10 @@ enamldef MeasureContent(Container): main:
     attr workspace
 
     DockArea:
+        # Sizes are exppressed in pixels
         layout = VSplitLayout(
-                    HSplitLayout('meas_editor', 'meas_exec'),
-                    'main_log')
+                    HSplitLayout('meas_editor', 'meas_exec', sizes=[5000,100]),
+                    'main_log', sizes=[5000,100])
 
         MeasureEditorDockItem:
             stretch = 10

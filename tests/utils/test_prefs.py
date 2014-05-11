@@ -4,7 +4,7 @@ import shutil
 from enaml.workbench.api import Workbench
 import enaml
 from configobj import ConfigObj
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_true
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
@@ -80,6 +80,8 @@ class Test_Prefs(object):
 
         self.workbench = Workbench()
         self.workbench.register(CoreManifest())
+        # Creating an empty config file.
+        ConfigObj(os.path.join(self.test_dir, 'default_test.ini')).write()
 
     def teardown(self):
         path = os.path.join(self.test_dir, 'default_test.ini')
@@ -149,8 +151,8 @@ class Test_Prefs(object):
                             {'plugin_id': u'test.prefs'}, self)
 
         pref_plugin = self.workbench.get_plugin(u'hqc_meas.preferences')
-        assert pref_plugin._prefs == {u'test.prefs': {'string': 'test_update',
-                                                      'auto': ''}}
+        assert_equal(pref_plugin._prefs,
+                     {u'test.prefs': {'string': 'test_update', 'auto': ''}})
 
     def test_auto_sync(self):
         self.workbench.register(PreferencesManifest())
@@ -161,10 +163,10 @@ class Test_Prefs(object):
 
         ref = {u'test.prefs': {'auto': 'test_auto'}}
         pref_plugin = self.workbench.get_plugin(u'hqc_meas.preferences')
-        assert pref_plugin._prefs == ref
+        assert_equal(pref_plugin._prefs, ref)
         path = os.path.join(self.test_dir, 'default_test.ini')
-        assert os.path.isfile(path)
-        assert ConfigObj(path).dict() == ref
+        assert_true(os.path.isfile(path))
+        assert_equal(ConfigObj(path).dict(), ref)
 
     def test_save1(self):
         self.workbench.register(PreferencesManifest())
