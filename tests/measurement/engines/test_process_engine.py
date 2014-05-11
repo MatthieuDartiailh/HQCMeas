@@ -15,6 +15,7 @@ from hqc_meas.tasks.tasks_util.test_tasks import SleepTask, PrintTask
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from enaml.workbench.ui.ui_manifest import UIManifest
+    from hqc_meas.app_manifest import HqcAppManifest
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
     from hqc_meas.log_system.log_manifest import LogManifest
@@ -104,6 +105,7 @@ class TestProcessEngine(object):
         self.workbench = Workbench()
         self.workbench.register(CoreManifest())
         self.workbench.register(UIManifest())
+        self.workbench.register(HqcAppManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
         self.workbench.register(LogManifest())
@@ -113,6 +115,10 @@ class TestProcessEngine(object):
         self.workbench.register(TestSuiteManifest())
 
     def teardown(self):
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        engine = plugin.engine_instance
+        if engine and engine._process and engine._process.is_alive():
+            engine._process.terminate()
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
         self.workbench.unregister(u'tests.suite')
@@ -122,6 +128,7 @@ class TestProcessEngine(object):
         self.workbench.unregister(u'hqc_meas.logging')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')
+        self.workbench.unregister(u'hqc_meas.app')
         self.workbench.unregister(u'enaml.workbench.ui')
         self.workbench.unregister(u'enaml.workbench.core')
 
@@ -136,6 +143,7 @@ class TestProcessEngine(object):
         cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
                             self)
+        process_app_events()
 
         log_plugin = self.workbench.get_plugin(u'hqc_meas.logging')
 
@@ -191,13 +199,16 @@ class TestProcessEngine(object):
         engine = plugin.engine_instance
         assert_true(engine.active)
         while not engine._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
+            counter += 1
+            if counter > 100:
+                raise Exception('Engine took too long to start.')
 
         while engine._processing.is_set():
             process_app_events()
             sleep(0.1)
             counter += 1
-            if counter > 100:
+            if counter > 200:
                 raise Exception('Task took too long to complete.')
 
         sleep(0.1)
@@ -205,9 +216,9 @@ class TestProcessEngine(object):
         assert_equal(measure.status, 'COMPLETED')
 
         while engine.active:
-            sleep(0.05)
+            sleep(0.1)
             counter += 1
-            if counter > 100:
+            if counter > 300:
                 raise Exception('Engine took too long to exit.')
 
         # Check the engine exited properly.
@@ -256,14 +267,17 @@ class TestProcessEngine(object):
         engine.run()
 
         assert_true(engine.active)
-        while not engine._processing.is_set():
-            sleep(0.01)
-
         i = 0
-        while i != 0 and engine._processing.is_set():
-            sleep(0.2)
+        while not engine._processing.is_set():
+            sleep(0.1)
             i += 1
-            if i > 50:
+            if i > 100:
+                raise Exception('Engine took too long to start.')
+
+        while i != 0 and engine._processing.is_set():
+            sleep(0.1)
+            i += 1
+            if i > 200:
                 raise Exception('Task took too long to complete.')
 
         engine.exit()
@@ -271,7 +285,7 @@ class TestProcessEngine(object):
         while engine.active:
             sleep(0.1)
             i += 1
-            if i > 100:
+            if i > 300:
                 raise Exception('Task took too long to complete.')
 
         # Check the monitor and log received the notifications.
@@ -327,7 +341,7 @@ class TestProcessEngine(object):
         workspace.start_processing_measures()
         i = 0
         while not plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
             i += 1
             if i > 100:
                 raise Exception('Task took too long to complete.')
@@ -335,6 +349,7 @@ class TestProcessEngine(object):
         # Stop the measure before it completes.
         workspace.stop_current_measure()
 
+        i = 0
         while plugin.engine_instance._processing.is_set():
             sleep(0.1)
             i += 1
@@ -366,7 +381,7 @@ class TestProcessEngine(object):
         workspace.start_processing_measures()
         i = 0
         while not plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
             i += 1
             if i > 100:
                 raise Exception('Task took too long to complete.')
@@ -374,6 +389,7 @@ class TestProcessEngine(object):
         # Stop the measure before it completes.
         workspace.stop_processing_measures()
 
+        i = 0
         while plugin.engine_instance._processing.is_set():
             sleep(0.1)
             i += 1
@@ -404,7 +420,7 @@ class TestProcessEngine(object):
         workspace.start_processing_measures()
         i = 0
         while not plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
             i += 1
             if i > 100:
                 raise Exception('Task took too long to complete.')
@@ -412,6 +428,7 @@ class TestProcessEngine(object):
         # Force stop the measure before it completes.
         workspace.force_stop_measure()
 
+        i = 0
         while plugin.engine_instance._processing.is_set():
             sleep(0.1)
             i += 1
@@ -440,14 +457,15 @@ class TestProcessEngine(object):
         workspace.start_processing_measures()
         i = 0
         while not plugin.engine_instance._processing.is_set():
-            sleep(0.01)
+            sleep(0.1)
             i += 1
-            if i > 50:
-                raise Exception('Task took too long to complete.')
+            if i > 100:
+                raise Exception('Task took too long to start.')
 
         # Force stop the processing.
         workspace.force_stop_processing()
 
+        i = 0
         while plugin.engine_instance._processing.is_set():
             sleep(0.1)
             i += 1

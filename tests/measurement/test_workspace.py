@@ -178,8 +178,26 @@ class TestMeasureSpace(object):
         # Check the engine contribution was removed.
         assert_false(plugin.engines[u'engine1'].contributing)
 
-    def test_engine_contribution_observer(self):
-        """ Test the contribution of the selected engine is correctly handled.
+    def test_engine_contribution_observer1(self):
+        """ Test engine selected before workspace starts does contribute.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        plugin.selected_engine = u'engine1'
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+        process_app_events()
+
+        assert_true(plugin.engines[u'engine1'].contributing)
+
+        plugin.selected_engine = u''
+        assert_false(plugin.engines[u'engine1'].contributing)
+
+    def test_engine_contribution_observer2(self):
+        """ Test engine selected after workspace starts does contribute.
 
         """
         core = self.workbench.get_plugin(u'enaml.workbench.core')

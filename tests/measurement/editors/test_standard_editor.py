@@ -11,6 +11,7 @@ from hqc_meas.tasks.base_tasks import RootTask
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from enaml.workbench.ui.ui_manifest import UIManifest
+    from hqc_meas.app_manifest import HqcAppManifest
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
     from hqc_meas.log_system.log_manifest import LogManifest
@@ -98,6 +99,7 @@ class TestProcessEngine(object):
         self.workbench = Workbench()
         self.workbench.register(CoreManifest())
         self.workbench.register(UIManifest())
+        self.workbench.register(HqcAppManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
         self.workbench.register(LogManifest())
@@ -116,6 +118,7 @@ class TestProcessEngine(object):
         self.workbench.unregister(u'hqc_meas.logging')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')
+        self.workbench.unregister(u'hqc_meas.app')
         self.workbench.unregister(u'enaml.workbench.ui')
         self.workbench.unregister(u'enaml.workbench.core')
 

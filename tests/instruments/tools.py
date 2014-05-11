@@ -56,8 +56,8 @@ class BaseClass(object):
         prof.write()
 
         # Saving plugin preferences.
-        man_conf = {'drivers_loading': str(driv_loading),
-                    'profiles_folders': str([profile_path])}
+        man_conf = {'drivers_loading': repr(driv_loading),
+                    'profiles_folders': repr([profile_path])}
 
         conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
         conf['hqc_meas.instr_manager'] = {}
