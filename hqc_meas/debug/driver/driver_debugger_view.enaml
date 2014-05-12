@@ -231,9 +231,8 @@ enamldef DriverDebuggerView(DockItem): main:
                 debugger.close_driver()
         PushButton: dr_reload:
             text = 'Reload driver'
-            # TODO reactivate later
             enabled << bool(debugger.driver
-                            and debugger.driver_instance is None) and False
+                            and debugger.driver_instance is None)
             clicked ::
                 debugger.reload_driver()
 

@@ -10,23 +10,23 @@ from ..debugger import Debugger
 from .driver_debugger import DriverDebugger
 from .driver_debugger_view import DriverDebuggerView
 
-def debugger_factory(manifest, plugin):
+def debugger_factory(declaration, plugin):
     """ Create a new driver debugger instance.
 
     """
-    return DriverDebugger(manifest=manifest, plugin=plugin)
+    return DriverDebugger(declaration=declaration, plugin=plugin)
 
 def contribute_menus(workspace):
     """ Contribute to the main window when the debug workspace is activated.
 
     """
-    worksapce.workbench.register(DriverDebuggerMenuManifest())
+    workspace.workbench.register(DriverDebuggerMenuManifest())
 
 def remove_menus(workspace):
     """ Remove contribution when the workspace is deactivated.
 
     """
-    worksapce.workbench.unregister(u'hqc_meas.debug.driver.menus')
+    workspace.workbench.unregister(u'hqc_meas.debug.driver.menus')
 
 enamldef DriverDebuggerManifest(PluginManifest):
     """
@@ -35,10 +35,11 @@ enamldef DriverDebuggerManifest(PluginManifest):
 
     Extension:
         id = u'debuggers'
+        point = u'hqc_meas.debug.debuggers'
         Debugger:
             id = u'hqc_meas.debuggers.driver'
             description = 'GUI debugger for drivers.'
-            fatcory = debugger_factory
+            factory = debugger_factory
             view = DriverDebuggerView
             contribute_workspace = contribute_menus
             remove_contribution = remove_menus
@@ -52,7 +53,7 @@ enamldef DriverDebuggerMenuManifest(PluginManifest):
         id = 'actions'
         point = 'enaml.workbench.ui.actions'
         ActionItem:
-                path = '/debug/create_debugger/driver'
+                path = '/debug/create/driver'
                 label = 'Driver debugger'
                 group = 'debuggers'
                 command = 'hqc_meas.debug.create_debugger'

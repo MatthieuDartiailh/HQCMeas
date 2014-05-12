@@ -14,7 +14,7 @@ from atom.api import (Str, Dict, List, Unicode, Typed, Subclass)
 from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                              FileDeletedEvent, FileMovedEvent)
-from inspect import cleandoc
+from inspect import cleandoc, getmodule, getmembers, isclass
 from collections import defaultdict
 
 from ..utils.has_pref_plugin import HasPrefPlugin
@@ -336,6 +336,43 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         """
         return self._failed
+
+    def reload_driver(self, driver):
+        """ Reload a driver definition.
+
+        All the classes in the driver mro are reloaded in reverse order.
+
+        Parameters
+        ----------
+        driver : str
+            Name of the driver whose definition should be reloaded.
+
+        Returns
+        -------
+        driver: class
+            Reloaded definition of the driver.
+
+        """
+        d_class = self._drivers[driver]
+        mro = type.mro(d_class)[::-1]
+        for ancestor in mro[2::]:
+            name = ancestor.__name__
+            mod = getmodule(ancestor)
+            mod = reload(mod)
+            mem = getmembers(mod, isclass)
+            reloaded = [m[1] for m in mem if m[0] == name][0]
+
+            if ancestor in self._drivers.values():
+                for k, v in self._drivers.iteritems():
+                    if v == ancestor:
+                        self._drivers[k] = reloaded
+
+            if ancestor in self._driver_types.values():
+                for k, v in self._driver_types.iteritems():
+                    if v == ancestor:
+                        self._driver_types[k] = reloaded
+
+        return self._drivers[driver]
 
     #--- Private API ----------------------------------------------------------
     # Drivers types
