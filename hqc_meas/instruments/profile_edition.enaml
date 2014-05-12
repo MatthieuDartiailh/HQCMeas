@@ -9,8 +9,11 @@ from atom.api import Enum, set_default
 from enaml.widgets.api import (Dialog, Container, PushButton, Form,
                                ObjectCombo, Label, Field)
 from enaml.stdlib.mapped_view import MappedView
+from enaml.stdlib.message_box import critical
 from enaml.layout.api import vertical, horizontal, hbox, spacer, align, vbox
 from enaml.core.api import Conditional
+from inspect import cleandoc
+from textwrap import fill
 
 from .forms import FORMS_MAP_VIEWS
 from .drivers.driver_tools import InstrIOError

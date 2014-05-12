@@ -83,3 +83,5 @@ class ProfileForm(Atom):
             form_class = FORMS.get(change['value'], None)
             if form_class:
                 self.connection_form = form_class()
+            else:
+                self.connection_form = None

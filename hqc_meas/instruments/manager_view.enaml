@@ -31,7 +31,7 @@ class _EditorModel(Atom):
 
     Attributes
     ----------
-    selected_profile : str
+    selected_profile : unicode
         Name of the selected instrumen profile
     form : instance(`InstrumentForm`)
         `InstrumentForm` instance associated to the selected profile
@@ -79,6 +79,10 @@ class _EditorModel(Atom):
                           title='Deletion confirmation')
         if result is not None and result.action == 'accept':
             path = self.manager.profile_path(self.selected_profile)
+            profs = sorted(self.manager.all_profiles)
+            self.selected_profile = profs[0]\
+                                    if profs[0] != self.selected_profile\
+                                    else profs[1]
             os.remove(path)
 
     #--- Private API ----------------------------------------------------------
@@ -87,10 +91,11 @@ class _EditorModel(Atom):
         """Create a form for the selected instrument
         """
         profile = change['value']
-        fullpath = self.manager.profile_path(profile)
-        profile_infos = open_profile(fullpath)
-        profile_infos.update({'manager': self.manager, 'name': profile})
-        self.form = ProfileForm(**profile_infos)
+        if profile:
+            fullpath = self.manager.profile_path(profile)
+            profile_infos = open_profile(fullpath)
+            profile_infos.update({'manager': self.manager, 'name': profile})
+            self.form = ProfileForm(**profile_infos)
 
 
 def _layout(list_view, instr_form, *buttons):
@@ -125,7 +130,7 @@ enamldef InstrManagerView(Dialog): instr_manager_view:
                         hug_width = 'medium'
                         hug_height = 'medium'
                         items << sorted(manager.all_profiles)
-                        selected_item >> _internal.selected_profile
+                        selected_item := _internal.selected_profile
                     Conditional: instr_form:
                         condition << bool(_internal.selected_profile)
                         ProfileView:
