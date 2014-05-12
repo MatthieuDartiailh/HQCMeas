@@ -18,16 +18,17 @@ from textwrap import fill
 from inspect import cleandoc
 
 from ..driver_tools import (InstrIOError, instrument_property,
-                          secure_communication)
+                            secure_communication)
 from ..visa_tools import VisaInstrument
+
 
 class YokogawaGS200(VisaInstrument):
     """
     Driver for the YokogawaGS200, using the VISA library.
 
-    This driver does not give access to all the functionnality of the instrument
-    but you can extend it if needed. See the documentation of the `driver_tools`
-    package for more details about writing instruments drivers.
+    This driver does not give access to all the functionnality of the
+    instrument but you can extend it if needed. See the documentation of the
+    `driver_tools` package for more details about writing instruments drivers.
 
     Parameters
     ----------
@@ -70,7 +71,10 @@ class YokogawaGS200(VisaInstrument):
     @instrument_property
     @secure_communication()
     def voltage_range(self):
-        """Voltage range getter method. NB: does not check the current function.
+        """ Voltage range getter method.
+
+        NB: does not check the current function.
+
         """
         v_range = self.ask(":SOURce:RANGe?")
         if v_range is not None:
@@ -90,7 +94,10 @@ class YokogawaGS200(VisaInstrument):
     @voltage_range.setter
     @secure_communication()
     def voltage_range(self, v_range):
-        """Voltage range getter method. NB: does not check the current function.
+        """Voltage range getter method.
+
+        NB: does not check the current function.
+
         """
         visa_range = ''
         if v_range == '10 mV':
@@ -164,12 +171,12 @@ class YokogawaGS200(VisaInstrument):
         off = re.compile('off', re.IGNORECASE)
         if on.match(value) or value == 1:
             self.write(':OUTPUT ON')
-            if self.ask(':OUTPUT?')!= '1':
+            if self.ask(':OUTPUT?') != '1':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
-        elif off.match(value) or value ==0:
+        elif off.match(value) or value == 0:
             self.write(':OUTPUT OFF')
-            if self.ask(':OUTPUT?')!= '0':
+            if self.ask(':OUTPUT?') != '0':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
         else:
@@ -182,13 +189,14 @@ class YokogawaGS200(VisaInstrument):
 #        """
 #        return False
 
+
 class Yokogawa7651(VisaInstrument):
     """
     Driver for the Yokogawa7651, using the VISA library.
 
-    This driver does not give access to all the functionnality of the instrument
-    but you can extend it if needed. See the documentation of the `driver_tools`
-    package for more details about writing instruments drivers.
+    This driver does not give access to all the functionnality of the
+    instrument but you can extend it if needed. See the documentation of the
+    `driver_tools` package for more details about writing instruments drivers.
 
     Parameters
     ----------
@@ -209,7 +217,8 @@ class Yokogawa7651(VisaInstrument):
     @instrument_property
     @secure_communication()
     def voltage(self):
-        """Voltage getter method
+        """Voltage getter method.
+
         """
         data = self.ask("OD")
         voltage = float(data[4::])
@@ -221,7 +230,8 @@ class Yokogawa7651(VisaInstrument):
     @voltage.setter
     @secure_communication()
     def voltage(self, set_point):
-        """Voltage setter method
+        """Voltage setter method.
+
         """
         self.write("S{:+E}E".format(set_point))
         data = self.ask("OD")
@@ -233,7 +243,8 @@ class Yokogawa7651(VisaInstrument):
     @instrument_property
     @secure_communication()
     def function(self):
-        """Function getter method
+        """Function getter method.
+
         """
         data = self.ask('OD')
         if data[3] == 'V':
@@ -246,7 +257,8 @@ class Yokogawa7651(VisaInstrument):
     @function.setter
     @secure_communication()
     def function(self, mode):
-        """Function setter method
+        """Function setter method.
+
         """
         volt = re.compile('VOLT', re.IGNORECASE)
         curr = re.compile('CURR', re.IGNORECASE)
@@ -272,12 +284,14 @@ class Yokogawa7651(VisaInstrument):
     @instrument_property
     @secure_communication()
     def output(self):
-        """Output getter method
+        """Output getter method.
+
         """
-        value = ('{0:08b}'.format(int(self.ask('OC'))))[3]
-        if value == 0:
+        mess = self.ask('OC')[5::]
+        value = ('{0:08b}'.format(int(mess)))[3]
+        if value == '0':
             return 'OFF'
-        elif value == 1:
+        elif value == '1':
             return 'ON'
         else:
             raise InstrIOError('Instrument did not return the output state')
@@ -285,18 +299,21 @@ class Yokogawa7651(VisaInstrument):
     @output.setter
     @secure_communication()
     def output(self, value):
-        """Output setter method
+        """Output setter method.
+
         """
         on = re.compile('on', re.IGNORECASE)
         off = re.compile('off', re.IGNORECASE)
         if on.match(value) or value == 1:
             self.write('O1E')
-            if ('{0:08b}'.format(int(self.ask('OC'))))[3] != '1':
+            mess = self.ask('OC')[5::]  # Instr return STS1=m we want m
+            if ('{0:08b}'.format(int(mess)))[3] != '1':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
-        elif off.match(value) or value ==0:
+        elif off.match(value) or value == 0:
             self.write('O0E')
-            if('{0:08b}'.format(int(self.ask('OC'))))[3] != '0':
+            mess = self.ask('OC')[5::]  # Instr return STS1=m we want m
+            if('{0:08b}'.format(int(mess)))[3] != '0':
                 raise InstrIOError(cleandoc('''Instrument did not set correctly
                                             the output'''))
         else:
@@ -309,5 +326,5 @@ class Yokogawa7651(VisaInstrument):
         """
         return False
 
-DRIVERS = {'YokogawaGS200' : YokogawaGS200,
-           'Yokogawa7651' : Yokogawa7651}
+DRIVERS = {'YokogawaGS200': YokogawaGS200,
+           'Yokogawa7651': Yokogawa7651}

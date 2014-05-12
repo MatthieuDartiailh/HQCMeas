@@ -21,6 +21,7 @@ enamldef VisaFormView(Form):
         condition = bool(mode != 'static')
         ObjectCombo:
             items = ['GPIB', 'USB', 'TCPIP']
+            selected = None
             selected >> model.connection_type
     Label:
         text = 'Address'

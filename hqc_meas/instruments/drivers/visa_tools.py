@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # TODO this is not compatible with PyVisa 1.5
 try:
-    from visa import Instrument, VisaIOError
+    from pyvisa.visa import Instrument, VisaIOError
 except ImportError:
     raise
 
@@ -77,13 +77,13 @@ class VisaInstrument(BaseInstrument):
                                              caching_permissions)
         if connection_info['additionnal_mode'] != '':
             self.connection_str =\
-                connection_info['connection_type']\
-                + '::' + connection_info['address']\
-                + '::' + connection_info['additionnal_mode']
+                str(connection_info['connection_type']
+                    + '::' + connection_info['address']
+                    + '::' + connection_info['additionnal_mode'])
         else:
             self.connection_str =\
-                connection_info['connection_type']\
-                + '::' + connection_info['address']
+                str(connection_info['connection_type']
+                    + '::' + connection_info['address'])
         self._driver = None
         if auto_open:
             self.open_connection()

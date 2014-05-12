@@ -89,25 +89,31 @@ class DriverDebugger(BaseDebugger):
                 self.errors += mes
                 return
 
+            profile_dict = profs[self.profile]
+        else:
+            profile_dict = self.profile
+
         cmd = 'hqc_meas.instr_manager.drivers_request'
         drivers, _ = core.invoke_command(cmd, {'drivers': [self.driver]},
                                          self)
 
         try:
             driver = drivers[self.driver]
-            driver_instance = driver(profs[self.profile])
+            driver_instance = driver(profile_dict)
             # Listing drivers attributes
             parent = [m[0] for m in getmembers(driver)]
-            self.driver_attributes = [m[0] for m in getmembers(driver_instance)
-                                      if m[0] not in parent
-                                      and not m[0].startswith('_')]
+            self.driver_attributes = [m for m in dir(driver_instance)
+                                      if m not in parent
+                                      and not m.startswith('_')]
             self.driver_instance = driver_instance
             self.connected = True
         except Exception as e:
             self.errors += e.message + '\n'
             self.driver_instance = None
-            cmd = 'hqc_meas.instr_manager.profiles_released'
-            core.invoke_command(cmd, {'profiles': [self.profile]}, self.plugin)
+            if not isinstance(self.profile, dict):
+                cmd = 'hqc_meas.instr_manager.profiles_released'
+                core.invoke_command(cmd, {'profiles': [self.profile]},
+                                    self.plugin)
 
     def open_connection(self):
         """ Open the connection to an instrument.
