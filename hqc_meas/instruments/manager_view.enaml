@@ -11,7 +11,7 @@ from configobj import ConfigObj
 from textwrap import fill
 from inspect import cleandoc
 
-from enaml.widgets.api import (Window, Container, PushButton, Form,
+from enaml.widgets.api import (Dialog, Container, PushButton, Form,
                                ObjectCombo, Label, Field, Notebook, Page)
 from enaml.core.api import Conditional
 from enaml.layout.api import hbox, vbox, spacer, align
@@ -52,7 +52,7 @@ class _EditorModel(Atom):
         result = dial.exec_()
         if result:
             directory = self.manager.profiles_folders[0]
-            save_profile(path, form.name, form.dict())
+            save_profile(directory, form.name, form.dict())
 
     def edit_profile(self, view):
         """
@@ -103,7 +103,7 @@ def _layout(list_view, instr_form, *buttons):
         return [hbox(list_view, vbox(*b))]
 
 
-enamldef InstrManagerView(Window): instr_manager_view:
+enamldef InstrManagerView(Dialog): instr_manager_view:
     """
     """
     attr manager
@@ -114,7 +114,7 @@ enamldef InstrManagerView(Window): instr_manager_view:
         Notebook:
             tabs_closable = False
             tabs_movable = False
-            
+
             Page:
                 title = 'Profile edition'
                 Container:
@@ -142,7 +142,7 @@ enamldef InstrManagerView(Window): instr_manager_view:
                     PushButton: delete:
                         text = 'Delete'
                         clicked :: _internal.del_profile(instr_manager_view)
-                        
+
             Page:
                 title = 'Profile use'
                 enabled = False

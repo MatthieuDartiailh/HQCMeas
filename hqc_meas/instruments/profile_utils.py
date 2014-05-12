@@ -36,4 +36,5 @@ def save_profile(directory, profile_name, profile_infos):
     path = os.path.join(directory, profile_name + '.ini')
     conf = ConfigObj()
     conf.update(profile_infos)
-    conf.write(path)
+    with open(path, 'w') as f:
+        conf.write(f)

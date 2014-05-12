@@ -74,7 +74,7 @@ def _handle_close(view, is_ok):
                 and connection_form.check()):
             connection_dict = connection_form.connection_dict()
             try:
-                drivers, _ = manager.request_driver([model.driver])
+                drivers, _ = manager.drivers_request([model.driver])
                 driver = drivers[model.driver]
                 instr = driver(connection_dict)
                 instr.close_connection()
