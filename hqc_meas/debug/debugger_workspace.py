@@ -5,6 +5,7 @@
 # license : MIT license
 #==============================================================================
 import enaml
+import logging
 from atom.api import Typed, Value, set_default, Bool
 from enaml.application import deferred_call
 from enaml.workbench.ui.api import Workspace
@@ -93,10 +94,15 @@ class DebuggerSpace(Workspace):
 
         self.plugin.workspace = None
 
-    def create_debugger(self, declaration):
+    def create_debugger(self, debugger_id):
         """ Create a debugger panel and add a reference to it in the plugin.
 
         """
+        declaration = self.plugin.debuggers.get(unicode(debugger_id))
+        if not declaration:
+            logging.getLogger(__name__)
+            logging.warn('{} is not known debugger id'.format(debugger_id))
+
         # Find first unused name.
         dock_numbers = sorted([int(pane.name[5])
                                for pane in self.dock_area.dock_items()

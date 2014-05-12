@@ -83,17 +83,17 @@ class DebuggerPlugin(HasPrefPlugin):
         NB : the path should be a dot separated string referring to a package
         in sys.path. It should be an absolute path.
         """
-        try:
-            with enaml.imports():
-                module = import_module(path)
-            manifest = getattr(module, manifest_name)
-            plugin = manifest()
-            self.workbench.register(plugin)
-            self._manifest_ids.append(plugin.id)
+#        try:
+        with enaml.imports():
+            module = import_module(path)
+        manifest = getattr(module, manifest_name)
+        plugin = manifest()
+        self.workbench.register(plugin)
+        self._manifest_ids.append(plugin.id)
 
-        except Exception:
-            logger = logging.getLogger(__name__)
-            logger.error('Failed to register manifest: {}'.format(path))
+#        except Exception:
+#            logger = logging.getLogger(__name__)
+#            logger.error('Failed to register manifest: {}'.format(path))
 
     def _refresh_debuggers(self):
         """ Refresh the list of known engines.

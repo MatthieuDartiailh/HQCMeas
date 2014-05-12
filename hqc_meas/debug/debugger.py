@@ -17,7 +17,7 @@ class BaseDebugger(Atom):
     """ Base class for all debuggers.
 
     """
-    #: Refrence to the application workbench.
+    #: Reference to the debugger plugin.
     plugin = ForwardTyped(_debugger_plugin)
 
     #: Reference to the manifest used for cretaing this debugger.

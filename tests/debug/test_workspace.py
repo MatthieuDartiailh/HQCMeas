@@ -64,7 +64,6 @@ class TestDebugSpace(object):
         default.write()
 
         conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
-        conf[u'hqc_meas.measure'] = {}
         conf.write()
 
     @classmethod
@@ -181,10 +180,10 @@ class TestDebugSpace(object):
         process_app_events()
 
         # Creating debuggers.
-        workspace.create_debugger(plugin.debuggers['debugger1'])
+        workspace.create_debugger('debugger1')
         process_app_events()
 
-        workspace.create_debugger(plugin.debuggers['debugger1'])
+        workspace.create_debugger('debugger1')
         process_app_events()
 
         d_view1 = workspace.dock_area.find('item_1')
@@ -235,7 +234,7 @@ class TestDebugSpace(object):
         ui.show_window()
         process_app_events()
 
-        workspace.create_debugger(plugin.debuggers['debugger1'])
+        workspace.create_debugger('debugger1')
         process_app_events()
 
         assert_true(plugin.debugger_instances)
@@ -263,11 +262,11 @@ class TestDebugSpace(object):
         ui.show_window()
         process_app_events()
 
-        workspace.create_debugger(plugin.debuggers['debugger1'])
+        workspace.create_debugger('debugger1')
         process_app_events()
-        workspace.create_debugger(plugin.debuggers['debugger1'])
+        workspace.create_debugger('debugger1')
         process_app_events()
-        workspace.create_debugger(plugin.debuggers['debugger1'])
+        workspace.create_debugger('debugger1')
         process_app_events()
 
         debugger = plugin.debugger_instances[1]
@@ -282,7 +281,7 @@ class TestDebugSpace(object):
         assert_equal(len(plugin.debugger_instances), 2)
         assert_true(debugger.released)
 
-        workspace.create_debugger(plugin.debuggers['debugger1'])
+        workspace.create_debugger('debugger1')
         process_app_events()
 
         assert_equal(len(plugin.debugger_instances), 3)
