@@ -34,7 +34,8 @@ class DummyInstrument(BaseInstrument):
         return self.corrupted
 
     def connected(self):
-        """Return whether or not commands can be sent to the instrument
+        """Return whether or not commands can be sent to the instrument.
+
         """
         return self._connected
 

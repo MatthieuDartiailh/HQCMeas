@@ -245,7 +245,8 @@ class BaseInstrument(object):
         raise NotImplementedError(message)
 
     def check_connection(self):
-        """Check whether or not the cache is likely to have been corrupted
+        """Check whether or not the cache is likely to have been corrupted.
+
         """
         message = fill(cleandoc(
             '''This method is used to check that the instrument is
