@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from enaml.workbench.api import Workbench
+from nose.tools import assert_equal, assert_true, assert_is
 import enaml
 
 with enaml.imports():
@@ -54,8 +55,9 @@ class Test_State(object):
         par = {'state_id': 'test.states.state'}
         state = core.invoke_command(GET_STATE,
                                     par, trigger=self)
-        assert hasattr(state, 'string')
-        assert hasattr(state, 'prop')
+        assert_true(hasattr(state, 'string'))
+        assert_equal(state.string, 'init')
+        assert_true(hasattr(state, 'prop'))
 
     def test_member_sync(self):
         core = self.workbench.get_plugin(CORE_PLUGIN)
@@ -66,7 +68,7 @@ class Test_State(object):
         plugin = self.workbench.get_plugin('test.states')
         plugin.string = 'test'
 
-        assert state.string == 'test'
+        assert_equal(state.string, 'test')
 
     def test_prop_getter(self):
         core = self.workbench.get_plugin(CORE_PLUGIN)
@@ -74,7 +76,7 @@ class Test_State(object):
         state = core.invoke_command(GET_STATE,
                                     par, trigger=self)
 
-        assert state.prop == 'ok'
+        assert_equal(state.prop, 'ok')
 
     def test_death_notif1(self):
         core = self.workbench.get_plugin(CORE_PLUGIN)
@@ -83,7 +85,7 @@ class Test_State(object):
                                     par, trigger=self)
 
         self.workbench.unregister(u'test.states')
-        assert state.alive is False
+        assert_is(state.alive, False)
 
     def test_death_notif2(self):
         self.workbench.register(StateContributor2())
@@ -93,4 +95,4 @@ class Test_State(object):
                                     par, trigger=self)
 
         self.workbench.unregister(u'test.states2')
-        assert state.alive is False
+        assert_is(state.alive, False)

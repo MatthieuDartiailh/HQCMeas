@@ -180,11 +180,13 @@ class StatePlugin(Plugin):
             members[p] = Property()
         state_class = classobj(class_name, (_StateHolder,), members)
 
-        # Instantiation and binding of the state object to the plugin declaring
-        # it
+        # Instantiation , initialisation, and binding of the state object to
+        # the plugin declaring it.
         state_object = state_class()
         plugin = workbench.get_plugin(extension.plugin_id)
         for m in state.sync_members:
+            with state_object.setting_allowed():
+                setattr(state_object, m, getattr(plugin, m))
             plugin.observe(m, state_object.updater)
         for p in state.prop_getters:
             prop = state_object.get_member(p)

@@ -8,7 +8,7 @@ from hqc_meas.utils.state import State
 class _State(Plugin):
     """
     """
-    string = Str()
+    string = Str('init')
 
     def property_getter(self, aux):
         return 'ok'
