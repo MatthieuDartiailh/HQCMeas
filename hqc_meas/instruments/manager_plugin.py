@@ -281,7 +281,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         profiles = []
         for driver in drivers:
             profs = [prof for prof, path in self._profiles_map.iteritems()
-                     if open_profile(path)['driver_class'] == driver]
+                     if open_profile(path)['driver'] == driver]
             profiles.extend(profs)
 
         return profiles

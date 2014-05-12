@@ -52,7 +52,7 @@ class BaseClass(object):
         os.mkdir(profile_path)
         prof = ConfigObj(os.path.join(profile_path, 'dummy.ini'))
         prof['driver_type'] = 'Dummy'
-        prof['driver_class'] = 'PanelTestDummy'
+        prof['driver'] = 'PanelTestDummy'
         prof.write()
 
         # Saving plugin preferences.

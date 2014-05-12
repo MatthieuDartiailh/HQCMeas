@@ -70,7 +70,7 @@ class Test_DriverManagement(BaseClass):
         profile_path = os.path.join(self.test_dir, 'temp_profiles')
         prof = ConfigObj(os.path.join(profile_path, 'test.ini'))
         prof['driver_type'] = 'Dummy'
-        prof['driver_class'] = 'PanelTestDummy'
+        prof['driver'] = 'PanelTestDummy'
         prof.write()
         from time import sleep
         sleep(0.1)
