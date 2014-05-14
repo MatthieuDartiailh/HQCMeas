@@ -40,7 +40,7 @@ class TextMonitor(BaseMonitor):
 
     # List of the entries which should not be displayed when a measure is
     # running.
-    undisplayed_entries = List(Instance(MonitoredEntry))
+    undisplayed_entries = ContainerList(Instance(MonitoredEntry))
 
     # List of the entries which should be not displayed when a measure is
     # running because they would be redundant with another entry. (created by
