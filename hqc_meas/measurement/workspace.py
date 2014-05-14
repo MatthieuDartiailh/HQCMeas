@@ -109,7 +109,6 @@ class MeasureSpace(Workspace):
                           fill(message.replace('\n', ' '), 79),
                           )
 
-        print result, result.action
         if result is not None and result.action == 'accept':
             self._new_measure()
 

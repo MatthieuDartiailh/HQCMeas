@@ -30,7 +30,7 @@ def _method_call(model, meth, f_args, f_kwargs):
     if f_args.text:
         try:
             args = eval('(' + f_args.text + ',)')
-        except:
+        except Exception:
             model.errors += 'Failed to evaluate args'
             return
     else:
@@ -40,7 +40,7 @@ def _method_call(model, meth, f_args, f_kwargs):
         try:
             aux = f_kwargs.text.replace('=', ':')
             kwargs = eval('{' + aux + '}')
-        except:
+        except Exception:
             errors.text += 'Failed to evaluate kwargs'
             return
     else:

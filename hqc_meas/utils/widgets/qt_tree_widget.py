@@ -147,7 +147,7 @@ class QtTreeWidget(RawWidget):
         try:
             tree = self.get_widget()
             if (not isinstance(selection, basestring) and
-                isinstance(selection, collections.Iterable)):
+                    isinstance(selection, collections.Iterable)):
 
                 item_selection = QtGui.QItemSelection()
                 for sel in selection:
@@ -159,7 +159,7 @@ class QtTreeWidget(RawWidget):
                     QtGui.QItemSelectionModel.ClearAndSelect)
             else:
                 tree.setCurrentItem(node_control._object_info(selection)[2])
-        except:
+        except Exception:
             raise
 
     @observe('_node_control.selected')
@@ -957,7 +957,7 @@ class TreeNodeController(Atom):
         # it hasn't.
         try:
             _, node, obj = self._get_node_data(nid)
-        except:
+        except Exception:
             return
 
         new_label = unicode(nid.text(col))

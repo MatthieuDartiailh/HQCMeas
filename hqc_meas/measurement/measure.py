@@ -94,13 +94,13 @@ class Measure(Atom):
         measure = cls()
         config = ConfigObj(path)
         measure.name = config['name']
+        measure.plugin = measure_plugin
 
         workbench = measure_plugin.workbench
         core = workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.build_root'
         kwarg = {'mode': 'config', 'config': config['root_task']}
         measure.root_task = core.invoke_command(cmd, kwarg, measure)
-
         database = measure.root_task.task_database
         entries = database.list_all_entries(values=True)
 

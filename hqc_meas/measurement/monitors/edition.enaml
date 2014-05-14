@@ -31,7 +31,7 @@ enamldef MonitorSelector(Dialog): dial:
     # Mapping between monitor name and id.
     attr _mapping = {monitor.name: monitor_id
                      for monitor_id, monitor in monitors.iteritems()}
-                         
+
     title = 'Select a monitor'
 
     Container:
@@ -79,7 +79,7 @@ enamldef MonitorsEditor(Container): main:
     attr selected_page
 
     constraints << [hbox(nb,
-                         vbox(add, remove))
+                         vbox(add, remove, spacer))
                     ]
 
     Notebook: nb:
