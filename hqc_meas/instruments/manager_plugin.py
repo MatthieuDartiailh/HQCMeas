@@ -10,6 +10,8 @@ import os
 import logging
 from importlib import import_module
 from atom.api import (Str, Dict, List, Unicode, Typed, Subclass)
+from enaml.application import deferred_call
+
 
 from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
@@ -412,6 +414,15 @@ class InstrManagerPlugin(HasPrefPlugin):
                 # Beware redundant names are overwrited
                 profiles[profile_name] = prof_path
 
+        deferred_call(self._set_profiles_map, profiles)
+
+    def _set_profiles_map(self, profiles):
+        """ Set the known profiles values.
+
+        This function is used for deferred settings to avoid issues with
+        watchdog threads.
+
+        """
         self._profiles_map = profiles
         self.all_profiles = sorted(list(profiles.keys()))
         self.available_profiles = [prof for prof in sorted(profiles.keys())
