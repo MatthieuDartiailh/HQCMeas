@@ -1,36 +1,49 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : pna_tasks_views.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from enaml.core.api import Conditional
-from enaml.layout.api import grid, vbox, hbox
+from enaml.layout.api import grid, vbox, hbox, factory
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, Container)
 from enaml.stdlib.fields import IntField, FloatField
 
 from inspect import cleandoc
 from textwrap import fill
 
-from hqc_meas.utils.layouts import HGroup
+from hqc_meas.utils.layouts import auto_grid_layout
+from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.widgets.list_editor import ListEditor
 
-enamldef PNASetFreqView(HGroup): view:
-    attr task
-    attr mapping
+
+enamldef PNASetFreqView(BaseInstrumentView): view:
+
     attr in_loop : bool = False
-    padding = (0,0,5,5)
     title << task.task_name
+    constraints = [factory(auto_grid_layout)]
+
     Label:
         text = 'Driver'
     ObjectCombo:
         items << sorted(task.driver_list)
         selected := task.selected_driver
+
     Label:
         text = 'Instr'
     ObjectCombo:
-        items << sorted(task.profile_dict.keys())
+        items << sorted(profiles)
         selected := task.selected_profile
+
     Label:
         text = 'Channel'
     IntField:
         hug_width = 'weak'
         value := task.channel
+
     Conditional:
         condition = not in_loop
         Label:
@@ -39,32 +52,38 @@ enamldef PNASetFreqView(HGroup): view:
             text := task.frequency
             entries_updater << task._list_database_entries
 
-enamldef PNASetPowerView(HGroup): view:
-    attr task
-    attr mapping
+
+enamldef PNASetPowerView(BaseInstrumentView): view:
+
     attr in_loop : bool = False
-    padding = (0,0,5,5)
     title << task.task_name
+    constraints = [factory(auto_grid_layout),
+                   ch.width == po.width]
+
     Label:
         text = 'Driver'
     ObjectCombo:
         items << sorted(task.driver_list)
         selected := task.selected_driver
+
     Label:
         text = 'Instr'
     ObjectCombo:
-        items << sorted(task.profile_dict.keys())
+        items << sorted(profiles)
         selected := task.selected_profile
+
     Label:
         text = 'Channel'
-    IntField:
+    IntField: ch:
         hug_width = 'weak'
         value := task.channel
+
     Label:
         text = 'Port'
-    IntField:
+    IntField: po:
         hug_width = 'weak'
         value := task.port
+
     Conditional:
         condition = not in_loop
         Label:
@@ -72,6 +91,7 @@ enamldef PNASetPowerView(HGroup): view:
         QtLineCompleter:
             text := task.power
             entries_updater << task._list_database_entries
+
 
 enamldef MeasField(Container):
     attr model
@@ -86,37 +106,44 @@ enamldef MeasField(Container):
                           fill(cleandoc('''Available formats are : MLIN, MLOG,
                                         PHAS, REAL, IMAG'''),60)
 
-enamldef PNASinglePointView(GroupBox): view:
-    attr task
-    attr mapping
-    padding = (0,0,5,5)
+
+enamldef PNASinglePointView(BaseInstrumentView): view:
+
     title << task.task_name
     constraints = [vbox(
                     grid([driv_lab, instr_lab, cha_lab, if_lab, win_lab],
                          [driv_val, instr_val, cha_val, if_val, win_val]),
-                    meas)]
+                    meas),
+                    cha_val.width == if_val.width,
+                    if_val.width == win_val.width]
+
     Label: driv_lab:
         text = 'Driver'
     ObjectCombo: driv_val:
         items << sorted(task.driver_list)
         selected := task.selected_driver
+
     Label: instr_lab:
         text = 'Instr'
     ObjectCombo: instr_val:
-        items << sorted(task.profile_dict.keys())
+        items << sorted(profiles)
         selected := task.selected_profile
+
     Label: cha_lab:
         text = 'Channel'
     IntField: cha_val:
         value := task.channel
+
     Label: if_lab:
         text = 'IF bandwidth (Hz)'
     IntField: if_val:
         value := task.if_bandwidth
+
     Label: win_lab:
         text = 'Window'
     IntField: win_val:
         value := task.window
+
     GroupBox: meas:
         title = 'Measures'
         ListEditor(MeasField): ed:
@@ -124,65 +151,78 @@ enamldef PNASinglePointView(GroupBox): view:
             ed.iterable_name = 'measures'
             ed.factory = PNAMeasure
 
+
 def label_maker(label, type):
     if type == 'Freq':
         return label + '(Hz)'
     else:
         return label + '(dBm)'
 
-enamldef PNASweepMeasView(GroupBox): view:
-    attr task
-    attr mapping
-    padding = (0,0,5,5)
+
+enamldef PNASweepMeasView(BaseInstrumentView): view:
+
     title << task.task_name
     constraints = [vbox(
                     grid([driv_lab, instr_lab, cha_lab, if_lab, win_lab],
                          [driv_val, instr_val, cha_val, if_val, win_val]),
                     grid([type_lab, start_lab, stop_lab, points_lab],
                          [type_val, start_val, stop_val, points_val]),
-                    meas)]
+                    meas),
+                    cha_val.width == if_val.width,
+                    if_val.width == win_val.width,
+                    start_val.width == stop_val.width]
+
     Label: driv_lab:
         text = 'Driver'
     ObjectCombo: driv_val:
         items << sorted(task.driver_list)
         selected := task.selected_driver
+
     Label: instr_lab:
         text = 'Instr'
     ObjectCombo: instr_val:
-        items << sorted(task.profile_dict.keys())
+        items << sorted(profiles)
         selected := task.selected_profile
+
     Label: cha_lab:
         text = 'Channel'
     IntField: cha_val:
         value := task.channel
+
     Label: type_lab:
         text = 'Type'
     ObjectCombo: type_val:
         items << list(task.get_member('sweep_type').items)
         selected := task.sweep_type
+
     Label: if_lab:
         text = 'IF bandwidth (Hz)'
     IntField: if_val:
         value := task.if_bandwidth
+
     Label: win_lab:
         text = 'Window'
     IntField: win_val:
         value := task.window
+
     Label: start_lab:
         text << label_maker('Start', task.sweep_type)
     QtLineCompleter: start_val:
         text := task.start
         entries_updater << task._list_database_entries
+
     Label: stop_lab:
         text << label_maker('Stop', task.sweep_type)
     QtLineCompleter: stop_val:
         text := task.stop
         entries_updater << task._list_database_entries
+
     Label: points_lab:
         text = 'Points'
     QtLineCompleter: points_val:
         text := task.points
         entries_updater << task._list_database_entries
+
     GroupBox: meas:
         title = 'Measures'
         ListEditor(MeasField): ed:
@@ -190,7 +230,7 @@ enamldef PNASweepMeasView(GroupBox): view:
             ed.iterable_name = 'measures'
             ed.factory = lambda : ''
 
-TASK_VIEW_MAPPING = {'PNASetFreqTask' : PNASetFreqView,
-                     'PNASetPowerTask' : PNASetPowerView,
-                     'PNASinglePointMeasureTask' : PNASinglePointView,
-                     'PNASweepTask' : PNASweepMeasView}
+TASK_VIEW_MAPPING = {'PNASetFreqTask': PNASetFreqView,
+                     'PNASetPowerTask': PNASetPowerView,
+                     'PNASinglePointMeasureTask': PNASinglePointView,
+                     'PNASweepTask': PNASweepMeasView}
