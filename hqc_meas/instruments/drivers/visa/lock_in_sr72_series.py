@@ -16,12 +16,13 @@ This module defines drivers for lock-in from Signal Recoveries
 from ..driver_tools import (InstrIOError, secure_communication)
 from ..visa_tools import VisaInstrument
 
+
 class LockInSR7265(VisaInstrument):
     """Driver for a SR7265 lock-in, using the VISA library.
 
-    This driver does not give access to all the functionnality of the instrument
-    but you can extend it if needed. See the documentation of the `driver_tools`
-    package for more details about writing instruments drivers.
+    This driver does not give access to all the functionnality of the
+    instrument but you can extend it if needed. See the documentation of the
+    driver_tools package for more details about writing instruments drivers.
 
     Parameters
     ----------
@@ -54,8 +55,8 @@ class LockInSR7265(VisaInstrument):
         """
         Return the x quadrature measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('X.')
@@ -70,8 +71,8 @@ class LockInSR7265(VisaInstrument):
         """
         Return the y quadrature measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('Y.')
@@ -86,8 +87,8 @@ class LockInSR7265(VisaInstrument):
         """
         Return the x and y quadratures measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         values = self.ask_for_values('XY.')
@@ -102,8 +103,8 @@ class LockInSR7265(VisaInstrument):
         """
         Return the amplitude of the signal measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('MAG.')
@@ -118,8 +119,8 @@ class LockInSR7265(VisaInstrument):
         """
         Return the phase of the signal measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('PHA.')
@@ -134,8 +135,8 @@ class LockInSR7265(VisaInstrument):
         """
         Return the amplitude and phase of the signal measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         values = self.ask_for_values('MP.')
@@ -158,13 +159,14 @@ class LockInSR7265(VisaInstrument):
         else:
             return 'OK'
 
+
 class LockInSR7270(LockInSR7265):
     """
     Driver for a SR7270 lock-in, using the VISA library.
 
-    This driver does not give access to all the functionnality of the instrument
-    but you can extend it if needed. See the documentation of the `driver_tools`
-    package for more details about writing instruments drivers.
+    This driver does not give access to all the functionnality of the
+    instrument but you can extend it if needed. See the documentation of the
+    driver_tools package for more details about writing instruments drivers.
 
     Parameters
     ----------
@@ -190,8 +192,8 @@ class LockInSR7270(LockInSR7265):
     The completion of each command is checked by reading the status byte (see
     `_check_completion` method).
     The only difference between this driver and the one for the SR7265 is the
-    termination character used and the fact that the SR7270 automatically return
-    the status byte.
+    termination character used and the fact that the SR7270 automatically
+    return the status byte.
 
     """
 
@@ -213,5 +215,5 @@ class LockInSR7270(LockInSR7265):
         else:
             return 'OK'
 
-DRIVERS = {'SR7265-LI' : LockInSR7265,
-           'SR7270-LI' : LockInSR7270}
+DRIVERS = {'SR7265-LI': LockInSR7265,
+           'SR7270-LI': LockInSR7270}

@@ -14,58 +14,60 @@ This module defines drivers for oxford ips magnet supply
 from inspect import cleandoc
 from time import sleep
 from ..driver_tools import (InstrIOError, secure_communication,
-                           instrument_property)
+                            instrument_property)
 from ..visa_tools import VisaInstrument
 
-_PARAMETER_DICT = {'Demand current' : 0,
-                   'Supply voltage' : 1,
-                   'Magnet current' : 2,
-                   'Target current' : 5,
-                   'Current sweep rate' : 6,
-                   'Demand field' : 7,
-                   'Target field' : 8,
-                   'Field sweep rate' : 9,
-                   'Software voltage limit' : 15,
-                   'Persistent magnet current' : 16,
-                   'Trip current' : 17,
-                   'Persistent magnet field' : 18,
-                   'Trip field' : 19,
-                   'Switch heater current' : 20,
-                   'Positive current limit' : 21,
-                   'Negative current limit' : 22,
-                   'Lead resistance' : 23,
-                   'Magnet inductance' : 24}
+_PARAMETER_DICT = {'Demand current': 0,
+                   'Supply voltage': 1,
+                   'Magnet current': 2,
+                   'Target current': 5,
+                   'Current sweep rate': 6,
+                   'Demand field': 7,
+                   'Target field': 8,
+                   'Field sweep rate': 9,
+                   'Software voltage limit': 15,
+                   'Persistent magnet current': 16,
+                   'Trip current': 17,
+                   'Persistent magnet field': 18,
+                   'Trip field': 19,
+                   'Switch heater current': 20,
+                   'Positive current limit': 21,
+                   'Negative current limit': 22,
+                   'Lead resistance': 23,
+                   'Magnet inductance': 24}
 
-_ACTIVITY_DICT = {'Hold' : 0,
-                  'To set point' : 1,
-                  'To zero' : 2,
-                  'Clamp' : 4}
+_ACTIVITY_DICT = {'Hold': 0,
+                  'To set point': 1,
+                  'To zero': 2,
+                  'Clamp': 4}
 
-_CONTROL_DICT = {'Local & Locked' : 0,
-                 'Remote & Locked' : 1,
-                 'Local & Unlocked' : 2,
-                 'Remote & Unlocked' : 3}
+_CONTROL_DICT = {'Local & Locked': 0,
+                 'Remote & Locked': 1,
+                 'Local & Unlocked': 2,
+                 'Remote & Unlocked': 3}
 
-_GET_HEATER_DICT = {0 : 'Off Magnet at Zero',
-                    1 : 'On (switch open)',
-                    2 : 'Off Magnet at Field',
-                    5 : 'Heater Fault',
-                    8 : 'No Switch Fitted'}
+_GET_HEATER_DICT = {0: 'Off Magnet at Zero',
+                    1: 'On (switch open)',
+                    2: 'Off Magnet at Field',
+                    5: 'Heater Fault',
+                    8: 'No Switch Fitted'}
+
 
 class IPS12010(VisaInstrument):
     """
     """
 
-    caching_permissions = {'heater_state' : True,
-                           'target_current' : True,
-                           'sweep_rate_current' : True,
-                           'target_field' : True,
-                           'sweep_rate_field' : True,
+    caching_permissions = {'heater_state': True,
+                           'target_current': True,
+                           'sweep_rate_current': True,
+                           'target_field': True,
+                           'sweep_rate_field': True,
                            }
-    def __init__(self, connection_info, caching_allowed = True,
-                 caching_permissions = {}):
+
+    def __init__(self, connection_info, caching_allowed=True,
+                 caching_permissions={}):
         super(IPS12010, self).__init__(connection_info, caching_allowed,
-                                    caching_permissions)
+                                       caching_permissions)
         self.term_chars = '\r'
 
     def make_ready(self):
@@ -75,7 +77,7 @@ class IPS12010(VisaInstrument):
         self.set_communications_protocol(False, True)
         self.set_mode('TESLA')
 
-    def go_to_field(self, value, rate, auto_stop_heater = True):
+    def go_to_field(self, value, rate, auto_stop_heater=True):
         """
         """
         waiting_time = abs(value - self.target_field)/rate*60
@@ -103,7 +105,6 @@ class IPS12010(VisaInstrument):
             while self.check_output() == 'Changing':
                 sleep(1)
 
-
     def check_output(self):
         """
         """
@@ -113,7 +114,6 @@ class IPS12010(VisaInstrument):
             return 'Constant'
         else:
             return 'Changing'
-
 
     def get_full_heater_state(self):
         """
@@ -137,8 +137,8 @@ class IPS12010(VisaInstrument):
                 raise InstrIOError(cleandoc('''IPS120-10 did not set the
                     heater mode to {}'''.format(mode)))
         else:
-            raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
-                set_mode method'''.format(mode)))
+            raise ValueError(cleandoc(''' Invalid parameter {} sent to
+                IPS120-10 set_mode method'''.format(mode)))
 
     @secure_communication()
     def set_communications_protocol(self, use_line_feed, extended_resolution):
@@ -163,8 +163,8 @@ class IPS12010(VisaInstrument):
         if par:
             return self.ask('R{}'.format(par))[1:]
         else:
-            raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
-                read_parameter method'''.format(parameter)))
+            raise ValueError(cleandoc(''' Invalid parameter {} sent to
+                IPS120-10 read_parameter method'''.format(parameter)))
 
     def check_connection(self):
         """
@@ -204,8 +204,8 @@ class IPS12010(VisaInstrument):
                 raise InstrIOError(cleandoc('''IPS120-10 did not set the
                     heater state to {}'''.format(state)))
         else:
-            raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
-                set_heater_state method'''.format(state)))
+            raise ValueError(cleandoc(''' Invalid parameter {} sent to
+                IPS120-10 set_heater_state method'''.format(state)))
 
     @instrument_property
     def control(self):
@@ -228,11 +228,11 @@ class IPS12010(VisaInstrument):
         if value:
             result = self.ask('C{}'.format(value))
             if result.startswith('?'):
-                raise InstrIOError(cleandoc('''IPS120-10 did not set the control
-                    to {}'''.format(control)))
+                raise InstrIOError(cleandoc('''IPS120-10 did not set the
+                    control to {}'''.format(control)))
         else:
-            raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
-                set_control method'''.format(control)))
+            raise ValueError(cleandoc(''' Invalid parameter {} sent to
+                IPS120-10 set_control method'''.format(control)))
 
     @instrument_property
     def activity(self):
@@ -254,8 +254,8 @@ class IPS12010(VisaInstrument):
                 raise InstrIOError(cleandoc('''IPS120-10 did not set the
                     activity to {}'''.format(value)))
         else:
-            raise ValueError(cleandoc(''' Invalid parameter {} sent to IPS120-10
-                set_activity method'''.format(value)))
+            raise ValueError(cleandoc(''' Invalid parameter {} sent to
+                IPS120-10 set_activity method'''.format(value)))
 
     @instrument_property
     def persistent_current(self):
@@ -345,4 +345,4 @@ class IPS12010(VisaInstrument):
         else:
             raise InstrIOError('''IPS120-10 did not return its status''')
 
-DRIVERS = {'IPS12010' : IPS12010}
+DRIVERS = {'IPS12010': IPS12010}
