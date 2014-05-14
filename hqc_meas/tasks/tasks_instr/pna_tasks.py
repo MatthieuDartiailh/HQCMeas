@@ -105,6 +105,8 @@ class PNASetFreqTask(PNATasks):
         self.channel_driver.frequency = freq
         self.write_in_database('frequency', freq)
 
+        return True
+
     def check(self, *args, **kwargs):
         """
         """
@@ -152,6 +154,8 @@ class PNASetPowerTask(PNATasks):
         self.channel_driver.port = self.port
         self.channel_driver.power = power
         self.write_in_database('power', power)
+
+        return True
 
     def check(self, *args, **kwargs):
         """
@@ -261,6 +265,8 @@ class PNASinglePointMeasureTask(PNATasks):
             else:
                 data = self.channel_driver.read_raw_data()[0]
             self.write_in_database(measure, data)
+
+        return True
 
     @observe('channel')
     def _update_channels(self, change):
@@ -378,6 +384,8 @@ class PNASweepTask(PNATasks):
         names = [self.sweep_type] + meas_names
         final_arr = np.rec.fromarrays(data, names=names)
         self.write_in_database('sweep_data', final_arr)
+
+        return True
 
     def check(self, *args, **kwargs):
         """
