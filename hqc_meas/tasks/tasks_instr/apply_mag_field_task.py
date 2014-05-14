@@ -67,7 +67,7 @@ class ApplyMagFieldTask(InstrumentTask):
             try:
                 val = format_and_eval_string(self.target_field, self.task_path,
                                              self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-field'] = \
                     cleandoc('''Failed to eval the target field formula

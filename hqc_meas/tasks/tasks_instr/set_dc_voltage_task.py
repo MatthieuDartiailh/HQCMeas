@@ -116,7 +116,7 @@ class SetDCVoltageTask(InstrumentTask):
             try:
                 val = format_and_eval_string(self.target_value, self.task_path,
                                              self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-volt'] = \
                     cleandoc('''Failed to eval the target value formula

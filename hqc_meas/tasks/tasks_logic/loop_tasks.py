@@ -44,28 +44,28 @@ class BaseLoopTask(ComplexTask):
         try:
             start = format_and_eval_string(self.task_start, self.task_path,
                                            self.task_database)
-        except:
+        except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-start'] = \
                 'Loop task did not success to compute  the start value'
         try:
             stop = format_and_eval_string(self.task_stop, self.task_path,
                                           self.task_database)
-        except:
+        except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-stop'] = \
                 'Loop task did not success to compute  the stop value'
         try:
             step = format_and_eval_string(self.task_step, self.task_path,
                                           self.task_database)
-        except:
+        except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-step'] = \
                 'Loop task did not success to compute the step value'
         try:
             num = int(abs((stop - start)/step)) + 1
             self.write_in_database('point_number', num)
-        except:
+        except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-points'] = \
                 'Loop task did not success to compute the point number'

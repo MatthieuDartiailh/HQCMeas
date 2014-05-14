@@ -157,7 +157,7 @@ class SaveTask(SimpleTask):
             full_folder_path = get_formatted_string(self.folder,
                                                     self.task_path,
                                                     self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the folder path'
             return False, traceback
@@ -165,7 +165,7 @@ class SaveTask(SimpleTask):
         try:
             filename = get_formatted_string(self.filename, self.task_path,
                                             self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the filename'
             return False, traceback
@@ -175,7 +175,7 @@ class SaveTask(SimpleTask):
         try:
             f = open(full_path, 'wb')
             f.close()
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to open the specified file'
             return False, traceback
@@ -184,7 +184,7 @@ class SaveTask(SimpleTask):
             format_and_eval_string(self.array_size,
                                    self.task_path,
                                    self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to compute the array size'
             return False, traceback
@@ -195,7 +195,7 @@ class SaveTask(SimpleTask):
                 format_and_eval_string(s.value,
                                        self.task_path,
                                        self.task_database)
-            except:
+            except Exception:
                 traceback[self.task_path + '/' + self.task_name + str(i)] = \
                     'Failed to evaluate entry : {}'.format(s.label)
                 test = False
@@ -329,7 +329,7 @@ class SaveArrayTask(SimpleTask):
             full_folder_path = get_formatted_string(self.folder,
                                                     self.task_path,
                                                     self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the folder path'
             return False, traceback
@@ -347,7 +347,7 @@ class SaveArrayTask(SimpleTask):
         try:
             filename = get_formatted_string(self.filename, self.task_path,
                                             self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the filename'
             return False, traceback
@@ -357,7 +357,7 @@ class SaveArrayTask(SimpleTask):
         try:
             f = open(full_path, 'wb')
             f.close()
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to open the specified file'
             return False, traceback

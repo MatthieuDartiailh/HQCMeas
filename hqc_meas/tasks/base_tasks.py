@@ -98,8 +98,8 @@ class BaseTask(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
     def update_members_from_preferences(self, **parameters):
-        """ Method used to update the trait values using the info extracted from
-        a config file.
+        """ Method used to update the trait values using the info extracted
+        from a config file.
 
         Parameters:
         ----------

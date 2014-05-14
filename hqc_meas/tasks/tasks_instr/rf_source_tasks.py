@@ -55,7 +55,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
             try:
                 freq = format_and_eval_string(self.frequency, self.task_path,
                                               self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
                     cleandoc('''Failed to eval the frequency
@@ -106,7 +106,7 @@ class RFSourceSetPowerTask(InstrumentTask):
             try:
                 power = format_and_eval_string(self.power, self.task_path,
                                                self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-power'] = \
                     'Failed to eval the frequency power {}'.format(self.power)

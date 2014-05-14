@@ -100,7 +100,7 @@ class DefinitionTask(SimpleTask):
             try:
                 val = safe_eval(entry.definition)
                 self.write_in_database(entry.label, val)
-            except:
+            except Exception:
                 test = False
                 path = self.task_path + '/' + self.task_name + \
                     '-' + entry.label
@@ -126,7 +126,8 @@ class DefinitionTask(SimpleTask):
             **parameters)
 
         if 'definitions' in parameters:
+            defs = eval(parameters['definitions'])
             self.definitions = [Definition(label=d[0], definition=d[1])
-                                for d in parameters['definitions']]
+                                for d in defs]
 
 KNOWN_PY_TASKS = [PrintTask, SleepTask, DefinitionTask]

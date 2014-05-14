@@ -54,7 +54,7 @@ class FormulaTask(SimpleTask):
                 val = format_and_eval_string(formula.formula, self.task_path,
                                              self.task_database)
                 self.write_in_database(formula.label, val)
-            except:
+            except Exception:
                 test = False
                 name = self.task_path + '/' + self.task_name + str(-(i+1))
                 traceback[name] =\
