@@ -195,9 +195,7 @@ class TreeNode (Atom):
     def delete_child ( self, obj, index ):
         """ Deletes a child at a specified index from the object's children.
         """
-        print getattr(obj, self.children)
         del getattr( obj, self.children )[ index ]
-        print getattr(obj, self.children)
 
     #---------------------------------------------------------------------------
     #  Sets up/Tears down a listener for 'children replaced' on a specified

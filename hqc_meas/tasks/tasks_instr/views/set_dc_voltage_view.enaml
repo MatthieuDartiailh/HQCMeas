@@ -1,30 +1,34 @@
 from enaml.core.api import Conditional
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
 from enaml.stdlib.fields import FloatField
+from enaml.layout.api import factory
 
 from inspect import cleandoc
 from textwrap import fill
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
-from hqc_meas.utils.layouts import HGroup
+from hqc_meas.utils.layouts import auto_grid_layout
+from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
 
-enamldef SetDcVoltageView(HGroup): view:
-    attr task
-    attr mapping
+
+enamldef SetDcVoltageView(BaseInstrumentView): view:
+
     attr in_loop : bool = False
-    padding = (0,0,5,5)
     title << task.task_name
-    constraints = auto_grid_layout(view)
+    constraints = [factory(auto_grid_layout)]
+
     Label:
         text = 'Driver'
     ObjectCombo:
         items << sorted(task.driver_list)
         selected := task.selected_driver
+
     Label:
         text = 'Instr'
     ObjectCombo:
-        items << sorted(task.profile_dict.keys())
+        items << sorted(profiles)
         selected := task.selected_profile
+
     Conditional:
         condition = not in_loop
         Label:
@@ -33,14 +37,17 @@ enamldef SetDcVoltageView(HGroup): view:
             hug_width = 'ignore'
             text := task.target_value
             entries_updater << task._list_database_entries
+
     Label:
         text = 'Back step (V)'
     FloatField:
         value := task.back_step
+
     Label:
         text = 'Delay (s)'
     FloatField:
         value := task.delay
+
     Label:
         text = 'Check Value'
     CheckBox:

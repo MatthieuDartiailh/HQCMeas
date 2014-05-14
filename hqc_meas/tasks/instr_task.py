@@ -7,28 +7,27 @@
 """
 """
 from atom.api import (Str, Instance)
-import os
 from inspect import cleandoc
 
 from .base_tasks import SimpleTask
-from ..instruments.drivers.driver_tools import BaseInstrument, InstrIOError
-from ..instruments.profile_utils import open_profile
+from hqc_meas.instruments.drivers.driver_tools import (BaseInstrument,
+                                                       InstrIOError)
 
 
 class InstrumentTask(SimpleTask):
     """ Base class for all tasks calling instruments.
 
     """
-    # Name of the profile to use.
+    #: Name of the profile to use.
     selected_profile = Str().tag(pref=True)
 
-    # List of acceptable drivers. (class attribute)
+    #: List of acceptable drivers. (class attribute)
     driver_list = []
 
-    # Name of the selected driver.
+    #: Name of the selected driver.
     selected_driver = Str().tag(pref=True)
 
-    # Instance of instrument driver.
+    #: Instance of instrument driver.
     driver = Instance(BaseInstrument)
 
     def check(self, *args, **kwargs):
@@ -39,15 +38,10 @@ class InstrumentTask(SimpleTask):
 
         if self.selected_profile:
             if run_time:
-                full_path = run_time['profiles'][self.selected_profile]
+                config = run_time['profiles'][self.selected_profile]
         else:
             traceback[self.task_path + '/' + self.task_name] =\
                 'You must provide an instrument profile'
-            return False, traceback
-
-        if run_time and not os.path.isfile(full_path):
-            traceback[self.task_path + '/' + self.task_name] =\
-                'Failed to get the specified instr profile'''
             return False, traceback
 
         if run_time and self.selected_driver in run_time['drivers']:
@@ -58,7 +52,6 @@ class InstrumentTask(SimpleTask):
             return False, traceback
 
         if kwargs['test_instr']:
-            config = open_profile(full_path)
             try:
                 instr = driver_class(config)
                 instr.close_connection()
@@ -79,9 +72,8 @@ class InstrumentTask(SimpleTask):
         if self.selected_profile in instrs:
             self.driver = instrs[self.selected_profile]
         else:
-            full_path = run_time['profiles'][self.selected_profile]
+            config = run_time['profiles'][self.selected_profile]
             driver_class = run_time['drivers'][self.selected_driver]
-            config = open_profile(full_path)
             self.driver = driver_class(config)
             instrs[self.selected_profile] = self.driver
             self.task_database.set_value('root', 'instrs', instrs)

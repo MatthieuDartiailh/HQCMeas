@@ -4,9 +4,10 @@
 from atom.api import (Str, Bool, set_default, Enum)
 from inspect import cleandoc
 
-from ..instr_task import InstrumentTask
-from ..tools.task_decorator import (smooth_instr_crash)
-from ..tools.database_string_formatter import format_and_eval_string
+from hqc_meas.tasks.api import InstrumentTask
+from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
+from hqc_meas.tasks.tools.database_string_formatter\
+    import format_and_eval_string
 
 
 class RFSourceSetFrequencyTask(InstrumentTask):
