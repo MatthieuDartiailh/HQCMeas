@@ -105,6 +105,7 @@ class SetDCVoltageTask(InstrumentTask):
         self.driver.voltage = value
         self.last_value = value
         self.write_in_database('voltage', value)
+
         return True
 
     def check(self, *args, **kwargs):

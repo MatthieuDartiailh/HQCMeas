@@ -9,30 +9,31 @@
 from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
                                Form, Label)
 from enaml.core.api import Conditional, Include
-from enaml.layout.api import hbox
+from enaml.layout.api import hbox, vbox
 
 from ..browsing import TaskSelector
 
 enamldef LoopView(Container): view:
+
     attr model
-    Form:
-        Label:
-            text = 'Task name'
-        Field:
-            text >> model.task_name
-            submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
-    GroupBox:
-        title = 'Descritpion'
-        hug_height = 'strong'
-        Label:
-            text << model.task_doc
-    Container:
-        constraints = [hbox(selector, *conf.objects)]
-        TaskSelector: selector:
-            hug_width = 'strong'
-            manager = view.model.manager
-            display_filters = False
-            selected_filter = 'Loopable'
-            selected_task >> model.subtask
-        Include: conf:
-            objects  << [model.config_view]
+    constraints << [vbox(hbox(name_lab, name_val),
+                         desc,
+                         hbox(selector, *conf.objects)),
+                    selector.left == contents_left]
+
+    Label: name_lab:
+        text = 'Task name'
+    Field: name_val:
+        text >> model.task_name
+        submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+    Label: desc:
+        text << model.task_doc
+
+    TaskSelector: selector:
+        hug_width = 'strong'
+        manager = view.model.manager
+        display_filters = False
+        selected_filter = 'Loopable'
+        selected_task >> model.subtask
+    Include: conf:
+        objects  << [model.config_view] if model.config_view else []

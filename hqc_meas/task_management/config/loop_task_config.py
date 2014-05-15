@@ -15,7 +15,7 @@ class LoopConfigTask(PyConfigTask):
     """
     """
     # Embedded task
-    sub_task = Str()
+    subtask = Str()
 
     # Configurer for the subtask.
     config = Instance(AbstractConfigTask)
@@ -40,7 +40,7 @@ class LoopConfigTask(PyConfigTask):
         loopable_task = self.config.build_task()
         return self.task_class(task_name=self.task_name, task=loopable_task)
 
-    def _observe_sub_task(self, change):
+    def _observe_subtask(self, change):
         """ Observer getting the right config and config view for the subtask.
 
         """
