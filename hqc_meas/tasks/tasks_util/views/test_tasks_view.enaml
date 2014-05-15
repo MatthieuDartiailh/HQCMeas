@@ -7,11 +7,12 @@ from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.widgets.list_editor import ListEditor
 
 enamldef PrintView(GroupBox):
+
     attr task
-    attr mapping
     attr in_loop : bool = False
     title << task.task_name
     padding = (0,0,5,5)
+
     Form:
         Label:
             text = 'Message'
@@ -20,10 +21,11 @@ enamldef PrintView(GroupBox):
             entries_updater << task._list_database_entries
 
 enamldef SleepView(GroupBox):
+
     attr task
-    attr mapping
     title << task.task_name
     padding = (0,0,5,5)
+
     Container:
         constraints = [hbox(lab, time, unit),
                         align('v_center', lab, time),
@@ -36,9 +38,11 @@ enamldef SleepView(GroupBox):
             text = 's'
 
 enamldef Def(Container):
+
     attr model
     constraints = [hbox(lab, defi)]
     padding = (0,2,0,0)
+
     Field: lab:
         hug_width = 'strong'
         text := model.label
@@ -47,10 +51,11 @@ enamldef Def(Container):
         text := model.definition
 
 enamldef DefinitionView(GroupBox):
+
     attr task
-    attr mapping
     title << task.task_name
     padding = (0,0,5,5)
+
     ListEditor(Def): definitions:
         definitions.title = 'Label : Value'
         definitions.model := task

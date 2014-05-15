@@ -36,7 +36,7 @@ def save_task(manager, task, mode, parent_ui=None):
     Returns:
     -------
     config or None:
-        A ConfigObj object is returned if the mose is 'config'.
+        A ConfigObj object is returned if the mode is 'config'.
 
     """
     full_path = u''
@@ -64,7 +64,7 @@ def save_task(manager, task, mode, parent_ui=None):
     preferences = task.task_preferences
 
     if mode == 'config':
-        return preferences
+        return preferences.dict()
 
     else:
         doc = ''

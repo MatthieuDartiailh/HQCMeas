@@ -986,7 +986,7 @@ class RootTask(ComplexTask):
         #Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
 
-    def _task_class_default(self):
+    def _default_task_class(self):
         return ComplexTask.__name__
 
     @observe('default_path')
