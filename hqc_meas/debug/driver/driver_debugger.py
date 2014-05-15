@@ -169,9 +169,10 @@ class DriverDebugger(BaseDebugger):
 
         self.connected = False
         self.driver_instance = None
-        core = self.plugin.workbench.get_plugin('enaml.workbench.core')
-        core.invoke_command('hqc_meas.instr_manager.profiles_released',
-                            {'profiles': [self.profile]}, self.plugin)
+        if not isinstance(self.profile, dict):
+            core = self.plugin.workbench.get_plugin('enaml.workbench.core')
+            core.invoke_command('hqc_meas.instr_manager.profiles_released',
+                                {'profiles': [self.profile]}, self.plugin)
 
     def attempt_get(self, prop):
         """ Try to get an instrument property value.
