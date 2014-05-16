@@ -4,7 +4,7 @@ from enaml.widgets.api import (DockItem, Container, ObjectCombo, Label,
                                GroupBox, Notebook, Page, PushButton,
                                MultilineField, Field, ScrollArea, PopupView)
 from enaml.core.api import (Looper, Conditional, Include)
-from enaml.layout.api import grid, vbox, hbox, spacer
+from enaml.layout.api import grid, vbox, hbox, spacer, align
 from enaml.stdlib.mapped_view import MappedView
 from inspect import cleandoc, getdoc, getargspec, formatargspec
 from textwrap import fill
@@ -79,12 +79,10 @@ enamldef SetGetBox(GroupBox):
     alias iterable : loop.iterable
 
     constraints << [grid(*loop.items)] +\
-                   [line[1].width == line[3].width
-                   for line in loop.items] +\
-                   [line[2].width == 20
-                   for line in loop.items] +\
-                   [line[4].width == 20
-                   for line in loop.items]
+                   [line[1].width == line[3].width for line in loop.items] +\
+                   [line[2].width == 20 for line in loop.items] +\
+                   [line[4].width == 20 for line in loop.items] +\
+                   [align('v_center', line[0], line[1]) for line in loop.items]
     padding = 2
 
     Looper: loop:
