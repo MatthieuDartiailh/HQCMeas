@@ -283,6 +283,17 @@ class MeasureSpace(Workspace):
         measure.status = 'READY'
         measure.infos = 'Measure re-enqueued by the user'
 
+    def remove_processed_measures(self):
+        """ Remove all the measures which have been processed from the queue.
+
+        This method rely on the status of the measure. Only measures whose
+        status is 'READY' will be left in the queue.
+
+        """
+        for measure in self.plugin.enqueued_measures[:]:
+            if measure.status != 'READY':
+                self.plugin.enqueued_measures.remove(measure)
+
     def start_processing_measures(self):
         """ Starts to perform the measurement in the queue.
 
