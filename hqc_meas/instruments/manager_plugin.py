@@ -398,7 +398,7 @@ class InstrManagerPlugin(HasPrefPlugin):
     # Watchdog observer
     _observer = Typed(Observer, ())
 
-    def _refresh_profiles_map(self):
+    def _refresh_profiles_map(self, deferred=False):
         """ Refresh the known profiles
 
         """
@@ -414,7 +414,10 @@ class InstrManagerPlugin(HasPrefPlugin):
                 # Beware redundant names are overwrited
                 profiles[profile_name] = prof_path
 
-        deferred_call(self._set_profiles_map, profiles)
+        if deferred:
+            deferred_call(self._set_profiles_map, profiles)
+        else:
+            self._set_profiles_map(profiles)
 
     def _set_profiles_map(self, profiles):
         """ Set the known profiles values.
@@ -712,14 +715,14 @@ class _FileListUpdater(FileSystemEventHandler):
     def on_created(self, event):
         super(_FileListUpdater, self).on_created(event)
         if isinstance(event, FileCreatedEvent):
-            self.handler()
+            self.handler(True)
 
     def on_deleted(self, event):
         super(_FileListUpdater, self).on_deleted(event)
         if isinstance(event, FileDeletedEvent):
-            self.handler()
+            self.handler(True)
 
     def on_moved(self, event):
         super(_FileListUpdater, self).on_deleted(event)
         if isinstance(event, FileMovedEvent):
-            self.handler()
+            self.handler(True)
