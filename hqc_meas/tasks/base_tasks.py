@@ -768,6 +768,8 @@ class ComplexTask(BaseTask):
                     else:
                         self._child_added(new)
 
+    #--- Private API ----------------------------------------------------------
+
     #@observe('task_name, task_path, task_depth')
     def _update_paths(self, change):
         """Takes care that the paths, the database and the task names remains
@@ -897,7 +899,6 @@ class RootTask(ComplexTask):
     has_root = set_default(True)
     task_name = set_default('Root')
     task_label = set_default('Root')
-    task_preferences = ConfigObj(indent_type='    ')
     task_depth = set_default(0)
     task_path = set_default('root')
     task_database_entries = set_default({'threads': {},
@@ -905,6 +906,7 @@ class RootTask(ComplexTask):
                                          'default_path': ''})
 
     def __init__(self, *args, **kwargs):
+        self.task_preferences = ConfigObj(indent_type='    ')
         self.task_database = TaskDatabase()
         super(RootTask, self).__init__(*args, **kwargs)
         self.register_in_database()
@@ -998,6 +1000,12 @@ class RootTask(ComplexTask):
             self.default_path = os.path.normpath(new)
             self.task_database.set_value('root', 'default_path',
                                          self.default_path)
+
+    def _observe_task_name(self, change):
+        """ Update the label any time the task name changes.
+
+        """
+        pass
 
 KNOWN_PY_TASKS = [ComplexTask]
 
