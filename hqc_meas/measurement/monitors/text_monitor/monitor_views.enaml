@@ -171,12 +171,6 @@ enamldef TextMonitorPage(Page): dial:
                             monitor.undisplayed_entries.remove(selected)
                         monitor.custom_entries.remove(selected)
 
-        # Quit button.
-        PushButton: close:
-            text = 'Close'
-            clicked ::
-                dial.accept()
-
 
 enamldef TextMonitorView(Window):
     """ View used to display the monitor infos about the measure.

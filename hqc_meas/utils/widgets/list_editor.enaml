@@ -30,7 +30,7 @@ enamldef PopupListMenu(Menu):
         condition = bool('remove' in operations)
         Action:
             text = 'Delete'
-            triggered :: print index; del model[index]
+            triggered :: del model[index]
         Action:
             separator = True
     Conditional:

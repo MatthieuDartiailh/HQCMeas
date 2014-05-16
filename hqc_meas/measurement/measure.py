@@ -54,7 +54,6 @@ class Measure(Atom):
 
         """
         config = ConfigObj(indent_type='    ')
-        config.filename = path
         core = self.plugin.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.save_task'
         config['root_task'] = {}
@@ -75,7 +74,8 @@ class Measure(Atom):
         config['headers'] = repr(self.headers.keys())
         config['name'] = self.name
 
-        config.write()
+        with open(path, 'w') as f:
+            config.write(f)
 
     @classmethod
     def load_measure(cls, measure_plugin, path):
