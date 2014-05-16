@@ -10,7 +10,7 @@ from collections import defaultdict
 
 
 def flatten_walk(walk, entries):
-    """ Convert a nested dict in a flat dict by gathering entries in sets.
+    """ Convert a nested list in a flat dict by gathering entries in sets.
 
     Parameters
     ----------
@@ -30,7 +30,7 @@ def flatten_walk(walk, entries):
     results = defaultdict(set)
     for step in walk:
         if isinstance(step, list):
-            aux = flatten_walk(step)
+            aux = flatten_walk(step, entries)
             for key in aux:
                 results[key].update(aux[key])
         else:
