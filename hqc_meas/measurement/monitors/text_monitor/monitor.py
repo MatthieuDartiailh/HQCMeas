@@ -213,8 +213,9 @@ class TextMonitor(BaseMonitor):
     def show_monitor(self, parent_ui):
         if self._view and self._view.proxy_is_active:
             self._view.restore()
+            self._view.send_to_front()
         else:
-            view = TextMonitorView(monitor=self, parent=parent_ui)
+            view = TextMonitorView(monitor=self)
             view.show()
             self._view = view
 
