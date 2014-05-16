@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from enaml.widgets.api import Container, DockArea, DockItem
+from enaml.widgets.api import Container, DockArea, DockItem, Menu, Action
 from enaml.layout.api import HSplitLayout, VSplitLayout
 
 from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
@@ -42,4 +42,10 @@ enamldef MeasureContent(Container): main:
                 hug_height = 'strong'
                 QtAutoscrollHtml:
                     text << workspace.log_model.text
+                    Menu:
+                        context_menu = True
+                        Action:
+                            text = 'Clear'
+                            triggered ::
+                                workspace.log_model.text = ''
 

@@ -6,7 +6,7 @@
 #==============================================================================
 from atom.api import Atom, Bool, Str
 from enaml.workbench.api import PluginManifest, Extension
-from enaml.widgets.api import DockItem, Container
+from enaml.widgets.api import DockItem, Container, Menu, Action
 from enaml.layout.api import InsertItem, RemoveItem
 from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
 
@@ -49,6 +49,12 @@ enamldef SubprocessLogPanel(DockItem):
     Container:
         QtAutoscrollHtml:
             text << model.text
+            Menu:
+                context_menu = True
+                Action:
+                    text = 'Clear'
+                    triggered ::
+                        model.text = ''
 
 def add_log_panel(declaration, workspace):
     """ Add a log panel for the subprocess.
