@@ -107,7 +107,7 @@ class SaveTask(SimpleTask):
                                     file'''.format(self.task_name))
                     log.error(mes)
                     self.root_task.should_stop.set()
-                    return
+                    return False
 
                 self.write_in_database('file', self.file_object)
                 if self.header:

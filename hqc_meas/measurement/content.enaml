@@ -48,4 +48,3 @@ enamldef MeasureContent(Container): main:
                             text = 'Clear'
                             triggered ::
                                 workspace.log_model.text = ''
-

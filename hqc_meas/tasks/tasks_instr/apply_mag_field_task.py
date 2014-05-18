@@ -7,7 +7,6 @@
 """
 
 """
-
 from atom.api import (Str, Float, Bool, set_default)
 from inspect import cleandoc
 

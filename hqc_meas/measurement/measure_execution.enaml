@@ -26,7 +26,7 @@ def _build_layout(self):
     children = self.widgets()
     if meas.status == 'READY':
         return [vbox(hbox(children[0], children[1], spacer),
-                     hbox(children[2], spacer, children[3]))]
+                     hbox(children[2], children[3], spacer, children[4]))]
     elif meas.status not in ('READY', 'RUNNING'):
         return [vbox(hbox(children[0], children[1], spacer),
                      children[2])]
@@ -81,6 +81,11 @@ enamldef MeasView(GroupBox): widget:
                 path = os.path.join(default_path,
                                     measure.name + '_last_run.ini')
                 measure.save_measure(path)
+
+        PushButton: process:
+            text = 'Process'
+            clicked ::
+                measure.plugin.workspace.process_single_measure(measure)
 
     Conditional: cd2:
         condition << bool(measure.status not in ('READY', 'RUNNING'))

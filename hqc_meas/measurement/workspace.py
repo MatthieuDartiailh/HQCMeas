@@ -300,13 +300,13 @@ class MeasureSpace(Workspace):
         Measure will be processed in their order of appearance in the queue.
 
         """
+        logger = logging.getLogger(__name__)
         if not self.plugin.selected_engine:
             dial = EngineSelector(plugin=self.plugin)
             dial.exec_()
             if dial.selected_id:
                 self.plugin.selected_engine = dial.selected_id
             else:
-                logger = logging.getLogger(__name__)
                 msg = cleandoc('''The user did not select an engine to run the
                                measure''')
                 logger.warn(msg)
@@ -317,6 +317,9 @@ class MeasureSpace(Workspace):
         measure = self.plugin.find_next_measure()
         if measure is not None:
             self.plugin.start_measure(measure)
+        else:
+            msg = cleandoc('''No curently enqueued measure can be run.''')
+            logger.info(msg)
 
     def process_single_measure(self, measure):
         """ Performs a single measurement and then stops.
