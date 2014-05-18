@@ -149,7 +149,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         Returns
         -------
         views : dict
-            Dict mapping the task classes to their associated views.
+            Dict mapping the task class names to their associated views.
 
         """
         views = self._task_views

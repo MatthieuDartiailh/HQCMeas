@@ -6,64 +6,72 @@
 #==============================================================================
 """
 """
+from atom.api import Atom, Dict, Value
 from enaml.core.api import Looper, Conditional, Include
 from enaml.layout.api import vbox, spacer, hbox, align
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Stack,
                                StackItem, Label, GroupBox, Form)
 from enaml.stdlib.mapped_view import MappedView
+from enaml.workbench.core.core_plugin import CorePlugin
 
 from hqc_meas.utils.widgets.list_editor import PopupListMenu
 
-                
-def view_instantiater(task, map_views, attrs):
-    """ A helper function instantiating a task view.
-    
-    Parameters
-    ----------
-    task : BaseTask
-        Task instance for which to create a view.
-        
-    map_wiews : dict
-        Dict mapping task class to the associated view.
-        
-    attrs : dict
-        Dict of additional object which should be passed to the view if it
-        defines the attribute.
-        
-    Returns
-    -------
-    view : 
-        Created task view.
-    
-    """
-    view = map_views[type(task).__name__]
-    kwargs = {'task': task}
-    for key in attrs:
-        if hasattr(view, key):
-            kwargs[key] = attrs[key]
-    return view(**kwargs)
-    
-    
-def _views_getter(core, tasks):
-    """ A helper function retrieving the views associated with task.
+class TaskViewManager(Atom):
+    """ Class responsible for instantiating the task view for _TaskListView.
+
+    Using this class allow to request all the views in one pass when
+    instantiating a new editor.
 
     """
-    t_classes = set([type(task).__name__ for task in tasks])      
-    views, missing = core.invoke_command('hqc_meas.task_manager.views_request',
-                                         {'task_classes': t_classes})
-    
-    return {t_c_name: views[t_c_name]\
-            for t_c_name in t_classes}
-                
-    
-enamldef _MappedTaskView(Include):
-    """ Custom mapped view for the tasks.
-    
-    """
-    attr task
-    attr typemap: dict
-    attr attrs: dict = {}
-    objects << [view_instantiater(task, typemap, attrs)]
+    #: Reference to the core plugin of the app.
+    core = Value()
+
+    #: Dict mapping Task names to their view.
+    views = Dict()
+
+    def __init__(self, children, **kwargs):
+        super(TaskViewManager, self).__init__(**kwargs)
+        t_classes = set([type(task).__name__ for task in children])
+        self.get_views(t_classes)
+
+    def instantiate_view(self, task, attrs):
+        """ A helper function instantiating a task view.
+
+        Parameters
+        ----------
+        task : BaseTask
+            Task instance for which to create a view.
+
+        attrs : dict
+            Dict of additional object which should be passed to the view if it
+            defines the attribute.
+
+        Returns
+        -------
+        view :
+            Created task view.
+
+        """
+        name = type(task).__name__
+        views = self.views
+        if name not in views:
+            self.get_views([name])
+        view = views[name]
+        kwargs = {'task': task}
+        for key in attrs:
+            if hasattr(view, key):
+                kwargs[key] = attrs[key]
+        return view(**kwargs)
+
+    def get_views(self, class_names):
+        """ Helper method updating the known views with the ones associated
+        with the given names.
+
+        """
+        cmd = 'hqc_meas.task_manager.views_request'
+        views, _ = self.core.invoke_command(cmd,
+                                            {'task_classes': class_names})
+        self.views.update(views)
 
 
 enamldef _TaskListView(Container): list_view:
@@ -74,13 +82,13 @@ enamldef _TaskListView(Container): list_view:
     attr core
     attr cache
     attr operations = ['add', 'remove', 'move']
-    attr views_map << _views_getter(core, task.children_task[:])
+    attr model = TaskViewManager(task.children_task, core=core)
 
     hug_height = 'strong'
     padding = 0
 
     Looper:
-        iterable << task.children_task[:]
+        iterable << task.children_task
         Container:
             padding = 0
             constraints = [hbox(button, *view.objects),
@@ -101,11 +109,11 @@ enamldef _TaskListView(Container): list_view:
                       kwargs = {'parameters': {'parent_ui': button},
                                 'trigger': button})
                     menu.popup()
-            _MappedTaskView: view:
-                task << loop_item
-                typemap << views_map
-                attrs << {'core': core, 'cache': cache}
-                
+            Include: view:
+                objects << [model.instantiate_view(loop_item,
+                                                   {'core': core,
+                                                    'cache': cache})]
+
 
 enamldef TaskEditor(Container): view:
     """ A custom container to edit the children of a task. Support folding.
@@ -145,7 +153,7 @@ enamldef TaskEditor(Container): view:
                        box.stack_index = 1
                        cache[task.task_path] = 1
                        folding.text = '-'
-            GroupBox: foldable_content:
+            Container: foldable_content:
                 padding = (0,5,2,2)
                 Stack:
                     size_hint_mode = 'current'
