@@ -231,6 +231,7 @@ class DriverDebugger(BaseDebugger):
             return e
 
     #--- Private API ----------------------------------------------------------
+
     def _refresh_profiles(self, change):
         """ Refresh the list of matching profiles for the selected driver.
 
@@ -241,8 +242,6 @@ class DriverDebugger(BaseDebugger):
             self.profiles = core.invoke_command(cmd,
                                                 {'drivers': [self.driver]},
                                                 self)
-
-    #--- Observers ------------------------------------------------------------
 
     def _observe_driver(self, change):
         """
