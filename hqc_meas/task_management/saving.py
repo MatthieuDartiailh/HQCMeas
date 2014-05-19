@@ -64,7 +64,7 @@ def save_task(manager, task, mode, parent_ui=None):
     preferences = task.task_preferences
 
     if mode == 'config':
-        return preferences.dict()
+        return preferences
 
     else:
         doc = ''

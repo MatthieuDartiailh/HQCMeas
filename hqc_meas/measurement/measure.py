@@ -3,7 +3,8 @@ from atom.api import (Atom, Instance, Dict, Unicode, ForwardTyped, Str)
 from configobj import ConfigObj
 import logging
 
-from ..tasks.api import RootTask
+from hqc_meas.tasks.api import RootTask
+from hqc_meas.utils.configobj_ops import include_configobj
 
 
 def measure_plugin():
@@ -57,10 +58,9 @@ class Measure(Atom):
         core = self.plugin.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.save_task'
         config['root_task'] = {}
-        config['root_task'].update(core.invoke_command(cmd,
-                                                       {'task': self.root_task,
-                                                        'mode': 'config'},
-                                                       self))
+        task_prefs = core.invoke_command(cmd, {'task': self.root_task,
+                                               'mode': 'config'}, self)
+        include_configobj(config['root_task'], task_prefs)
 
         i = 0
         for id, monitor in self.monitors.iteritems():
