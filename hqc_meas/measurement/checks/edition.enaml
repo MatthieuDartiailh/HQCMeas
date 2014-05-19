@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
-                               MultilineField)
+                               MultilineField, GroupBox)
 from enaml.layout.api import vbox, hbox, spacer
 from enaml.core.api import Include
 
@@ -33,7 +33,8 @@ enamldef CheckSelector(Dialog): dial:
                      for check_id, check in checks}
 
     Container:
-        constraints << [vbox(list_ed, desc, hbox(cancel, ok))]
+        constraints << [vbox(hbox(list_ed, desc),
+                             hbox(spacer, cancel, ok))]
 
         QtListStrWidget: list_ed:
             items << sorted([name for name, check_id in _mapping
@@ -75,7 +76,7 @@ enamldef ChecksEditor(Container): ed:
                       for check_id, check in measure.checks}
 
     constraints << [hbox(list_ed, desc,
-                         vbox(add, remove))
+                         vbox(add, remove, spacer))
                     ]
 
     QtListStrWidget: list_ed:
@@ -86,8 +87,11 @@ enamldef ChecksEditor(Container): ed:
                 key = _mapping[new_val]
                 ed.selected_check = measure.checks[key]
 
-    MultilineField: desc:
-        text << ed.selected_check.description if ed.selected_check else ''
+    GroupBox: desc:
+        title = 'Description'
+        MultilineField:
+            hug_width = 'ignore'
+            text << ed.selected_check.description if ed.selected_check else ''
 
     PushButton: add:
         text = 'Add check'
