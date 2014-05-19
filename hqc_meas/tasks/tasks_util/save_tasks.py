@@ -86,6 +86,7 @@ class SaveTask(SimpleTask):
         """
         #Initialisation.
         if not self.initialized:
+            self.line_index = 0
             self.array_length = format_and_eval_string(self.array_size,
                                                        self.task_path,
                                                        self.task_database)
