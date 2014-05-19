@@ -308,6 +308,11 @@ class MeasurePlugin(HasPrefPlugin):
         self.running_measure.status = status
         self.running_measure.infos = infos
 
+        logger = logging.getLogger(__name__)
+        mess = 'Measure {} processed, status : {}'.format(
+            self.running_measure.name, status)
+        logger.info(mess)
+
         # Disconnect monitors.
         engine = self.engine_instance
         if engine:

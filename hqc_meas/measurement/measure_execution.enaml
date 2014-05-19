@@ -26,7 +26,7 @@ def _build_layout(self):
     children = self.widgets()
     if meas.status == 'READY':
         return [vbox(hbox(children[0], children[1], spacer),
-                     hbox(children[2], children[3], spacer, children[4]))]
+                     hbox(children[2], spacer, children[3]))]
     elif meas.status not in ('READY', 'RUNNING'):
         return [vbox(hbox(children[0], children[1], spacer),
                      children[2])]
@@ -39,6 +39,7 @@ enamldef MeasView(GroupBox): widget:
     """
     attr model >> measure
     attr measure = model
+    title << measure.name
 
     constraints << [factory(_build_layout)]
     Label: sta_lab:
@@ -48,39 +49,42 @@ enamldef MeasView(GroupBox): widget:
         tool_tip << measure.infos
 
     Conditional: cd1:
-        condition << bool(measure.status == 'READY')
+        condition << bool(measure.status in ('READY', 'EDITING'))
         PushButton: edit:
-            text = 'Edit measure'
-            clicked ::
-                kwargs = {'parent': widget, 'measure': measure,
-                          'workspace': measure.plugin.workspace}
-                meas_editor = MeasureEditorDialog(**kwargs)
-                measure.status = 'EDITING'
-                default_path = measure.root_task.default_path
-                meas_editor.exec_()
+            text = 'Edit'
+            Menu:
+                Action:
+                    text = 'Measure'
+                    triggered ::
+                        kwargs = {'parent': widget, 'measure': measure,
+                                  'workspace': measure.plugin.workspace}
+                        meas_editor = MeasureEditorDialog(**kwargs)
+                        measure.status = 'EDITING'
+                        default_path = measure.root_task.default_path
+                        meas_editor.exec_()
 
-                task = measure.root_task
-                path = os.path.join(default_path,
-                                    measure.name + '_last_run.ini')
-                if task.default_path == default_path:
-                    model.save_measure(path)
-                else:
-                    os.remove(path)
-                    path = os.path.join(task.default_path,
-                                        measure.name + '_last_run.ini')
-                    model.save_measure(path)
+                        task = measure.root_task
+                        path = os.path.join(default_path,
+                                            measure.name + '_last_run.ini')
+                        if task.default_path == default_path:
+                            model.save_measure(path)
+                        else:
+                            os.remove(path)
+                            path = os.path.join(task.default_path,
+                                                measure.name + '_last_run.ini')
+                            model.save_measure(path)
 
-                measure.status = 'READY'
+                        measure.status = 'READY'
 
-        PushButton: edit_tools:
-            text = 'Edit measure tools.'
-            clicked ::
-                ToolsEditorDialog(parent=widget,
-                                  measure=measure).exec_()
-                default_path = measure.root_task.default_path
-                path = os.path.join(default_path,
-                                    measure.name + '_last_run.ini')
-                measure.save_measure(path)
+                Action:
+                    text = 'Tools'
+                    triggered ::
+                        ToolsEditorDialog(parent=widget,
+                                          measure=measure).exec_()
+                        default_path = measure.root_task.default_path
+                        path = os.path.join(default_path,
+                                            measure.name + '_last_run.ini')
+                        measure.save_measure(path)
 
         PushButton: process:
             text = 'Process'
