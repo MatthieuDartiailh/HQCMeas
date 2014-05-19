@@ -73,10 +73,10 @@ class BaseMonitor(HasPrefAtom):
                         BaseMonitor''')
         raise NotImplementedError(mess)
 
-    def process_news(self, change):
+    def process_news(self, news):
         """ Handle news received from the engine.
 
-        This method should be connected to the news event of the engine when
+        This method will be connected to the news signal of the engine when
         the measure is started. The value received will be a tuple containing
         the name of the updated database entry and its new value.
 

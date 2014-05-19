@@ -35,26 +35,26 @@ class TextMonitor(BaseMonitor):
     """
     #--- Public API -----------------------------------------------------------
 
-    # List of the entries which should be displayed when a measure is running.
+    #: List of the entries which should be displayed when a measure is running.
     displayed_entries = ContainerList(Instance(MonitoredEntry))
 
-    # List of the entries which should not be displayed when a measure is
-    # running.
+    #: List of the entries which should not be displayed when a measure is
+    #: running.
     undisplayed_entries = ContainerList(Instance(MonitoredEntry))
 
-    # List of the entries which should be not displayed when a measure is
-    # running because they would be redundant with another entry. (created by
-    # a rule for example.)
+    #: List of the entries which should be not displayed when a measure is
+    #: running because they would be redundant with another entry. (created by
+    #: a rule for example.)
     hidden_entries = List(Instance(MonitoredEntry))
 
-    # Mapping between a database entry and a list of callable used for updating
-    # an entry of the monitor which relies on the database entry.
+    #: Mapping between a database entry and a list of callable used for
+    #:updating an entry of the monitor which relies on the database entry.
     updaters = Dict(Str(), List(Callable()))
 
-    # List of rules which should be used to build monitor entries.
+    #: List of rules which should be used to build monitor entries.
     rules = ContainerList(Instance(AbstractMonitorRule))
 
-    # List of user created monitor entries.
+    #: List of user created monitor entries.
     custom_entries = List(Instance(MonitoredEntry))
 
     def start(self, parent_ui):
@@ -67,6 +67,7 @@ class TextMonitor(BaseMonitor):
             self._view = None
 
     def process_news(self, news):
+
         values = self._database_values
         values[news[0]] = news[1]
         for updater in self.updaters[news[0]]:

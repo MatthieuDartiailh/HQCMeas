@@ -18,7 +18,6 @@ from inspect import cleandoc
 
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
-from hqc_meas.utils.widgets.list_editor import ListEditor
 
 from .entries import MonitoredEntry
 from .custom_entry_building import EntryDialog
@@ -45,7 +44,6 @@ enamldef TextMonitorPage(Page): dial:
                                 vbox(edit_rules, manual_entries,
                                      hbox(*cond.items), show_hidden),
                                 ),
-                            hbox(spacer, close),
                             ),
                         disp_all.width == disp_one.width,
                         disp_one.width == hide_one.width,
