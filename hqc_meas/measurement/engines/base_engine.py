@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 
-from atom.api import Atom, Event, Callable, Bool, Unicode, ForwardTyped
+from atom.api import Atom, Event, Callable, Bool, Unicode, ForwardTyped, Signal
 from enaml.core.declarative import Declarative, d_
 from inspect import cleandoc
 
@@ -20,8 +20,8 @@ class BaseEngine(Atom):
     # Declaration defining this engine.
     declaration = ForwardTyped(lambda: Engine)
 
-    # Event used to pass news about the measurement progress.
-    news = Event()
+    # Signal used to pass news about the measurement progress.
+    news = Signal()
 
     # Event through the engine signals it is done with a measure.
     done = Event()
