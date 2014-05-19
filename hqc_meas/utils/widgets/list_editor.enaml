@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : list_editor.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from enaml.core.api import Looper, Conditional
 from enaml.layout.api import hbox, align, spacer, grid, vbox
 from enaml.widgets.api import (PushButton, Menu, Action, Container, ScrollArea,

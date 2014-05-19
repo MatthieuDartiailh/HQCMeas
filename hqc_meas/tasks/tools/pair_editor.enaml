@@ -1,0 +1,53 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : pair_editor.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from atom.api import Atom, Str, Value, Callable, ContainerList
+from hqc_meas.utils.widgets.list_editor import ListEditor
+
+class Pair(Atom):
+    """ Place holder class for the Pair editor.
+
+    """
+    label = Str()
+    value = Str()
+
+    refresh_method = Callable()
+
+    @observe('label', 'value')
+    def _update_model(self, change):
+        refresh_method({})
+
+class _PairEditorModel(Atom):
+    """ Model converting a list of pairs into an editable list of Pair.
+
+    """
+    model = Value()
+    iterable = Str()
+
+    pairs = ContainerList(Typed(Pair))
+
+    @observe('pairs')
+    def refresh(self, change):
+        """ Synchronise pairs and the underlying model.
+
+        """
+        pass
+
+
+enamldef PairEditor(Container):
+
+    attr model
+    attr iterable_name
+    alias operations : ed.operations
+
+    attr _model = _PairEditorModel(model=model, iterable_name=iterable_name)
+    ListEditor(Content): ed:
+        ed.model = _model
+        ed.iterable_name = 'pairs'
+        ed.factory = Pair
+        ed.kwargs = {'refresh_method': _model.refresh}
