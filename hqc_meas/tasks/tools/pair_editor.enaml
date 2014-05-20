@@ -6,28 +6,35 @@
 #==============================================================================
 """
 """
-from atom.api import Atom, Str, Value, Callable, ContainerList
+from atom.api import Atom, Str, Value, Callable, ContainerList, observe, Typed
+from enaml.widgets.api import Container
 from hqc_meas.utils.widgets.list_editor import ListEditor
 
 class Pair(Atom):
     """ Place holder class for the Pair editor.
 
     """
-    label = Str()
-    value = Str()
+    label = Value('')
+    value = Value('')
+
+    task = Value()
 
     refresh_method = Callable()
 
-    @observe('label', 'value')
+    def __init__(self, **kwargs):
+        super(Pair, self).__init__(**kwargs)
+        self.observe('label', self._update_model)
+        self.observe('value', self._update_model)
+
     def _update_model(self, change):
-        refresh_method({})
+        self.refresh_method({'name': 'pair'})
 
 class _PairEditorModel(Atom):
     """ Model converting a list of pairs into an editable list of Pair.
 
     """
     model = Value()
-    iterable = Str()
+    iterable_name = Str()
 
     pairs = ContainerList(Typed(Pair))
 
@@ -36,18 +43,27 @@ class _PairEditorModel(Atom):
         """ Synchronise pairs and the underlying model.
 
         """
-        pass
+        setattr(self.model, self.iterable_name,
+                [(p.label, p.value) for p in self.pairs])
+
+    def _default_pairs(self):
+        return [Pair(label=p[0], value=p[1], refresh_method=self.refresh,
+                     task=self.model)
+                for p in getattr(self.model, self.iterable_name)]
 
 
-enamldef PairEditor(Container):
+template PairEditor(Content):
+    Container: main:
+        padding = 0
+        attr model
+        attr iterable_name
+        alias operations : ed.operations
+        alias title: ed.title
 
-    attr model
-    attr iterable_name
-    alias operations : ed.operations
-
-    attr _model = _PairEditorModel(model=model, iterable_name=iterable_name)
-    ListEditor(Content): ed:
-        ed.model = _model
-        ed.iterable_name = 'pairs'
-        ed.factory = Pair
-        ed.kwargs = {'refresh_method': _model.refresh}
+        attr _model = _PairEditorModel(model=model,
+                                       iterable_name=iterable_name)
+        ListEditor(Content): ed:
+            ed.model = _model
+            ed.iterable_name = 'pairs'
+            ed.factory = Pair
+            ed.kwargs = {'refresh_method': _model.refresh, 'task': main.model}

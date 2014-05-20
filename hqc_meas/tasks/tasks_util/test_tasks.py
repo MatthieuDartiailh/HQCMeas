@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : test_task.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 """
 """
-from atom.api import (Str, Float, ContainerList, Typed, set_default, Atom)
+from atom.api import (Str, Float, ContainerList, Tuple, set_default)
 
 from time import sleep
 from inspect import cleandoc
@@ -70,19 +75,12 @@ class SleepTask(SimpleTask):
         return True, {}
 
 
-class Definition(Atom):
-    """ Helper class.
-    """
-    label = Str()
-    definition = Str()
-
-
 class DefinitionTask(SimpleTask):
     """Add static values in the database.
 
     """
     # List of definitions.
-    definitions = ContainerList(Typed(Definition))
+    definitions = ContainerList(Tuple()).tag(pref=True)
 
     def process(self):
         """ Do nothing.
@@ -108,26 +106,11 @@ class DefinitionTask(SimpleTask):
                             '''.format(entry.definition))
         return test, traceback
 
-    def register_preferences(self):
-        """ Simple override as definitions is not handled.
+    def _observe_definitions(self, change):
+        """ Observer adding the new definitions to the database.
 
         """
-        super(DefinitionTask, self).register_preferences()
-        self.task_preferences['definitions'] = \
-            repr([(d.label, d.definition) for d in self.definitions])
-
-    update_preferences_from_members = register_preferences
-
-    def update_members_from_preferences(self, **parameters):
-        """ Simple override as definitions is not handled.
-
-        """
-        super(DefinitionTask, self).update_members_from_preferences(
-            **parameters)
-
-        if 'definitions' in parameters:
-            defs = eval(parameters['definitions'])
-            self.definitions = [Definition(label=d[0], definition=d[1])
-                                for d in defs]
+        self.task_database_entries = {obj[0]: 0.0
+                                      for obj in change['value']}
 
 KNOWN_PY_TASKS = [PrintTask, SleepTask, DefinitionTask]

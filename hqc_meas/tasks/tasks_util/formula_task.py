@@ -6,17 +6,10 @@
 #==============================================================================
 """
 """
-from atom.api import (Str, ContainerList, Instance, Atom, Bool)
+from atom.api import (Tuple, ContainerList)
 
 from ..base_tasks import SimpleTask
 from ..tools.database_string_formatter import (format_and_eval_string)
-
-
-class Formula(Atom):
-    """
-    """
-    label = Str()
-    formula = Str()
 
 
 class FormulaTask(SimpleTask):
@@ -24,10 +17,7 @@ class FormulaTask(SimpleTask):
     evaluated and replacement to access to the database data can be used.
     """
     # List of formulas.
-    formulas = ContainerList(Instance(Formula))
-
-    # Flag indicating the state of the database.
-    database_ready = Bool(False)
+    formulas = ContainerList(Tuple()).tag(pref=True)
 
     def __init__(self, **kwargs):
         super(FormulaTask, self).__init__(**kwargs)
@@ -37,10 +27,10 @@ class FormulaTask(SimpleTask):
         """
         """
         for i, formula in enumerate(self.formulas):
-            value = format_and_eval_string(formula.formula,
+            value = format_and_eval_string(formula[1],
                                            self.task_path,
                                            self.task_database)
-            self.write_in_database(formula.label, value)
+            self.write_in_database(formula[0], value)
 
         return True
 
@@ -51,42 +41,20 @@ class FormulaTask(SimpleTask):
         test = True
         for i, formula in enumerate(self.formulas):
             try:
-                val = format_and_eval_string(formula.formula, self.task_path,
+                val = format_and_eval_string(formula[1], self.task_path,
                                              self.task_database)
-                self.write_in_database(formula.label, val)
+                self.write_in_database(formula[0], val)
             except Exception:
                 test = False
                 name = self.task_path + '/' + self.task_name + str(-(i+1))
                 traceback[name] =\
-                    "Failed to eval the formula {}".format(formula.label)
+                    "Failed to eval the formula {}".format(formula[0])
         return test, traceback
 
-    def register_in_database(self):
-        """ Override handling formulas.
+    def _observe_formulas(self, change):
+        """ Observer keeping the list of database entries up to date.
 
         """
-        if not self.database_ready:
-            self.database_ready = True
-        self.task_database_entries = {f.label: 0.0 for f in self.formulas}
-        super(FormulaTask, self).register_in_database()
-
-    def register_preferences(self):
-        """ Override handling formulas.
-
-        """
-        super(FormulaTask, self).register_preferences()
-        self.task_preferences['formulas'] = \
-            repr([(f.label, f.formula) for f in self.formulas])
-
-    update_preferences_from_members = register_preferences
-
-    def update_members_from_preferences(self, **parameters):
-        """ Override handling formulas.
-
-        """
-        super(FormulaTask, self).update_members_from_preferences(**parameters)
-        if 'formulas' in parameters:
-            self.definitions = [Formula(label=f[0], formula=f[1])
-                                for f in parameters['formulas']]
+        self.task_database_entries = {f[0]: 0.0 for f in change['value']}
 
 KNOWN_PY_TASKS = [FormulaTask]
