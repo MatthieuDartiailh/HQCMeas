@@ -30,6 +30,7 @@ the VISA library.
 from textwrap import fill
 from inspect import cleandoc
 import inspect
+from functools import wraps
 
 
 class InstrError(Exception):
@@ -106,6 +107,8 @@ def secure_communication(max_iter=10):
 
     """
     def decorator(method):
+
+        @wraps(method)
         def wrapper(self, *args, **kwargs):
 
             i = 0
@@ -123,8 +126,7 @@ def secure_communication(max_iter=10):
                         self.reopen_connection()
                         i += 1
 
-        wrapper.__name__ = method.__name__
-        wrapper.__doc__ = method.__doc__
+        wrapper.__wrapped__ = method
         return wrapper
 
     return decorator

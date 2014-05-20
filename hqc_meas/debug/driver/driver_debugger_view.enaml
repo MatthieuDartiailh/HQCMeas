@@ -67,7 +67,10 @@ def _method_doc(method):
 
     """
     name = method.__name__
-    signature = formatargspec(*getargspec(method))
+    if hasattr(method, '__wrapped__'):
+        signature = formatargspec(*getargspec(method.__wrapped__))
+    else:
+        signature = formatargspec(*getargspec(method))
     doc = getdoc(method) if getdoc(method) else ''
 
     full_doc = name + signature + ':\n\n' + doc

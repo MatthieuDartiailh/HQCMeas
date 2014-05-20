@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from ..driver_tools import InstrIOError, instrument_property
+from ..driver_tools import (InstrIOError, instrument_property,
+                            secure_communication)
 from ..dummy import DummyInstrument
 
 
@@ -67,5 +68,9 @@ class PanelTestDummy(DummyInstrument):
             raise InstrIOError('Wrong val for dummy_cached_int')
         print 'dummy_enum :', val
         self._enum_val = val
+
+    @secure_communication()
+    def dummy_method(self, arg1, arg2=None):
+        return arg1, arg2
 
 DRIVERS = {'PanelTestDummy': PanelTestDummy}
