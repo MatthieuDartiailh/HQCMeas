@@ -59,6 +59,7 @@ template PairEditor(Content):
         attr iterable_name
         alias operations : ed.operations
         alias title: ed.title
+        alias alignment : ed.alignment
 
         attr _model = _PairEditorModel(model=model,
                                        iterable_name=iterable_name)

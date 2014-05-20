@@ -94,9 +94,13 @@ enamldef PNASetPowerView(BaseInstrumentView): view:
 MODES = {'Raw': '', 'Mag lin': 'MLIN', 'Mag log': 'MLOG', 'Phase': 'PHAS',
          'Real part': 'REAL','Imaginary part': 'IMAG'}
 
+
 enamldef MeasField(Container):
+
     attr model
+    padding = 0
     constraints = [hbox(field, combo)]
+
     Field: field:
         text := model.label
         tool_tip =  fill(cleandoc(
@@ -156,6 +160,7 @@ enamldef PNASinglePointView(BaseInstrumentView): view:
         PairEditor(MeasField): ed:
             ed.model = task
             ed.iterable_name = 'measures'
+            ed.alignment = 'v_center'
 
 
 def label_maker(label, type):
@@ -234,6 +239,7 @@ enamldef PNASweepMeasView(BaseInstrumentView): view:
         PairEditor(MeasField): ed:
             ed.model = task
             ed.iterable_name = 'measures'
+            ed.alignment = 'v_center'
 
 TASK_VIEW_MAPPING = {'PNASetFreqTask': PNASetFreqView,
                      'PNASetPowerTask': PNASetPowerView,
