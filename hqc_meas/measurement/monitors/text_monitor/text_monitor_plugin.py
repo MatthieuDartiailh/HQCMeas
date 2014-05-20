@@ -77,7 +77,7 @@ class TextMonitorPlugin(HasPrefPlugin):
         if not raw:
             rules = []
             for rule_name in self.default_rules:
-                config = self.rules.get(rule_name)
+                config = self.rules.get(rule_name).copy()
                 if config is not None:
                     rule = self.build_rule(config)
                     rules.append(rule)
