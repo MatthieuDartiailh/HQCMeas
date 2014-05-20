@@ -13,27 +13,24 @@ can use instrument properties (see below). Drivers should not directly subclass
 the VISA library.
 
 :Contains:
+    InstrError :
+        General exception for instrument error.
     InstrIOError :
-        General exception for instrument communication error
+        General exception for instrument communication error.
     BaseInstrument :
-        Base class for all drivers
-    VisaInstrument : .
-        Base class for drivers using the VISA protocol
+        Base class for all drivers.
     instrument_properties :
         subclass of property allowing to cache a property on certain condition,
-        and to reset the cache
+        and to reset the cache.
     secure_communication :
         decorator making sure that a communication error cannot simply be
-        resolved by attempting again to send a message
-    BypassDescriptor :
-        Class allowing to acces to a descriptor instance
-    AllowBypassableDescriptors :
-        Metaclass for using bypassable descriptors
+        resolved by attempting again to send a message.
 
 """
 from textwrap import fill
 from inspect import cleandoc
 import inspect
+from functools import wraps
 
 
 class InstrError(Exception):
@@ -48,73 +45,55 @@ class InstrIOError(InstrError):
     pass
 
 
-class BypassDescriptor(object):
-    """Class allowing to acces to a descriptor instance"""
-    def __init__(self, descriptor):
-        self.descriptor = descriptor
-
-    def __getattr__(self, name):
-        return getattr(self.descriptor, name)
-
-
-class AllowBypassableDescriptors(type):
-    """Metaclass allowing to access to bypassed descriptor (_descriptorName).
-    Here customized to access instrument properties.
-
-    """
-    def __new__(mcs, name, bases, members):
-        new_members = {}
-        for n, value in members.iteritems():
-            if isinstance(value, instrument_property):
-                new_members['_' + n] = BypassDescriptor(value)
-        members.update(new_members)
-        return type.__new__(mcs, name, bases, members)
-
-
 class instrument_property(property):
     """Property allowing to cache the result of a get operation and return it
     on the next get. The cache can be cleared.
 
     """
-    _cache = None
-    _allow_caching = False
+
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
+        super(instrument_property, self).__init__(fget, fset, fdel, doc)
+        if fget is not None:
+            self.name = fget.__name__
+        elif fset is not None:
+            self.name = fset.__name__
+        else:
+            err = 'Need either a setter or getter for an instrument_property.'
+            raise ValueError(err)
 
     def __get__(self, obj, objtype=None):
         """
         """
-        if self._allow_caching:
-            if self._cache is None:
-                self._cache = super(instrument_property, self).__get__(obj,
-                                                                       objtype)
-            return self._cache
+        if obj is not None:
+            name = self.name
+            if name in obj._caching_permissions:
+                try:
+                    return obj._cache[name]
+                except KeyError:
+                    aux = super(instrument_property, self).__get__(obj,
+                                                                   objtype)
+                    obj._cache[name] = aux
+                    return aux
+            else:
+                return super(instrument_property, self).__get__(obj, objtype)
+
         else:
-            return super(instrument_property, self).__get__(obj, objtype)
+            return self
 
     def __set__(self, obj, value):
         """
         """
-        if self._allow_caching:
-            if self._cache == value:
-                return
+        name = self.name
+        if name in obj._caching_permissions:
+            try:
+                if obj._cache[name] == value:
+                    return
+            except KeyError:
+                pass
             super(instrument_property, self).__set__(obj, value)
-            self._cache = value
+            obj._cache[name] = value
         else:
             super(instrument_property, self).__set__(obj, value)
-
-    def clear_cache(self):
-        """Clear the cached value.
-        """
-        self._cache = None
-
-    def check_cache(self):
-        """Return the cache value
-        """
-        return self._cache
-
-    def set_caching_authorization(self, author):
-        """Allow or disallow to cache the property.
-        """
-        self._allow_caching = author
 
 
 def secure_communication(max_iter=10):
@@ -128,6 +107,8 @@ def secure_communication(max_iter=10):
 
     """
     def decorator(method):
+
+        @wraps(method)
         def wrapper(self, *args, **kwargs):
 
             i = 0
@@ -145,8 +126,7 @@ def secure_communication(max_iter=10):
                         self.reopen_connection()
                         i += 1
 
-        wrapper.__name__ = method.__name__
-        wrapper.__doc__ = method.__doc__
+        wrapper.__wrapped__ = method
         return wrapper
 
     return decorator
@@ -196,7 +176,6 @@ class BaseInstrument(object):
         Clear the cache of some or all instrument properties
 
     """
-    __metaclass__ = AllowBypassableDescriptors
     caching_permissions = {}
     secure_com_except = ()
     owner = ''
@@ -208,11 +187,11 @@ class BaseInstrument(object):
             # Avoid overriding class attribute
             perms = self.caching_permissions.copy()
             perms.update(caching_permissions)
-            for prop_name in perms:
-                #Accessing bypass descriptor to call their methods
-                prop = getattr(self, '_' + prop_name)
-                author = perms[prop_name]
-                prop.set_caching_authorization(author)
+            self._caching_permissions = set([key for key in perms
+                                             if perms[key]])
+        else:
+            self._caching_permissions = set([])
+        self._cache = {}
 
     def open_connection(self):
         """Open a connection to an instrument
@@ -265,32 +244,47 @@ class BaseInstrument(object):
         raise NotImplementedError(message)
 
     def clear_instrument_cache(self, properties=None):
-        """Clear the cache of all the properties or only the one of specified
-        ones
+        """ Clear the cache of all the properties or only the one of specified
+        ones.
 
         Parameters
         ----------
         properties : iterable of str, optionnal
             Name of the properties whose cache should be cleared. All caches
             will be cleared if not specified.
-        """
-        test = lambda obj: isinstance(obj, BypassDescriptor)
-        if properties is None:
-            for name, instr_prop in inspect.getmembers(self.__class__, test):
-                if name.startswith('_'):
-                    # Calling method only on bypassed descriptor
-                    instr_prop.clear_cache()
-        else:
-            for name, instr_prop in inspect.getmembers(self.__class__, test):
-                if name.startswith('_') and name[1:] in properties:
-                    # Calling method only on bypassed descriptor
-                    instr_prop.clear_cache()
 
-    def check_instrument_cache(self, properties):
         """
+        test = lambda obj: isinstance(obj, instrument_property)
+        if properties:
+            for name, instr_prop in inspect.getmembers(self.__class__, test):
+                if name in properties:
+                    del self._cache[name]
+        else:
+            self._cache = {}
+
+    def check_instrument_cache(self, properties=None):
+        """Return the value of the cache of the instruments
+
+        Parameters
+        ----------
+        properties : iterable of str, optionnal
+            Name of the properties whose cache should be cleared. All caches
+            will be cleared if not specified.
+
+        Returns
+        -------
+        cache : dict
+            Dict containing the cached value, if the properties arg is given
+            None will be returned for the field with no cached value.
+
         """
-        test = lambda obj: isinstance(obj, BypassDescriptor)
-        for name, instr_prop in inspect.getmembers(self.__class__, test):
-                if name.startswith('_') and name[1:] == properties:
-                    # Calling method only on bypassed descriptor
-                    instr_prop.check_cache()
+        test = lambda obj: isinstance(obj, instrument_property)
+        cache = {}
+        if properties:
+            for name, instr_prop in inspect.getmembers(self.__class__, test):
+                if name in properties:
+                    cache[name] = self._cache.get(name)
+        else:
+            cache = self._cache
+
+        return cache

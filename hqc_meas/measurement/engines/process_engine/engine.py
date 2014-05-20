@@ -184,7 +184,7 @@ class ProcessEngine(BaseEngine):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Starting listener')
+        logger.debug('Starting listener')
 
         while not self._pipe.poll(2):
             if not self._process.is_alive():
@@ -216,12 +216,11 @@ class ProcessEngine(BaseEngine):
 
             # Send the measure.
             self._pipe.send(self._temp)
+            logger.debug('Measure {} sent'.format(self._temp[0]))
 
             # Empty _temp and reset flag.
             self._temp = tuple()
             self._starting_allowed.clear()
-
-            logger.info('Measurement sent')
 
             # Wait for the process to finish the measure and check it has not
             # been killed.
@@ -256,7 +255,7 @@ class ProcessEngine(BaseEngine):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Cleaning up')
+        logger.debug('Cleaning up')
         self._pipe.close()
         if process:
             self._process.join()

@@ -13,7 +13,6 @@ from enaml.core.api import Looper
 
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
-# TODO fix to work with the output of measure.perform_checks
 class _TaskCheckModel(Atom):
 
     """Simple dialog displaying the errors messages resulting from a failed
@@ -76,7 +75,7 @@ enamldef ChecksDisplay(Dialog): dial:
     attr model = _TaskCheckModel(errors)
 
     Container:
-        constraints = [vbox(grid([lis_lab, che_lab], [nb, che]),
+        constraints = [vbox(hbox(lis_lab, che_lab), hbox(nb, che),
                             close),
                        align('left', lis_lab, nb),
                        align('left', che_lab, che),
@@ -84,6 +83,7 @@ enamldef ChecksDisplay(Dialog): dial:
         Label: lis_lab:
             text = 'Failed tests'
         Notebook: nb:
+            hug_height = 'ignore'
             selected_tab >> model.selected_category
             Looper:
                 iterable = errors.keys()
@@ -91,6 +91,7 @@ enamldef ChecksDisplay(Dialog): dial:
                     title = loop_item.capitalize()
                     name = loop_item
                     QtListStrWidget: lis:
+                        hug_height = 'ignore'
                         items << model.name_to_path_dict[loop_item].keys()
                         selected_item >> model.selected_check
         Label: che_lab:

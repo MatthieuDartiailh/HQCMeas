@@ -7,7 +7,7 @@
 """
 """
 from enaml.layout.api import hbox, align, spacer, vbox
-from enaml.widgets.api import (PushButton, Container, Label, Field, 
+from enaml.widgets.api import (PushButton, Container, Label, Field,
                                FileDialogEx, GroupBox, ScrollArea)
 
 from ..tools.task_editor import (TaskEditor, NonFoldingTaskEditor)
@@ -52,9 +52,8 @@ enamldef RootView(GroupBox): view:
         text = 'E'
         hug_width = 'strong'
         clicked ::
-            path = FileDialogEx(file_mode='directory', accept_mode='open',
-                                title='Select a default path',
-                                ).exec_()
+            path = FileDialogEx.get_existing_directory(
+                                                title='Select a default path')
             if path:
                 task.default_path = path
     ScrollArea: scroll:

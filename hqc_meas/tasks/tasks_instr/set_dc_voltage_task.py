@@ -7,9 +7,10 @@ import time
 import logging
 from inspect import cleandoc
 
-from ..instr_task import InstrumentTask
-from ..tools.task_decorator import (smooth_instr_crash)
-from ..tools.database_string_formatter import format_and_eval_string
+from hqc_meas.tasks.api import InstrumentTask
+from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
+from hqc_meas.tasks.tools.database_string_formatter\
+    import format_and_eval_string
 
 
 class SetDCVoltageTask(InstrumentTask):
@@ -104,6 +105,7 @@ class SetDCVoltageTask(InstrumentTask):
         self.driver.voltage = value
         self.last_value = value
         self.write_in_database('voltage', value)
+
         return True
 
     def check(self, *args, **kwargs):
@@ -115,7 +117,7 @@ class SetDCVoltageTask(InstrumentTask):
             try:
                 val = format_and_eval_string(self.target_value, self.task_path,
                                              self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-volt'] = \
                     cleandoc('''Failed to eval the target value formula

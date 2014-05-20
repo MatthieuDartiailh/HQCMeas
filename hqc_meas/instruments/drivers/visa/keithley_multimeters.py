@@ -12,15 +12,16 @@ This module defines drivers for keithley multimeters using VISA library.
 """
 
 from ..driver_tools import (InstrIOError, secure_communication,
-                           instrument_property)
+                            instrument_property)
 from ..visa_tools import VisaInstrument
+
 
 class Keithley2000(VisaInstrument):
     """Driver for Keithley 2000 using the VISA library
 
-    This driver does not give access to all the functionnality of the instrument
-    but you can extend it if needed. See the documentation of the `driver_tools`
-    package for more details about writing instruments drivers.
+    This driver does not give access to all the functionnality of the
+    instrument but you can extend it if needed. See the documentation of the
+    driver_tools package for more details about writing instruments drivers.
 
     Parameters
     ----------
@@ -36,23 +37,23 @@ class Keithley2000(VisaInstrument):
     Methods
     -------
     read_voltage_dc(mes_range = 'DEF', mes_resolution = 'DEF')
-        Return the DC voltage read by the instrument. Can change the function if
-        needed.
+        Return the DC voltage read by the instrument. Can change the function
+        if needed.
     read_voltage_ac(mes_range = 'DEF', mes_resolution = 'DEF')
-        Return the AC voltage read by the instrument. Can change the function if
-        needed.
+        Return the AC voltage read by the instrument. Can change the function
+        if needed.
     read_res(mes_range = 'DEF', mes_resolution = 'DEF')
-        Return the resistance read by the instrument. Can change the function if
-        needed.
+        Return the resistance read by the instrument. Can change the function
+        if needed.
     read_current_dc(mes_range = 'DEF', mes_resolution = 'DEF')
-        Return the DC current read by the instrument. Can change the function if
-        needed.
+        Return the DC current read by the instrument. Can change the function
+        if needed.
     read_current_ac(mes_range = 'DEF', mes_resolution = 'DEF')
-        Return the AC current read by the instrument. Can change the function if
-        needed.
+        Return the AC current read by the instrument. Can change the function
+        if needed.
 
     """
-    caching_permissions = {'function' : True}
+    caching_permissions = {'function': True}
 
     @instrument_property
     @secure_communication()
@@ -76,7 +77,7 @@ class Keithley2000(VisaInstrument):
             raise InstrIOError('Keithley2000: Failed to set function')
 
     @secure_communication()
-    def read_voltage_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_voltage_dc(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the DC voltage read by the instrument.
 
         Perform a direct reading without any waiting. Can return identical
@@ -95,7 +96,7 @@ class Keithley2000(VisaInstrument):
             raise InstrIOError('Keithley2000: DC voltage measure failed')
 
     @secure_communication()
-    def read_voltage_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_voltage_ac(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the AC voltage read by the instrument.
 
         Perform a direct reading without any waiting. Can return identical
@@ -114,7 +115,7 @@ class Keithley2000(VisaInstrument):
             raise InstrIOError('Keithley2000: AC voltage measure failed')
 
     @secure_communication()
-    def read_resistance(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_resistance(self, mes_range='DEF', mes_resolution='DEF'):
         """
         Return the resistance read by the instrument.
 
@@ -134,7 +135,7 @@ class Keithley2000(VisaInstrument):
             raise InstrIOError('Keithley2000: Resistance measure failed')
 
     @secure_communication()
-    def read_current_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_current_dc(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the DC current read by the instrument.
 
         Perform a direct reading without any waiting. Can return identical
@@ -153,7 +154,7 @@ class Keithley2000(VisaInstrument):
             raise InstrIOError('Keithley2000: DC current measure failed')
 
     @secure_communication()
-    def read_current_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_current_ac(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the AC current read by the instrument.
 
         Perform a direct reading without any waiting. Can return identical

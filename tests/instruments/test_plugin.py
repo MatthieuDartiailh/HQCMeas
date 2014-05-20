@@ -9,7 +9,7 @@
 import enaml
 import os
 from configobj import ConfigObj
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_in, assert_not_in
 from nose.plugins.skip import SkipTest
 
 from .tools import BaseClass
@@ -20,7 +20,7 @@ with enaml.imports():
 
     from .users import InstrUser1, InstrUser2, InstrUser3
 
-from ..util import complete_line
+from ..util import complete_line, process_app_events
 
 
 def setup_module():
@@ -38,10 +38,10 @@ class Test_DriverManagement(BaseClass):
     def test_init(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
-        assert plugin.driver_types == ['Dummy']
-        assert plugin.drivers == ['PanelTestDummy']
-        assert plugin.all_profiles == ['Dummy']
-        assert plugin.available_profiles == ['Dummy']
+        assert_equal(plugin.driver_types, ['Dummy'])
+        assert_equal(plugin.drivers, ['PanelTestDummy'])
+        assert_in('Dummy', plugin.all_profiles)
+        assert_in('Dummy', plugin.available_profiles)
 
     def test_load_all(self):
         self.workbench.register(InstrManagerManifest())
@@ -55,18 +55,18 @@ class Test_DriverManagement(BaseClass):
         self.workbench.register(InstrManagerManifest())
         self.workbench.register(InstrUser1())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
-        assert plugin._users.keys() == [u'test.user1']
+        assert_equal(plugin._users.keys(), [u'test.user1'])
         self.workbench.register(InstrUser2())
-        assert sorted(plugin._users.keys()) ==\
-            sorted([u'test.user1', u'test.user2'])
+        assert_equal(sorted(plugin._users.keys()),
+                     sorted([u'test.user1', u'test.user2']))
         self.workbench.unregister(u'test.user2')
-        assert plugin._users.keys() == [u'test.user1']
+        assert_equal(plugin._users.keys(), [u'test.user1'])
 
     def test_profile_observation(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
-        assert plugin.all_profiles == ['Dummy']
-        assert plugin.available_profiles == ['Dummy']
+        assert_in('Dummy', plugin.all_profiles)
+        assert_in('Dummy', plugin.available_profiles)
         profile_path = os.path.join(self.test_dir, 'temp_profiles')
         prof = ConfigObj(os.path.join(profile_path, 'test.ini'))
         prof['driver_type'] = 'Dummy'
@@ -74,12 +74,14 @@ class Test_DriverManagement(BaseClass):
         prof.write()
         from time import sleep
         sleep(0.1)
-        assert plugin.all_profiles == sorted([u'Dummy', u'Test'])
-        assert plugin.available_profiles == sorted([u'Dummy', u'Test'])
+        process_app_events()
+        assert_in(u'Test', plugin.all_profiles)
+        assert_in(u'Test', plugin.available_profiles)
         os.remove(os.path.join(profile_path, 'test.ini'))
         sleep(0.1)
-        assert plugin.all_profiles == sorted([u'Dummy'])
-        assert plugin.available_profiles == sorted([u'Dummy'])
+        process_app_events()
+        assert_not_in(u'Test', plugin.all_profiles)
+        assert_not_in(u'Test', plugin.available_profiles)
 
     def test_driver_types_request1(self):
         self.workbench.register(InstrManagerManifest())
@@ -165,17 +167,18 @@ class Test_DriverManagement(BaseClass):
         self.workbench.register(InstrManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.matching_profiles'
-        [prof_name] = core.invoke_command(com, {'drivers': ['PanelTestDummy']},
+        [prof_name] = core.invoke_command(com,
+                                          {'drivers': ['PanelTestDummy']},
                                           self)
-        assert prof_name == 'Dummy'
+        assert_equal(prof_name, 'Dummy')
 
     def test_profile_path1(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
         path = plugin.profile_path('Dummy')
-        assert path == os.path.join(self.test_dir,
-                                    'temp_profiles',
-                                    'dummy.ini')
+        assert_equal(path, os.path.join(self.test_dir,
+                                        'temp_profiles',
+                                        'dummy.ini'))
 
     def test_profile_path2(self):
         self.workbench.register(InstrManagerManifest())

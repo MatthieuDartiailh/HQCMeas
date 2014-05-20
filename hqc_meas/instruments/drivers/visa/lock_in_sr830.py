@@ -15,12 +15,14 @@ This module defines a driver for the Stanford instrument lock-in SR830
 from ..driver_tools import (InstrIOError, secure_communication)
 from ..visa_tools import VisaInstrument
 
+
 class LockInSR830(VisaInstrument):
     """Driver for a SR830 lock-in, using the VISA library.
 
-    This driver does not give access to all the functionnality of the instrument
-    but you can extend it if needed. See the documentation of the `driver_tools`
-    package for more details about writing instruments drivers.
+    This driver does not give access to all the functionnality of the
+    instrument but you can extend it if needed. See the documentation of
+    the driver_tools module for more details about writing instruments
+    drivers.
 
     Parameters
     ----------
@@ -46,7 +48,7 @@ class LockInSR830(VisaInstrument):
     def __init__(self, *args, **kwargs):
 
         super(LockInSR830, self).__init__(*args, **kwargs)
-        bus = kwargs.get('bus','GPIB')
+        bus = kwargs.get('bus', 'GPIB')
         if bus == 'GPIB':
             self.write('OUTX1')
         elif bus == 'RS232':
@@ -59,8 +61,8 @@ class LockInSR830(VisaInstrument):
         """
         Return the x quadrature measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('OUTP?1')
@@ -74,8 +76,8 @@ class LockInSR830(VisaInstrument):
         """
         Return the y quadrature measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('OUTP?2')
@@ -89,8 +91,8 @@ class LockInSR830(VisaInstrument):
         """
         Return the x and y quadratures measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         values = self.ask_for_values('SNAP?1,2')
@@ -104,8 +106,8 @@ class LockInSR830(VisaInstrument):
         """
         Return the amplitude of the signal measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('OUTP?3')
@@ -119,8 +121,8 @@ class LockInSR830(VisaInstrument):
         """
         Return the phase of the signal measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         value = self.ask_for_values('OUTP?4')
@@ -134,8 +136,8 @@ class LockInSR830(VisaInstrument):
         """
         Return the amplitude and phase of the signal measured by the instrument
 
-        Perform a direct reading without any waiting. Can return non independent
-        values if the instrument is queried too often.
+        Perform a direct reading without any waiting. Can return non
+        independent values if the instrument is queried too often.
 
         """
         values = self.ask_for_values('SNAP?3,4')
@@ -144,4 +146,4 @@ class LockInSR830(VisaInstrument):
         else:
             return values
 
-DRIVERS = {'SR830' : LockInSR830}
+DRIVERS = {'SR830': LockInSR830}

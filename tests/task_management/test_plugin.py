@@ -266,7 +266,7 @@ class Test(object):
         conf, view = core.invoke_command(com, {'task': 'Loop'}, self)
         assert_equal(type(conf).__name__, 'LoopConfigTask')
         conf.task_name = 'Test'
-        conf.sub_task = 'Print'
+        conf.subtask = 'Print'
         assert_equal(conf.config_ready, True)
         task = conf.build_task()
         assert_equal(task.task_name, 'Test')

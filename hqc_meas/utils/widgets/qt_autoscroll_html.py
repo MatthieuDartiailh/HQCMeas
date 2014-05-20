@@ -29,6 +29,8 @@ class QtAutoscrollHtml(RawWidget):
             editor.
         """
         widget = self.get_widget()
+        text = change['value']
+        text = text.replace('\n', '<br>')
         if widget:
-            widget.setHtml(change['value'])
+            widget.setHtml(text)
             widget.moveCursor(QtGui.QTextCursor.End)

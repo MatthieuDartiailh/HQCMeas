@@ -4,8 +4,8 @@
 from atom.api import Float, set_default
 from time import sleep
 
-from ..instr_task import InstrumentTask
-from ..tools.task_decorator import smooth_instr_crash
+from hqc_meas.tasks.api import InstrumentTask
+from hqc_meas.tasks.tools.task_decorator import smooth_instr_crash
 
 
 class MeasDCVoltageTask(InstrumentTask):

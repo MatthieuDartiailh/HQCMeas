@@ -222,13 +222,13 @@ class TaskProcess(Process):
             },
         }
         logging.config.dictConfig(config_worker)
-        if os.name == 'posix':
-            # On POSIX, the setup logger will have been configured in the
-            # parent process, but should have been disabled following the
-            # dictConfig call.
-            # On Windows, since fork isn't used, the setup logger won't
-            # exist in the child, so it would be created and the message
-            # would appear - hence the "if posix" clause.
-            logger = logging.getLogger('setup')
-            logger.critical(
-                'Should not appear, because of disabled logger ...')
+#        if os.name == 'posix':
+#            # On POSIX, the setup logger will have been configured in the
+#            # parent process, but should have been disabled following the
+#            # dictConfig call.
+#            # On Windows, since fork isn't used, the setup logger won't
+#            # exist in the child, so it would be created and the message
+#            # would appear - hence the "if posix" clause.
+#            logger = logging.getLogger('setup')
+#            logger.critical(
+#                'Should not appear, because of disabled logger ...')

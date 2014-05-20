@@ -157,6 +157,10 @@ class DriverDebugger(BaseDebugger):
         except Exception as e:
             self.errors += 'Failed to reload driver {}: {}'.format(self.driver,
                                                                    e.message)
+            return
+
+        self._observe_driver({'value': self.driver})
+        self.errors += 'Driver {} successfully reloaded'.format(self.driver)
 
     def close_driver(self):
         """ Destroy the driver and release the instrument profile.
@@ -169,9 +173,10 @@ class DriverDebugger(BaseDebugger):
 
         self.connected = False
         self.driver_instance = None
-        core = self.plugin.workbench.get_plugin('enaml.workbench.core')
-        core.invoke_command('hqc_meas.instr_manager.profiles_released',
-                            {'profiles': [self.profile]}, self.plugin)
+        if not isinstance(self.profile, dict):
+            core = self.plugin.workbench.get_plugin('enaml.workbench.core')
+            core.invoke_command('hqc_meas.instr_manager.profiles_released',
+                                {'profiles': [self.profile]}, self.plugin)
 
     def attempt_get(self, prop):
         """ Try to get an instrument property value.
@@ -230,6 +235,7 @@ class DriverDebugger(BaseDebugger):
             return e
 
     #--- Private API ----------------------------------------------------------
+
     def _refresh_profiles(self, change):
         """ Refresh the list of matching profiles for the selected driver.
 
@@ -240,8 +246,6 @@ class DriverDebugger(BaseDebugger):
             self.profiles = core.invoke_command(cmd,
                                                 {'drivers': [self.driver]},
                                                 self)
-
-    #--- Observers ------------------------------------------------------------
 
     def _observe_driver(self, change):
         """

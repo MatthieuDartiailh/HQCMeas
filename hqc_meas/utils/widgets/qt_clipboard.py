@@ -9,9 +9,6 @@ import warnings
 from enaml.qt import QtCore, QtGui
 from atom.api import Atom, Property
 
-#-------------------------------------------------------------------------------
-#  'PyMimeData' class:
-#-------------------------------------------------------------------------------
 
 class PyMimeData(QtCore.QMimeData):
     """ The PyMimeData wraps a Python instance as MIME data.
@@ -20,7 +17,7 @@ class PyMimeData(QtCore.QMimeData):
     MIME_TYPE = 'application/x-ets-qt4-instance'
     NOPICKLE_MIME_TYPE = 'application/x-ets-qt4-instance-no-pickle'
 
-    def __init__(self, data = None, pickle = False):
+    def __init__(self, data=None, pickle=False):
         """ Initialise the instance.
         """
         QtCore.QMimeData.__init__(self)
@@ -33,14 +30,15 @@ class PyMimeData(QtCore.QMimeData):
                 # We may not be able to pickle the data.
                 try:
                     pdata = dumps(data)
-                    # This format (as opposed to using a single sequence) allows
-                    # the type to be extracted without unpickling the data.
+                    # This format (as opposed to using a single sequence)
+                    # allows the type to be extracted without unpickling
+                    # the data.
                     self.setData(self.MIME_TYPE, dumps(data.__class__) + pdata)
                 except (PickleError, TypeError):
                     # if pickle fails, still try to create a draggable
                     warnings.warn(("Could not pickle dragged object %s, " +
-                            "using %s mimetype instead") % (repr(data),
-                            self.NOPICKLE_MIME_TYPE), RuntimeWarning)
+                                   "using %s mimetype instead") % (repr(data),
+                                  self.NOPICKLE_MIME_TYPE), RuntimeWarning)
                     self.setData(self.NOPICKLE_MIME_TYPE, str(id(data)))
 
         else:
@@ -69,19 +67,19 @@ class PyMimeData(QtCore.QMimeData):
             for format in md.formats():
                 nmd.setData(format, md.data(format))
         else:
-            # by default, try to pickle the coerced object
-            pickle = True
-    
+            # by default, don't try to pickle the coerced object
+            pickle = False
+
             # See if the data is a list, if so check for any items which are
             # themselves of the right type.  If so, extract the instance and
             # track whether we should pickle.
             # XXX lists should suffice for now, but may want other containers
             if isinstance(md, list):
-                pickle = not any(item.hasFormat(cls.NOPICKLE_MIME_TYPE)
-                        for item in md if isinstance(item, QtCore.QMimeData))
+#                pickle = not any(item.hasFormat(cls.NOPICKLE_MIME_TYPE)
+#                        for item in md if isinstance(item, QtCore.QMimeData))
                 md = [item.instance() if isinstance(item, PyMimeData) else item
-                        for item in md]
-    
+                      for item in md]
+
             # Arbitrary python object, wrap it into PyMimeData
             nmd = cls(md, pickle)
 
@@ -133,17 +131,14 @@ class PyMimeData(QtCore.QMimeData):
                 ret.append(url.toLocalFile())
         return ret
 
-#-------------------------------------------------------------------------------
-#  '_Clipboard' class:
-#-------------------------------------------------------------------------------
 
 class _Clipboard(Atom):
     """ The _Clipboard class provides a wrapper around the PyQt clipboard.
     """
 
-    #---------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     #  Trait definitions:
-    #---------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
 
     # The instance on the clipboard (if any).
     instance = Property()
@@ -154,9 +149,9 @@ class _Clipboard(Atom):
     # The type of the instance on the clipboard (if any).
     instance_type = Property()
 
-    #---------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     #  Instance property methods:
-    #---------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     @instance.getter
     def _instance_getter(self):
         """ The instance getter.
@@ -166,7 +161,7 @@ class _Clipboard(Atom):
             return None
 
         return md.instance()
-        
+
     @instance.setter
     def _instance_setter(self, data):
         """ The instance setter.
@@ -190,8 +185,8 @@ class _Clipboard(Atom):
 
         return md.instanceType()
 
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 #  The singleton clipboard instance.
-#-------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 clipboard = _Clipboard()

@@ -3,9 +3,9 @@ from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, ObjectCombo, Dialog, MultilineField,
                                 Form)
 
-from hqc_meas.utils.widgets.list_editor import ListEditor
+from hqc_meas.tasks.tools.pair_editor import PairEditor
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
-from ..save_tasks import SavedValue
+
 
 enamldef HeaderDialog(Dialog): dial:
     attr model
@@ -33,6 +33,7 @@ enamldef HeaderDialog(Dialog): dial:
             clicked ::
                 dial.accept()
 
+
 enamldef SavedValueView(Form):
     attr model
     padding = (0,0,0,0)
@@ -41,7 +42,8 @@ enamldef SavedValueView(Form):
         text := model.label
     QtLineCompleter:
         text := model.value
-        entries_updater = model.updater
+        entries_updater = model.task._list_database_entries
+
 
 enamldef SaveView(GroupBox):
     attr task
@@ -92,12 +94,11 @@ enamldef SaveView(GroupBox):
                     if dial.exec_():
                         task.header = dial.header
 
-    ListEditor(SavedValueView): ed:
+    PairEditor(SavedValueView): ed:
         ed.title = 'Label : Value'
         ed.model << task
         ed.iterable_name = 'saved_values'
-        ed.factory = SavedValue
-        ed.kwargs = {'updater' : task._list_database_entries}
+
 
 enamldef SaveArrayView(GroupBox):
     attr task

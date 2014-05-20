@@ -7,13 +7,13 @@
 """
 
 """
-
 from atom.api import (Str, Float, Bool, set_default)
 from inspect import cleandoc
 
-from ..instr_task import InstrumentTask
-from ..tools.task_decorator import (smooth_instr_crash)
-from ..tools.database_string_formatter import format_and_eval_string
+from hqc_meas.tasks.api import InstrumentTask
+from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
+from hqc_meas.tasks.tools.database_string_formatter\
+    import format_and_eval_string
 
 
 class ApplyMagFieldTask(InstrumentTask):
@@ -66,7 +66,7 @@ class ApplyMagFieldTask(InstrumentTask):
             try:
                 val = format_and_eval_string(self.target_field, self.task_path,
                                              self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-field'] = \
                     cleandoc('''Failed to eval the target field formula

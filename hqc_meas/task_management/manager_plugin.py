@@ -149,7 +149,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         Returns
         -------
         views : dict
-            Dict mapping the task classes to their associated views.
+            Dict mapping the task class names to their associated views.
 
         """
         views = self._task_views
@@ -300,8 +300,14 @@ class TaskManagerPlugin(HasPrefPlugin):
                 if pack in self.tasks_loading:
                     tasks_packages.remove(pack)
 
-        self._py_tasks = tasks
-        self._task_views = views
+        aux_task_map = {v.__name__: k for k, v in tasks.iteritems()}
+        valid_tasks = {k: tasks[k] for name, k in aux_task_map.iteritems()
+                       if name in views}
+        valid_views = {k: v for k, v in views.iteritems()
+                       if k in aux_task_map or k == 'RootTask'}
+
+        self._py_tasks = valid_tasks
+        self._task_views = valid_views
         self.tasks = list(tasks.keys()) + list(self._template_tasks.keys())
         self._failed = failed
         # TODO do something with failed

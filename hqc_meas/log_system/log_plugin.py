@@ -32,6 +32,8 @@ class LogPlugin(HasPrefPlugin):
         """ Start the log system.
 
         """
+        logging.getLogger().setLevel(logging.INFO)
+
         log_dir = os.path.join(MODULE_PATH, 'logs')
         # Create log dir if it does not exist.
         if not os.path.isdir(log_dir):
@@ -39,6 +41,9 @@ class LogPlugin(HasPrefPlugin):
 
         # Add day rotating handler to the root logger.
         handler = DayRotatingTimeHandler(os.path.join(log_dir, 'hqc_log.log'))
+        aux = '%(asctime)s | %(processName)s | %(levelname)s | %(message)s'
+        formatter = logging.Formatter(aux)
+        handler.setFormatter(formatter)
         self.add_handler(u'hqc_meas.standard_log', handler)
 
         # XXXX add auto redirection

@@ -156,9 +156,9 @@ class MeasurePlugin(HasPrefPlugin):
                                                 {'profiles': list(profs)},
                                                 self)
         if profs and not profiles:
-            mes = cleandoc('''The profiles requested for the measurement {} are
-                           not available, the measurement cannot be performed
-                           '''.format(measure.name))
+            mes = cleandoc('''The instrument profiles requested for the
+                           measurement {} are not available, the measurement
+                           cannot be performed.'''.format(measure.name))
             logger.info(mes)
 
             # Simulate a message coming from the engine.
@@ -168,6 +168,10 @@ class MeasurePlugin(HasPrefPlugin):
             # if a new measure is started.
             enaml.application.deferred_call(self._listen_to_engine, done)
             return
+
+        if profs:
+            logger.info(cleandoc('''The use of the instrument profiles has been
+                                granted by the manager.'''))
 
         measure.root_task.run_time.update({'profiles': profiles})
 
@@ -215,6 +219,7 @@ class MeasurePlugin(HasPrefPlugin):
             engine.observe('news', monitor.process_news)
             monitor.start(ui_plugin.window)
 
+        logger.info('''Starting measure {}.'''.format(measure.name))
         # Ask the engine to start the measure.
         engine.run()
 
@@ -302,6 +307,11 @@ class MeasurePlugin(HasPrefPlugin):
         status, infos = change['value']
         self.running_measure.status = status
         self.running_measure.infos = infos
+
+        logger = logging.getLogger(__name__)
+        mess = 'Measure {} processed, status : {}'.format(
+            self.running_measure.name, status)
+        logger.info(mess)
 
         # Disconnect monitors.
         engine = self.engine_instance

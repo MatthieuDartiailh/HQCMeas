@@ -50,7 +50,8 @@ class ThreadMeasureMonitor(Thread):
             try:
                 news = self.queue.get()
                 if news != (None, None):
-                    self.engine.news = news
+                    # Here news is a Signal not Event hence the syntax.
+                    self.engine.news(news)
                 else:
                     break
             except Empty:

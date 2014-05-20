@@ -115,7 +115,8 @@ class YokogawaGS200(VisaInstrument):
             self.write(":SOURce:RANGe {}".format(visa_range))
             check = self.ask(":SOURce:RANGe?")
             if check != visa_range:
-                raise InstrIOError('Instrument did not set correctly the range')
+                raise InstrIOError(cleandoc('''Instrument did not set correctly
+                    the range'''))
 
     @instrument_property
     @secure_communication()
@@ -266,7 +267,10 @@ class Yokogawa7651(VisaInstrument):
             self.write('OS')
             self.read()
             current_range = self.read()[2:4]
-            self.read(); self.read(); self.read()
+            # Empty output buffer.
+            self.read()
+            self.read()
+            self.read()
             self.write('F1{}E'.format(current_range))
             value = self.ask('OD')
             if value[3] != 'V':

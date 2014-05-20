@@ -31,7 +31,7 @@ enamldef MonitorSelector(Dialog): dial:
     # Mapping between monitor name and id.
     attr _mapping = {monitor.name: monitor_id
                      for monitor_id, monitor in monitors.iteritems()}
-                         
+
     title = 'Select a monitor'
 
     Container:
@@ -79,7 +79,7 @@ enamldef MonitorsEditor(Container): main:
     attr selected_page
 
     constraints << [hbox(nb,
-                         vbox(add, remove))
+                         vbox(add, remove, spacer))
                     ]
 
     Notebook: nb:
@@ -96,7 +96,8 @@ enamldef MonitorsEditor(Container): main:
             selector = MonitorSelector(measure=measure)
             if selector.exec_():
                 workbench = measure.plugin.workbench
-                monitor = selector.selected_decl.factory(workbench)
+                decl = selector.selected_decl
+                monitor = selector.selected_decl.factory(decl, workbench)
                 measure.add_monitor(selector.selected_id,
                                     monitor)
 
@@ -104,5 +105,5 @@ enamldef MonitorsEditor(Container): main:
         text = 'Remove monitor'
         enabled << bool(nb.selected_tab)
         clicked ::
-            id = pages[selected_page]
+            id = nb_pages[selected_page]
             measure.remove_monitor(id)

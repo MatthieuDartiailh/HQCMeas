@@ -6,8 +6,8 @@
 #==============================================================================
 """
 """
-from atom.api import (Instance, ContainerList, Str, Enum, Value, Atom,
-                      Bool, Int, observe, set_default, Unicode, Callable)
+from atom.api import (Tuple, ContainerList, Str, Enum, Value,
+                      Bool, Int, observe, set_default, Unicode)
 
 import os
 import numpy
@@ -17,15 +17,6 @@ from inspect import cleandoc
 from ..tools.database_string_formatter import (get_formatted_string,
                                                format_and_eval_string)
 from ..base_tasks import SimpleTask
-
-
-class SavedValue(Atom):
-    """ Helper class.
-
-    """
-    label = Str()
-    value = Str()
-    updater = Callable()
 
 
 class SaveTask(SimpleTask):
@@ -65,8 +56,8 @@ class SaveTask(SimpleTask):
     # Index of the current line.
     line_index = Int(0)
 
-    # List of values to be saved.
-    saved_values = ContainerList(Instance(SavedValue))
+    # List of values to be saved store as (label, value).
+    saved_values = ContainerList(Tuple()).tag(pref=True)
 
     # Flag indicating whether or not initialisation has been performed.
     initialized = Bool(False)
@@ -86,6 +77,7 @@ class SaveTask(SimpleTask):
         """
         #Initialisation.
         if not self.initialized:
+            self.line_index = 0
             self.array_length = format_and_eval_string(self.array_size,
                                                        self.task_path,
                                                        self.task_database)
@@ -107,20 +99,20 @@ class SaveTask(SimpleTask):
                                     file'''.format(self.task_name))
                     log.error(mes)
                     self.root_task.should_stop.set()
-                    return
+                    return False
 
                 self.write_in_database('file', self.file_object)
                 if self.header:
                     for line in self.header.split('\n'):
                         self.file_object.write('# ' + line + '\n')
-                labels = [s.label for s in self.saved_values]
+                labels = [s[0] for s in self.saved_values]
                 self.file_object.write('\t'.join(labels) + '\n')
                 self.file_object.flush()
 
             if self.saving_target != 'File':
                 # TODO add more flexibilty on the dtype (possible complex
                 # values)
-                array_type = numpy.dtype([(str(s.label), 'f8')
+                array_type = numpy.dtype([(str(s[0]), 'f8')
                                           for s in self.saved_values])
                 self.array = numpy.empty((self.array_length),
                                          dtype=array_type)
@@ -128,7 +120,7 @@ class SaveTask(SimpleTask):
             self.initialized = True
 
         #writing
-        values = [format_and_eval_string(s.value,
+        values = [format_and_eval_string(s[1],
                                          self.task_path,
                                          self.task_database)
                   for s in self.saved_values]
@@ -157,7 +149,7 @@ class SaveTask(SimpleTask):
             full_folder_path = get_formatted_string(self.folder,
                                                     self.task_path,
                                                     self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the folder path'
             return False, traceback
@@ -165,7 +157,7 @@ class SaveTask(SimpleTask):
         try:
             filename = get_formatted_string(self.filename, self.task_path,
                                             self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the filename'
             return False, traceback
@@ -175,7 +167,7 @@ class SaveTask(SimpleTask):
         try:
             f = open(full_path, 'wb')
             f.close()
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to open the specified file'
             return False, traceback
@@ -184,7 +176,7 @@ class SaveTask(SimpleTask):
             format_and_eval_string(self.array_size,
                                    self.task_path,
                                    self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to compute the array size'
             return False, traceback
@@ -192,44 +184,28 @@ class SaveTask(SimpleTask):
         test = True
         for i, s in enumerate(self.saved_values):
             try:
-                format_and_eval_string(s.value,
+                format_and_eval_string(s[1],
                                        self.task_path,
                                        self.task_database)
-            except:
+            except Exception:
                 traceback[self.task_path + '/' + self.task_name + str(i)] = \
-                    'Failed to evaluate entry : {}'.format(s.label)
+                    'Failed to evaluate entry : {}'.format(s[0])
                 test = False
 
         if self.saving_target != 'File':
             data = [numpy.array([0.0, 1.0]) for s in self.saved_values]
-            names = str(','.join([s.label for s in self.saved_values]))
+            names = str(','.join([s[0] for s in self.saved_values]))
             final_arr = numpy.rec.fromarrays(data, names=names)
 
             self.write_in_database('array', final_arr)
 
         return test, traceback
 
-    def update_preferences_from_members(self):
-        """ Override handling saved_values.
-
-        """
-        super(SaveTask, self).update_preferences_from_members()
-        to_save = [(s.label, s.value) for s in self.saved_values]
-        self.task_preferences['saved_values'] = repr(to_save)
-
-    def update_members_from_preferences(self, **parameters):
-        """ Override handling saved_values.
-
-        """
-        super(SaveTask, self).update_members_from_preferences(**parameters)
-        if 'saved_values' in parameters:
-            self.saved_values = [SavedValue(label=s[0], value=s[1])
-                                 for s in parameters['saved_values']]
-
     @observe('saving_target')
-    def _update_database_entries(self, new):
+    def _update_database_entries(self, change):
         """
         """
+        new = change['value']
         if new == 'File':
             self.task_database_entries = {'file': None}
         elif new == 'Array':
@@ -329,7 +305,7 @@ class SaveArrayTask(SimpleTask):
             full_folder_path = get_formatted_string(self.folder,
                                                     self.task_path,
                                                     self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the folder path'
             return False, traceback
@@ -347,7 +323,7 @@ class SaveArrayTask(SimpleTask):
         try:
             filename = get_formatted_string(self.filename, self.task_path,
                                             self.task_database)
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the filename'
             return False, traceback
@@ -357,7 +333,7 @@ class SaveArrayTask(SimpleTask):
         try:
             f = open(full_path, 'wb')
             f.close()
-        except:
+        except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to open the specified file'
             return False, traceback

@@ -3,7 +3,8 @@ from atom.api import (Atom, Instance, Dict, Unicode, ForwardTyped, Str)
 from configobj import ConfigObj
 import logging
 
-from ..tasks.api import RootTask
+from hqc_meas.tasks.api import RootTask
+from hqc_meas.utils.configobj_ops import include_configobj
 
 
 def measure_plugin():
@@ -54,14 +55,12 @@ class Measure(Atom):
 
         """
         config = ConfigObj(indent_type='    ')
-        config.filename = path
         core = self.plugin.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.save_task'
         config['root_task'] = {}
-        config['root_task'].update(core.invoke_command(cmd,
-                                                       {'task': self.root_task,
-                                                        'mode': 'config'},
-                                                       self))
+        task_prefs = core.invoke_command(cmd, {'task': self.root_task,
+                                               'mode': 'config'}, self)
+        include_configobj(config['root_task'], task_prefs)
 
         i = 0
         for id, monitor in self.monitors.iteritems():
@@ -75,7 +74,8 @@ class Measure(Atom):
         config['headers'] = repr(self.headers.keys())
         config['name'] = self.name
 
-        config.write()
+        with open(path, 'w') as f:
+            config.write(f)
 
     @classmethod
     def load_measure(cls, measure_plugin, path):
@@ -94,13 +94,13 @@ class Measure(Atom):
         measure = cls()
         config = ConfigObj(path)
         measure.name = config['name']
+        measure.plugin = measure_plugin
 
         workbench = measure_plugin.workbench
         core = workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.build_root'
         kwarg = {'mode': 'config', 'config': config['root_task']}
         measure.root_task = core.invoke_command(cmd, kwarg, measure)
-
         database = measure.root_task.task_database
         entries = database.list_all_entries(values=True)
 
@@ -236,8 +236,11 @@ class Measure(Atom):
             return
 
         database = self.root_task.task_database
-        monitor = self.monitors.pop(id)
+        # Workaround the missing ContainerDict
+        monitors = self.monitors.copy()
+        monitor = monitors.pop(id)
         database.unobserve('notifier', monitor.database_modified)
+        self.monitors = monitors
 
     def collect_headers(self, workbench):
         """ Set the default_header of the root task using all contributions.

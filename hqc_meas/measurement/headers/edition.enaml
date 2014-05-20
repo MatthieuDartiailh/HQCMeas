@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
-                               MultilineField)
+                               MultilineField, GroupBox)
 from enaml.layout.api import vbox, hbox, spacer
 from enaml.core.api import Include
 
@@ -33,7 +33,8 @@ enamldef HeaderSelector(Dialog): dial:
                       for header_id, header in headers}
 
     Container:
-        constraints << [vbox(list_ed, desc, hbox(cancel, ok))]
+        constraints << [vbox(hbox(list_ed, desc),
+                             hbox(spacer, cancel, ok))]
 
         QtListStrWidget: list_ed:
             items << sorted([name for name, header_id in _mapping
@@ -75,7 +76,7 @@ enamldef HeadersEditor(Container): ed:
                       for header_id, header in measure.headers}
 
     constraints << [hbox(list_ed, desc,
-                         vbox(add, remove))
+                         vbox(add, remove, spacer))
                     ]
 
     QtListStrWidget: list_ed:
@@ -84,10 +85,13 @@ enamldef HeadersEditor(Container): ed:
             new_val = change['value']
             if new_val:
                 key = _mapping[new_val]
-                ed.selected_header = measure.headers[key]
+                ed.selected_header = key
 
-    MultilineField: desc:
-        text << ed.selected_header.description if ed.selected_header else ''
+    GroupBox: desc:
+        title = 'Description'
+        MultilineField:
+            text << ed.selected_header.description\
+                    if ed.selected_header else ''
 
     PushButton: add:
         text = 'Add header'
@@ -96,11 +100,17 @@ enamldef HeadersEditor(Container): ed:
         clicked ::
             selector = HeaderSelector(measure=measure)
             if selector.exec_():
-                measure.headers.append(selector.selected_decl)
+                # Workaround missing Container Dict
+                headers = measure.headers.copy()
+                headers[selector.selected_decl.id] = selector.selected_decl
+                measure.headers = headers
                 list_ed.set_items(sorted(_mapping.keys()))
 
     PushButton: remove:
         text = 'Remove header'
         enabled << bool(ed.selected_header)
         clicked ::
-            measure.headers.remove(ed.selected_header)
+             # Workaround missing Container Dict
+            headers = measure.headers.copy()
+            del headers[ed.selected_header]
+            measure.headers = headers

@@ -4,9 +4,10 @@
 from atom.api import (Str, Bool, set_default, Enum)
 from inspect import cleandoc
 
-from ..instr_task import InstrumentTask
-from ..tools.task_decorator import (smooth_instr_crash)
-from ..tools.database_string_formatter import format_and_eval_string
+from hqc_meas.tasks.api import InstrumentTask
+from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
+from hqc_meas.tasks.tools.database_string_formatter\
+    import format_and_eval_string
 
 
 class RFSourceSetFrequencyTask(InstrumentTask):
@@ -54,7 +55,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
             try:
                 freq = format_and_eval_string(self.frequency, self.task_path,
                                               self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
                     cleandoc('''Failed to eval the frequency
@@ -105,7 +106,7 @@ class RFSourceSetPowerTask(InstrumentTask):
             try:
                 power = format_and_eval_string(self.power, self.task_path,
                                                self.task_database)
-            except:
+            except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-power'] = \
                     'Failed to eval the frequency power {}'.format(self.power)

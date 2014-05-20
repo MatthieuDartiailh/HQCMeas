@@ -15,13 +15,15 @@ This module defines drivers for agilent multimeters using VISA library.
 from ..driver_tools import (InstrIOError, secure_communication)
 from ..visa_tools import VisaInstrument
 
+
 class Agilent34410A(VisaInstrument):
     """
     Driver for an Agilent 34410A multimeter, using the VISA library.
 
-    This driver does not give access to all the functionnality of the instrument
-    but you can extend it if needed. See the documentation of the `driver_tools`
-    package for more details about writing instruments drivers.
+    This driver does not give access to all the functionnality of the
+    instrument but you can extend it if needed. See the documentation of
+    the `driver_tools` module for more details about writing instruments
+    drivers.
 
     Parameters
     ----------
@@ -42,11 +44,12 @@ class Agilent34410A(VisaInstrument):
 
     Notes
     -----
-    This driver has been written for the Agilent 34410A but might work for other
-    models using the same SCPI commands.
+    This driver has been written for the Agilent 34410A but might work for
+    other models using the same SCPI commands.
+
     """
     @secure_communication()
-    def read_voltage_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_voltage_dc(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the DC voltage measured by the instrument
         """
         instruction = "MEASure:VOLTage:DC? {},{}"
@@ -58,7 +61,7 @@ class Agilent34410A(VisaInstrument):
             raise InstrIOError('DC voltage measure failed')
 
     @secure_communication()
-    def read_voltage_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_voltage_ac(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the AC voltage measured by the instrument
         """
         instruction = "MEASure:VOLTage:AC? {},{}"
@@ -70,7 +73,7 @@ class Agilent34410A(VisaInstrument):
             raise InstrIOError('AC voltage measure failed')
 
     @secure_communication()
-    def read_resistance(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_resistance(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the resistance measured by the instrument
         """
         instruction = "MEASure:RESistance? {},{}"
@@ -82,7 +85,7 @@ class Agilent34410A(VisaInstrument):
             raise InstrIOError('Resistance measure failed')
 
     @secure_communication()
-    def read_current_dc(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_current_dc(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the DC current measured by the instrument
         """
         instruction = "MEASure:CURRent:DC? {},{}"
@@ -94,7 +97,7 @@ class Agilent34410A(VisaInstrument):
             raise InstrIOError('DC current measure failed')
 
     @secure_communication()
-    def read_current_ac(self, mes_range = 'DEF', mes_resolution = 'DEF'):
+    def read_current_ac(self, mes_range='DEF', mes_resolution='DEF'):
         """Return the AC current measured by the instrument
         """
         instruction = "MEASure:CURRent:AC? {},{}"
@@ -105,4 +108,4 @@ class Agilent34410A(VisaInstrument):
         else:
             raise InstrIOError('AC current measure failed')
 
-DRIVERS = {'Agilent34410A' : Agilent34410A}
+DRIVERS = {'Agilent34410A': Agilent34410A}

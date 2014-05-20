@@ -73,7 +73,7 @@ class PrefPlugin(Plugin):
             prefs.update(self._prefs)
             prefs.filename = pref_path
             prefs.write()
-        except:
+        except Exception:
             print 'Invalid pref path'
 
         def_path = os.path.join(MODULE_PATH, 'default.ini')
@@ -82,7 +82,7 @@ class PrefPlugin(Plugin):
             defaults['folder'] = self.default_folder
             defaults['file'] = self.default_file
             defaults.write()
-        except:
+        except Exception:
             print 'Invalid default pref path'
 
     def save_preferences(self, path=None):

@@ -13,7 +13,7 @@ This module defines drivers for agilent PSG SignalGenerator using VISA library.
 """
 
 from ..driver_tools import (InstrIOError, instrument_property,
-                          secure_communication)
+                            secure_communication)
 from ..visa_tools import VisaInstrument
 from visa import VisaTypeError
 from textwrap import fill
@@ -27,7 +27,7 @@ class AgilentPSGSignalGenerator(VisaInstrument):
 
     This driver does not give access to all the functionnality of the
     instrument but you can extend it if needed. See the documentation of
-    the `driver_tools` module for more details about writing instruments
+    the driver_tools module for more details about writing instruments
     drivers.
 
     Parameters
@@ -52,8 +52,8 @@ class AgilentPSGSignalGenerator(VisaInstrument):
     models using the same SCPI commands.
 
     """
-    def __init__(self, connection_info, caching_allowed = True,
-                 caching_permissions = {}, auto_open = True):
+    def __init__(self, connection_info, caching_allowed=True,
+                 caching_permissions={}, auto_open=True):
 
         super(AgilentPSGSignalGenerator, self).__init__(connection_info,
                                                         caching_allowed,

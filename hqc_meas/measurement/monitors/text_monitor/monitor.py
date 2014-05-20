@@ -35,26 +35,26 @@ class TextMonitor(BaseMonitor):
     """
     #--- Public API -----------------------------------------------------------
 
-    # List of the entries which should be displayed when a measure is running.
+    #: List of the entries which should be displayed when a measure is running.
     displayed_entries = ContainerList(Instance(MonitoredEntry))
 
-    # List of the entries which should not be displayed when a measure is
-    # running.
-    undisplayed_entries = List(Instance(MonitoredEntry))
+    #: List of the entries which should not be displayed when a measure is
+    #: running.
+    undisplayed_entries = ContainerList(Instance(MonitoredEntry))
 
-    # List of the entries which should be not displayed when a measure is
-    # running because they would be redundant with another entry. (created by
-    # a rule for example.)
+    #: List of the entries which should be not displayed when a measure is
+    #: running because they would be redundant with another entry. (created by
+    #: a rule for example.)
     hidden_entries = List(Instance(MonitoredEntry))
 
-    # Mapping between a database entry and a list of callable used for updating
-    # an entry of the monitor which relies on the database entry.
+    #: Mapping between a database entry and a list of callable used for
+    #:updating an entry of the monitor which relies on the database entry.
     updaters = Dict(Str(), List(Callable()))
 
-    # List of rules which should be used to build monitor entries.
+    #: List of rules which should be used to build monitor entries.
     rules = ContainerList(Instance(AbstractMonitorRule))
 
-    # List of user created monitor entries.
+    #: List of user created monitor entries.
     custom_entries = List(Instance(MonitoredEntry))
 
     def start(self, parent_ui):
@@ -67,6 +67,7 @@ class TextMonitor(BaseMonitor):
             self._view = None
 
     def process_news(self, news):
+
         values = self._database_values
         values[news[0]] = news[1]
         for updater in self.updaters[news[0]]:
@@ -184,9 +185,9 @@ class TextMonitor(BaseMonitor):
         m_entries = set(self.displayed_entries + self.undisplayed_entries +
                         self.hidden_entries + self.custom_entries)
 
-        pref_disp = config['displayed']
-        pref_undisp = config['undisplayed']
-        pref_hidden = config['hidden']
+        pref_disp = eval(config['displayed'])
+        pref_undisp = eval(config['undisplayed'])
+        pref_hidden = eval(config['hidden'])
         disp = [e for e in m_entries if e.path in pref_disp]
         m_entries -= set(disp)
         undisp = [e for e in m_entries if e.path in pref_undisp]
@@ -199,7 +200,7 @@ class TextMonitor(BaseMonitor):
                         text=cleandoc('''The application of new rules lead
                         to the creation of new entries. These entries has been
                         added to the displayed ones.'''))
-            pref_disp += m_entries
+            pref_disp += list(m_entries)
 
         self.displayed_entries = disp
         self.undisplayed_entries = undisp
@@ -213,8 +214,9 @@ class TextMonitor(BaseMonitor):
     def show_monitor(self, parent_ui):
         if self._view and self._view.proxy_is_active:
             self._view.restore()
+            self._view.send_to_front()
         else:
-            view = TextMonitorView(monitor=self, parent=parent_ui)
+            view = TextMonitorView(monitor=self)
             view.show()
             self._view = view
 

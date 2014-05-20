@@ -10,7 +10,7 @@ import enaml
 from atom.api import Typed, Value, set_default
 from enaml.application import deferred_call
 from enaml.workbench.ui.api import Workspace
-from enaml.widgets.api import FileDialog
+from enaml.widgets.api import FileDialogEx
 from inspect import cleandoc
 from textwrap import fill
 
@@ -109,7 +109,6 @@ class MeasureSpace(Workspace):
                           fill(message.replace('\n', ' '), 79),
                           )
 
-        print result, result.action
         if result is not None and result.action == 'accept':
             self._new_measure()
 
@@ -128,12 +127,13 @@ class MeasureSpace(Workspace):
 
         """
         if mode == 'file':
-            # TODO use new API
-            full_path = FileDialog(parent=self.content,
-                                   mode='save_file',
-                                   filters=[u'*.ini']).exec_()
+            get_file = FileDialogEx.get_save_file_name
+            full_path = get_file(parent=self.content,
+                                 name_filters=[u'*.ini'])
             if not full_path:
                 return
+            elif not full_path.endswith('.ini'):
+                full_path += '.ini'
 
             measure.save_measure(full_path)
 
@@ -168,8 +168,8 @@ class MeasureSpace(Workspace):
 
         """
         if mode == 'file':
-            full_path = FileDialog(mode='open_file',
-                                   filters=[u'*.ini']).exec_()
+            get_file = FileDialogEx.get_open_file_name
+            full_path = get_file(name_filters=[u'*.ini'])
             if not full_path:
                 return
 
@@ -284,19 +284,30 @@ class MeasureSpace(Workspace):
         measure.status = 'READY'
         measure.infos = 'Measure re-enqueued by the user'
 
+    def remove_processed_measures(self):
+        """ Remove all the measures which have been processed from the queue.
+
+        This method rely on the status of the measure. Only measures whose
+        status is 'READY' will be left in the queue.
+
+        """
+        for measure in self.plugin.enqueued_measures[:]:
+            if measure.status != 'READY':
+                self.plugin.enqueued_measures.remove(measure)
+
     def start_processing_measures(self):
         """ Starts to perform the measurement in the queue.
 
         Measure will be processed in their order of appearance in the queue.
 
         """
+        logger = logging.getLogger(__name__)
         if not self.plugin.selected_engine:
             dial = EngineSelector(plugin=self.plugin)
             dial.exec_()
             if dial.selected_id:
                 self.plugin.selected_engine = dial.selected_id
             else:
-                logger = logging.getLogger(__name__)
                 msg = cleandoc('''The user did not select an engine to run the
                                measure''')
                 logger.warn(msg)
@@ -307,6 +318,9 @@ class MeasureSpace(Workspace):
         measure = self.plugin.find_next_measure()
         if measure is not None:
             self.plugin.start_measure(measure)
+        else:
+            msg = cleandoc('''No curently enqueued measure can be run.''')
+            logger.info(msg)
 
     def process_single_measure(self, measure):
         """ Performs a single measurement and then stops.

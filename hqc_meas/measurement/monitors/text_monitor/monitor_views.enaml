@@ -18,7 +18,6 @@ from inspect import cleandoc
 
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
-from hqc_meas.utils.widgets.list_editor import ListEditor
 
 from .entries import MonitoredEntry
 from .custom_entry_building import EntryDialog
@@ -36,7 +35,7 @@ enamldef TextMonitorPage(Page): dial:
     title = 'Text monitor'
 
     Container:
-        constraints << [vbox(auto, 
+        constraints << [vbox(auto,
                              hbox(
                                 vbox(undisp_lab, undisp),
                                 vbox(disp_all, disp_one,
@@ -45,7 +44,6 @@ enamldef TextMonitorPage(Page): dial:
                                 vbox(edit_rules, manual_entries,
                                      hbox(*cond.items), show_hidden),
                                 ),
-                            hbox(spacer, close),
                             ),
                         disp_all.width == disp_one.width,
                         disp_one.width == hide_one.width,
@@ -170,12 +168,6 @@ enamldef TextMonitorPage(Page): dial:
                         else:
                             monitor.undisplayed_entries.remove(selected)
                         monitor.custom_entries.remove(selected)
-
-        # Quit button.
-        PushButton: close:
-            text = 'Close'
-            clicked ::
-                dial.accept()
 
 
 enamldef TextMonitorView(Window):

@@ -12,7 +12,7 @@ from enaml.core.api import Include
 from inspect import cleandoc
 
 from hqc_meas.tasks.api import BaseTask
-from hqc_meas.tasks.tools.task_editor import view_instantiater
+from hqc_meas.tasks.tools.task_editor import TaskViewManager
 from ..base_editor import BaseEditor
 
 
@@ -27,7 +27,7 @@ enamldef FailureView(GroupBox):
                            task.''')
 
 
-class _StandardEditorModel(Atom):
+class _StandardEditorModel(TaskViewManager):
     """ Model for the standard editor.
 
     The model is responsible for fetching the right view for the selected task,
@@ -50,16 +50,10 @@ class _StandardEditorModel(Atom):
     current_view = Value()
 
     def __init__(self, workbench, selected_task):
-        super(_StandardEditorModel, self).__init__(workbench=workbench)
+        super(_StandardEditorModel, self).__init__([], workbench=workbench)
         self.selected_task = selected_task
 
     #--- Private API ----------------------------------------------------------
-
-    # Cache in which task view are stored for quicker second access.
-    _views_def_cache = Dict()
-
-    # Reference to the invoke_command method of the core plugin.
-    _core = Typed(CorePlugin)
 
     def _observe_selected_task(self, change):
         """ Observer getting the correct view for the selected task.
@@ -67,17 +61,15 @@ class _StandardEditorModel(Atom):
         """
         task = change['value']
         t_class = type(task).__name__
-        cmd = u'hqc_meas.task_manager.views_request'
-        invoke = self._core.invoke_command
-        views, missing = invoke(cmd, {'task_classes': [t_class]}, self)
-        if missing:
+        self.get_views([t_class])
+        if t_class not in self.views:
             self.current_view = FailureView()
         else:
-            self.current_view = view_instantiater(task, views,
-                                                  {'core': self._core,
-                                                   'cache': self.cache})
+            self.current_view = self.instantiate_view(task,
+                                                      {'core': self.core,
+                                                       'cache': self.cache})
 
-    def _default__core(self):
+    def _default_core(self):
         """ Default value for the _invoker member.
 
         """

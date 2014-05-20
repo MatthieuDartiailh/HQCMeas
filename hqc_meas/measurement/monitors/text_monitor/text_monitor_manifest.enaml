@@ -12,7 +12,7 @@ from hqc_meas.utils.preferences import Preferences
 from ..base_monitor import Monitor
 
 
-def monitor_factory(workbench, raw=False):
+def monitor_factory(declaration, workbench, raw=False):
     """ Factory function returning anew TextMonitor instance.
 
     """
@@ -35,6 +35,7 @@ enamldef TextMonitorManifest(PluginManifest):
         id = 'monitors'
         point = u'hqc_meas.measure.monitors'
         Monitor:
+            id = u'hqc_meas.measure.monitors.text_monitor'
             name = 'Text monitor'
             description = u'Monitor displaying infos as text.'
             factory = monitor_factory
