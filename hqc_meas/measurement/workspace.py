@@ -10,7 +10,7 @@ import enaml
 from atom.api import Typed, Value, set_default
 from enaml.application import deferred_call
 from enaml.workbench.ui.api import Workspace
-from enaml.widgets.api import FileDialog
+from enaml.widgets.api import FileDialogEx
 from inspect import cleandoc
 from textwrap import fill
 
@@ -127,12 +127,13 @@ class MeasureSpace(Workspace):
 
         """
         if mode == 'file':
-            # TODO use new API
-            full_path = FileDialog(parent=self.content,
-                                   mode='save_file',
-                                   filters=[u'*.ini']).exec_()
+            get_file = FileDialogEx.get_save_file_name
+            full_path = get_file(parent=self.content,
+                                 name_filters=[u'*.ini'])
             if not full_path:
                 return
+            elif not full_path.endswith('.ini'):
+                full_path += '.ini'
 
             measure.save_measure(full_path)
 
@@ -167,8 +168,8 @@ class MeasureSpace(Workspace):
 
         """
         if mode == 'file':
-            full_path = FileDialog(mode='open_file',
-                                   filters=[u'*.ini']).exec_()
+            get_file = FileDialogEx.get_open_file_name
+            full_path = get_file(name_filters=[u'*.ini'])
             if not full_path:
                 return
 
