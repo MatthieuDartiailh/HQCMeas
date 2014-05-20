@@ -157,6 +157,10 @@ class DriverDebugger(BaseDebugger):
         except Exception as e:
             self.errors += 'Failed to reload driver {}: {}'.format(self.driver,
                                                                    e.message)
+            return
+
+        self._observe_driver({'value': self.driver})
+        self.errors += 'Driver {} successfully reloaded'.format(self.driver)
 
     def close_driver(self):
         """ Destroy the driver and release the instrument profile.
