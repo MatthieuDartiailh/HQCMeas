@@ -38,10 +38,13 @@ def _method_call(model, meth, f_args, f_kwargs):
 
     if f_kwargs.text:
         try:
-            aux = f_kwargs.text.replace('=', ':')
+            aux = [kv.split('=') for kv in f_kwargs.text.split(',')]
+            aux = ','.join(['"' + kv[0].strip() + '":' + kv[1].strip()
+                            for kv in aux])
+            print aux
             kwargs = eval('{' + aux + '}')
         except Exception:
-            errors.text += 'Failed to evaluate kwargs'
+            model.errors += 'Failed to evaluate kwargs'
             return
     else:
         kwargs = {}
@@ -211,7 +214,8 @@ enamldef DriverDebuggerView(DockItem): main:
                             clicked ::
                                 aux = main.debugger.custom_form[0]
                                 if aux.check():
-                                    main.debugger.profile = aux.connection_dict()
+                                    main.debugger.profile =\
+                                        aux.connection_dict()
 
         # Main buttons.
         PushButton: dr_start:
@@ -251,52 +255,55 @@ enamldef DriverDebuggerView(DockItem): main:
         # Driver interface.
         Conditional: cond:
             condition << debugger.driver_instance is not None
-            # Attributes and instrument properties
+
             ScrollArea:
                 Container:
-                    SetGetBox:
-                        title = 'Attributes'
-                        iterable << debugger.driver_attributes
+                    # Attributes and instrument properties
+                    ScrollArea:
+                        Container:
+                            SetGetBox:
+                                title = 'Attributes'
+                                iterable << debugger.driver_attributes
 
-                    SetGetBox:
-                        title = 'Instrument properties'
-                        iterable << debugger.driver_properties
+                            SetGetBox:
+                                title = 'Instrument properties'
+                                iterable << debugger.driver_properties
 
-            # Method caller.
-            Container:
-                padding = 2
-                constraints << [hbox(
-                                    vbox(hbox(meth, doc),
-                                         g_args,
-                                         g_kwargs),
-                                     vbox(spacer, call_button)),
-                                    ]
-                ObjectCombo: meth:
-                    items << debugger.driver_methods
-                    to_string = lambda x : x.__name__
-                    selected ::
-                        f_args.text = ''
-                        f_kwargs.text = ''
-                PushButton: doc:
-                    text = 'Doc'
-                    clicked ::
-                        if meth.selected:
-                            f_doc = _method_doc(meth.selected)
-                            DocPopup(doc, text=f_doc).show()
-                GroupBox: g_args:
-                    title = 'Args'
-                    Field: f_args:
-                        tool_tip = f_c('''Enter the positional arguments
-                            of the selected method''')
-                GroupBox: g_kwargs:
-                    title = 'Kwargs'
-                    Field: f_kwargs:
-                        tool_tip = f_c('''Enter the keyword arguments of
-                            the selected method''')
-                PushButton: call_button:
-                    text = 'Call'
-                    clicked ::
-                        _method_call(debugger, meth, f_args, f_kwargs)
+                    # Method caller.
+                    Container:
+                        padding = 2
+                        constraints << [hbox(
+                                            vbox(hbox(meth, doc),
+                                                 g_args,
+                                                 g_kwargs),
+                                             vbox(spacer, call_button)),
+                                            ]
+                        ObjectCombo: meth:
+                            items << debugger.driver_methods
+                            to_string = lambda x : x.__name__
+                            selected ::
+                                f_args.text = ''
+                                f_kwargs.text = ''
+                        PushButton: doc:
+                            text = 'Doc'
+                            clicked ::
+                                if meth.selected:
+                                    f_doc = _method_doc(meth.selected)
+                                    DocPopup(doc, text=f_doc).show()
+                        GroupBox: g_args:
+                            title = 'Args'
+                            Field: f_args:
+                                tool_tip = f_c('''Enter the positional
+                                    arguments of the selected method.''')
+                        GroupBox: g_kwargs:
+                            title = 'Kwargs'
+                            Field: f_kwargs:
+                                tool_tip = f_c('''Enter the keyword arguments
+                                    of the selected method.''')
+                        PushButton: call_button:
+                            text = 'Call'
+                            clicked ::
+                                _method_call(debugger, meth, f_args, f_kwargs)
 
         # Error display
         MultilineField: err:
