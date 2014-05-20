@@ -6,8 +6,8 @@
 #==============================================================================
 """
 """
-from atom.api import (Atom, Str, Int, List, observe, Enum, set_default, Bool,
-                      Typed, ContainerList)
+from atom.api import (Str, Int, List, observe, Enum, set_default,
+                      Tuple, ContainerList)
 
 import time
 from inspect import cleandoc
@@ -175,12 +175,6 @@ class PNASetPowerTask(PNATasks):
         self.channels = [change['value']]
 
 
-class PNAMeasure(Atom):
-    """
-    """
-    measure = Str()
-
-
 class PNASinglePointMeasureTask(PNATasks):
     """Measure the specified parameters. Frequency and power can be set before.
 
@@ -188,8 +182,7 @@ class PNASinglePointMeasureTask(PNATasks):
 
     """
     channel = Int(1).tag(pref=True)
-    measures = ContainerList(Typed(PNAMeasure)).tag(pref=True)
-    measure_format = List(Bool()).tag(pref=True)
+    measures = ContainerList(Tuple()).tag(pref=True)
 
     if_bandwidth = Int(2).tag(pref=True)
     window = Int(1).tag(pref=True)
@@ -213,12 +206,12 @@ class PNASinglePointMeasureTask(PNATasks):
             self.driver.owner = self.task_name
             self.driver.set_all_chanel_to_hold()
             self.driver.trigger_scope = 'CURRent'
-            if self.if_bandwidth > 5:
+            if self.if_bandwidth >= 5:
                 self.driver.trigger_source = 'IMMediate'
             else:
                 self.driver.trigger_source = 'MANual'
 
-        meas_names = ['Ch{}:'.format(self.channel) + measure.measure
+        meas_names = ['Ch{}:'.format(self.channel) + ':'.join(measure)
                       for measure in self.measures]
 
         if self.channel_driver.owner != self.task_name:
@@ -247,7 +240,7 @@ class PNASinglePointMeasureTask(PNATasks):
                     self.channel_driver.prepare_measure(meas_name, self.window,
                                                         i+1, clear)
                     clear = False
-            if self.if_bandwidth > 5:
+            if self.if_bandwidth >= 5:
                 self.channel_driver.sweep_mode = 'CONTinuous'
 
         if self.if_bandwidth < 5:
@@ -260,7 +253,7 @@ class PNASinglePointMeasureTask(PNATasks):
 
         for i, meas_name in enumerate(meas_names):
             self.channel_driver.selected_measure = meas_name
-            if self.measure_format[i]:
+            if self.measures[i][1]:
                 data = self.channel_driver.read_formatted_data()[0]
             else:
                 data = self.channel_driver.read_raw_data()[0]
@@ -274,21 +267,16 @@ class PNASinglePointMeasureTask(PNATasks):
         """
         self.channels = [change['value']]
 
-    @observe('measures')
-    def _post_measures_update(self, change):
+    def _observe_measures(self, change):
         """
         """
         entries = {}
-        meas_for = []
         for measure in change['value']:
-            if len(measure.split(':')) > 1:
-                entries[measure.measure] = 1.0
-                meas_for.append(True)
+            if measure[1]:
+                entries[':'.join(measure)] = 1.0
             else:
-                entries[measure.measure] = 1.0 + 1j
-                meas_for.append(False)
+                entries[measure[0]] = 1.0 + 1j
 
-        self.measure_format = meas_for
         self.task_database_entries = entries
 
 
@@ -309,7 +297,7 @@ class PNASweepTask(PNATasks):
 
     sweep_type = Enum('Frequency', 'Power').tag(pref=True)
 
-    measures = ContainerList(Str()).tag(pref=True)
+    measures = ContainerList(Tuple()).tag(pref=True)
 
     if_bandwidth = Int(10).tag(pref=True)
 
@@ -326,7 +314,6 @@ class PNASweepTask(PNATasks):
     def process(self):
         """
         """
-        measures_format = self.measures_format()
         if not self.driver:
             self.start_driver()
             self.channel_driver = self.driver.get_channel(self.channel)
@@ -337,7 +324,7 @@ class PNASweepTask(PNATasks):
             self.driver.trigger_scope = 'CURRent'
             self.driver.trigger_source = 'MANual'
 
-        meas_names = ['Ch{}:'.format(self.channel) + measure.measure
+        meas_names = ['Ch{}:'.format(self.channel) + ':'.join(measure)
                       for measure in self.measures]
 
         if self.channel_driver.owner != self.task_name:
@@ -375,7 +362,7 @@ class PNASweepTask(PNATasks):
 
         data = [np.linspace(start, stop, points)]
         for i, meas_name in enumerate(meas_names):
-            if measures_format[i]:
+            if self.measures[i][1]:
                 data.append(
                     self.channel_driver.read_formatted_data(meas_name))
             else:
@@ -415,7 +402,7 @@ class PNASweepTask(PNATasks):
 
         data = [np.array([0.0, 1.0])] + \
             [np.array([0.0, 1.0]) for meas in self.measures]
-        names = [self.sweep_type] + self.measures
+        names = [self.sweep_type] + [':'.join(meas) for meas in self.measures]
         final_arr = np.rec.fromarrays(data, names=names)
 
         self.write_in_database('sweep_data', final_arr)
@@ -425,18 +412,6 @@ class PNASweepTask(PNATasks):
     def _update_channels(self, change):
         self.channels = [change['value']]
 
-    def measures_format(self):
-        """
-        """
-        entries = self.measures
-        meas_for = []
-        for measure in entries:
-            if len(measure.split(':')) > 1:
-                meas_for.append(True)
-            else:
-                meas_for.append(False)
-
-        return meas_for
 
 KNOWN_PY_TASKS = [PNASetFreqTask, PNASetPowerTask, PNASinglePointMeasureTask,
                   PNASweepTask]
