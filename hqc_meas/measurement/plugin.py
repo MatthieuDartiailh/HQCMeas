@@ -57,6 +57,9 @@ class MeasurePlugin(HasPrefPlugin):
     # Currently edited measure.
     edited_measure = Typed(Measure)
 
+    #: Path to which save by default the currently edited measure
+    edited_measure_path = Unicode()
+
     # Currently enqueued measures.
     enqueued_measures = ContainerList(Typed(Measure))
 

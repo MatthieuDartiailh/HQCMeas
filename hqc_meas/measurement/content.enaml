@@ -4,8 +4,12 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from enaml.widgets.api import Container, DockArea, DockItem, Menu, Action
+from enaml.widgets.api import (Container, DockArea, DockItem, Menu, Action,
+                               PopupView, Label)
 from enaml.layout.api import HSplitLayout, VSplitLayout
+from enaml.workbench.api import PluginManifest, Extension
+from enaml.workbench.core.api import Command
+from enaml.workbench.ui.api import ActionItem, MenuItem
 
 from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
 from .measure_edition import MeasureEditorDockItem
@@ -21,8 +25,8 @@ enamldef MeasureContent(Container): main:
     DockArea:
         # Sizes are exppressed in pixels
         layout = VSplitLayout(
-                    HSplitLayout('meas_editor', 'meas_exec', sizes=[5000,100]),
-                    'main_log', sizes=[5000,100])
+                    HSplitLayout('meas_editor', 'meas_exec', sizes=[5000,10]),
+                    'main_log', sizes=[5000,10])
 
         MeasureEditorDockItem:
             stretch = 10
@@ -48,3 +52,164 @@ enamldef MeasureContent(Container): main:
                             text = 'Clear'
                             triggered ::
                                 workspace.log_model.text = ''
+
+
+def new_measure(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.measure')
+    plugin.workspace.new_measure()
+
+NEW_DESCRIPTION =\
+'''Create a new measure using the default parameters for the tools (monitors,
+headers, checks).'''
+
+
+enamldef SaveConfirm(PopupView):
+    attr measure_name
+    parent_anchor = (1.0, 0.0)
+    timeout = 2
+
+    Container:
+        Label:
+            text = 'Measure {} was correctly saved'.format(measure_name)
+
+
+def save_measure(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.measure')
+    if plugin.edited_measure_path:
+        plugin.edited_measure.save_measure(plugin.edited_measure_path)
+        window = workbench.get_plugin('enaml.workbench.ui').window
+        SaveConfirm(window, measure_name=plugin.edited_measure.name).show()
+    else:
+        plugin.workspace.save_measure(plugin.edited_measure, 'file')
+
+SAVE_DESCRIPTION =\
+'''Save the currently edited measure to a file. If this measure has already
+been saved to a file then simply override it.'''
+
+
+def save_measure_as(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.measure')
+    plugin.workspace.save_measure(plugin.edited_measure, 'file')
+
+SAVE_AS_DESCRIPTION =\
+'''Save the currently edited measure to a file. The user will always be asked
+to choose a file to which the measure should be saved.'''
+
+
+def save_measure_as_template(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.measure')
+    plugin.workspace.save_measure(plugin.edited_measure, 'template')
+
+SAVE_AS_DESCRIPTION =\
+'''Save the currently edited measure as template.'''
+
+
+def load_measure(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.measure')
+    plugin.workspace.load_measure('file')
+
+LOAD_DESCRIPTION =\
+'''Load a measure from a file.'''
+
+
+def load_template(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.measure')
+    plugin.workspace.load_measure('template')
+
+LOAD_DESCRIPTION =\
+'''Create a measure from a template.'''
+
+
+enamldef MeasureSpaceMenu(PluginManifest):
+    """ Contribution to the main window of the MeasureSpace.
+
+    """
+    id = u'hqc_meas.measure.workspace.menus'
+
+    Extension:
+        id = 'commands'
+        point = 'enaml.workbench.core.commands'
+        Command:
+            id = 'hqc_meas.measure.workspace.new'
+            description = NEW_DESCRIPTION
+            handler = new_measure
+        Command:
+            id = 'hqc_meas.measure.workspace.save'
+            description = SAVE_DESCRIPTION
+            handler = save_measure
+        Command:
+            id = 'hqc_meas.measure.workspace.save_as'
+            description = SAVE_AS_DESCRIPTION
+            handler = save_measure_as
+        Command:
+            id = 'hqc_meas.measure.workspace.save_as_template'
+            description = SAVE_AS_TEMPLATE_DESCRIPTION
+            handler = save_measure_as_template
+        Command:
+            id = 'hqc_meas.measure.workspace.load'
+            description = LOAD_DESCRIPTION
+            handler = load_measure
+        Command:
+            id = 'hqc_meas.measure.workspace.load_template'
+            description = LOAD_TEMPLATE_DESCRIPTION
+            handler = load_template
+
+    Extension:
+        id = 'action'
+        point = 'enaml.workbench.ui.actions'
+        # File contributions.
+        ActionItem:
+            path = '/file/new'
+            label = 'New measure'
+            command = 'hqc_meas.measure.workspace.new'
+            group = 'user'
+            before = 'save'
+        ActionItem:
+            path = '/file/save'
+            label = 'Save measure'
+            shortcut = 'Ctrl+S'
+            command = 'hqc_meas.measure.workspace.save'
+            group = 'user'
+            before = 'save_as'
+        ActionItem:
+            path = '/file/save_as'
+            label = 'Save measure as'
+            command = 'hqc_meas.measure.workspace.save_as'
+            group = 'user'
+            before = 'save_as_template'
+        ActionItem:
+            path = '/file/save_as_template'
+            label = 'Save measure as template'
+            command = 'hqc_meas.measure.workspace.save_as_template'
+            group = 'user'
+            before = 'load'
+            # TODO reactivate later
+            enabled = False
+        ActionItem:
+            path = '/file/load'
+            label = 'Load measure'
+            command = 'hqc_meas.measure.workspace.load'
+            group = 'user'
+            before = 'load_template'
+        ActionItem:
+            path = '/file/load_template'
+            label = 'Build measure from template'
+            command = 'hqc_meas.measure.workspace.load_template'
+            group = 'user'
+            # TODO reactivate later
+            enabled = False
+
+        # Measure menu
+        # Will see later.
+#        MenuItem:
+#            path = '/measure'
+#            label = 'Measures'
+#            after = 'file'
+#            before = 'preferences'
+
