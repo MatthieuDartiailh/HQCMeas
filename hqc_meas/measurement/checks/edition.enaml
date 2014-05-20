@@ -73,7 +73,7 @@ enamldef ChecksEditor(Container): ed:
 
     # Mapping between header name and id.
     attr _mapping << {check.name: check_id
-                      for check_id, check in measure.checks}
+                      for check_id, check in measure.checks.iteritems()}
 
     constraints << [hbox(list_ed, desc,
                          vbox(add, remove, spacer))
@@ -85,7 +85,7 @@ enamldef ChecksEditor(Container): ed:
             new_val = change['value']
             if new_val:
                 key = _mapping[new_val]
-                ed.selected_check = measure.checks[key]
+                ed.selected_check = key
 
     GroupBox: desc:
         title = 'Description'
@@ -100,11 +100,17 @@ enamldef ChecksEditor(Container): ed:
         clicked ::
             selector = CheckSelector(measure=measure)
             if selector.exec_():
-                measure.checks.append(selector.selected_decl)
+                # Workaround missing Container Dict
+                checks = measure.checks.copy()
+                checks[selector.selected_decl.id] = selector.selected_decl
+                measure.checks = checks
                 list_ed.set_items(sorted(_mapping.keys()))
 
     PushButton: remove:
         text = 'Remove check'
         enabled << bool(ed.selected_check)
         clicked ::
-            measure.headers.remove(ed.selected_check)
+            # Workaround missing Container Dict
+            checks = measure.checks.copy()
+            del checks[ed.selected_check]
+            measure.checks = checks

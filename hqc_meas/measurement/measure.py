@@ -236,8 +236,11 @@ class Measure(Atom):
             return
 
         database = self.root_task.task_database
-        monitor = self.monitors.pop(id)
+        # Workaround the missing ContainerDict
+        monitors = self.monitors.copy()
+        monitor = monitors.pop(id)
         database.unobserve('notifier', monitor.database_modified)
+        self.monitors = monitors
 
     def collect_headers(self, workbench):
         """ Set the default_header of the root task using all contributions.
