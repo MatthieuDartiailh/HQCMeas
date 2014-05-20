@@ -76,12 +76,10 @@ enamldef HqcAppManifest(PluginManifest):
                 id = 'spaces'
         ActionItem:
             path = '/file/close'
-            label = 'Close'
-            shortcut = 'Ctrl+Q'
+            label = 'Exit'
             command = 'enaml.workbench.ui.close_window'
         ActionItem:
             path = '/workspace/close'
             label = 'Close Workspace'
-            shortcut = 'Ctrl+D'
             command = 'enaml.workbench.ui.close_workspace'
 
