@@ -85,7 +85,7 @@ enamldef HeadersEditor(Container): ed:
             new_val = change['value']
             if new_val:
                 key = _mapping[new_val]
-                ed.selected_header = measure.headers[key]
+                ed.selected_header = key
 
     GroupBox: desc:
         title = 'Description'
@@ -100,11 +100,17 @@ enamldef HeadersEditor(Container): ed:
         clicked ::
             selector = HeaderSelector(measure=measure)
             if selector.exec_():
-                measure.headers.append(selector.selected_decl)
+                # Workaround missing Container Dict
+                headers = measure.headers.copy()
+                headers[selector.selected_decl.id] = selector.selected_decl
+                measure.headers = headers
                 list_ed.set_items(sorted(_mapping.keys()))
 
     PushButton: remove:
         text = 'Remove header'
         enabled << bool(ed.selected_header)
         clicked ::
-            measure.headers.remove(ed.selected_header)
+             # Workaround missing Container Dict
+            headers = measure.headers.copy()
+            del headers[ed.selected_header]
+            measure.headers = headers

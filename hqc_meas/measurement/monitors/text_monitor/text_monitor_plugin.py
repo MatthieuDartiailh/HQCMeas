@@ -42,7 +42,7 @@ class TextMonitorPlugin(HasPrefPlugin):
             New rule properly initialized.
 
         """
-        class_name = rule_config.pop('class')
+        class_name = rule_config.pop('class_name')
         rule_class = self.rules_classes.get(class_name)
         if rule_class is not None:
             rule = rule_class()
