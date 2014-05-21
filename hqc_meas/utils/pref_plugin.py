@@ -44,15 +44,15 @@ class PrefPlugin(Plugin):
             self.default_file = defaults['file']
             pref_path = os.path.join(defaults['folder'], defaults['file'])
             if os.path.isfile(pref_path):
-                self._prefs.update(ConfigObj(pref_path))
+                self._prefs.merge(ConfigObj(pref_path))
                 self._prefs.filename = pref_path
             elif os.path.isfile(def_pref_path):
                 defaults = ConfigObj(def_pref_path)
-                self._prefs.update(defaults)
+                self._prefs.merge(defaults)
 
         elif os.path.isfile(def_pref_path):
             defaults = ConfigObj(pref_path)
-            self._prefs.update(defaults)
+            self._prefs.merge(defaults)
 
         self._refresh_pref_decls()
         self._bind_observers()
