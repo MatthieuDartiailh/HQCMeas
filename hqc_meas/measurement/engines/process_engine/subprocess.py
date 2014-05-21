@@ -64,6 +64,7 @@ class TaskProcess(Process):
     def __init__(self, pipe, log_queue, monitor_queue,
                  task_stop, process_stop):
         super(TaskProcess, self).__init__(name='MeasureProcess')
+        self.daemon = True
         self.task_stop = task_stop
         self.process_stop = process_stop
         self.pipe = pipe
