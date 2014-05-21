@@ -1,10 +1,10 @@
-from enaml.stdlib.mapped_view import MappedView
+from enaml.core.api import Include
 from enaml.layout.api import hbox, align, spacer, vbox, grid
 from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, CheckBox)
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
-from hqc_meas.tasks.tools.task_editor import (TaskEditor)
+from hqc_meas.tasks.tools.task_editor import (TaskEditor, TaskViewManager)
 
 enamldef SimpleLoopView(GroupBox): view:
     attr task
@@ -40,44 +40,48 @@ enamldef SimpleLoopView(GroupBox): view:
         task := view.task
 
 enamldef LoopView(GroupBox): view:
+
     attr task
+    alias cache : editor.cache
     alias core : editor.core
+    attr _model = TaskViewManager([task.task], core=core)
+
     title << task.task_name
     constraints << [vbox(grid(
                     [lab_start, lab_stop, lab_step, timing],
                     [val_start, val_stop, val_step, timing_bool]),
-                    hbox(cont, spacer), editor),
+                    hbox(*incl.objects), editor),
                     val_start.width == val_stop.width,
                     val_stop.width == val_step.width,
                 ]
+
     Label: lab_start:
         text = 'Start'
     QtLineCompleter: val_start:
         text := task.task_start
         entries_updater << task._list_database_entries
+
     Label: lab_stop:
         text = 'Stop'
     QtLineCompleter: val_stop:
         text := task.task_stop
         entries_updater << task._list_database_entries
+
     Label: lab_step:
         text = 'Step'
     QtLineCompleter: val_step:
         text := task.task_step
         entries_updater << task._list_database_entries
+
     Label: timing:
         text = 'Timing'
     CheckBox: timing_bool:
         checked := task.timing
-    Container: cont:
-        padding = (0,0,0,0)
-        hug_width = 'strong'
-        hug_height = 'strong'
-        MappedView:
-            model << task.task
-            typemap = mapping
-            modelkey = 'task'
-            kwargs = {'mapping' : mapping, 'in_loop' : True}
+
+    Include: incl:
+        objects << [_model.instantiate_view(task.task, {'core': core,
+                                                        'in_loop': True})]
+
     TaskEditor: editor:
         task := view.task
 

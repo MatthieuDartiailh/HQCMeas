@@ -69,8 +69,9 @@ enamldef SaveView(GroupBox):
         GroupBox: folder:
             constraints = [hbox(path, explore),
                             align('v_center', path, explore)]
-            Field: path:
+            QtLineCompleter: path:
                 text := task.folder
+                entries_updater << task._list_database_entries
             PushButton: explore:
                 text = 'E'
                 hug_width = 'strong'

@@ -71,9 +71,9 @@ class BaseLoopTask(ComplexTask):
                 'Loop task did not success to compute the point number'
 
         if self.timing:
-            self.process_ = self.process_with_timing
+            self.process_ = self.process_with_timing.__func__
         else:
-            self.process_ = self.process_no_timing
+            self.process_ = self.process_no_timing.__func__
 
         check = super(BaseLoopTask, self).check(*args, **kwargs)
         test = test and check[0]
@@ -163,7 +163,7 @@ class LoopTask(BaseLoopTask):
     # Task to call before other child tasks with current loop value.
     task = Instance(SimpleTask).tag(child=True)
 
-    task_database_entries = set_default({'point_number': 11})
+    task_database_entries = set_default({'point_number': 11, 'index': 1})
 
     @make_stoppable
     def process_no_timing(self):
