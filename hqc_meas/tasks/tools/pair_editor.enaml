@@ -54,7 +54,7 @@ class _PairEditorModel(Atom):
 
 template PairEditor(Content):
     Container: main:
-        padding = 0
+        padding = 2
         attr model
         attr iterable_name
         alias operations : ed.operations

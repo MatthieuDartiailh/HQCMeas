@@ -41,7 +41,7 @@ enamldef RootView(GroupBox): view:
     alias core : editor.core
     alias cache : editor.cache
 
-    constraints = [vbox(hbox(path, explore), scroll),
+    constraints = [vbox(hbox(path, explore), editor),
                 align('v_center', path, explore)]
 
     GroupBox: path:
@@ -52,13 +52,21 @@ enamldef RootView(GroupBox): view:
         text = 'E'
         hug_width = 'strong'
         clicked ::
-            path = FileDialogEx.get_existing_directory(
-                                                title='Select a default path')
+            plugin = core.workbench.get_plugin('hqc_meas.measure')
+            curr_path = task.default_path
+            if not curr_path:
+                curr_path = plugin.paths.get('task', '')
+
+            get_dir = FileDialogEx.get_existing_directory
+            path = get_dir(title='Select a default path',
+                           current_path=curr_path)
+
             if path:
                 task.default_path = path
-    ScrollArea: scroll:
-        NonFoldingTaskEditor: editor:
-            task := view.task
+                plugin.paths['task'] = path
+
+    NonFoldingTaskEditor: editor:
+        task := view.task
 
 TASK_VIEW_MAPPING = {'ComplexTask': ComplexView,
                      'RootTask': RootView,
