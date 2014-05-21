@@ -10,6 +10,7 @@ from enaml.layout.api import HSplitLayout, VSplitLayout
 from enaml.workbench.api import PluginManifest, Extension
 from enaml.workbench.core.api import Command
 from enaml.workbench.ui.api import ActionItem, MenuItem
+from enaml.styling import StyleSheet, Style, Setter
 
 from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
 from .measure_edition import MeasureEditorDockItem
@@ -64,14 +65,24 @@ NEW_DESCRIPTION =\
 headers, checks).'''
 
 
+enamldef MoreVisibleLabel(StyleSheet):
+    Style:
+        style_class = 'large-font'
+        Setter:
+            field = 'font'
+            value = '20pt bold Verdana'
+
+
 enamldef SaveConfirm(PopupView):
     attr measure_name
-    parent_anchor = (1.0, 0.0)
+    parent_anchor = (0.5, 0.0)
     timeout = 2
-
+    MoreVisibleLabel:
+        pass
     Container:
         Label:
             text = 'Measure {} was correctly saved'.format(measure_name)
+            style_class = 'large-font'
 
 
 def save_measure(event):

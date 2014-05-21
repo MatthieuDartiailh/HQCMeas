@@ -90,10 +90,11 @@ enamldef ChecksDisplay(Dialog): dial:
                 Page:
                     title = loop_item.capitalize()
                     name = loop_item
-                    QtListStrWidget: lis:
-                        hug_height = 'ignore'
-                        items << model.name_to_path_dict[loop_item].keys()
-                        selected_item >> model.selected_check
+                    Container:
+                        QtListStrWidget: lis:
+                            hug_height = 'ignore'
+                            items << model.name_to_path_dict[loop_item].keys()
+                            selected_item >> model.selected_check
         Label: che_lab:
             text << model.full_path
         MultilineField: che:

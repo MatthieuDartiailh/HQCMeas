@@ -7,7 +7,7 @@
 from atom.api import Atom, Dict, Str, Value, Instance, Typed, Callable
 from enaml.workbench.api import Workbench
 from enaml.workbench.core.core_plugin import CorePlugin
-from enaml.widgets.api import Html, Container, GroupBox
+from enaml.widgets.api import Html, Container, GroupBox, ScrollArea
 from enaml.core.api import Include
 from inspect import cleandoc
 
@@ -90,5 +90,7 @@ enamldef StandardEditor(BaseEditor):
     selected_task >> _internal.selected_task
 
     Container:
-        Include:
-            objects << [_internal.current_view]
+        ScrollArea:
+            Container:
+                Include:
+                    objects << [_internal.current_view]
