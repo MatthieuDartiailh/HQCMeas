@@ -109,15 +109,21 @@ class Measure(Atom):
             id = monitor_config.pop('id')
             try:
                 monitor_decl = measure_plugin.monitors[id]
+
+            except KeyError:
+                mess = 'Requested monitor not found : {}'.format(id)
+                logger.warn(mess)
+
+            try:
                 monitor = monitor_decl.factory(monitor_decl, workbench,
                                                raw=True)
                 monitor.set_state(monitor_config, entries)
                 # Don't refresh as it has been done already
                 measure.add_monitor(id, monitor, False)
 
-            except KeyError:
-                mess = 'Requested monitor not found : {}'.format(id)
-                logger.warn(mess)
+            except Exception:
+                mess = 'Failed to restore monitor : {}'.format(id)
+                logger.warn(mess, exc_info=True)
 
         for check_id in eval(config['checks']):
             try:
