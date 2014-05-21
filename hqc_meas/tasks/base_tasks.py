@@ -400,7 +400,8 @@ class SimpleTask(BaseTask):
                 obj = args[0]
                 all_threads = obj.task_database.get_value('root', 'threads')
 
-                threads = chain([all_threads.get(w, []) for w in wait])
+                threads = chain.from_iterable([all_threads.get(w, [])
+                                               for w in wait])
                 for thread in threads:
                     thread.join()
                 all_threads.update({w: [] for w in wait if w in all_threads})
@@ -415,7 +416,7 @@ class SimpleTask(BaseTask):
                 all_threads = obj.task_database.get_value('root', 'threads')
 
                 pools = [k for k in all_threads if k not in no_wait]
-                threads = chain([all_threads[p] for p in pools])
+                threads = chain.from_iterable([all_threads[p] for p in pools])
                 for thread in threads:
                     thread.join()
                 all_threads.update({p: [] for p in pools})
@@ -428,7 +429,7 @@ class SimpleTask(BaseTask):
                 obj = args[0]
                 all_threads = obj.task_database.get_value('root', 'threads')
 
-                threads = chain(all_threads.values())
+                threads = chain.from_iterable(all_threads.values())
                 for thread in threads:
                     thread.join()
                 all_threads.update({w: [] for w in all_threads})
