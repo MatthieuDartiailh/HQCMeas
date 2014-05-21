@@ -29,6 +29,11 @@ class _SelectorModel(Atom):
     selected_filter = Str('All')
     display_tasks = List(Str())
 
+    def __init__(self, manager, selected_filter):
+        super(_SelectorModel, self).__init__(manager=manager)
+        if selected_filter:
+            self.selected_filter = selected_filter
+
     def _observe_selected_filter(self, change):
         """ Observer getting the tasks to display.
 
@@ -42,10 +47,10 @@ class _SelectorModel(Atom):
                 tasks = ['']
         else:
             self.display_tasks = self.manager.filter_tasks('All')
-            
+
     def _default_display_tasks(self):
         """ Default value for the display task member.
-        
+
         """
         return self.manager.filter_tasks('All')
 
@@ -55,8 +60,9 @@ enamldef TaskSelector(Container):
     """
     attr manager
     attr display_filters : bool = True
-    attr _internal = _SelectorModel(manager=manager)
-    attr selected_filter := _internal.selected_filter
+    attr _internal = _SelectorModel(manager=manager,
+                                    selected_filter=selected_filter)
+    attr selected_filter >> _internal.selected_filter
 
     alias selected_task : t_select.selected_item
 
