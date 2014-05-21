@@ -130,7 +130,10 @@ class MeasureSpace(Workspace):
         """
         if mode == 'file':
             get_file = FileDialogEx.get_save_file_name
+            path = measure.path \
+                if measure.path else self.plugin.paths.get('measure', '')
             full_path = get_file(parent=self.content,
+                                 current_path=path,
                                  name_filters=[u'*.ini'])
             if not full_path:
                 return
@@ -139,6 +142,7 @@ class MeasureSpace(Workspace):
 
             measure.save_measure(full_path)
             self.plugin.edited_measure_path = full_path
+            self.plugin.paths['measure'] = os.path.dirname(full_path)
 
         elif mode == 'template':
             message = cleandoc("""You are going to save the whole measurement
@@ -172,13 +176,16 @@ class MeasureSpace(Workspace):
         """
         if mode == 'file':
             get_file = FileDialogEx.get_open_file_name
-            full_path = get_file(name_filters=[u'*.ini'])
+            full_path = get_file(name_filters=[u'*.ini'],
+                                 current_path=self.plugin.paths.get('measure',
+                                                                    ''))
             if not full_path:
                 return
 
             self.plugin.edited_measure = Measure.load_measure(self.plugin,
                                                               full_path)
             self.plugin.edited_measure_path = full_path
+            self.plugin.paths['measure'] = os.path.dirname(full_path)
 
         elif mode == 'template':
              # TODO create brand new measure using defaults from plugin and
