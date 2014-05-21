@@ -140,7 +140,9 @@ enamldef InstrManagerView(Dialog): instr_manager_view:
                             form << _internal.form
                     PushButton: add:
                         text = 'Add'
-                        clicked :: _internal.add_profile(instr_manager_view)
+                        clicked ::
+                            _internal.add_profile(instr_manager_view)
+                            list_view.set_items(sorted(manager.all_profiles))
                     PushButton: edit:
                         text = 'Edit'
                         clicked :: _internal.edit_profile(instr_manager_view)

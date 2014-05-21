@@ -69,6 +69,10 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         """
         super(TaskManagerPlugin, self).start()
+        path = os.path.realpath(os.path.join(MODULE_PATH,
+                                             '../tasks/templates'))
+        if not os.path.isdir(path):
+            os.mkdir(path)
         self._refresh_template_tasks()
         self._refresh_tasks()
         self._refresh_filters()
@@ -251,15 +255,19 @@ class TaskManagerPlugin(HasPrefPlugin):
         """
         templates = {}
         for path in self.templates_folders:
-            filenames = sorted(f for f in os.listdir(path)
-                               if (os.path.isfile(os.path.join(path, f))
-                                   and f.endswith('.ini')))
+            if os.path.isdir(path):
+                filenames = sorted(f for f in os.listdir(path)
+                                   if (os.path.isfile(os.path.join(path, f))
+                                       and f.endswith('.ini')))
 
-            for filename in filenames:
-                template_name = self._normalise_name(filename)
-                template_path = os.path.join(path, filename)
-                # Beware redundant names are overwrited
-                templates[template_name] = template_path
+                for filename in filenames:
+                    template_name = self._normalise_name(filename)
+                    template_path = os.path.join(path, filename)
+                    # Beware redundant names are overwrited
+                    templates[template_name] = template_path
+            else:
+                logger = logging.getLogger(__name__)
+                logger.warn('{} is not a valid directory'.format(path))
 
         self._template_tasks = templates
         self.tasks = list(self._py_tasks.keys()) + list(templates.keys())
