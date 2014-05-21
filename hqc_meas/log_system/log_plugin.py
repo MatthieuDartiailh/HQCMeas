@@ -5,12 +5,14 @@
 # license : MIT license
 #==============================================================================
 import os
+import sys
 import logging
 import atexit
 from atom.api import Unicode, Dict, List, Tuple
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
-from .tools import PanelModel, GuiHandler, DayRotatingTimeHandler
+from .tools import (PanelModel, GuiHandler, DayRotatingTimeHandler,
+                    StreamToLogRedirector)
 
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -32,7 +34,8 @@ class LogPlugin(HasPrefPlugin):
         """ Start the log system.
 
         """
-        logging.getLogger().setLevel(logging.INFO)
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
 
         log_dir = os.path.join(MODULE_PATH, 'logs')
         # Create log dir if it does not exist.
@@ -46,8 +49,13 @@ class LogPlugin(HasPrefPlugin):
         handler.setFormatter(formatter)
         self.add_handler(u'hqc_meas.standard_log', handler)
 
-        # XXXX add auto redirection
+        # Automatic redirection of stdout and stderr to the log system
+        redir_stdout = StreamToLogRedirector(logger)
+        redir_stderr = StreamToLogRedirector(logger, stream_type='stderr')
+        sys.stdout = redir_stdout
+        sys.stderr = redir_stderr
 
+        logger.info('Log system started.')
         # Clean up upon application exit.
         atexit.register(logging.shutdown)
 
