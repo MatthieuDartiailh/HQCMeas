@@ -24,7 +24,7 @@ with enaml.imports():
     from enaml.stdlib.message_box import question
     from .checks.checks_display import ChecksDisplay
     from .engines.selection import EngineSelector
-    from .content import MeasureContent
+    from .content import MeasureContent, MeasureSpaceMenu
 
 
 LOG_ID = u'hqc_meas.measure.workspace'
@@ -65,7 +65,7 @@ class MeasureSpace(Workspace):
         self.content = MeasureContent(workspace=self)
 
         # Contribute menus.
-        # TODO by registering a new plugin (Manifest only)
+        self.workbench.register(MeasureSpaceMenu())
 
         # Check whether or not an engine can contribute.
         if plugin.selected_engine:
@@ -93,6 +93,8 @@ class MeasureSpace(Workspace):
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.logging.remove_handler'
         core.invoke_command(cmd, {'id': LOG_ID}, self)
+
+        self.workbench.unregister(u'hqc_meas.measure.workspace.menus')
 
         self.plugin.workspace = None
 
@@ -128,7 +130,10 @@ class MeasureSpace(Workspace):
         """
         if mode == 'file':
             get_file = FileDialogEx.get_save_file_name
+            path = measure.path \
+                if measure.path else self.plugin.paths.get('measure', '')
             full_path = get_file(parent=self.content,
+                                 current_path=path,
                                  name_filters=[u'*.ini'])
             if not full_path:
                 return
@@ -136,6 +141,8 @@ class MeasureSpace(Workspace):
                 full_path += '.ini'
 
             measure.save_measure(full_path)
+            self.plugin.edited_measure_path = full_path
+            self.plugin.paths['measure'] = os.path.dirname(full_path)
 
         elif mode == 'template':
             message = cleandoc("""You are going to save the whole measurement
@@ -169,12 +176,16 @@ class MeasureSpace(Workspace):
         """
         if mode == 'file':
             get_file = FileDialogEx.get_open_file_name
-            full_path = get_file(name_filters=[u'*.ini'])
+            full_path = get_file(name_filters=[u'*.ini'],
+                                 current_path=self.plugin.paths.get('measure',
+                                                                    ''))
             if not full_path:
                 return
 
             self.plugin.edited_measure = Measure.load_measure(self.plugin,
                                                               full_path)
+            self.plugin.edited_measure_path = full_path
+            self.plugin.paths['measure'] = os.path.dirname(full_path)
 
         elif mode == 'template':
              # TODO create brand new measure using defaults from plugin and
@@ -396,6 +407,7 @@ class MeasureSpace(Workspace):
                 logger.warn("Default monitor {} not found".format(monitor_id))
 
         self.plugin.edited_measure = measure
+        self.plugin.edited_measure_path = ''
 
     def _update_engine_contribution(self, change):
         """

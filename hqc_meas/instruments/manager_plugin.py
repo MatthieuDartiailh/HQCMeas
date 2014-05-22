@@ -66,6 +66,9 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         """
         super(InstrManagerPlugin, self).start()
+        path = os.path.join(MODULE_PATH, 'profiles')
+        if not os.path.isdir(path):
+            os.mkdir(path)
         self._refresh_drivers()
         self._refresh_profiles_map()
         self._refresh_users()
@@ -404,15 +407,19 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         profiles = {}
         for path in self.profiles_folders:
-            filenames = sorted(f for f in os.listdir(path)
-                               if (os.path.isfile(os.path.join(path, f))
-                                   and f.endswith('.ini')))
+            if os.path.isdir(path):
+                filenames = sorted(f for f in os.listdir(path)
+                                   if (os.path.isfile(os.path.join(path, f))
+                                       and f.endswith('.ini')))
 
-            for filename in filenames:
-                profile_name = self._normalise_name(filename)
-                prof_path = os.path.join(path, filename)
-                # Beware redundant names are overwrited
-                profiles[profile_name] = prof_path
+                for filename in filenames:
+                    profile_name = self._normalise_name(filename)
+                    prof_path = os.path.join(path, filename)
+                    # Beware redundant names are overwrited
+                    profiles[profile_name] = prof_path
+            else:
+                logger = logging.getLogger(__name__)
+                logger.warn('{} is not a valid directory'.format(path))
 
         if deferred:
             deferred_call(self._set_profiles_map, profiles)

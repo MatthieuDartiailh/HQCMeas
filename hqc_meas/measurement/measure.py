@@ -18,31 +18,34 @@ class Measure(Atom):
     """
     #--- Public API -----------------------------------------------------------
 
-    # Reference to the measure plugin managing this measure.
+    #: Reference to the measure plugin managing this measure.
     plugin = ForwardTyped(measure_plugin)
 
-    # Name of the measure.
+    #: Name of the measure.
     name = Str()
 
-    # Flag indicating the measure status.
+    #: Flag indicating the measure status.
     status = Str()
 
-    # Detailed information about the measure status.
+    #: Detailed information about the measure status.
     infos = Str()
 
-    # Root task holding the measure logic.
+    #: Path to the last file in which that measure was saved.
+    path = Unicode()
+
+    #: Root task holding the measure logic.
     root_task = Instance(RootTask)
 
-    # Dict of active monitor for this measure.
+    #: Dict of active monitor for this measure.
     monitors = Dict(Unicode())
 
-    # Dict of checks for this measure
+    #: Dict of checks for this measure
     checks = Dict(Unicode())
 
-    # Dict of header generators to call.
+    #: Dict of header generators to call.
     headers = Dict(Unicode())
 
-    # Dict to store useful runtime infos
+    #: Dict to store useful runtime infos
     store = Dict(Str())
 
     def save_measure(self, path):
@@ -77,6 +80,8 @@ class Measure(Atom):
         with open(path, 'w') as f:
             config.write(f)
 
+        self.path = path
+
     @classmethod
     def load_measure(cls, measure_plugin, path):
         """ Build a measure from a ConfigObj file.
@@ -95,6 +100,7 @@ class Measure(Atom):
         config = ConfigObj(path)
         measure.name = config['name']
         measure.plugin = measure_plugin
+        measure.path = path
 
         workbench = measure_plugin.workbench
         core = workbench.get_plugin(u'enaml.workbench.core')
@@ -109,15 +115,21 @@ class Measure(Atom):
             id = monitor_config.pop('id')
             try:
                 monitor_decl = measure_plugin.monitors[id]
+
+            except KeyError:
+                mess = 'Requested monitor not found : {}'.format(id)
+                logger.warn(mess)
+
+            try:
                 monitor = monitor_decl.factory(monitor_decl, workbench,
                                                raw=True)
                 monitor.set_state(monitor_config, entries)
                 # Don't refresh as it has been done already
                 measure.add_monitor(id, monitor, False)
 
-            except KeyError:
-                mess = 'Requested monitor not found : {}'.format(id)
-                logger.warn(mess)
+            except Exception:
+                mess = 'Failed to restore monitor : {}'.format(id)
+                logger.warn(mess, exc_info=True)
 
         for check_id in eval(config['checks']):
             try:

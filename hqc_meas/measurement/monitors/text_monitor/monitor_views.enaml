@@ -60,7 +60,8 @@ enamldef TextMonitorPage(Page): dial:
 
         QtListStrWidget: undisp:
             items << [e.name for e in sorted(monitor.undisplayed_entries,
-                                             key=attrgetter('path'))]
+                                             key=attrgetter('path'),
+                                             reverse=True)]
             selected_item ::
                 selected = selected_item
                 disp.clear_selection()
@@ -71,7 +72,8 @@ enamldef TextMonitorPage(Page): dial:
 
         QtListStrWidget: disp:
             items << [e.name for e in sorted(monitor.displayed_entries,
-                                             key=attrgetter('path'))]
+                                             key=attrgetter('path'),
+                                             reverse=True)]
             selected_item ::
                 selected = selected_item
                 undisp.clear_selection()

@@ -6,7 +6,9 @@
 #==============================================================================
 """
 """
+from atom.api import Str
 from enaml.core.api import Looper, Conditional
+from enaml.core.declarative import d_
 from enaml.layout.api import hbox, align, spacer, grid, vbox
 from enaml.widgets.api import (PushButton, Menu, Action, Container, ScrollArea,
                                GroupBox, Form)
@@ -75,6 +77,8 @@ enamldef PopupListMenu(Menu):
 class ListContainer(Container):
     """
     """
+    alignment = d_(Str('top'))
+
     def layout_constraints(self):
         """
         """
@@ -83,7 +87,7 @@ class ListContainer(Container):
 
         while children:
             lines.append(hbox(*children[0:2]))
-            aligns.append(align('top', children[0], children[1]))
+            aligns.append(align(self.alignment, children[0], children[1]))
             del children[0:2]
 
         constraints = [vbox(*lines)]
@@ -97,6 +101,8 @@ template ListEditor(Content):
         attr factory
         attr operations = ['add', 'remove', 'move']
         attr kwargs : dict = {}
+        attr alignment : str = 'top'
+
         padding = 0
         Conditional:
             condition << (not bool(getattr(model, iterable_name)) and
@@ -117,6 +123,7 @@ template ListEditor(Content):
             ScrollArea:
                 border = None
                 ListContainer:
+                    alignment = cont.alignment
                     padding = (2,0,2,0)
                     Looper:
                         iterable << getattr(model, iterable_name)[:]

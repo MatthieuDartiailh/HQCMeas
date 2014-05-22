@@ -54,11 +54,12 @@ class _PairEditorModel(Atom):
 
 template PairEditor(Content):
     Container: main:
-        padding = 0
+        padding = 2
         attr model
         attr iterable_name
         alias operations : ed.operations
         alias title: ed.title
+        alias alignment : ed.alignment
 
         attr _model = _PairEditorModel(model=model,
                                        iterable_name=iterable_name)

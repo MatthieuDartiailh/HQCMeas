@@ -5,10 +5,11 @@
 # license : MIT license
 #==============================================================================
 import logging
+import os
 from collections import defaultdict
 from inspect import cleandoc
 from atom.api import (Typed, Unicode, Dict, ContainerList, List, Instance,
-                      Tuple, ForwardTyped)
+                      Tuple, ForwardTyped, Str)
 from time import sleep
 from importlib import import_module
 import enaml
@@ -54,8 +55,14 @@ class MeasurePlugin(HasPrefPlugin):
     # Reference to the workspace if any.
     workspace = ForwardTyped(_workspace)
 
+    #: Reference to the last path used to save/load a measure
+    paths = Dict(Str(), Unicode()).tag(pref=True)
+
     # Currently edited measure.
     edited_measure = Typed(Measure)
+
+    #: Path to which save by default the currently edited measure
+    edited_measure_path = Unicode()
 
     # Currently enqueued measures.
     enqueued_measures = ContainerList(Typed(Measure))
@@ -100,6 +107,9 @@ class MeasurePlugin(HasPrefPlugin):
         """
         """
         super(MeasurePlugin, self).start()
+        for k, v in self.paths.iteritems():
+            if not os.path.isdir(v):
+                self.paths[k] = ''
 
         # Register contributed plugin.
         for path, manifest_name in self.manifests:

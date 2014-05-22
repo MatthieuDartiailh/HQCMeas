@@ -38,6 +38,7 @@ class BaseInstrumentView(GroupBox):
                                          {'state_id':
                                           'hqc_meas.states.instr_manager'})
         self.instr_man_state = state
+        self._update_profiles({})
         self._bind_observers()
 
     def destroy(self):

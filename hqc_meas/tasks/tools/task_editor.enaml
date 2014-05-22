@@ -125,7 +125,7 @@ enamldef TaskEditor(Container): view:
     attr core
     attr cache
 
-    padding = 2
+    padding = 0
     Conditional:
         condition << not bool(task.children_task)
         PushButton:
@@ -155,7 +155,7 @@ enamldef TaskEditor(Container): view:
                        cache[task.task_path] = 1
                        folding.text = '-'
             Container: foldable_content:
-                padding = (0,5,2,2)
+                padding = 0
                 Stack:
                     size_hint_mode = 'current'
                     hug_width = 'ignore'
