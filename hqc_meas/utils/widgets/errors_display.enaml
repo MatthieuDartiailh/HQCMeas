@@ -1,0 +1,74 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : checks_display.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+
+from atom.api import (Atom, Str, Dict, Unicode)
+from enaml.widgets.api import (Dialog, Container, Label, MultilineField,
+                               PushButton, Notebook, Page)
+from enaml.layout.api import vbox, grid, hbox, align
+from enaml.core.api import Conditional
+
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+
+class _ErrorsDisplayModel(Atom):
+    """
+    """
+    errors = Dict(Str(), Str())
+
+    selected_error = Str()
+    message = Str()
+
+    def __init__(self, errors):
+        super(_ErrorsDisplayModel, self).__init__()
+        self.errors = errors
+        self.selected_error= errors.keys()[0]
+
+    def _observe_selected_error(self, change):
+        """ Set the `full_path` and `message` attrs when a check is selected.
+
+        """
+        new = change['value']
+        self.message = self.errors[new]
+
+
+enamldef ErrorsDisplay(Dialog): dial:
+    """
+    """
+    attr errors
+    attr model = _ErrorsDisplayModel(errors)
+
+    Conditional:
+        condition = bool(errors)
+        Container:
+            constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che),
+                                close),
+                           align('left', lis_lab, lis),
+                           align('left', che_lab, che),
+                           contents_right == close.right]
+            Label: lis_lab:
+                text = 'Import failures'
+            QtListStrWidget: lis:
+                hug_height = 'ignore'
+                items << model.errors.keys()
+                selected_item >> model.selected_error
+            Label: che_lab:
+                text << model.selected_error
+            MultilineField: che:
+                text << model.message
+                read_only = True
+            PushButton: close:
+                text = 'Close'
+                clicked :: dial.accept()
+
+    Conditional:
+        condition = not bool(errors)
+        Container:
+            MultilineField:
+                read_only = True
+                text = 'No error happened on start-up'
+            PushButton: close:
+                text = 'Close'
+                clicked :: dial.accept()
