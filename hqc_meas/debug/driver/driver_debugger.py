@@ -288,9 +288,9 @@ class DriverDebugger(BaseDebugger):
             self._get_driver_instr_properties(driver_infos, type(channel))
             self._get_driver_methods(driver_infos, type(channel))
             self._get_driver_attrs(driver_infos, channel)
-            self.drivers_infos.append(driver_infos)
             if args:
-                driver_infos.id = args[0]
+                driver_infos.id = repr(args[0])
+            self.drivers_infos.append(driver_infos)
             return None, None
         except Exception as e:
             mess = 'Failed to create new channel : {}\n'.format(e.message)
