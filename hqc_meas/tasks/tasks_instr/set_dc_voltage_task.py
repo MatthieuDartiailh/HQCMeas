@@ -62,7 +62,7 @@ class SetDCVoltageTask(InstrumentTask):
                     configured to output a voltage'''.format(self.task_name))
                 log.fatal(mes)
                 self.root_task.task_stop.set()
-                return
+                return False
 
         if target_value is not None:
             value = target_value
