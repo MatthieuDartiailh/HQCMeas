@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from atom.api import (Str, List, Bool, set_default)
+from atom.api import (Str, ContainerList, Bool, set_default)
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from .entries import MonitoredEntry
@@ -13,7 +13,7 @@ class AbstractMonitorRule(HasPrefAtom):
 
     # List of database entries suffixes used to identify the entries which
     # contributes to the rule.
-    suffixes = List(Str()).tag(pref=True)
+    suffixes = ContainerList(Str()).tag(pref=True)
 
     # Name of the class used for persistence.
     class_name = Str().tag(pref=True)
