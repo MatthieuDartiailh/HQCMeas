@@ -937,7 +937,7 @@ class RootTask(ComplexTask):
         for child in self.children_task:
             result &= child.process_(child)
         pools = self.task_database.get_value('root', 'threads')
-        for pool in pools.items():
+        for pool in pools.values():
             for thread in pool:
                 thread.join()
         instrs = self.task_database.get_value('root', 'instrs')
