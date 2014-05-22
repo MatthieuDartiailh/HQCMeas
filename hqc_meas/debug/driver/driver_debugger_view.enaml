@@ -462,6 +462,7 @@ enamldef DriverDebuggerView(DockItem): main:
 
         # Error display
         MultilineField: err:
+            hug_height = 'medium'
             text << debugger.errors
             read_only = True
         PushButton: clear:
