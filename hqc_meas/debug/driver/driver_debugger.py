@@ -5,7 +5,7 @@
 # license : MIT license
 #==============================================================================
 from atom.api import (Atom, List, Str, Callable, Bool, Instance, Value, Tuple,
-                      Typed)
+                      Typed, ContainerList, Unicode)
 from inspect import getmembers, ismethod
 
 from hqc_meas.instruments.drivers.driver_tools\
@@ -17,6 +17,9 @@ from ..debugger import BaseDebugger
 class DriverInfos(Atom):
     """
     """
+    #: Id
+    id = Unicode()
+
     #: Instance of the driver being tested.
     driver_instance = Instance(BaseInstrument)
 
@@ -104,7 +107,7 @@ class DriverDebugger(BaseDebugger):
 
     #: List of drivers infos (It contains more than one info for drivers using
     #: channels).
-    drivers_infos = List(Typed(DriverInfos))
+    drivers_infos = ContainerList(Typed(DriverInfos))
 
     #: List of profiles matching the currently selected driver.
     profiles = List(Str())
@@ -115,6 +118,9 @@ class DriverDebugger(BaseDebugger):
     #: Form corresponding to the type of driver currently selected, both the
     #: form and its associated vview are stored.
     custom_form = Tuple(default=(None, None))
+
+    #: Is a driver currently opened.
+    driver_active = Bool()
 
     #: Is an active connection opened.
     connected = Bool()
@@ -174,6 +180,7 @@ class DriverDebugger(BaseDebugger):
             self._get_driver_attrs(driver_infos, driver_instance)
             driver_infos.driver_instance = driver_instance
             self.connected = True
+            self.driver_active = True
         except Exception as e:
             self.errors += e.message + '\n'
             self.traceback = '{}'.format(e)
@@ -249,19 +256,20 @@ class DriverDebugger(BaseDebugger):
             self.traceback = '{}'.format(e)
 
         self.connected = False
+        self.driver_active = False
         driver_infos.driver_instance = None
         if not isinstance(self.profile, dict):
             core = self.plugin.workbench.get_plugin('enaml.workbench.core')
             core.invoke_command('hqc_meas.instr_manager.profiles_released',
                                 {'profiles': [self.profile]}, self.plugin)
 
-    def create_channel(self, method_name, args, kwargs):
+    def create_channel(self, method, args, kwargs):
         """ Create a new channel driver.
 
         Parameters
         ----------
-        method_name : str
-            Name of the method of the driver to call to create the channel.
+        method_name : unbound_method
+            Unbound method of the driver to call to create the channel.
 
         args : tuple
             Tuple of args to pass to the method to create the channel.
@@ -272,18 +280,21 @@ class DriverDebugger(BaseDebugger):
         """
         try:
             driver_instance = self.drivers_infos[0].driver_instance
-            meth = getattr(driver_instance, method_name)
-            channel = meth(*args, **kwargs)
+            channel = method(driver_instance, *args, **kwargs)
+            if not isinstance(channel, BaseInstrument):
+                return 'Selected method did not returned a driver.', None
             driver_infos = DriverInfos()
             driver_infos.driver_instance = channel
             self._get_driver_instr_properties(driver_infos, type(channel))
             self._get_driver_methods(driver_infos, type(channel))
             self._get_driver_attrs(driver_infos, channel)
             self.drivers_infos.append(driver_infos)
+            if args:
+                driver_infos.id = args[0]
+            return None, None
         except Exception as e:
             mess = 'Failed to create new channel : {}\n'.format(e.message)
-            self.errors += mess
-            self.traceback = '{}'.format(e)
+            return mess, '{}'.format(e)
 
     #--- Private API ----------------------------------------------------------
 
