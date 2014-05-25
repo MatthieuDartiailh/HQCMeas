@@ -4,6 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
+import logging
 from threading import Thread
 from Queue import Empty
 from multiprocessing.queues import Queue
@@ -32,7 +33,10 @@ class MeasureSpy(Atom):
             self.queue.put_nowait(new)
 
     def close(self):
-        self.queue.put((None, None))
+        # Simply signal the queue the working thread that the spy won't send
+        # any more informations. But don't request the thread to exit this
+        # is the responsability of the engine.
+        self.queue.put(('', ''))
 
 
 class ThreadMeasureMonitor(Thread):
@@ -49,9 +53,12 @@ class ThreadMeasureMonitor(Thread):
         while True:
             try:
                 news = self.queue.get()
-                if news != (None, None):
+                if news not in [(None, None), ('', '')]:
                     # Here news is a Signal not Event hence the syntax.
                     self.engine.news(news)
+                elif news == ('', ''):
+                    logger = logging.getLogger(__name__)
+                    logger.debug('Spy closed')
                 else:
                     break
             except Empty:
