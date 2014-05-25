@@ -170,8 +170,8 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Parameters
         ----------
-        new_owner : Plugin
-            The object requesting the right to use some profiles
+        new_owner : unicode
+            Id of the plugin requesting the right to use some profiles
 
         profiles : list(str)
             The names of the profiles the user want the privilege to use.
@@ -186,6 +186,13 @@ class InstrManagerPlugin(HasPrefPlugin):
             The list of profiles that was not found.
 
         """
+        if new_owner not in self._users:
+            logger = logging.getLogger(__name__)
+            mess = cleandoc('''Plugin {} tried to request profiles, but it is
+                not a registered user.'''.format(new_owner))
+            logger.error(mess)
+            return {}, []
+
         missing = [prof for prof in profiles
                    if prof not in self.all_profiles]
 
