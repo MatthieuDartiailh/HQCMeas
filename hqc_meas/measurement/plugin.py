@@ -158,7 +158,7 @@ class MeasurePlugin(HasPrefPlugin):
         self.running_measure = measure
 
         # Requesting profiles.
-        profs = measure.store.get('profiles', set())
+        profs = measure.store.get('profiles', set([]))
         core = self.workbench.get_plugin('enaml.workbench.core')
 
         com = u'hqc_meas.instr_manager.profiles_request'
@@ -322,6 +322,13 @@ class MeasurePlugin(HasPrefPlugin):
         mess = 'Measure {} processed, status : {}'.format(
             self.running_measure.name, status)
         logger.info(mess)
+
+        # Releasing instrument profiles.
+        profs = self.running_measure.store.get('profiles', set([]))
+        core = self.workbench.get_plugin('enaml.workbench.core')
+
+        com = u'hqc_meas.instr_manager.profiles_released'
+        core.invoke_command(com, {'profiles': list(profs)}, self)
 
         # Disconnect monitors.
         engine = self.engine_instance
