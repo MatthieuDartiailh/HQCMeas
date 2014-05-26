@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from nose.tools import raises, assert_equal
+from nose.tools import raises, assert_equal, assert_false, assert_true
 from hqc_meas.tasks.tools.task_database import TaskDatabase
 
 from ..util import complete_line
@@ -18,6 +18,8 @@ def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
+#--- Edition mode tests.
+
 def test_database_nodes():
     database = TaskDatabase()
     database.create_node('root', 'node1')
@@ -28,12 +30,13 @@ def test_database_nodes():
 
 def test_database_values():
     database = TaskDatabase()
-    database.set_value('root', 'val1', 1)
+    assert_true(database.set_value('root', 'val1', 1))
     assert_equal(database.get_value('root', 'val1'), 1)
+    assert_false(database.set_value('root', 'val1', 2))
     database.create_node('root', 'node1')
     database.set_value('root/node1', 'val2', 'a')
     assert_equal(database.get_value('root/node1', 'val2'), 'a')
-    assert_equal(database.get_value('root/node1', 'val1'), 1)
+    assert_equal(database.get_value('root/node1', 'val1'), 2)
 
 
 @raises(KeyError)
@@ -65,3 +68,42 @@ def test_database_listing():
     assert_equal(database.list_accessible_entries('root'), [])
     assert_equal(database.list_accessible_entries('root/node1'),
                  sorted(['val2']))
+
+
+#--- Running mode tests.
+
+def test_flattening_database():
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.set_value('root/node1', 'val2', 'a')
+
+    database.prepare_for_running()
+
+
+def test_index_op_on_flat_database():
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.set_value('root/node1', 'val2', 'a')
+
+    database.prepare_for_running()
+    assert_equal(database.get_entries_indexes('root', ['val1']), {'val1': 0})
+    assert_equal(database.get_entries_indexes('root/node1', ['val1', 'val2']),
+                 {'val1': 0, 'val2': 1})
+
+    assert_equal(database.get_values_by_index([0, 1]), [1, 'a'])
+    assert_equal(database.get_values_by_index([0, 1], 'e_'),
+                 {'e_0': 1, 'e_1': 'a'})
+
+
+def test_get_set_on_flat_database():
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.set_value('root/node1', 'val2', 'a')
+
+    database.prepare_for_running()
+    assert_false(database.set_value('root', 'val1', 2))
+    assert_equal(database.get_value('root', 'val1'), 2)
+    assert_equal(database.get_value('root/node1', 'val1'), 2)

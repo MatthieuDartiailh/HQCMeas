@@ -62,6 +62,7 @@ class TaskDatabase(Atom):
             the database
 
         """
+        new_val = False
         if self._running:
             full_path = node_path + '/' + value_name
             index = self._entry_index_map[full_path]
@@ -71,7 +72,6 @@ class TaskDatabase(Atom):
             self._lock.release()
         else:
             node = self._go_to_path(node_path)
-            new_val = False
             if value_name not in node.data:
                 new_val = True
             node.data[value_name] = value
@@ -126,7 +126,7 @@ class TaskDatabase(Atom):
                     raise KeyError(mes)
                 return self.get_value(new_assumed_path, value_name)
 
-    def delete_entry(self, node_path, value_name):
+    def delete_value(self, node_path, value_name):
         """Method to remove an entry from the specified node
 
         This method remove the specified entry from the specified node. This
@@ -147,7 +147,7 @@ class TaskDatabase(Atom):
         else:
             node = self._go_to_path(node_path)
 
-            if value_name in node:
+            if value_name in node.data:
                 del node.data[value_name]
                 self.notifier = (node_path + '/' + value_name,)
             else:
@@ -217,7 +217,7 @@ class TaskDatabase(Atom):
         entries = []
         while node_path != 'root':
             node = self._go_to_path(node_path)
-            keys = node.data.keyskeys()
+            keys = node.data.keys()
             # Looking for the entries in the node.
             for key in keys:
                 if not isinstance(node.data[key], DatabaseNode):
@@ -232,10 +232,10 @@ class TaskDatabase(Atom):
             node_path = node_path.rpartition('/')[0]
 
         node = self._go_to_path(node_path)
-        keys = node.keys()
+        keys = node.data.keys()
         for key in keys:
-            if not isinstance(node[key], DatabaseNode):
-                entries.append(key[1:])
+            if not isinstance(node.data[key], DatabaseNode):
+                entries.append(key)
 
         for entry in self.excluded:
             if entry in entries:
@@ -304,8 +304,11 @@ class TaskDatabase(Atom):
             Name of the new node to create
 
         """
+        if self._running:
+            raise RuntimeError('Cannot create a node in running mode')
+
         parent_node = self._go_to_path(parent_path)
-        parent_node[node_name] = DatabaseNode()
+        parent_node.data[node_name] = DatabaseNode()
 
     def rename_node(self, parent_path, new_name, old_name):
         """Method used to rename a node in the database
@@ -324,9 +327,12 @@ class TaskDatabase(Atom):
             New name of node
 
         """
+        if self._running:
+            raise RuntimeError('Cannot rename a node in running mode')
+
         parent_node = self._go_to_path(parent_path)
-        parent_node[new_name] = parent_node[old_name]
-        del parent_node[old_name]
+        parent_node.data[new_name] = parent_node.data[old_name]
+        del parent_node.data[old_name]
 
     def delete_node(self, parent_path, node_name):
         """Method used to an existing node from the database
@@ -345,18 +351,21 @@ class TaskDatabase(Atom):
             Name of the new node to create
 
         """
+        if self._running:
+            raise RuntimeError('Cannot delete a node in running mode')
+
         parent_node = self._go_to_path(parent_path)
-        if node_name in parent_node:
-            del parent_node[node_name]
+        if node_name in parent_node.data:
+            del parent_node.data[node_name]
         else:
             err_str = 'No node {} at the path {}'.format(node_name,
                                                          parent_path)
             raise ValueError(err_str)
 
     def prepare_for_running(self):
-        """ Enter a thread safe state.
+        """ Enter a thread safe, flat database state.
 
-        This is used when tasks are excuted.
+        This is used when tasks are executed.
 
         """
         self._lock = Lock()
@@ -410,8 +419,8 @@ class TaskDatabase(Atom):
         del keys[0]
 
         for key in keys:
-            if key in node:
-                node = node[key]
+            if key in node.data:
+                node = node.data[key]
             else:
                 ind = keys.index(key)
                 if ind == 0:
