@@ -70,6 +70,32 @@ def test_database_listing():
                  sorted(['val2']))
 
 
+def test_access_exceptions():
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.set_value('root/node1', 'val2', 'a')
+    database.create_node('root', 'node2')
+    database.set_value('root/node2', 'val3', 2.0)
+
+    assert_equal(database.list_accessible_entries('root'), ['val1'])
+
+    database.add_access_exception('root', 'val2', 'root/node1')
+    assert_equal(database.list_accessible_entries('root'), ['val1', 'val2'])
+    assert_equal(database.get_value('root', 'val2'), 'a')
+
+    database.add_access_exception('root', 'val3', 'root/node2')
+    assert_equal(database.list_accessible_entries('root'),
+                 ['val1', 'val2', 'val3'])
+    assert_equal(database.get_value('root', 'val3'), 2.0)
+
+    database.remove_access_exception('root', 'val2')
+    assert_equal(database.list_accessible_entries('root'), ['val1', 'val3'])
+
+    database.remove_access_exception('root')
+    assert_equal(database.list_accessible_entries('root'), ['val1'])
+
+
 #--- Running mode tests.
 
 def test_flattening_database():

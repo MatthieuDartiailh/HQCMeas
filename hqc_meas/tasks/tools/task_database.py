@@ -115,7 +115,7 @@ class TaskDatabase(Atom):
 
             # Second check if there is a special rule about this entry.
             elif 'access' in node.meta and value_name in node.meta['access']:
-                path = assumed_path + '/' + node.meta['access'][value_name]
+                path = node.meta['access'][value_name]
                 return self.get_value(path, value_name)
 
             # Finally go one step up in the node hierarchy.
@@ -237,6 +237,11 @@ class TaskDatabase(Atom):
             if not isinstance(node.data[key], DatabaseNode):
                 entries.append(key)
 
+        # Adding the special access if they are not already in the list.
+        for entry in node.meta.get('access', []):
+            if entry not in entries:
+                entries.append(entry)
+
         for entry in self.excluded:
             if entry in entries:
                 entries.remove(entry)
@@ -286,6 +291,49 @@ class TaskDatabase(Atom):
                         del entries[aux]
 
         return sorted(entries) if not values else entries
+
+    def add_access_exception(self, node_path, entry, entry_node):
+        """ Add an access exception in a node for an entry located in a node
+        below.
+
+        Parameters
+        ----------
+        node_path : str
+            Path to the node which should hold the exception.
+
+        entry : str
+            Name of the entry for which to create an exception.
+
+        entry_node : str
+            Absolute path to the node holding the entry.
+
+        """
+        node = self._go_to_path(node_path)
+        if 'access' in node.meta:
+            access_exceptions = node.meta['access']
+            access_exceptions[entry] = entry_node
+        else:
+            node.meta['access'] = {entry: entry_node}
+
+    def remove_access_exception(self, node_path, entry=''):
+        """ Remove an access exception from a node for a given entry.
+
+        Parameters
+        ----------
+        node_path : str
+            Path to the node holding the exception.
+
+        entry : str, optional
+            Name of the entry for which to remove the exception, if not
+            provided all access exceptions will be removed.
+
+        """
+        node = self._go_to_path(node_path)
+        if entry:
+            access_exceptions = node.meta['access']
+            del access_exceptions[entry]
+        else:
+            del node.meta['access']
 
     def create_node(self, parent_path, node_name):
         """Method used to create a new node in the database
