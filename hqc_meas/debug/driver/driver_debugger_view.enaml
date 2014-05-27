@@ -86,7 +86,7 @@ def _method_call(debugger, infos, meth, f_args, f_kwargs):
     """
     args, kwargs = _evaluate_args_kwargs(f_args.text, f_kwargs.text)
     if kwargs is None:
-        debuggers.errors += args
+        debugger.errors += args
         return
 
     call = infos.attempt_call(meth.selected, args, kwargs)
