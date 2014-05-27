@@ -20,6 +20,10 @@ import os
 from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
 from .tools.task_decorator import make_stoppable
+from .tools.string_evaluation import safe_eval
+
+
+PREFIX = '_a'
 
 
 class BaseTask(Atom):
@@ -29,6 +33,7 @@ class BaseTask(Atom):
     members and methods.
 
     """
+    #--- Public API -----------------------------------------------------------
     task_class = Str().tag(pref=True)
     task_name = Str().tag(pref=True)
     task_label = Str()
@@ -113,6 +118,162 @@ class BaseTask(Atom):
         a config file.'
         raise NotImplementedError(cleandoc(err_str))
 
+    def accessible_database_entries(self):
+        """ Convenience to get the accesible entries in the database.
+
+        """
+        return self.task_database.list_accessible_entries(self.task_path)
+
+    def format_string(self, string):
+        """ Replace values in {} by their corresponding database value.
+
+        Parameters
+        ----------
+        string : str
+            The string to format using the current values of the database.
+
+        Returns
+        -------
+        formatted : str
+            Formatted version of the input.
+
+        """
+        # If a cache evaluation of the string already exists use it.
+        if string in self._format_cache:
+            preformatted, ids = self._format_cache[string]
+            vals = self.task_database.get_values_by_index(ids, PREFIX)
+            return preformatted.format(**vals)
+
+        # Otherwise if we are in running mode build a cache formatting.
+        elif self.task_database.running:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                database_indexes = database.get_entries_indexes(self.task_path,
+                                                                elements[1::2])
+                str_to_format = ''
+                length = len(elements)
+                for i in range(0, length, 2):
+                    if i + 1 < length:
+                        repl = PREFIX + str(database_indexes[elements[i + 1]])
+                        str_to_format += elements[i] + '{' + repl + '}'
+                    else:
+                        str_to_format += elements[i]
+
+                indexes = database_indexes.values()
+                self._format_cache[string] = (str_to_format, indexes)
+                vals = self.task_database.get_values_by_index(indexes, PREFIX)
+                return str_to_format.format(**vals)
+            else:
+                self._format_cache[string] = (string, [])
+                return string
+
+        # In edition mode simply perfom the formatting as execution time is not
+        # critical.
+        else:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                replacement_values = [database.get_value(self.task_path, key)
+                                      for key in elements[1::2]]
+                str_to_format = ''
+                for key in elements[::2]:
+                    str_to_format += key + '{}'
+
+                str_to_format = str_to_format[:-2]
+
+                return str_to_format.format(*replacement_values)
+            else:
+                return string
+
+    def format_and_eval_string(self, string):
+        """ Replace values in {} by their corresponding database value and eval
+
+        Parameters
+        ----------
+        string : str
+            The string to eval using the current values of the database.
+
+        Returns
+        -------
+        formatted : str
+            Formatted version of the input.
+
+        """
+        # If a cache evaluation of the string already exists use it.
+        if string in self._eval_cache:
+            preformatted, ids = self._eval_cache[string]
+            vals = self.task_database.get_values_by_index(ids, PREFIX)
+            return safe_eval(preformatted, vals)
+
+        # Otherwise if we are in running mode build a cache evaluation.
+        elif self.task_database.running:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                database_indexes = database.get_entries_indexes(self.task_path,
+                                                                elements[1::2])
+                str_to_eval = ''
+                length = len(elements)
+                for i in range(0, length, 2):
+                    if i + 1 < length:
+                        repl = PREFIX + str(database_indexes[elements[i + 1]])
+                        str_to_eval += elements[i] + repl
+                    else:
+                        str_to_eval += elements[i]
+
+                indexes = database_indexes.values()
+                self._eval_cache[string] = (str_to_eval, indexes)
+                vals = self.task_database.get_values_by_index(indexes, PREFIX)
+                return safe_eval(str_to_eval, vals)
+            else:
+                self._eval_cache[string] = (string, [])
+                return safe_eval(string)
+
+        # In edition mode simply perfom the evaluation as execution time is not
+        # critical.
+        else:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                replacement_token = [PREFIX + str(i)
+                                     for i in xrange(len(elements[1::2]))]
+                repl = {PREFIX + str(i): database.get_value(self.task_path,
+                                                            key)
+                        for i, key in enumerate(elements[1::2])}
+                str_to_format = ''
+                for key in elements[::2]:
+                    str_to_format += key + '{}'
+
+                str_to_format = str_to_format[:-2]
+
+                expr = str_to_format.format(*replacement_token)
+                return safe_eval(expr, repl)
+            else:
+                return safe_eval(string)
+
+    #--- Private API ----------------------------------------------------------
+
+    #: Dictionary storing in infos necessary to perform fast formatting.
+    #: Only used in running mode.
+    _format_cache = Dict()
+
+    #: Dictionary storing in infos necessary to perform fast evaluation.
+    #: Only used in running mode.
+    _eval_cache = Dict()
+
     def _default_task_class(self):
         """ Default value for the task_class member.
 
@@ -146,12 +307,6 @@ class BaseTask(Atom):
                 for entry in added:
                     new_value = deepcopy(self.task_database_entries[entry])
                     self.write_in_database(entry, new_value)
-
-    def _list_database_entries(self):
-        """ Convenience to get the accesible entries in the database.
-
-        """
-        return self.task_database.list_accessible_entries(self.task_path)
 
 
 class SimpleTask(BaseTask):
@@ -452,10 +607,12 @@ class ComplexTask(BaseTask):
     """Task composed of several subtasks.
 
     """
-    # List of all the children of the task.
+    #--- Public API -----------------------------------------------------------
+
+    #: List of all the children of the task.
     children_task = ContainerList(Instance(BaseTask)).tag(child=True)
 
-    # Flag indicating whether or not the task has a root task.
+    #: Flag indicating whether or not the task has a root task.
     has_root = Bool(False)
 
     def __init__(self, *args, **kwargs):
@@ -463,8 +620,6 @@ class ComplexTask(BaseTask):
         self.observe('task_name', self._update_paths)
         self.observe('task_path', self._update_paths)
         self.observe('task_depth', self._update_paths)
-
-    #--- Public API -----------------------------------------------------------
 
     @make_stoppable
     def process(self):
@@ -763,7 +918,7 @@ class ComplexTask(BaseTask):
                             self._child_removed(child)
 
                 # One child was replaced.
-                elif op in ('__setitem__'):
+                elif op in ('__setitem__',):
                     old = change['olditem']
                     if isinstance(old, list):
                         for child in old:
@@ -893,16 +1048,18 @@ class RootTask(ComplexTask):
     """Special task which is always the root of a measurement.
 
     """
-    # Path to which log infos, prefernces, etc should be written by default.
+    #--- Public API -----------------------------------------------------------
+
+    #: Path to which log infos, prefernces, etc should be written by default.
     default_path = Unicode('').tag(pref=True)
 
-    # Header assembled just before the measure is run.
+    #: Header assembled just before the measure is run.
     default_header = Str('')
 
-    # Dict storing data needed at execution time (ex: drivers classes)
+    #: Dict storing data needed at execution time (ex: drivers classes)
     run_time = Dict()
 
-    # Inter-process event signaling the task it should stop execution.
+    #: Inter-process event signaling the task it should stop execution.
     should_stop = Instance(Event)
 
     # Seeting default values for the root task.
@@ -921,8 +1078,6 @@ class RootTask(ComplexTask):
         super(RootTask, self).__init__(*args, **kwargs)
         self.register_in_database()
         self.root_task = self
-
-    #--- Public API -----------------------------------------------------------
 
     def check(self, *args, **kwargs):
         traceback = {}
