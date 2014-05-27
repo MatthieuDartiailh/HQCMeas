@@ -38,6 +38,10 @@ class TaskDatabase(Atom):
     #: List of root entries which should not be listed.
     excluded = List(Str(), ['threads', 'instrs'])
 
+    #: Flag indicating whether or not the database entered the running mode. In
+    #: running mode the database is flattened into a list for faster acces.
+    running = Bool(False)
+
     def set_value(self, node_path, value_name, value):
         """Method used to set the value of the entry at the specified path
 
@@ -63,7 +67,7 @@ class TaskDatabase(Atom):
 
         """
         new_val = False
-        if self._running:
+        if self.running:
             full_path = node_path + '/' + value_name
             index = self._entry_index_map[full_path]
             self._lock.acquire()
@@ -101,7 +105,7 @@ class TaskDatabase(Atom):
             Value stored under the entry value_name
 
         """
-        if self._running:
+        if self.running:
             index = self._find_index(assumed_path, value_name)
             return self._flat_database[index]
 
@@ -141,7 +145,7 @@ class TaskDatabase(Atom):
             Name of the value we are looking for
 
         """
-        if self._running:
+        if self.running:
             raise RuntimeError('Cannot delete an entry in running mode')
 
         else:
@@ -352,7 +356,7 @@ class TaskDatabase(Atom):
             Name of the new node to create
 
         """
-        if self._running:
+        if self.running:
             raise RuntimeError('Cannot create a node in running mode')
 
         parent_node = self._go_to_path(parent_path)
@@ -375,7 +379,7 @@ class TaskDatabase(Atom):
             New name of node
 
         """
-        if self._running:
+        if self.running:
             raise RuntimeError('Cannot rename a node in running mode')
 
         parent_node = self._go_to_path(parent_path)
@@ -399,7 +403,7 @@ class TaskDatabase(Atom):
             Name of the new node to create
 
         """
-        if self._running:
+        if self.running:
             raise RuntimeError('Cannot delete a node in running mode')
 
         parent_node = self._go_to_path(parent_path)
@@ -417,28 +421,38 @@ class TaskDatabase(Atom):
 
         """
         self._lock = Lock()
-        self._running = True
+        self.running = True
 
         # Flattening the database by walking all the nodes.
         index = 0
         nodes = [('root', self._database)]
+        mapping = {}
+        datas = []
         for (node_path, node) in nodes:
             for key, val in node.data.iteritems():
                 path = node_path + '/' + key
                 if isinstance(val, DatabaseNode):
                     nodes.append((path, val))
                 else:
-                    self._entry_index_map[path] = index
+                    mapping[path] = index
                     index += 1
-                    self._flat_database.append(val)
+                    datas.append(val)
+
+        # Walking a second time to add the exception to the _entry_index_map,
+        # in reverse order in case an entry has multiple exceptions.
+        for (node_path, node) in nodes[::-1]:
+            access = node.meta.get('access', [])
+            for entry in access:
+                short_path = node_path + '/' + entry
+                full_path = access[entry] + '/' + entry
+                mapping[short_path] = mapping[full_path]
+
+        self._flat_database = datas
+        self._entry_index_map = mapping
 
         self._database = None
 
     #--- Private API ----------------------------------------------------------
-
-    #: Flag indicating whether or not the database entered the running mode. In
-    #: running mode the database is flattened into a list for faster acces.
-    _running = Bool(False)
 
     #: Main container for the database.
     _database = Typed(DatabaseNode, ())

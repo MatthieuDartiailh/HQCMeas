@@ -107,7 +107,7 @@ def test_flattening_database():
     database.prepare_for_running()
 
 
-def test_index_op_on_flat_database():
+def test_index_op_on_flat_database1():
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -123,7 +123,20 @@ def test_index_op_on_flat_database():
                  {'e_0': 1, 'e_1': 'a'})
 
 
-def test_get_set_on_flat_database():
+def test_index_op_on_flat_database2():
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.set_value('root/node1', 'val2', 'a')
+    database.add_access_exception('root', 'val2', 'root/node1')
+
+    database.prepare_for_running()
+    assert_equal(database.get_entries_indexes('root', ['val1']), {'val1': 0})
+    assert_equal(database.get_entries_indexes('root', ['val1', 'val2']),
+                 {'val1': 0, 'val2': 1})
+
+
+def test_get_set_on_flat_database1():
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -133,3 +146,15 @@ def test_get_set_on_flat_database():
     assert_false(database.set_value('root', 'val1', 2))
     assert_equal(database.get_value('root', 'val1'), 2)
     assert_equal(database.get_value('root/node1', 'val1'), 2)
+
+
+def test_get_set_on_flat_database2():
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.set_value('root/node1', 'val2', 'a')
+    database.add_access_exception('root', 'val2', 'root/node1')
+
+    database.prepare_for_running()
+    assert_false(database.set_value('root', 'val2', 2))
+    assert_equal(database.get_value('root', 'val2'), 2)
