@@ -8,7 +8,8 @@
 """
 from atom.api\
     import (Atom, Str, Int, Instance, Bool, Value, observe, Unicode, List,
-            ForwardTyped, Typed, ContainerList, set_default, Callable, Dict)
+            ForwardTyped, Typed, ContainerList, set_default, Callable, Dict,
+            Tuple)
 
 from configobj import Section, ConfigObj
 from threading import Thread
@@ -43,6 +44,7 @@ class BaseTask(Atom):
     task_database_entries = Dict(Str(), Value())
     task_path = Str()
     root_task = ForwardTyped(lambda: RootTask)
+    parent_task = ForwardTyped(lambda: BaseTask)
     process_ = Callable()
 
     def process(self):
@@ -371,7 +373,7 @@ class SimpleTask(BaseTask):
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 # Perform a deepcopy of the entry value as I don't want to
-                # alter that default value when delaing with the database later
+                # alter that default value when dealing with the database later
                 # on (apply for list and dict).
                 value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
@@ -612,6 +614,9 @@ class ComplexTask(BaseTask):
     #: List of all the children of the task.
     children_task = ContainerList(Instance(BaseTask)).tag(child=True)
 
+    #: Dict of access exception in the database.
+    access_exs = Dict().tag(pref=True)
+
     #: Flag indicating whether or not the task has a root task.
     has_root = Bool(False)
 
@@ -747,7 +752,7 @@ class ComplexTask(BaseTask):
 
         self.task_database.create_node(self.task_path, self.task_name)
 
-        #ComplexTask defines children_task so we always get something
+        # ComplexTask defines children_task so we always get something
         for name in tagged_members(self, 'child'):
             child = getattr(self, name)
             if child:
@@ -757,6 +762,12 @@ class ComplexTask(BaseTask):
                 else:
                     child.register_in_database()
 
+        # Add access exception in database.
+        database = self.task_database
+        for entry, path in self.access_exs:
+            database.add_access_exception(self.parent_task.task_path,
+                                          entry, path)
+
     def unregister_from_database(self):
         """ Unregister all entries and delete associated database node.
 
@@ -764,6 +775,12 @@ class ComplexTask(BaseTask):
         as child.
 
         """
+        # Remove access exception from database.
+        database = self.task_database
+        for entry, path in self.access_exs:
+            database.remove_access_exception(self.parent_task.task_path,
+                                             entry, path)
+
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 self.task_database.delete_value(self.task_path,
@@ -867,7 +884,7 @@ class ComplexTask(BaseTask):
 
                 setattr(self, name, validated)
 
-            # Then we deal with the choild tasks
+            # Then we deal with the child tasks
             elif meta and 'child' in meta:
                 if name not in parameters:
                     continue
@@ -881,8 +898,55 @@ class ComplexTask(BaseTask):
 
                 setattr(self, name, validated)
 
-    @observe('children_task')
-    def on_children_modified(self, change):
+    #--- Private API ----------------------------------------------------------
+
+    #: Name of the last removed child and list of database access exceptions
+    #: attached to it.
+    _last_removed = Tuple(default=(None, None))
+
+    #@observe('task_name, task_path, task_depth')
+    def _update_paths(self, change):
+        """Takes care that the paths, the database and the task names remains
+        coherent.
+
+        """
+        if change['type'] == 'update':
+            name = change['name']
+            new = change['value']
+            old = change.get('oldvalue', None)
+            if self.has_root:
+                if name == 'task_name':
+                    self.task_database.rename_node(self.task_path, new, old)
+                    for name in tagged_members(self, 'child'):
+                        child = getattr(self, name)
+                        if child:
+                            if isinstance(child, list):
+                                for aux in child:
+                                    aux.task_path = self.task_path + '/' + new
+                            else:
+                                child.task_path = self.task_path + '/' + new
+
+                elif name == 'task_path':
+                    for name in tagged_members(self, 'child'):
+                        child = getattr(self, name)
+                        if child:
+                            if isinstance(child, list):
+                                for aux in child:
+                                    aux.task_path = new + '/' + self.task_name
+                            else:
+                                child.task_path = new + '/' + self.task_name
+
+                elif name == 'task_depth':
+                    for name in tagged_members(self, 'child'):
+                        child = getattr(self, name)
+                        if child:
+                            if isinstance(child, list):
+                                for aux in child:
+                                    aux.task_depth = new + 1
+                            else:
+                                child.task_depth = new + 1
+
+    def _observe_children_task(self, change):
         """Handle children being added or removed from the task.
 
         """
@@ -933,48 +997,6 @@ class ComplexTask(BaseTask):
                     else:
                         self._child_added(new)
 
-    #--- Private API ----------------------------------------------------------
-
-    #@observe('task_name, task_path, task_depth')
-    def _update_paths(self, change):
-        """Takes care that the paths, the database and the task names remains
-        coherent.
-
-        """
-        if change['type'] == 'update':
-            name = change['name']
-            new = change['value']
-            old = change.get('oldvalue', None)
-            if self.has_root:
-                if name == 'task_name':
-                    self.task_database.rename_node(self.task_path, new, old)
-                    for name in tagged_members(self, 'child'):
-                        child = getattr(self, name)
-                        if child:
-                            if isinstance(child, list):
-                                for aux in child:
-                                    aux.task_path = self.task_path + '/' + new
-                            else:
-                                child.task_path = self.task_path + '/' + new
-                elif name == 'task_path':
-                    for name in tagged_members(self, 'child'):
-                        child = getattr(self, name)
-                        if child:
-                            if isinstance(child, list):
-                                for aux in child:
-                                    aux.task_path = new + '/' + self.task_name
-                            else:
-                                child.task_path = new + '/' + self.task_name
-                elif name == 'task_depth':
-                    for name in tagged_members(self, 'child'):
-                        child = getattr(self, name)
-                        if child:
-                            if isinstance(child, list):
-                                for aux in child:
-                                    aux.task_depth = new + 1
-                            else:
-                                child.task_depth = new + 1
-
     def _child_added(self, child):
         """Update the database, depth and preferences when a child is added.
 
@@ -986,11 +1008,19 @@ class ComplexTask(BaseTask):
         #Give him its root so that it can proceed to any child
         #registration it needs to.
         child.root_task = self.root_task
+        child.parent_task = self
 
         #Ask the child to register in database
         child.register_in_database()
         #Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
+
+        if child.task_name == self._last_removed[0]:
+            access_exs = self.access_exs.copy()
+            access_exs.update(self._last_removed[1])
+            self.access_exs = access_exs
+
+        self._last_removed = (None, None)
 
     def _child_removed(self, child):
         """Update the database, depth and preferences when a child is removed.
@@ -998,6 +1028,28 @@ class ComplexTask(BaseTask):
         """
         self.register_preferences()
         child.unregister_from_database()
+
+        # List all the task database entries associated with the child just
+        # removed.
+        data_entries = [child.task_name + '_' + entry
+                        for entry in child.task_database_entries]
+        # Take access exceptions into account for ComplexTask.
+        if isinstance(child, ComplexTask):
+            data_entries += child.access_ex.keys()
+
+        # Remove all access exception linked to that child from
+        # exceptions.
+        access_exs = self.access_exs.copy()
+        sus_access_exs = {ex: path for ex, path in access_exs
+                          if ex in data_entries}
+        for ex, path in sus_access_exs:
+            del access_exs[ex]
+        self.access_exs = access_exs
+
+        # Keep list of exceptions to restore them if child is re-added.
+        # This avoids screwing up access exceptions when moving a task.
+        if sus_access_exs:
+            self._last_removed = (child.task_name, sus_access_exs)
 
     def _observe_root_task(self, change):
         """ Observer.
@@ -1023,6 +1075,7 @@ class ComplexTask(BaseTask):
                         # Give him its root so that it can proceed to any child
                         # registration it needs to.
                         aux.root_task = self.root_task
+                        aux.parent_task = self
                 else:
                     child.task_depth = self.task_depth + 1
                     child.task_database = self.task_database
@@ -1031,6 +1084,35 @@ class ComplexTask(BaseTask):
                     # Give him its root so that it can proceed to any child
                     # registration it needs to.
                     child.root_task = self.root_task
+                    child.parent_task = self
+
+    def _observe_access_exs(self, change):
+        """ Keep the parent node in the database in sync with the access_exs.
+
+        """
+        database = self.task_database
+        if not database:
+            return
+
+        if change['type'] == 'new':
+            for entry, path in change['value']:
+                database.add_access_exception(self.parent_task.task_path,
+                                              entry, path)
+
+        elif change['type'] == 'update':
+            added = set(change['value']) - set(change['oldvalue'])
+            removed = set(change['oldvalue']) - set(change['value'])
+            for entry, path in added:
+                database.add_access_exception(self.parent_task.task_path,
+                                              entry, path)
+            for entry, path in removed:
+                database.remove_access_exception(self.parent_task.task_path,
+                                                 entry, path)
+
+        else:
+            for entry, path in change['value']:
+                database.remove_access_exception(self.parent_task.task_path,
+                                                 entry, path)
 
     @staticmethod
     def _answer(obj, members, callables):
