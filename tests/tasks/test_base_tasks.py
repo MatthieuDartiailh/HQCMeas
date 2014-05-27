@@ -5,6 +5,7 @@
 # license : MIT license
 #==============================================================================
 from hqc_meas.tasks.api import RootTask, SimpleTask, ComplexTask
+from nose.tools import assert_equal, assert_is, assert_raises
 
 from ..util import complete_line
 
@@ -18,7 +19,132 @@ def teardown_module():
 
 
 def test_register_in_database1():
+    # Check that the root task does write its default entries in the database
+    # when instantiated.
     root = RootTask()
-    assert root.get_from_database('threads') == {}
-    assert root.get_from_database('instrs') == {}
-    assert root.get_from_database('default_path') == ''
+    assert_equal(root.get_from_database('threads'), {})
+    assert_equal(root.get_from_database('instrs'), {})
+    assert_equal(root.get_from_database('default_path'), '')
+
+
+def test_child_addition_handling1():
+    # Test that adding a task to the root task is correctly handled.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1',
+                        task_database_entries={'val1': 2.0})
+    root.children_task.append(task1)
+
+    assert_equal(task1.task_depth, 1)
+    assert_equal(task1.task_path, 'root')
+    assert_is(task1.task_database, root.task_database)
+    assert_is(task1.root_task, root)
+    assert_is(task1.parent_task, root)
+
+    assert_equal(task1.get_from_database('task1_val1'), 2.0)
+    assert_equal(root.get_from_database('task1_val1'), 2.0)
+
+
+def test_child_addition_handling2():
+    # Test that adding a task to a complex task below the root task is
+    #correctly handled.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1',
+                        task_database_entries={'val1': 2.0})
+    root.children_task.append(task1)
+    task2 = SimpleTask(task_name='task2',
+                       task_database_entries={'val2': 'r'})
+    task1.children_task.append(task2)
+
+    assert_equal(task2.task_depth, 2)
+    assert_equal(task2.task_path, 'root/task1')
+    assert_is(task2.task_database, root.task_database)
+    assert_is(task2.root_task, root)
+    assert_is(task2.parent_task, task1)
+
+    assert_equal(task2.get_from_database('task2_val2'), 'r')
+
+
+def test_ex_access_handling1():
+    # Test adding an ex_access for an entry.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1')
+    root.children_task.append(task1)
+    task2 = SimpleTask(task_name='task2',
+                       task_database_entries={'val2': 'r'})
+    task1.children_task.append(task2)
+
+    task1.access_exs = {'task2_val2': 'root/task1'}
+    assert_equal(root.get_from_database('task2_val2'), 'r')
+
+
+def test_ex_access_handling2():
+    # Test removing an ex_access for an entry.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1')
+    root.children_task.append(task1)
+    task2 = SimpleTask(task_name='task2',
+                       task_database_entries={'val2': 'r'})
+    task1.children_task.append(task2)
+
+    task1.access_exs = {'task2_val2': 'root/task1'}
+    assert_equal(root.get_from_database('task2_val2'), 'r')
+    task1.access_exs = {}
+    assert_raises(KeyError, root.get_from_database, 'task2_val2')
+
+
+def test_ex_access_handling3():
+    # Test moving a task with whose one entry has an ex_access.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1')
+    root.children_task.append(task1)
+    task2 = SimpleTask(task_name='task2',
+                       task_database_entries={'val2': 'r'})
+    task1.children_task.append(task2)
+
+    task1.access_exs = {'task2_val2': 'root/task1'}
+    assert_equal(root.get_from_database('task2_val2'), 'r')
+    task1.children_task = []
+    assert_raises(KeyError, root.get_from_database, 'task2_val2')
+    task1.children_task.append(task2)
+    assert_equal(root.get_from_database('task2_val2'), 'r')
+
+
+def test_ex_access_handling4():
+    # Test removing a task with whose one entry has an ex_access, adding a new
+    # one and re-adding the first.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1')
+    root.children_task.append(task1)
+    task2 = SimpleTask(task_name='task2',
+                       task_database_entries={'val2': 'r'})
+    task1.children_task.append(task2)
+
+    task1.access_exs = {'task2_val2': 'root/task1'}
+    assert_equal(root.get_from_database('task2_val2'), 'r')
+    task1.children_task = []
+    assert_raises(KeyError, root.get_from_database, 'task2_val2')
+    task3 = SimpleTask(task_name='task3',
+                       task_database_entries={'val3': 'r'})
+    task1.children_task.append(task3)
+    task1.children_task.append(task2)
+    assert_raises(KeyError, root.get_from_database, 'task2_val2')
+
+
+def test_ex_access_handling5():
+    # Test removing a task with whose one entry has an ex_access, and then
+    # adding a different task (same name, same class, etc)
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1')
+    root.children_task.append(task1)
+    task2 = SimpleTask(task_name='task2',
+                       task_database_entries={'val2': 'r'})
+    task1.children_task.append(task2)
+
+    task1.access_exs = {'task2_val2': 'root/task1'}
+    assert_equal(root.get_from_database('task2_val2'), 'r')
+    task1.children_task = []
+    assert_raises(KeyError, root.get_from_database, 'task2_val2')
+    task3 = SimpleTask(task_name='task2',
+                       task_database_entries={'val2': 'r'})
+    task1.children_task.append(task3)
+    assert_raises(KeyError, root.get_from_database, 'task2_val2')

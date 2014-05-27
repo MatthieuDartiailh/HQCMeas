@@ -1015,7 +1015,7 @@ class ComplexTask(BaseTask):
         #Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
 
-        if child.task_name == self._last_removed[0]:
+        if child is self._last_removed[0]:
             access_exs = self.access_exs.copy()
             access_exs.update(self._last_removed[1])
             self.access_exs = access_exs
@@ -1040,16 +1040,16 @@ class ComplexTask(BaseTask):
         # Remove all access exception linked to that child from
         # exceptions.
         access_exs = self.access_exs.copy()
-        sus_access_exs = {ex: path for ex, path in access_exs
+        sus_access_exs = {ex: path for ex, path in access_exs.iteritems()
                           if ex in data_entries}
-        for ex, path in sus_access_exs:
+        for ex in sus_access_exs:
             del access_exs[ex]
         self.access_exs = access_exs
 
         # Keep list of exceptions to restore them if child is re-added.
         # This avoids screwing up access exceptions when moving a task.
         if sus_access_exs:
-            self._last_removed = (child.task_name, sus_access_exs)
+            self._last_removed = (child, sus_access_exs)
 
     def _observe_root_task(self, change):
         """ Observer.
@@ -1095,22 +1095,24 @@ class ComplexTask(BaseTask):
             return
 
         if change['type'] == 'new':
-            for entry, path in change['value']:
+            for entry, path in change['value'].iteritems():
                 database.add_access_exception(self.parent_task.task_path,
                                               entry, path)
 
         elif change['type'] == 'update':
-            added = set(change['value']) - set(change['oldvalue'])
-            removed = set(change['oldvalue']) - set(change['value'])
-            for entry, path in added:
+            new = change['value']
+            old = change['oldvalue']
+            added = set(new) - set(old)
+            removed = set(old) - set(new)
+            for entry in added:
                 database.add_access_exception(self.parent_task.task_path,
-                                              entry, path)
-            for entry, path in removed:
+                                              entry, new[entry])
+            for entry in removed:
                 database.remove_access_exception(self.parent_task.task_path,
-                                                 entry, path)
+                                                 entry)
 
         else:
-            for entry, path in change['value']:
+            for entry, path in change['value'].iteritems():
                 database.remove_access_exception(self.parent_task.task_path,
                                                  entry, path)
 
@@ -1235,6 +1237,7 @@ class RootTask(ComplexTask):
         #Give him its root so that it can proceed to any child
         #registration it needs to.
         child.root_task = self.root_task
+        child.parent_task = self
 
         #Ask the child to register in database
         child.register_in_database()
