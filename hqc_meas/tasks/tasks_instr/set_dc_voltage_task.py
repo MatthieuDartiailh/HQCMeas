@@ -9,8 +9,6 @@ from inspect import cleandoc
 
 from hqc_meas.tasks.api import InstrumentTask
 from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
-from hqc_meas.tasks.tools.database_string_formatter\
-    import format_and_eval_string
 
 
 class SetDCVoltageTask(InstrumentTask):
@@ -67,8 +65,7 @@ class SetDCVoltageTask(InstrumentTask):
         if target_value is not None:
             value = target_value
         else:
-            value = format_and_eval_string(self.target_value, self.task_path,
-                                           self.task_database)
+            value = self.format_and_eval_string(self.target_value)
 
         if self.check_value:
             last_value = self.driver.voltage
@@ -115,8 +112,7 @@ class SetDCVoltageTask(InstrumentTask):
         val = None
         if self.target_value:
             try:
-                val = format_and_eval_string(self.target_value, self.task_path,
-                                             self.task_database)
+                val = self.format_and_eval_string(self.target_value)
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-volt'] = \

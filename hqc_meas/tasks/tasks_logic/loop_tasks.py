@@ -13,7 +13,6 @@ from numpy import linspace
 from timeit import default_timer
 
 from ..tools.task_decorator import make_stoppable
-from ..tools.database_string_formatter import format_and_eval_string
 from ..base_tasks import (SimpleTask, ComplexTask)
 
 
@@ -42,22 +41,19 @@ class BaseLoopTask(ComplexTask):
         test = True
         traceback = {}
         try:
-            start = format_and_eval_string(self.task_start, self.task_path,
-                                           self.task_database)
+            start = self.format_and_eval_string(self.task_start)
         except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-start'] = \
                 'Loop task did not success to compute  the start value'
         try:
-            stop = format_and_eval_string(self.task_stop, self.task_path,
-                                          self.task_database)
+            stop = self.format_and_eval_string(self.task_stop)
         except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-stop'] = \
                 'Loop task did not success to compute  the stop value'
         try:
-            step = format_and_eval_string(self.task_step, self.task_path,
-                                          self.task_database)
+            step = self.format_and_eval_string(self.task_step)
         except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-step'] = \
@@ -108,12 +104,9 @@ class SimpleLoopTask(BaseLoopTask):
     def process_no_timing(self):
         """
         """
-        start = format_and_eval_string(self.task_start, self.task_path,
-                                       self.task_database)
-        stop = format_and_eval_string(self.task_stop, self.task_path,
-                                      self.task_database)
-        step = format_and_eval_string(self.task_step, self.task_path,
-                                      self.task_database)
+        start = self.format_and_eval_string(self.task_start)
+        stop = self.format_and_eval_string(self.task_stop)
+        step = self.format_and_eval_string(self.task_step)
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
 
@@ -132,12 +125,9 @@ class SimpleLoopTask(BaseLoopTask):
     def process_with_timing(self):
         """
         """
-        start = format_and_eval_string(self.task_start, self.task_path,
-                                       self.task_database)
-        stop = format_and_eval_string(self.task_stop, self.task_path,
-                                      self.task_database)
-        step = format_and_eval_string(self.task_step, self.task_path,
-                                      self.task_database)
+        start = self.format_and_eval_string(self.task_start)
+        stop = self.format_and_eval_string(self.task_stop)
+        step = self.format_and_eval_string(self.task_step)
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
 
@@ -169,12 +159,9 @@ class LoopTask(BaseLoopTask):
     def process_no_timing(self):
         """
         """
-        start = format_and_eval_string(self.task_start, self.task_path,
-                                       self.task_database)
-        stop = format_and_eval_string(self.task_stop, self.task_path,
-                                      self.task_database)
-        step = format_and_eval_string(self.task_step, self.task_path,
-                                      self.task_database)
+        start = self.format_and_eval_string(self.task_start)
+        stop = self.format_and_eval_string(self.task_stop)
+        step = self.format_and_eval_string(self.task_step)
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
 
@@ -193,12 +180,9 @@ class LoopTask(BaseLoopTask):
     def process_with_timing(self):
         """
         """
-        start = format_and_eval_string(self.task_start, self.task_path,
-                                       self.task_database)
-        stop = format_and_eval_string(self.task_stop, self.task_path,
-                                      self.task_database)
-        step = format_and_eval_string(self.task_step, self.task_path,
-                                      self.task_database)
+        start = self.format_and_eval_string(self.task_start)
+        stop = self.format_and_eval_string(self.task_stop)
+        step = self.format_and_eval_string(self.task_step)
         num = int(round(abs(((stop - start)/step)))) + 1
         self.write_in_database('point_number', num)
 

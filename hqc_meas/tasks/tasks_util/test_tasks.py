@@ -12,7 +12,7 @@ from time import sleep
 from inspect import cleandoc
 
 from ..base_tasks import SimpleTask
-from ..tools.database_string_formatter import get_formatted_string, safe_eval
+from ..tools.string_evaluation import safe_eval
 
 
 class PrintTask(SimpleTask):
@@ -34,9 +34,7 @@ class PrintTask(SimpleTask):
         """ Format the message and print it.
 
         """
-        mess = get_formatted_string(self.message,
-                                    self.task_path,
-                                    self.task_database)
+        mess = self.format_string(self.message)
         self.write_in_database('message', mess)
         print mess
         return True
@@ -45,9 +43,7 @@ class PrintTask(SimpleTask):
         """ Check that the message can be correctly formatted.
 
         """
-        mess = get_formatted_string(self.message,
-                                    self.task_path,
-                                    self.task_database)
+        mess = self.format_string(self.message)
         self.write_in_database('message', mess)
         return True, {}
 

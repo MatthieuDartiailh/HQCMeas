@@ -5,6 +5,7 @@ from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.tasks.tools.task_editor import (TaskEditor, TaskViewManager)
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 enamldef SimpleLoopView(GroupBox): view:
     attr task
@@ -21,21 +22,28 @@ enamldef SimpleLoopView(GroupBox): view:
         text = 'Start'
     QtLineCompleter: val_start:
         text := task.task_start
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
     Label: lab_stop:
         text = 'Stop'
     QtLineCompleter: val_stop:
         text := task.task_stop
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
     Label: lab_step:
         text = 'Step'
     QtLineCompleter: val_step:
         text := task.task_step
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
     Label: timing:
         text = 'Timing'
     CheckBox: timing_bool:
         checked := task.timing
+
     TaskEditor: editor:
         task := view.task
 
@@ -59,19 +67,22 @@ enamldef LoopView(GroupBox): view:
         text = 'Start'
     QtLineCompleter: val_start:
         text := task.task_start
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
     Label: lab_stop:
         text = 'Stop'
     QtLineCompleter: val_stop:
         text := task.task_stop
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
     Label: lab_step:
         text = 'Step'
     QtLineCompleter: val_step:
         text := task.task_step
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
     Label: timing:
         text = 'Timing'

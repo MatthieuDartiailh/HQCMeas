@@ -6,8 +6,6 @@ from inspect import cleandoc
 
 from hqc_meas.tasks.api import InstrumentTask
 from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
-from hqc_meas.tasks.tools.database_string_formatter\
-    import format_and_eval_string
 
 
 class RFSourceSetFrequencyTask(InstrumentTask):
@@ -37,8 +35,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
                 self.driver.output = 'On'
 
         if frequency is None:
-            frequency = format_and_eval_string(self.frequency, self.task_path,
-                                               self.task_database)
+            frequency = self.format_and_eval_string(self.frequency)
 
         self.driver.frequency_unit = self.unit
         self.driver.frequency = frequency
@@ -53,8 +50,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
                                                                       **kwargs)
         if self.frequency:
             try:
-                freq = format_and_eval_string(self.frequency, self.task_path,
-                                              self.task_database)
+                freq = self.format_and_eval_string(self.frequency)
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
@@ -89,8 +85,7 @@ class RFSourceSetPowerTask(InstrumentTask):
                 self.driver.output = 'On'
 
         if power is None:
-            power = format_and_eval_string(self.power, self.task_path,
-                                           self.task_database)
+            power = self.format_and_eval_string(self.power)
 
         self.driver.power = power
         self.write_in_database('power', power)
@@ -104,8 +99,7 @@ class RFSourceSetPowerTask(InstrumentTask):
                                                                   **kwargs)
         if self.power:
             try:
-                power = format_and_eval_string(self.power, self.task_path,
-                                               self.task_database)
+                power = self.format_and_eval_string(self.power)
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-power'] = \

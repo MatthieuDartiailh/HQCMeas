@@ -6,22 +6,23 @@
 #==============================================================================
 """
 """
-import textwrap
+from textwrap import fill
+from inspect import cleandoc
 from math import (cos, sin, tan, acos, asin, atan, sqrt, log10,
                 exp, log, cosh, sinh, tanh, atan2)
 from cmath import pi as Pi
 import numpy as np
 import cmath as cm
 
-FORMATTER_TOOLTIP = textwrap.fill("""In this field you can enter a text and
+FORMATTER_TOOLTIP = fill(cleandoc("""In this field you can enter a text and
                         include fields which will be replaced by database
-                        entries by using the delimiters '{' and '}'.""", 80)
+                        entries by using the delimiters '{' and '}'."""), 80)
 
 EVALUATER_TOOLTIP = '\n'.join([
-    textwrap.fill("""In this field you can enter a text and
+    fill(cleandoc("""In this field you can enter a text and
                   include fields which will be replaced by database
                   entries by using the delimiters '{' and '}' and
-                  which will then be evaluated.""", 80),
+                  which will then be evaluated."""), 80),
     "Available math functions:",
     "- cos, sin, tan, acos, asin, atan, atan2",
     "- exp, log, log10, cosh, sinh, tanh, sqrt",

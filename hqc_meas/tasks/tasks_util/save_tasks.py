@@ -14,8 +14,6 @@ import numpy
 import logging
 from inspect import cleandoc
 
-from ..tools.database_string_formatter import (get_formatted_string,
-                                               format_and_eval_string)
 from ..base_tasks import SimpleTask
 
 
@@ -78,17 +76,11 @@ class SaveTask(SimpleTask):
         #Initialisation.
         if not self.initialized:
             self.line_index = 0
-            self.array_length = format_and_eval_string(self.array_size,
-                                                       self.task_path,
-                                                       self.task_database)
+            self.array_length = self.format_and_eval_string(self.array_size)
             if self.saving_target != 'Array':
-                full_folder_path = get_formatted_string(self.folder,
-                                                        self.task_path,
-                                                        self.task_database)
+                full_folder_path = self.format_string(self.folder)
 
-                filename = get_formatted_string(self.filename,
-                                                self.task_path,
-                                                self.task_database)
+                filename = self.format_string(self.filename)
 
                 full_path = os.path.join(full_folder_path, filename)
                 try:
@@ -120,9 +112,7 @@ class SaveTask(SimpleTask):
             self.initialized = True
 
         #writing
-        values = [format_and_eval_string(s[1],
-                                         self.task_path,
-                                         self.task_database)
+        values = [self.format_and_eval_string(s[1])
                   for s in self.saved_values]
         if self.saving_target != 'Array':
             self.file_object.write('\t'.join([str(val)
@@ -147,17 +137,14 @@ class SaveTask(SimpleTask):
         traceback = {}
         if self.saving_target != 'Array':
             try:
-                full_folder_path = get_formatted_string(self.folder,
-                                                        self.task_path,
-                                                        self.task_database)
+                full_folder_path = self.format_string(self.folder)
             except Exception:
                 traceback[self.task_path + '/' + self.task_name] = \
                     'Failed to format the folder path'
                 return False, traceback
 
             try:
-                filename = get_formatted_string(self.filename, self.task_path,
-                                                self.task_database)
+                filename = self.format_string(self.filename)
             except Exception:
                 traceback[self.task_path + '/' + self.task_name] = \
                     'Failed to format the filename'
@@ -174,9 +161,7 @@ class SaveTask(SimpleTask):
                 return False, traceback
 
         try:
-            format_and_eval_string(self.array_size,
-                                   self.task_path,
-                                   self.task_database)
+            self.format_and_eval_string(self.array_size)
         except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to compute the array size'
@@ -185,9 +170,7 @@ class SaveTask(SimpleTask):
         test = True
         for i, s in enumerate(self.saved_values):
             try:
-                format_and_eval_string(s[1],
-                                       self.task_path,
-                                       self.task_database)
+                self.format_and_eval_string(s[1])
             except Exception as e:
                 traceback[self.task_path + '/' + self.task_name + str(i)] = \
                     'Failed to evaluate entry {}: {}'.format(s[0], e)
@@ -251,13 +234,9 @@ class SaveArrayTask(SimpleTask):
         """
         array_to_save = self.get_from_database(self.target_array[1:-1])
 
-        full_folder_path = get_formatted_string(self.folder,
-                                                self.task_path,
-                                                self.task_database)
+        full_folder_path = self.format_string(self.folder)
 
-        filename = get_formatted_string(self.filename,
-                                        self.task_path,
-                                        self.task_database)
+        filename = self.format_string(self.filename)
 
         full_path = os.path.join(full_folder_path, filename)
 
@@ -303,9 +282,7 @@ class SaveArrayTask(SimpleTask):
         """
         traceback = {}
         try:
-            full_folder_path = get_formatted_string(self.folder,
-                                                    self.task_path,
-                                                    self.task_database)
+            full_folder_path = self.format_string(self.folder)
         except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the folder path'
@@ -322,8 +299,7 @@ class SaveArrayTask(SimpleTask):
                     log.info(mes)
 
         try:
-            filename = get_formatted_string(self.filename, self.task_path,
-                                            self.task_database)
+            filename = self.format_string(self.filename)
         except Exception:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Failed to format the filename'

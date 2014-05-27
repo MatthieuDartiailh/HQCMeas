@@ -18,6 +18,7 @@ from hqc_meas.utils.layouts import auto_grid_layout
 from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.tasks.tools.pair_editor import PairEditor
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 enamldef PNASetFreqView(BaseInstrumentView): view:
 
@@ -49,7 +50,8 @@ enamldef PNASetFreqView(BaseInstrumentView): view:
             text = 'Frequency (Hz)'
         QtLineCompleter:
             text := task.frequency
-            entries_updater << task._list_database_entries
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
 
 
 enamldef PNASetPowerView(BaseInstrumentView): view:
@@ -89,7 +91,8 @@ enamldef PNASetPowerView(BaseInstrumentView): view:
             text = 'Power (dBm)'
         QtLineCompleter:
             text := task.power
-            entries_updater << task._list_database_entries
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
 
 MODES = {'Raw': '', 'Mag lin': 'MLIN', 'Mag log': 'MLOG', 'Phase': 'PHAS',
          'Real part': 'REAL','Imaginary part': 'IMAG'}
@@ -220,19 +223,22 @@ enamldef PNASweepMeasView(BaseInstrumentView): view:
         text << label_maker('Start', task.sweep_type)
     QtLineCompleter: start_val:
         text := task.start
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
     Label: stop_lab:
         text << label_maker('Stop', task.sweep_type)
     QtLineCompleter: stop_val:
         text := task.stop
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
     Label: points_lab:
         text = 'Points'
     QtLineCompleter: points_val:
         text := task.points
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
     GroupBox: meas:
         title = 'Measures'

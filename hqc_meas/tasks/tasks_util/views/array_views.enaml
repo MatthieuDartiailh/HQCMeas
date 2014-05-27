@@ -2,6 +2,7 @@ from enaml.layout.api import grid
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo)
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 enamldef ArrayExtremaView(GroupBox): view:
     attr task
@@ -16,7 +17,8 @@ enamldef ArrayExtremaView(GroupBox): view:
     QtLineCompleter: arr_val:
         hug_width = 'ignore'
         text >> task.target_array
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
     Label: col_lab:
         text = 'Column name'
     Field: col_val:

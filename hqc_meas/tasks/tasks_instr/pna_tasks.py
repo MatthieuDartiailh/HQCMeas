@@ -15,8 +15,6 @@ import numpy as np
 
 from hqc_meas.tasks.api import InstrumentTask
 from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
-from hqc_meas.tasks.tools.database_string_formatter\
-    import (format_and_eval_string)
 from hqc_meas.instruments.drivers.driver_tools import InstrIOError
 
 
@@ -99,8 +97,7 @@ class PNASetFreqTask(PNATasks):
             self.channel_driver.owner = self.task_name
 
         if freq is None:
-            freq = format_and_eval_string(self.frequency, self.task_path,
-                                          self.task_database)
+            freq = self.format_and_eval_string(self.frequency)
 
         self.channel_driver.frequency = freq
         self.write_in_database('frequency', freq)
@@ -112,8 +109,7 @@ class PNASetFreqTask(PNATasks):
         """
         test, traceback = super(PNASetFreqTask, self).check(*args, **kwargs)
         try:
-            format_and_eval_string(self.frequency, self.task_path,
-                                   self.task_database)
+            self.format_and_eval_string(self.frequency)
         except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-freq'] = \
@@ -149,8 +145,7 @@ class PNASetPowerTask(PNATasks):
             self.channel_driver.owner = self.task_name
 
         if not power:
-            power = format_and_eval_string(self.power, self.task_path,
-                                           self.task_database)
+            power = self.format_and_eval_string(self.power)
         self.channel_driver.port = self.port
         self.channel_driver.power = power
         self.write_in_database('power', power)
@@ -162,8 +157,7 @@ class PNASetPowerTask(PNATasks):
         """
         test, traceback = super(PNASetPowerTask, self).check(*args, **kwargs)
         try:
-            format_and_eval_string(self.power, self.task_path,
-                                   self.task_database)
+            self.format_and_eval_string(self.power)
         except Exception:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-power'] = \
@@ -345,12 +339,9 @@ class PNASweepTask(PNATasks):
                                                         i+1, clear)
                     clear = False
 
-        start = format_and_eval_string(self.start, self.task_path,
-                                       self.task_database)
-        stop = format_and_eval_string(self.stop, self.task_path,
-                                      self.task_database)
-        points = format_and_eval_string(self.points, self.task_path,
-                                        self.task_database)
+        start = self.format_and_eval_string(self.start)
+        stop = self.format_and_eval_string(self.stop)
+        points = self.format_and_eval_string(self.points)
         self.channel_driver.prepare_sweep(self.sweep_type.upper(), start, stop,
                                           points)
 
@@ -379,22 +370,19 @@ class PNASweepTask(PNATasks):
         """
         test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
         try:
-            format_and_eval_string(self.start, self.task_path,
-                                   self.task_database)
+            self.format_and_eval_string(self.start)
         except:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-start'] = \
                 'Failed to eval the start formula {}'.format(self.start)
         try:
-            format_and_eval_string(self.stop, self.task_path,
-                                   self.task_database)
+            self.format_and_eval_string(self.stop)
         except:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-stop'] = \
                 'Failed to eval the stop formula {}'.format(self.stop)
         try:
-            format_and_eval_string(self.points, self.task_path,
-                                   self.task_database)
+            self.format_and_eval_string(self.points)
         except:
             test = False
             traceback[self.task_path + '/' + self.task_name + '-step'] = \

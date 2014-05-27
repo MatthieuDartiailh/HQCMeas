@@ -11,6 +11,7 @@ from enaml.widgets.api import (Container, GroupBox, Label, Field)
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.tasks.tools.pair_editor import PairEditor
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 enamldef FView(Container):
 
@@ -23,7 +24,8 @@ enamldef FView(Container):
         text := model.label
     QtLineCompleter: defi:
         text := model.value
-        entries_updater << model.task._list_database_entries
+        entries_updater << model.task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
 enamldef FormulaView(GroupBox):
 

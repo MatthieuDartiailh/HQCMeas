@@ -12,8 +12,6 @@ from inspect import cleandoc
 
 from hqc_meas.tasks.api import InstrumentTask
 from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
-from hqc_meas.tasks.tools.database_string_formatter\
-    import format_and_eval_string
 
 
 class ApplyMagFieldTask(InstrumentTask):
@@ -50,9 +48,7 @@ class ApplyMagFieldTask(InstrumentTask):
             self.driver.make_ready()
 
         if target_value is None:
-            target_value = format_and_eval_string(self.target_field,
-                                                  self.task_path,
-                                                  self.task_database)
+            target_value = self.format_and_eval_string(self.target_field)
         self.driver.go_to_field(target_value, self.rate, self.auto_stop_heater)
         self.write_in_database('Bfield', target_value)
 
@@ -64,8 +60,7 @@ class ApplyMagFieldTask(InstrumentTask):
         test, traceback = super(ApplyMagFieldTask, self).check(*args, **kwargs)
         if self.target_field:
             try:
-                val = format_and_eval_string(self.target_field, self.task_path,
-                                             self.task_database)
+                val = self.format_and_eval_string(self.target_field)
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-field'] = \
