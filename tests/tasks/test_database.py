@@ -21,6 +21,7 @@ def teardown_module():
 #--- Edition mode tests.
 
 def test_database_nodes():
+    # Test all nodes operations.
     database = TaskDatabase()
     database.create_node('root', 'node1')
     database.create_node('root/node1', 'node2')
@@ -29,6 +30,7 @@ def test_database_nodes():
 
 
 def test_database_values():
+    # Test get/set value operations.
     database = TaskDatabase()
     assert_true(database.set_value('root', 'val1', 1))
     assert_equal(database.get_value('root', 'val1'), 1)
@@ -41,6 +43,7 @@ def test_database_values():
 
 @raises(KeyError)
 def test_database_values2():
+    # Test delete value operation.
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     assert_equal(database.get_value('root', 'val1'), 1)
@@ -49,6 +52,7 @@ def test_database_values2():
 
 
 def test_database_listing():
+    # Test database entries listing.
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -70,7 +74,8 @@ def test_database_listing():
                  sorted(['val2']))
 
 
-def test_access_exceptions():
+def test_access_exceptions1():
+    # Test simple access exceptions.
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -96,6 +101,32 @@ def test_access_exceptions():
     assert_equal(database.list_accessible_entries('root'), ['val1'])
 
 
+def test_access_exceptions2():
+    # Test nested access exceptions.
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.set_value('root/node1', 'val2', 'a')
+    database.create_node('root/node1', 'node2')
+    database.set_value('root/node1/node2', 'val3', 2.0)
+
+    assert_equal(database.list_accessible_entries('root'), ['val1'])
+
+    database.add_access_exception('root/node1', 'val3', 'root/node1/node2')
+    database.add_access_exception('root', 'val3', 'root/node1')
+    assert_equal(database.list_accessible_entries('root'), ['val1', 'val3'])
+    assert_equal(database.get_value('root', 'val3'), 2.0)
+
+    database.remove_access_exception('root', 'val3')
+    assert_equal(database.list_accessible_entries('root'), ['val1'])
+    assert_equal(database.list_accessible_entries('root/node1'),
+                 ['val1', 'val2', 'val3'])
+
+    database.remove_access_exception('root/node1', 'val3')
+    assert_equal(database.list_accessible_entries('root/node1'),
+                 ['val1', 'val2'])
+
+
 #--- Running mode tests.
 
 def test_flattening_database():
@@ -108,6 +139,7 @@ def test_flattening_database():
 
 
 def test_index_op_on_flat_database1():
+    # Test operation on flat database relying on indexes.
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -124,6 +156,8 @@ def test_index_op_on_flat_database1():
 
 
 def test_index_op_on_flat_database2():
+    # Test operation on flat database relying on indexes when a simple access
+    # ex exists.
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -136,7 +170,25 @@ def test_index_op_on_flat_database2():
                  {'val1': 0, 'val2': 1})
 
 
+def test_index_op_on_flat_database3():
+    # Test operation on flat database relying on indexes when a nested access
+    # ex exists.
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.create_node('root/node1', 'node2')
+    database.set_value('root/node1/node2', 'val2', 'a')
+    database.add_access_exception('root/node1', 'val2', 'root/node1/node2')
+    database.add_access_exception('root', 'val2', 'root/node1')
+
+    database.prepare_for_running()
+    assert_equal(database.get_entries_indexes('root', ['val1']), {'val1': 0})
+    assert_equal(database.get_entries_indexes('root', ['val1', 'val2']),
+                 {'val1': 0, 'val2': 1})
+
+
 def test_get_set_on_flat_database1():
+    # Test get/set operations on flat database using names.
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -149,6 +201,8 @@ def test_get_set_on_flat_database1():
 
 
 def test_get_set_on_flat_database2():
+    # Test get/set operations on flat database using names when an access ex
+    # exists.
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
@@ -158,3 +212,22 @@ def test_get_set_on_flat_database2():
     database.prepare_for_running()
     assert_false(database.set_value('root', 'val2', 2))
     assert_equal(database.get_value('root', 'val2'), 2)
+
+
+def test_get_set_on_flat_database3():
+    # Test get/set operations on flat database using names when a nested
+    # access ex exists.
+    database = TaskDatabase()
+    database.set_value('root', 'val1', 1)
+    database.create_node('root', 'node1')
+    database.create_node('root/node1', 'node2')
+    database.set_value('root/node1/node2', 'val2', 'a')
+    database.add_access_exception('root/node1', 'val2', 'root/node1/node2')
+    database.add_access_exception('root', 'val2', 'root/node1')
+
+    database.prepare_for_running()
+    assert_false(database.set_value('root', 'val2', 2))
+    assert_equal(database.get_value('root', 'val2'), 2)
+
+    assert_false(database.set_value('root/node1', 'val2', 2))
+    assert_equal(database.get_value('root/node1', 'val2'), 2)
