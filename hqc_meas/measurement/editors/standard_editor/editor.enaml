@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
-# module : base_editor.py
+# module : editor.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================

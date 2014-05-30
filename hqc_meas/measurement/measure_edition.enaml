@@ -37,13 +37,14 @@ enamldef SaveAction(Action):
         # TODO use core
 #        save_task(obj, mode='template')
 
-def build_task(workbench, parent_ui):
+def build_task(workbench):
     """ Call the Command responsible for building a task.
 
     """
     core = workbench.get_plugin('enaml.workbench.core')
+    ui = workbench.get_plugin('enaml.workbench.ui')
     return core.invoke_command('hqc_meas.task_manager.build_task',
-                               {'parent_ui': parent_ui}, workbench)
+                               {'parent_ui': ui.window}, workbench)
 
 
 enamldef SimpleMenu(Menu): menu:
@@ -57,12 +58,12 @@ enamldef SimpleMenu(Menu): menu:
         action_context << context
         factory = build_task
         mode = 'Add before'
-        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench}
     NewAction:
         action_context << context
         factory = build_task
         mode = 'Add after'
-        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench}
     Action:
         separator = True
     CutAction:
@@ -91,7 +92,7 @@ enamldef ComplexMenu(Menu): menu:
     NewAction:
         action_context << context
         factory = build_task
-        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench}
     Action:
         separator = True
     SaveAction:
@@ -189,9 +190,10 @@ class _MeasEditionModel(Atom):
             to_remove = current_editor_ids - valid_editor_ids
             to_add = valid_editor_ids - current_editor_ids
             for editor in self.valid_editors[:]:
-                if editor.id in to_remove:
+                ed_id = editor.declaration.id
+                if ed_id in to_remove:
                     self.valid_editors.remove(editor)
-                    self._unvalid_editors[editor.id] = editor
+                    self._unvalid_editors[ed_id] = editor
 
             for id in to_add:
                 if id not in self._unvalid_editors:
@@ -199,7 +201,12 @@ class _MeasEditionModel(Atom):
                     editor = decl.factory(decl, self.workspace.workbench)
                 else:
                     editor = self._unvalid_editors[id]
-                self.valid_editors.append(editor)
+
+                # Make sure the standard editor is the first one.
+                if id == u'hqc_meas.measure.editors.standard_editor':
+                    self.valid_editors.insert(0, editor)
+                else:
+                    self.valid_editors.append(editor)
 
         if not self.selected_editor:
             self.selected_editor = self.valid_editors[0]
@@ -302,8 +309,8 @@ enamldef MeasEditionView(Container): ed:
         # previously selected editor is removed.
         tabs_closable = False
         hug_width = 'ignore'
-#        selected_tab ::
-#            _internal.selected_editor = self.find(selected_tab)
+        selected_tab ::
+            _internal.selected_editor = self.find(selected_tab)
         Include:
             objects << _internal.valid_editors
 
