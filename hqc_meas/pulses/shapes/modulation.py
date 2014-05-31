@@ -41,35 +41,48 @@ class Modulation(HasPrefAtom):
     #: Unit of the phase used in the modulation.
     phase_unit = Enum('rad', 'deg').tag(pref=True)
 
-    def eval_entries(self, sequence_locals, missing):
+    def eval_entries(self, sequence_locals, missing, errors, index):
         """ Evaluate amplitude, frequency, and phase.
 
         """
-        evals = {}
-        errs = []
+        if not self.activated:
+            return True
+        
+        prefix = '{}'.format(index) + 'mod_'
+        
+        # Computing amplitude
         try:
             amp = eval_entry(self.amplitude, sequence_locals, missing)
         except Exception as e:
             eval_success = False
-            errs.append(repr(e))
+            errors[prefix + 'amplitude'] = repr(e)
 
         if amp is not None:
             self._amplitude = amp
-            evals['amplitude'] = amp
+            sequence_locals[prefix + 'amplitude'] = amp
 
+        # Computing frequency
         try:
             freq = eval(self.frequency, globals(), sequence_locals)
-            self._frequency = freq
         except Exception:
             eval_success = False
-            errs.append(repr(e))
+            errors[prefix + 'frequency'] = repr(e)
+            
+        if freq is not None:
+           self._frequency = freq
+           sequence_locals[prefix + 'frequency'] = freq
 
+        # Computing phase
         try:
             phase = eval(self.frequency, globals(), sequence_locals)
             self._phase = phase
         except Exception:
             eval_success = False
-            errs.append(repr(e))
+            errors[prefix + 'phase'] = repr(e)
+            
+        if phase is not None:
+           self._phase = phase
+           sequence_locals[prefix + 'phase'] = phase
 
         return eval_success
 

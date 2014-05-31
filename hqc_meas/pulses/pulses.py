@@ -7,6 +7,7 @@
 from atom.api import (Int, Instance, Str, Enum, Float, Dict, List, Typed, Bool,
                       ContainerList, ForwardInstance, ForwardTyped,
                       set_default)
+from itertools import chain
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from .contexts.base_context import BaseContext
@@ -28,7 +29,7 @@ class Item(HasPrefAtom):
     #: Flag to disable a particular item.
     enabled = Bool(True).tag(pref=True)
 
-    #: Class of the item use when rebuilding a sequence.
+    #: Class of the item to use when rebuilding a sequence.
     item_class = Str().tag(pref=True)
 
     #: Name of the variable which can be referenced in other items.
@@ -36,12 +37,6 @@ class Item(HasPrefAtom):
 
     #: Reference to the root sequence.
     root = ForwardTyped(lambda: RootSequence)
-
-    def eval_entries(self, sequence_locals):
-        """
-
-        """
-        raise NotImplementedError
 
     def _default_item_class(self):
         """ Default value for the item_class member.
@@ -95,10 +90,55 @@ class Pulse(Item):
     #: Shape of the pulse. Only enabled in analogical mode.
     shape = Instance(AbstractShape).tag(pref=True)
 
-    def eval_entries(self, sequence_locals, missing):
+    def eval_entries(self, sequence_locals, missings, errors):
         """
         """
-        pass
+        # Name of the parameter which will be evaluated.
+        par1 = self.def_mode.split('/')[0].lower()
+        par2 = self.def_mode.split('/')[1].lower()
+        prefix = '{}_'.format(self.index)
+        
+        # Evaluation of the first parameter.
+        d1 = None
+        try:
+            d1 = eval_entry(self.def_1, sequence_locals, missings)
+        except Exception as e:
+            errors[prefix + par1] = repr(e)
+            
+        if d1 is not None:
+            setattr(self, par1, d1)
+            sequence_locals[prefix + par1] = d1
+
+        # Evaluation of the second parameter.
+        d2 = None
+        try:
+            d2 = eval_entry(self.def_2, sequence_locals, missings)
+        except Exception as e:
+            errors[prefix + par2] = repr(e)
+            
+        if d2 is not None:
+            setattr(self, par2, d2)
+            sequence_locals[prefix + par2] = d2
+         
+         # Computation of the third.
+        success = d1 is not None and d2 is not None
+        if success:
+            if self.def_mode == 'Start/Duration':
+                 self.stop = d1 + d2
+                 sequence_locals[prefix + 'stop'] = self.stop
+            elif self.def_mode == 'Start/Stop':
+                self.duration = d2 - d1
+                sequence_locals[prefix + 'duration'] = self.stop
+            else:
+                self.start = d2 - d1
+                sequence_locals[prefix + 'start'] = self.stop
+         
+        if self.kind == 'analogical':
+            success &= self.modulation.eval_entries(sequence_locals, missings, errors, self.index)
+            
+            success &= self.shape.eval_entries(sequence_locals, missings, errors, self.index)
+            
+        return success
 
     def compute(self, time):
         """ Compute the relative strength of the pulse at a given time.
@@ -114,6 +154,13 @@ class Pulse(Item):
 
         else:
             return 0
+            
+#    def update_members_from_preferences():
+#        """
+#        """
+#        NO #recreate shape before loading preferences if it makes senses
+#        
+#        # Shape should be created by the loader.
 
 
 class Sequence(Item):
@@ -127,12 +174,43 @@ class Sequence(Item):
 
     #: Parent sequence of this sequence.
     parent = ForwardInstance(lambda: Sequence)
-
-    def eval_entries(self, sequence_locals):
+    
+    def compile_sequence(self, sequence_locals, missing_locals, errors):
         """
+        
         """
-        pass
+        compiled = [None for i in xrange(len(self.items))]
+        while True:
+            missings = set()            
+            
+            for i, item in enumerate(self.items):
+                # If we get a pulse simply evaluate the entries, to add their values to the locals
+                # and keep track of the missings to now when to abort compilation.
+                if isinstance(item, Pulse):
+                    success = item.eval_entries(sequence_locals, missings, errors)
+                    if success:
+                        compiled[i] = [item]
 
+                # Here we got a sequence so we must try to compile it.                        
+                else:
+                    success, items = item.compile_sequence(sequence_locals, missings, errors)
+                    if success:
+                        compiled[i] = items
+                        
+            known_locals = set(sequence_locals.keys())
+            # If none of the variables found missing during last pass is now known stop compilation
+            # as we now reached a dead end. Same if an error occured.
+            if errors or not known_locals & missings:
+                # Update the missings given by caller so that it knows it this failure is linked to circle
+                # references.
+                missing_locals.update(missings)
+                return False, []
+                
+            # If no var was found missing during last pass (and as no error occured) it means
+            # the compilation succeeded.
+            elif not missings:
+                return True, list(chain.from_iterable(compiled))
+                
     def walk(self, members, callables):
         """ Explore the items hierarchy looking.
 
@@ -298,45 +376,94 @@ class ConditionalSequence(Sequence):
 
     linkable_vars = set_default(['condition'])
 
-    def eval_entries(self, sequence_locals):
+    def compile_sequence(self, sequence_locals, missing_locals, errors):
         """
+        
         """
-        pass
+        cond = None
+        try:
+            cond = eval_entry(self.condition, sequence_locals, missing_locals)
+        except Exception as e:
+            errors['{}'.format(self.index) + 'condition'] = repr(e)
+            
+        if cond is None:
+            return False, []
+            
+        local = '{}'.format(self.index) + 'condition'
+        sequence_locals[local] = cond
+
+        if cond:
+            return super(ConditionalSequence, self).compile_sequence(sequence_locals,
+                                                                                              missing_locals)
+                                                                                              
+        else:
+            return True, []
 
 
-class LoopSequence(Sequence):
+class RepeatSequence(Sequence):
     """ Sequence whose child items will be included multiple times.
 
     """
-    start = Str().tag(pref=True)
+    iter_duration = Str().tag(pref=True)
 
-    stop = Str().tag(pref=True)
+    iter_number = Str().tag(pref=True)
 
-    step = Str().tag(pref=True)
+    linkable_vars = set_default(['iter_start', 'iter_stop'])
 
-    linkable_vars = set_default(['index', 'value'])
-
-    def eval_entries(self, sequence_locals):
+    def compile_sequence(self, sequence_locals):
         """
+        
         """
+        # TODO later will require some use of deepcopy.
         pass
 
 
 class RootSequence(Sequence):
     """ Base of any pulse sequences.
 
-    This Item perform the first step of compilation by evaluating all the
-    entries and then unravelling the pulse sequence (elimination of condition
-    and loop flattening).
+    This Item perform the first step of compilation by evaluating all the entries and then unravelling
+    the pulse sequence (elimination of condition and loop flattening).
 
-    The linkable_vars of the RootSequence stores all the known linkable vars
-    for the sequence.
+    The linkable_vars of the RootSequence stores all the known linkable vars for the sequence.
 
     """
     #: Dict of external variables.
     external_variables = Dict().tag(pref=True)
 
-    def compile_sequence(self):
+    def compile_sequence(self, use_context=True):
+        """ Compile a sequence to useful format.
+        
+        Parameters
+        ---------------
+        use_context : bool, optional
+            Should the context comile the pulse sequence.
+            
+        Returns
+        -----------
+        result : bool
+            Flag indicating whether or not the compilation succeeded.
+            
+        *args : 
+            Objects depending on the result and use_context flag.
+            In case of failure:
+                - a set of the entries whose values where never found and a dict of the errors which
+                occured during the compilation.
+            In case of success:
+                - a flat list of Pulse if use_context is false
+                - a context dependent result.
+        
         """
-        """
-        pass
+        sequence_locals = self.external_variables.copy()
+        missings = set()
+        errors = {}
+        
+        res, pulses = super(RootSequence, self).compile_sequence(sequence_locals, missings, errors)
+        
+        if not res:
+            return False, missings, errors
+            
+        elif not use_context:
+            return True, pulses
+            
+        else:
+            return self.context.compile_sequence(pulses)
