@@ -47,9 +47,9 @@ class Modulation(HasPrefAtom):
         """
         if not self.activated:
             return True
-        
+
         prefix = '{}'.format(index) + 'mod_'
-        
+
         # Computing amplitude
         try:
             amp = eval_entry(self.amplitude, sequence_locals, missing)
@@ -67,10 +67,10 @@ class Modulation(HasPrefAtom):
         except Exception:
             eval_success = False
             errors[prefix + 'frequency'] = repr(e)
-            
+
         if freq is not None:
-           self._frequency = freq
-           sequence_locals[prefix + 'frequency'] = freq
+            self._frequency = freq
+            sequence_locals[prefix + 'frequency'] = freq
 
         # Computing phase
         try:
@@ -79,10 +79,10 @@ class Modulation(HasPrefAtom):
         except Exception:
             eval_success = False
             errors[prefix + 'phase'] = repr(e)
-            
+
         if phase is not None:
-           self._phase = phase
-           sequence_locals[prefix + 'phase'] = phase
+            self._phase = phase
+            sequence_locals[prefix + 'phase'] = phase
 
         return eval_success
 
