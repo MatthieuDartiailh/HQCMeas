@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Atom, ContainerList, Value, Str, Tuple
+from atom.api import Atom, ContainerList, Value, Str, Tuple, List
 from enaml.workbench.api import Workbench
 from enaml.widgets.api import (Container, GroupBox, CheckBox, ScrollArea,
                                Label, FlowArea, FlowItem, Label)
@@ -22,52 +22,234 @@ class _Model(Atom):
     """
     task = Value()
 
-    entries = ContainerList()
+    entries = List()
 
-    children_entries = ContainerList()
+    children_entries = List()
 
     complexs = ContainerList()
 
-    def __init__(self, task):
+    def bind_observers(self):
+        """
+
+        """
+        if not self.task:
+            return
+
+        self.task.observe('task_database_entries', self._task_observer)
+        self.task.observe('access_exs', self._task_observer)
+        # XXXX this assumes that children task is the only container.
+        self.task.observe('children_task', self._children_observer)
+        for child in self.task._gather_children_task():
+            child.observe('task_database_entries',
+                          self._database_entries_observer)
+
+    def unbind_observers(self, task=None):
+        """
+
+        """
+        if not task:
+            if not self.task:
+                return
+            task = self.task
+
+        task.unobserve('task_database_entries', self._task_observer)
+        task.unobserve('access_exs', self._task_observer)
+        # XXXX this assumes that children task is the only container.
+        task.unobserve('children_task', self._children_observer)
+        for child in task._gather_children_task():
+            child.unobserve('task_database_entries',
+                            self._database_entries_observer)
+
+    def build_entries(self):
+        """
+
+        """
+        task = self.task
+        entries = [task.task_name + '_' + e
+                       for e in task.task_database_entries]
+        children_entries = []
+        complexs = []
+        for child in task._gather_children_task():
+            if isinstance(child, ComplexTask):
+                entries.extend(child.access_exs)
+                model = _Model(task=child)
+                model.observe('entries', self._model_entries_observer)
+                children_entries.extend(model.entries)
+                complexs.append((model, child))
+            else:
+                c_entries = [child.task_name + '_' + e
+                             for e in child.task_database_entries]
+                children_entries.extend(c_entries)
+
+        if task.task_depth == 0:
+            self.children_entries = entries + children_entries
+        else:
+            self.children_entries = children_entries
+
+        self.entries = entries
+        self.complexs = complexs
+
+    #--- Private API ----------------------------------------------------------
+
+    def _observe_task(self, change):
+        """
+
+        """
+        if 'oldvalue' in change and change['oldvalue']:
+            self.unbind_observers(change['oldvalue'])
+
+        task = change['value']
         if task:
-            self.entries = [(task.task_name + '_' + e, task.task_name, e)
-                            for e in task.task_database_entries]
-            for child in task._gather_children_task():
-                if isinstance(child, ComplexTask):
-                    self.entries.extend(child.access_exs)
-                    model = _Model(child)
-                    self.children_entries.extend(model.entries)
-                    self.complexs.append((model, child))
-                else:
-                    c_entries = [(child.task_name + '_' + e, child.task_name, e)
-                                 for e in child.task_database_entries]
-                    self.children_entries.extend(c_entries)
+            self.build_entries()
+            self.bind_observers()
 
-            if task.task_depth == 0:
-                self.children_entries = self.entries + self.children_entries
+    def _task_observer(self, change):
+        """
+
+        """
+        entries = self.entries[:]
+
+        if change['name'] == 'task_database_entries':
+            new = change['value'].viewkeys()
+            old = change.get('oldvalue',{}).viewkeys()
+            added = new - old
+            removed = old - new
+
+            for entry in removed:
+                entries.remove(task.task_name + '_' + entry)
+            for entry in added:
+                entries.append(task.task_name + '_' + entry)
+
+        else:
+            added = set(change['value']) - set(change.get('oldvalue', []))
+            removed = set(change.get('oldvalue', [])) - set(change['value'])
+
+            for entry in removed:
+                entries.remove(entry)
+            for entry in added:
+                entries.append(entry)
+
+        self.entries = entries
+
+    def _model_entries_observer(self, change):
+        """
+
+        """
+        new = change['value'].viewkeys()
+        old = change['oldvalue'].viewkeys()
+        added = new - old
+        removed = old - new
+
+        c_entries = self.children_entries[:]
+        for entry in removed:
+            c_entries.remove(task.task_name + '_' + entry)
+        for entry in added:
+            c_entries.append(task.task_name + '_' + entry)
+        self.children_entries = c_entries
+
+    def _database_entries_observer(self, change):
+        """
+
+        """
+        new = change['value'].viewkeys()
+        old = change['oldvalue'].viewkeys()
+        task = change['object']
+        added = new - old
+        removed = old - new
+
+        c_entries = self.children_entries[:]
+        for entry in removed:
+            c_entries.remove(task.task_name + '_' + entry)
+        for entry in added:
+            c_entries.append(task.task_name + '_' + entry)
+        self.children_entries = c_entries
+
+    def _children_observer(self, change):
+        """
+
+        """
+        added = set(change['value']) - set(change.get('oldvalue', []))
+        removed = set(change.get('oldvalue', [])) - set(change['value'])
+
+        complexs = self.complexs[:]
+        entries = self.entries[:]
+        c_entries = self.children_entries[:]
+
+        for child in removed:
+            if isinstance(child, ComplexTask):
+                child.unobserve('access_ex', self._exceptions_observer)
+                # XXXX this assumes that children task is the only container.
+                child.unobserve('children_task', self._children_observer)
+
+                for d in complexs:
+                    if d[1] is child:
+                        d[0].unbind_observers()
+                        complexs.remove(d)
+                        break
+
+                for ex in child.access_exs:
+                    entries.remove(child.task_name + '_' + ex)
+                    if self.task.task_depth == 0:
+                        c_entries.remove(child.task_name + '_' + ex)
+
+            child.unobserve('task_database_entries',
+                            self._database_entries_observer)
+            for entry in child.task_database_entries.keys():
+                c_entries.remove(child.task_name + '_' + entry)
+
+        for child in added:
+            if isinstance(child, ComplexTask):
+
+                model = _Model(task=child)
+                model.observe('entries', self._model_entries_observer)
+                complexs.append((model, child))
+
+                for ex in child.access_exs:
+                    entries.append(child.task_name + '_' + ex)
+                    if self.task.task_depth == 0:
+                        c_entries.append(child.task_name + '_' + ex)
+
+            child.observe('task_database_entries',
+                          self._database_entries_observer)
+            for entry in child.task_database_entries.keys():
+                c_entries.append(child.task_name + '_' + entry)
+
+        self.complexs = complexs
+        self.entries = entries
+        self.children_entries = c_entries
 
 
-enamldef TaskAccessEditor(GroupBox):
+enamldef _AccessEditor(GroupBox):
 
     attr task
     attr _model
     attr _map
 
-    title = task.task_name
+    title = task.task_name if task else ''
 
     FlowArea:
+        hug_height = 'strong'
         Looper:
             iterable << _model.children_entries
             FlowItem:
                 Container:
-                    CheckBox:
-                        text = loop_item[0]
-                        checked = loop_item[0] in task.access_exs
-                        checked ::
-                            if change['value']:
-                                task.add_access_exception(loop_item[0])
-                            else:
-                                task.remove_access_exception(loop_item[0])
+                    Conditional:
+                        condition << task.task_depth == 0 if task else False
+                        Container:
+                            Label:
+                                text << loop_item
+
+                    Conditional:
+                        condition << task.task_depth > 0 if task else True
+                        Container:
+                            CheckBox:
+                                text << loop_item
+                                checked = loop_item in task.access_exs if task else False
+                                checked ::
+                                    if change['value']:
+                                        task.add_access_exception(loop_item)
+                                    else:
+                                        task.remove_access_exception(loop_item)
 
     Looper:
         iterable << _model.complexs
@@ -78,49 +260,29 @@ enamldef TaskAccessEditor(GroupBox):
             modelkey = '_model'
 
 
-enamldef DatabaseAccessEditor(BaseEditor):
+enamldef DatabaseAccessEditor(BaseEditor): editor:
     """
 
     """
-    attr task << selected_task
-    attr _model << _Model(task)
-    attr _map = {_Model : TaskAccessEditor}
+    attr model = _Model(task=selected_task)
+    attr _map = {_Model : _AccessEditor}
 
     title = 'Database access editor'
     name = 'database_access_editor'
 
-    GroupBox:
-        padding = 2
-        title << task.task_name if task else ''
+    selected_task >> model.task
+
+    selected ::
+        model.build_entries()
+        model.bind_observers()
+
+    unselected ::
+        print 'tt'
+        model.unbind_observers()
+
+    Container:
         ScrollArea:
-            Container:
-                padding = 0
-                FlowArea:
-                    Looper:
-                        iterable << _model.children_entries
-                        FlowItem:
-                            Conditional:
-                                condition << task.task_depth == 0
-                                Container:
-                                    Label:
-                                        text << loop_item[0]
-
-                            Conditional:
-                                condition << task.task_depth > 0
-                                Container:
-                                    CheckBox:
-                                        text << loop_item[0]
-                                        checked = loop_item[0] in task.access_exs
-                                        checked ::
-                                            if change['value']:
-                                                task.add_access_exception(loop_item[0])
-                                            else:
-                                                task.remove_access_exception(loop_item[0])
-
-                Looper:
-                    iterable << _model.complexs
-                    MappedView:
-                        model << loop_item[0]
-                        typemap = _map
-                        kwargs = {'task': loop_item[1], '_map': _map}
-                        modelkey = '_model'
+            _AccessEditor:
+                task << selected_task
+                _model << model
+                _map = editor._map

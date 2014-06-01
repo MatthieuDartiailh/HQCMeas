@@ -142,7 +142,6 @@ class QtTreeWidget(RawWidget):
 
         super(QtTreeWidget, self).destroy()
 
-    @observe('selection')
     def _observe_selection(self, change):
         """ Handles the **selection** event.
         """
@@ -186,9 +185,6 @@ class TreeNodeController(Atom):
 
     # The currently selected object
     selected = Event()
-
-    # The currently selected object
-    selection = Event()
 
     # The event fired when the application wants to veto an operation:
     veto = Event()
@@ -254,6 +250,8 @@ class TreeNodeController(Atom):
         if ncolumns > 1:
             for i in range(ncolumns):
                 tree.resizeColumnToContents(i)
+
+        tree.setCurrentItem(tree.topLevelItem(0))
 
 #        self.selected = self.root_node
 

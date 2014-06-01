@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : measure.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 from atom.api import (Atom, Instance, Dict, Unicode, ForwardTyped, Str)
 from configobj import ConfigObj
 import logging

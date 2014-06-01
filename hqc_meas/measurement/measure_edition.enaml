@@ -162,13 +162,9 @@ class _MeasEditionModel(Atom):
 
         """
         self.selected_editor = None
-        self._unvalid_editors.clear()
         self.valid_editors = []
 
     #--- Private API ----------------------------------------------------------
-
-    # Dict storing editor started and then removed from the valid ones.
-    _unvalid_editors = Dict()
 
     def _observe_selected_task(self, change):
         """ Keep the list of valid editors up to date and update editor.
@@ -193,14 +189,10 @@ class _MeasEditionModel(Atom):
                 ed_id = editor.declaration.id
                 if ed_id in to_remove:
                     self.valid_editors.remove(editor)
-                    self._unvalid_editors[ed_id] = editor
 
             for id in to_add:
-                if id not in self._unvalid_editors:
-                    decl = editors[id]
-                    editor = decl.factory(decl, self.workspace.workbench)
-                else:
-                    editor = self._unvalid_editors[id]
+                decl = editors[id]
+                editor = decl.factory(decl, self.workspace.workbench)
 
                 # Make sure the standard editor is the first one.
                 if id == u'hqc_meas.measure.editors.standard_editor':
@@ -219,6 +211,9 @@ class _MeasEditionModel(Atom):
         """ Update infos for newly selected editor.
 
         """
+        if 'oldvalue' in change and change['oldvalue']:
+            change['oldvalue'].unselected = True
+
         editor = change['value']
         if editor:
             # Update selected task.
@@ -227,6 +222,8 @@ class _MeasEditionModel(Atom):
             # Get tree preferences.
             self.tree_enabled = editor.tree_enabled
             self.tree_visible = editor.tree_visible
+
+            editor.selected = True
 
 
 enamldef MeasEditionView(Container): ed:
@@ -310,7 +307,9 @@ enamldef MeasEditionView(Container): ed:
         tabs_closable = False
         hug_width = 'ignore'
         selected_tab ::
-            _internal.selected_editor = self.find(selected_tab)
+            ed = self.find(selected_tab)
+            if ed != editors:
+                _internal.selected_editor = ed
         Include:
             objects << _internal.valid_editors
 
