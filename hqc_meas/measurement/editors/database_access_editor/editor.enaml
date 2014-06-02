@@ -121,13 +121,31 @@ class _Model(Atom):
                 entries.append(task.task_name + '_' + entry)
 
         else:
-            added = set(change['value']) - set(change.get('oldvalue', []))
-            removed = set(change.get('oldvalue', [])) - set(change['value'])
+            if change['type'] != 'container':
+                new = set(change['value'])
+                old = set(change.get('oldvalue',[]))
+                added = new - old
+                removed = old - new
 
-            for entry in removed:
-                entries.remove(entry)
-            for entry in added:
-                entries.append(entry)
+                for entry in removed:
+                    entries.remove(task.task_name + '_' + entry)
+                for entry in added:
+                    entries.append(task.task_name + '_' + entry)
+
+            else:
+                op = change['operation']
+                if op in ('__iadd__', 'append', 'extend', 'insert'):
+                    if 'item' in change:
+                        entries.append(change['item'])
+                    if 'items' in change:
+                        entries.extend(change['items'])
+
+                elif op in ('__delitem__', 'remove', 'pop'):
+                    if 'item' in change:
+                        entries.remove(change['item'])
+                    if 'items' in change:
+                        for e in change['items']:
+                            entries.remove(e)
 
         self.entries = entries
 
@@ -135,16 +153,16 @@ class _Model(Atom):
         """
 
         """
-        new = change['value'].viewkeys()
-        old = change['oldvalue'].viewkeys()
+        new = set(change['value'])
+        old = set(change['oldvalue'])
         added = new - old
         removed = old - new
 
         c_entries = self.children_entries[:]
         for entry in removed:
-            c_entries.remove(task.task_name + '_' + entry)
+            c_entries.remove(entry)
         for entry in added:
-            c_entries.append(task.task_name + '_' + entry)
+            c_entries.append(entry)
         self.children_entries = c_entries
 
     def _database_entries_observer(self, change):
@@ -244,7 +262,8 @@ enamldef _AccessEditor(GroupBox):
                         Container:
                             CheckBox:
                                 text << loop_item
-                                checked = loop_item in task.access_exs if task else False
+                                checked = loop_item in task.access_exs\
+                                    if task else False
                                 checked ::
                                     if change['value']:
                                         task.add_access_exception(loop_item)
@@ -277,7 +296,6 @@ enamldef DatabaseAccessEditor(BaseEditor): editor:
         model.bind_observers()
 
     unselected ::
-        print 'tt'
         model.unbind_observers()
 
     Container:
