@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : modulation.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 from atom.api import (Str, Enum, Float, Bool, FloatRange)
 from math import cos, sin
 from math import pi as Pi
@@ -21,7 +26,7 @@ class Modulation(HasPrefAtom):
 
     """
     #: Flag indicating whether or not the modulation is activated.
-    activated = Bool().pref(pref=True)
+    activated = Bool().tag(pref=True)
 
     #: Kind of modulation to use : cos or sin
     kind = Enum('cos', 'sin').tag(pref=True)
@@ -43,6 +48,25 @@ class Modulation(HasPrefAtom):
 
     def eval_entries(self, sequence_locals, missing, errors, index):
         """ Evaluate amplitude, frequency, and phase.
+
+        Parameters
+        ----------
+        sequence_locals : dict
+            Known locals variables for the pulse sequence.
+
+        missing : set
+            Set of variables missing to evaluate some entries in the sequence.
+
+        errors : dict
+            Errors which occurred when trying to compile the pulse sequence.
+
+        index : int
+            Index of the pulse to which this Modulation object belongs.
+
+        Returns
+        -------
+        result : bool
+            Flag indicating whether or not the evaluation succeeded.
 
         """
         if not self.activated:
@@ -87,7 +111,21 @@ class Modulation(HasPrefAtom):
         return eval_success
 
     def compute(self, time, unit):
-        """
+        """ Computes the modulation impact at a given time.
+
+        Parameters
+        ----------
+        time : float
+            Time at which to compute the modulation.
+
+        unit : str
+            Unit in which the time is expressed.
+
+        Returns
+        -------
+        modulation : float
+            Value by which to multiply the shape to get the pulse value at time
+            t.
 
         """
         if not self.activated:

@@ -11,8 +11,8 @@ from itertools import chain
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from .contexts.base_context import BaseContext
-from .shape.base_shapes import AbstractShape
-from .shape.modulation import Modulation
+from .shapes.base_shapes import AbstractShape
+from .shapes.modulation import Modulation
 from .entry_eval import eval_entry
 
 
@@ -133,6 +133,15 @@ class Pulse(Item):
                 self.start = d2 - d1
                 sequence_locals[prefix + 'start'] = self.stop
 
+        # Check the values make sense.
+        if self.start < 0:
+            errors[prefix + 'start'] = 'Got a negative value for start'
+        if self.stop <= 0:
+            errors[prefix + 'stop'] = 'Got a negative or null value for stop'
+        if self.duration <= 0:
+            mess = 'Got a negative or null value for duration'
+            errors[prefix + 'duration'] = mess
+
         if self.kind == 'analogical':
             success &= self.modulation.eval_entries(sequence_locals, missings,
                                                     errors, self.index)
@@ -186,6 +195,10 @@ class Sequence(Item):
             missings = set()
 
             for i, item in enumerate(self.items):
+                # Skip disabled items
+                if not item.enabled:
+                    continue
+
                 # If we get a pulse simply evaluate the entries, to add their
                 # values to the locals and keep track of the missings to now
                 # when to abort compilation.
@@ -313,15 +326,21 @@ class Sequence(Item):
 
     def _item_added(self, item):
         """
+
         """
         item.context = self.context
+        item.root = self.root
         if isinstance(item, Sequence):
             item.observe('_last_index', self._item_last_index_updated)
             item.parent = self
 
     def _item_removed(self, item):
         """
+
         """
+        del item.context
+        del item.root
+        item.index = 0
         if isinstance(item, Sequence):
             item.unobserve('_last_index', self._item_last_index_updated)
             del item.parent
@@ -341,11 +360,13 @@ class Sequence(Item):
         if free_index is None:
             free_index = self.index + 1
 
-        for item in self.items[first_index:]:
+        # Cleanup the linkable_vars for all the pulses which will be reindexed.
+        linked_vars = self.root.linkable_vars
+        for var in linked_vars[:]:
+            if int(var[0]) >= free_index:
+                linked_vars.remove(var)
 
-            linked_vars = self.root.linkable_vars
-            for var in item.linkable_vars:
-                linked_vars.remove('{}_'.format(item.index) + var)
+        for item in self.items[first_index:]:
 
             item.index = free_index
             prefix = '{}_'.format(item.index)
@@ -439,6 +460,8 @@ class RootSequence(Sequence):
     #: Dict of external variables.
     external_variables = Dict().tag(pref=True)
 
+    index = set_default(0)
+
     def compile_sequence(self, use_context=True):
         """ Compile a sequence to useful format.
 
@@ -478,3 +501,10 @@ class RootSequence(Sequence):
 
         else:
             return self.context.compile_sequence(pulses)
+
+    #--- Private API ----------------------------------------------------------
+    def _default_root(self):
+        """ Initialise the root member to reference the root sequence itself.
+
+        """
+        return self
