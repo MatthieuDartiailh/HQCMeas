@@ -93,6 +93,9 @@ class Pulse(Item):
     def eval_entries(self, sequence_locals, missings, errors):
         """
         """
+        # Flag indicating good completion.
+        success = True
+
         # Name of the parameter which will be evaluated.
         par1 = self.def_mode.split('/')[0].lower()
         par2 = self.def_mode.split('/')[1].lower()
@@ -105,9 +108,23 @@ class Pulse(Item):
         except Exception as e:
             errors[prefix + par1] = repr(e)
 
-        if d1 is not None:
+        # Check the value makes sense as a start time or duration.
+        if d1 is not None and d1 >= 0 and (par1 == 'start' or d1 != 0):
             setattr(self, par1, d1)
             sequence_locals[prefix + par1] = d1
+        else:
+            success = False
+            if d1 is None:
+                m = 'Failed to evaluate {} expression: {}'.format(par1,
+                                                                  self.def_1)
+            else:
+                if par1 == 'start':
+                    m = 'Got a negative value for start: {}'.format(d1)
+
+                else:
+                    m = 'Got a negative value for duration: {}'.format(d1)
+
+            errors[prefix + par1] = m
 
         # Evaluation of the second parameter.
         d2 = None
@@ -116,12 +133,28 @@ class Pulse(Item):
         except Exception as e:
             errors[prefix + par2] = repr(e)
 
-        if d2 is not None:
+        # Check the value makes sense as a duration or stop time.
+        if d2 is not None and d2 > 0 and d2 > d1:
             setattr(self, par2, d2)
             sequence_locals[prefix + par2] = d2
+        else:
+            success = False
+            if d2 is None:
+                m = 'Failed to evaluate {} expression: {}'.format(par2,
+                                                                  self.def_2)
+            else:
+                if par2 == 'stop' and d2 <= 0:
+                    m = 'Got a negative or null value for stop: {}'.format(d2)
+                elif par2 == 'stop':
+                    m = 'Got a stop smaller than start: {} < {}'.format(d1, d2)
+                elif d2 < d1:
+                    m = 'Stop is smaller than duration: {} < {}'.format(d1, d2)
+                else:
+                    m = 'Got a negative value for duration: {}'.format(d2)
 
-         # Computation of the third.
-        success = d1 is not None and d2 is not None
+            errors[prefix + par2] = m
+
+        # Computation of the third parameter.
         if success:
             if self.def_mode == 'Start/Duration':
                 self.stop = d1 + d2
@@ -132,15 +165,6 @@ class Pulse(Item):
             else:
                 self.start = d2 - d1
                 sequence_locals[prefix + 'start'] = self.stop
-
-        # Check the values make sense.
-        if self.start < 0:
-            errors[prefix + 'start'] = 'Got a negative value for start'
-        if self.stop <= 0:
-            errors[prefix + 'stop'] = 'Got a negative or null value for stop'
-        if self.duration <= 0:
-            mess = 'Got a negative or null value for duration'
-            errors[prefix + 'duration'] = mess
 
         if self.kind == 'analogical':
             success &= self.modulation.eval_entries(sequence_locals, missings,
@@ -460,6 +484,13 @@ class RootSequence(Sequence):
     #: Dict of external variables.
     external_variables = Dict().tag(pref=True)
 
+    #: Flag to set the length of sequence to a fix duration.
+    fix_sequence_duration = Bool().tag(pref=True)
+
+    #: Duration of the sequence when it is fixed. The unit of this time is
+    # fixed by the context.
+    sequence_duration = Float().tag(pref=True)
+
     index = set_default(0)
 
     def compile_sequence(self, use_context=True):
@@ -486,6 +517,9 @@ class RootSequence(Sequence):
 
         """
         sequence_locals = self.external_variables.copy()
+        if self.fix_sequence_duration:
+            sequence_locals['sequence_end'] = self.sequence_duration
+
         missings = set()
         errors = {}
 
@@ -508,3 +542,16 @@ class RootSequence(Sequence):
 
         """
         return self
+
+    def _observe_fix_sequence_duration(self, change):
+        """ Keep the linkable_vars list in sync with fix_sequence_duration.
+
+        """
+        if change['value']:
+            link_vars = self.linkable_vars[:]
+            link_vars.insert(0, 'sequence_end')
+            self.linkable_vars = link_vars
+        elif 'sequence_end' in self.linkable_vars:
+            link_vars = self.linkable_vars[:]
+            link_vars.remove('sequence_end')
+            self.linkable_vars = link_vars

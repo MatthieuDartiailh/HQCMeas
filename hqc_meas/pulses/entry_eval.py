@@ -31,7 +31,7 @@ def eval_entry(string, seq_locals, missing_locals):
         elements = [el for aux in aux_strings
                     for el in aux.split('}')]
 
-        missing = [el for el in elements if el not in seq_locals]
+        missing = [el for el in elements[1::2] if el not in seq_locals]
         if missing:
             missing_locals.update(set(missing))
             return None

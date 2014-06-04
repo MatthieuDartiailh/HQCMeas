@@ -89,9 +89,10 @@ class SquareShape(AbstractShape):
             Flag indicating whether or not the evaluation succeeded.
 
         """
-        prefix = '{}'.format(index) + 'shape_'
+        prefix = '{}_'.format(index) + 'shape_'
 
         # Computing amplitude
+        amp = None
         try:
             amp = eval_entry(self.amplitude, sequence_locals, missing)
         except Exception as e:

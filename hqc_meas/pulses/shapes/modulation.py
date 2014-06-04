@@ -29,7 +29,7 @@ class Modulation(HasPrefAtom):
     activated = Bool().tag(pref=True)
 
     #: Kind of modulation to use : cos or sin
-    kind = Enum('cos', 'sin').tag(pref=True)
+    kind = Enum('sin', 'cos').tag(pref=True)
 
     #: Relative amplitude of the modulation.
     amplitude = Str().tag(pref=True)
@@ -72,9 +72,11 @@ class Modulation(HasPrefAtom):
         if not self.activated:
             return True
 
-        prefix = '{}'.format(index) + 'mod_'
+        prefix = '{}_'.format(index) + 'mod_'
+        eval_success = True
 
         # Computing amplitude
+        amp = None
         try:
             amp = eval_entry(self.amplitude, sequence_locals, missing)
         except Exception as e:
@@ -82,31 +84,54 @@ class Modulation(HasPrefAtom):
             errors[prefix + 'amplitude'] = repr(e)
 
         if amp is not None:
-            self._amplitude = amp
-            sequence_locals[prefix + 'amplitude'] = amp
+            if -1.0 <= amp <= 1.0:
+                self._amplitude = amp
+                sequence_locals[prefix + 'amplitude'] = amp
+            else:
+                eval_success = False
+                m = 'The amplitude must be a float between -1.0 and 1.0: {}'
+                mess = m.format(amp)
+                errors[prefix + 'amplitude'] = mess
+        else:
+            eval_success = False
+            m = 'Failed to evaluate {} expression: {}'.format('amplitude',
+                                                              self.amplitude)
+            errors[prefix + 'amplitude'] = m
 
         # Computing frequency
+        freq = None
         try:
-            freq = eval(self.frequency, globals(), sequence_locals)
-        except Exception:
+            freq = eval_entry(self.frequency, sequence_locals, missing)
+        except Exception as e:
             eval_success = False
             errors[prefix + 'frequency'] = repr(e)
 
         if freq is not None:
             self._frequency = freq
             sequence_locals[prefix + 'frequency'] = freq
+        else:
+            eval_success = False
+            m = 'Failed to evaluate {} expression: {}'.format('frequency',
+                                                              self.frequency)
+            errors[prefix + 'frequency'] = m
 
         # Computing phase
+        phase = None
         try:
-            phase = eval(self.frequency, globals(), sequence_locals)
+            phase = eval_entry(self.phase, sequence_locals, missing)
             self._phase = phase
-        except Exception:
+        except Exception as e:
             eval_success = False
             errors[prefix + 'phase'] = repr(e)
 
         if phase is not None:
             self._phase = phase
             sequence_locals[prefix + 'phase'] = phase
+        else:
+            eval_success = False
+            m = 'Failed to evaluate {} expression: {}'.format('phase',
+                                                              self.phase)
+            errors[prefix + 'phase'] = m
 
         return eval_success
 

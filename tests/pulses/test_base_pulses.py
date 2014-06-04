@@ -4,7 +4,8 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from nose.tools import assert_equal, assert_is, assert_true, assert_false
+from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
+                        assert_not_in, assert_in)
 from hqc_meas.pulses.pulses import (RootSequence, Sequence, Pulse,
                                     ConditionalSequence)
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
@@ -158,6 +159,9 @@ def test_eval_pulse1():
 
     assert_equal(missing, set())
     assert_equal(errors, {})
+    assert_in('0_start', local_vars)
+    assert_in('0_stop', local_vars)
+    assert_in('0_duration', local_vars)
     assert_equal(pulse.start, 2.0)
     assert_equal(pulse.stop, 3.0)
     assert_equal(pulse.duration, 1.0)
@@ -165,71 +169,513 @@ def test_eval_pulse1():
 
 def test_eval_pulse2():
     # Test evaluating the entries of a pulse when everything is ok.
-    # Start/Stop mode, meaningless values.
+    # Start/Stop mode, meaningless start.
     pulse = Pulse()
-    pulse.def_1 = '1.0*2.0'
+    pulse.def_1 = '-1.0*2.0'
     pulse.def_2 = '5.0*{a}/{b} + {c}'
 
     local_vars = {'a': 2.0, 'b': 10.0, 'c': 1.0}
-    save = local_vars.copy()
     missing = set()
     errors = {}
 
     assert_false(pulse.eval_entries(local_vars, missing, errors))
 
     assert_equal(missing, set())
-    assert_equal(errors,
-                 {'0_duration': 'Got a negative or null value for duration'})
-    assert_equal(local_vars, save)
+    assert_in('0_start', errors)
+    assert_not_in('0_start', local_vars)
+    assert_not_in('0_duration', local_vars)
 
 
 def test_eval_pulse3():
-    # Test evaluating the entries of a pulse when some vars are missing.
-    pass
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Start/Stop mode, meaningless stop (0).
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 0.0, 'b': 10.0, 'c': 0.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_stop', errors)
+    assert_not_in('0_stop', local_vars)
+    assert_not_in('0_duration', local_vars)
 
 
 def test_eval_pulse4():
-    # Test evaluating the entries of a pulse when some entries are incorrect.
-    pass
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Start/Stop mode, meaningless stop < start.
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 0.0, 'b': 10.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_stop', errors)
+    assert_not_in('0_stop', local_vars)
+    assert_not_in('0_duration', local_vars)
 
 
 def test_eval_pulse5():
-    # Test evaluating the entries of an analogical pulse.
-    pass
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Start/Duration mode, meaningful values.
+    pulse = Pulse()
+    pulse.def_mode = 'Start/Duration'
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 2.0, 'b': 5.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_true(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_equal(errors, {})
+    assert_in('0_start', local_vars)
+    assert_in('0_stop', local_vars)
+    assert_in('0_duration', local_vars)
+    assert_equal(pulse.start, 2.0)
+    assert_equal(pulse.stop, 5.0)
+    assert_equal(pulse.duration, 3.0)
 
 
 def test_eval_pulse6():
-    # Test evaluating the entries of an analogical pulse whose modulation
-    # evaluation fails.
-    pass
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Start/Duration mode, meaningless start.
+    pulse = Pulse()
+    pulse.def_mode = 'Start/Duration'
+    pulse.def_1 = '-1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 0.0, 'b': 10.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_start', errors)
+    assert_not_in('0_start', local_vars)
+    assert_not_in('0_stop', local_vars)
 
 
 def test_eval_pulse7():
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Start/Duration mode, meaningless duration.
+    pulse = Pulse()
+    pulse.def_mode = 'Start/Duration'
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 0.0, 'b': 10.0, 'c': 0.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_duration', errors)
+    assert_not_in('0_duration', local_vars)
+    assert_not_in('0_stop', local_vars)
+
+
+def test_eval_pulse8():
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Duration/Stop mode, meaningful values.
+    pulse = Pulse()
+    pulse.def_mode = 'Duration/Stop'
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 2.0, 'b': 5.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_true(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_equal(errors, {})
+    assert_in('0_start', local_vars)
+    assert_in('0_stop', local_vars)
+    assert_in('0_duration', local_vars)
+    assert_equal(pulse.start, 1.0)
+    assert_equal(pulse.stop, 3.0)
+    assert_equal(pulse.duration, 2.0)
+
+
+def test_eval_pulse9():
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Duration/Stop mode, meaningless duration.
+    pulse = Pulse()
+    pulse.def_mode = 'Duration/Stop'
+    pulse.def_1 = '-1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 0.0, 'b': 10.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_duration', errors)
+    assert_not_in('0_duration', local_vars)
+    assert_not_in('0_start', local_vars)
+
+
+def test_eval_pulse10():
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Duration/Stop mode, meaningless stop.
+    pulse = Pulse()
+    pulse.def_mode = 'Duration/Stop'
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 0.0, 'b': 10.0, 'c': 0.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_stop', errors)
+    assert_not_in('0_stop', local_vars)
+    assert_not_in('0_start', local_vars)
+
+
+def test_eval_pulse11():
+    # Test evaluating the entries of a pulse when everything is ok.
+    # Duration/Stop mode, duration larger than stop.
+    pulse = Pulse()
+    pulse.def_mode = 'Duration/Stop'
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 0.0, 'b': 10.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_stop', errors)
+    assert_not_in('0_start', local_vars)
+
+
+def test_eval_pulse12():
+    # Test evaluating the entries of a pulse when some vars are missing.
+    # Issue in def_1
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0*{d}'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 2.0, 'b': 10.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set('d'))
+    assert_in('0_start', errors)
+    assert_not_in('0_start', local_vars)
+    assert_in('0_stop', local_vars)
+
+
+def test_eval_pulse13():
+    # Test evaluating the entries of a pulse when some vars are missing.
+    # Issue in def_2
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 2.0, 'b': 10.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set('c'))
+    assert_in('0_stop', errors)
+    assert_not_in('0_stop', local_vars)
+    assert_in('0_start', local_vars)
+
+
+def test_eval_pulse14():
+    # Test evaluating the entries of a pulse when some entries are incorrect.
+    # Issue def_1
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0*zeffer'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    local_vars = {'a': 2.0, 'b': 10.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_start', errors)
+    assert_not_in('0_start', local_vars)
+    assert_in('0_stop', local_vars)
+
+
+def test_eval_pulse15():
+    # Test evaluating the entries of a pulse when some entries are incorrect.
+    # Issue in def_2
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c} + zeffer'
+
+    local_vars = {'a': 2.0, 'b': 10.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_stop', errors)
+    assert_not_in('0_stop', local_vars)
+    assert_in('0_start', local_vars)
+
+
+def test_eval_pulse16():
+    # Test evaluating the entries of an analogical pulse.
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    pulse.shape = SquareShape(amplitude='0.5')
+    pulse.kind = 'analogical'
+
+    pulse.context = BaseContext()
+
+    local_vars = {'a': 2.0, 'b': 5.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_true(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_equal(errors, {})
+    assert_equal(pulse.compute(2.5), 0.5)
+
+
+def test_eval_pulse17():
+    # Test evaluating the entries of an analogical pulse whose modulation
+    # evaluation fails.
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    pulse.shape = SquareShape(amplitude='0.5')
+    pulse.kind = 'analogical'
+
+    pulse.modulation.amplitude = '1.0*frfe'
+    pulse.modulation.frequency = '1.0'
+    pulse.modulation.phase = '1.0'
+    pulse.modulation.activated = True
+
+    pulse.context = BaseContext()
+
+    local_vars = {'a': 2.0, 'b': 5.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_mod_amplitude', errors)
+
+
+def test_eval_pulse18():
     # Test evaluating the entries of an analogical pulse whose shape
     # evaluation fails.
-    pass
+    pulse = Pulse()
+    pulse.def_1 = '1.0*2.0'
+    pulse.def_2 = '5.0*{a}/{b} + {c}'
+
+    pulse.shape = SquareShape(amplitude='0.5*')
+    pulse.kind = 'analogical'
+
+    pulse.modulation.amplitude = '1.0'
+    pulse.modulation.frequency = '1.0'
+    pulse.modulation.phase = '1.0'
+    pulse.modulation.activated = True
+
+    pulse.context = BaseContext()
+
+    local_vars = {'a': 2.0, 'b': 5.0, 'c': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_false(pulse.eval_entries(local_vars, missing, errors))
+
+    assert_equal(missing, set())
+    assert_in('0_shape_amplitude', errors)
 
 
 def test_eval_modulation1():
     # Test evaluating the entries of an inactive modulation.
-    pass
+    modulation = Modulation()
+    local_vars = {'a': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_true(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set())
+    assert_equal(errors, {})
+    assert_equal(modulation.compute(0, 'mus'), 1.0)
 
 
 def test_eval_modulation2():
-    # Text evaluating the entries of an active modulation.
-    pass
+    # Test evaluating the entries of an active modulation.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '1.0*{a}'
+    modulation.frequency = '1.0'
+    modulation.phase = '0.0'
+
+    local_vars = {'a': 1.0}
+    missing = set()
+    errors = {}
+
+    assert_true(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set())
+    assert_equal(errors, {})
+    assert_equal(modulation.compute(0, 'mus'), 0)
+    assert_equal(modulation.compute(0.25, 'mus'), 1.0)
 
 
 def test_eval_modulation3():
-    # Text evaluating the entries of an active modulation when some vars are
+    # Test evaluating the entries of an active modulation when some vars are
     # missing.
-    pass
+    # Issue on amplitude.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '1.0*{a}'
+    modulation.frequency = '1.0'
+    modulation.phase = '0.0'
+
+    local_vars = {}
+    missing = set()
+    errors = {}
+
+    assert_false(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set('a'))
+    assert_in('0_mod_amplitude', errors)
 
 
 def test_eval_modulation4():
-    # Text evaluating the entries of an active modulation when some entries
+    # Test evaluating the entries of an active modulation when some vars are
+    # missing.
+    # Issue on frequency.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '1.0'
+    modulation.frequency = '1.0*{a}'
+    modulation.phase = '0.0'
+
+    local_vars = {}
+    missing = set()
+    errors = {}
+
+    assert_false(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set('a'))
+    assert_in('0_mod_frequency', errors)
+
+
+def test_eval_modulation5():
+    # Test evaluating the entries of an active modulation when some vars are
+    # missing.
+    # Issue on phase.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '1.0'
+    modulation.frequency = '1.0'
+    modulation.phase = '0.0*{a}'
+
+    local_vars = {}
+    missing = set()
+    errors = {}
+
+    assert_false(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set('a'))
+    assert_in('0_mod_phase', errors)
+
+
+def test_eval_modulation6():
+    # Test evaluating the entries of an active modulation when some entries
     # are incorrect.
-    pass
+    # Issue on amplitude.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '1.0*'
+    modulation.frequency = '1.0'
+    modulation.phase = '0.0'
+
+    local_vars = {}
+    missing = set()
+    errors = {}
+
+    assert_false(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set())
+    assert_in('0_mod_amplitude', errors)
+
+
+def test_eval_modulation7():
+    # Test evaluating the entries of an active modulation when some entries
+    # are incorrect.
+    # Issue on frequency.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '1.0'
+    modulation.frequency = '1.0*'
+    modulation.phase = '0.0'
+
+    local_vars = {}
+    missing = set()
+    errors = {}
+
+    assert_false(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set())
+    assert_in('0_mod_frequency', errors)
+
+
+def test_eval_modulation8():
+    # Test evaluating the entries of an active modulation when some entries
+    # are incorrect.
+    # Issue on phase.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '1.0'
+    modulation.frequency = '1.0'
+    modulation.phase = '0.0*'
+
+    local_vars = {}
+    missing = set()
+    errors = {}
+
+    assert_false(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set())
+    assert_in('0_mod_phase', errors)
+
+
+def test_eval_modulation9():
+    # Test evaluating modulation with too large amplitude.
+    modulation = Modulation(activated=True)
+    modulation.amplitude = '2.0'
+    modulation.frequency = '1.0'
+    modulation.phase = '0.0*'
+
+    local_vars = {}
+    missing = set()
+    errors = {}
+
+    assert_false(modulation.eval_entries(local_vars, missing, errors, 0))
+    assert_equal(missing, set())
+    assert_in('0_mod_amplitude', errors)
 
 
 def test_sequence_compilation1():
