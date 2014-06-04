@@ -504,7 +504,7 @@ class TaskDatabase(Atom):
         """
         path = assumed_path
         while path != 'root':
-            full_path = assumed_path + '/' + entry
+            full_path = path + '/' + entry
             if full_path in self._entry_index_map:
                 return self._entry_index_map[full_path]
             path = path.rpartition('/')[0]

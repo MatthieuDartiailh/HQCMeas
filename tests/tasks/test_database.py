@@ -144,11 +144,14 @@ def test_index_op_on_flat_database1():
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')
     database.set_value('root/node1', 'val2', 'a')
+    database.create_node('root/node1', 'node2')
 
     database.prepare_for_running()
     assert_equal(database.get_entries_indexes('root', ['val1']), {'val1': 0})
     assert_equal(database.get_entries_indexes('root/node1', ['val1', 'val2']),
                  {'val1': 0, 'val2': 1})
+    assert_equal(database.get_entries_indexes('root/node1/node2', ['val2']),
+                 {'val2': 1})
 
     assert_equal(database.get_values_by_index([0, 1]), [1, 'a'])
     assert_equal(database.get_values_by_index([0, 1], 'e_'),
