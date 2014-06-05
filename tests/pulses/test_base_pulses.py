@@ -16,6 +16,8 @@ from hqc_meas.pulses.contexts.base_context import BaseContext
 def test_sequence_indexing1():
     # Test adding, moving, deleting pulse in a sequence.
     root = RootSequence()
+    root.fix_sequence_duration = True
+    root.sequence_duration = '1.0'
     context = BaseContext()
     root.context = context
 
@@ -27,14 +29,16 @@ def test_sequence_indexing1():
     assert_equal(pulse1.index, 1)
     assert_is(pulse1.context, context)
     assert_is(pulse1.root, root)
-    assert_equal(root.linkable_vars, ['1_start', '1_stop', '1_duration'])
+    assert_equal(root.linkable_vars, ['sequence_end',
+                                      '1_start', '1_stop', '1_duration'])
 
     root.items.append(pulse2)
     assert_equal(pulse1.index, 1)
     assert_equal(pulse2.index, 2)
     assert_is(pulse2.context, context)
     assert_is(pulse2.root, root)
-    assert_equal(root.linkable_vars, ['1_start', '1_stop', '1_duration',
+    assert_equal(root.linkable_vars, ['sequence_end',
+                                      '1_start', '1_stop', '1_duration',
                                       '2_start', '2_stop', '2_duration'])
 
     root.items.append(pulse3)
@@ -43,10 +47,12 @@ def test_sequence_indexing1():
     assert_equal(pulse3.index, 3)
     assert_is(pulse3.context, context)
     assert_is(pulse3.root, root)
-    assert_equal(root.linkable_vars, ['1_start', '1_stop', '1_duration',
+    assert_equal(root.linkable_vars, ['sequence_end',
+                                      '1_start', '1_stop', '1_duration',
                                       '2_start', '2_stop', '2_duration',
                                       '3_start', '3_stop', '3_duration'])
 
+    root.fix_sequence_duration = False
     root.items.remove(pulse2)
     assert_equal(pulse1.index, 1)
     assert_equal(pulse2.index, 0)
@@ -385,7 +391,7 @@ def test_eval_pulse12():
     assert_false(pulse.eval_entries(local_vars, missing, errors))
 
     assert_equal(missing, set('d'))
-    assert_in('0_start', errors)
+    assert_not_in('0_start', errors)
     assert_not_in('0_start', local_vars)
     assert_in('0_stop', local_vars)
 
@@ -404,7 +410,7 @@ def test_eval_pulse13():
     assert_false(pulse.eval_entries(local_vars, missing, errors))
 
     assert_equal(missing, set('c'))
-    assert_in('0_stop', errors)
+    assert_not_in('0_stop', errors)
     assert_not_in('0_stop', local_vars)
     assert_in('0_start', local_vars)
 
@@ -680,53 +686,422 @@ def test_eval_modulation9():
 
 def test_sequence_compilation1():
     # Test compiling a flat sequence.
-    pass
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{a}')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
+    root.items.extend([pulse1, pulse2, pulse3])
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 3)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 1.5)
+    assert_equal(pulses[0].duration, 0.5)
+    assert_equal(pulses[1].start, 2.5)
+    assert_equal(pulses[1].stop, 3.0)
+    assert_equal(pulses[1].duration, 0.5)
+    assert_equal(pulses[2].start, 3.5)
+    assert_equal(pulses[2].stop, 10.0)
+    assert_equal(pulses[2].duration, 6.5)
 
 
 def test_sequence_compilation2():
-    # Test compiling a flat sequence in two passes.
-    pass
+    # Test compiling a flat sequence of fixed duration.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+    root.fix_sequence_duration = True
+    root.sequence_duration = '10.0'
+
+    pulse1 = Pulse(def_1='1.0', def_2='{a}')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='{sequence_end}')
+    root.items.extend([pulse1, pulse2, pulse3])
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 3)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 1.5)
+    assert_equal(pulses[0].duration, 0.5)
+    assert_equal(pulses[1].start, 2.5)
+    assert_equal(pulses[1].stop, 3.0)
+    assert_equal(pulses[1].duration, 0.5)
+    assert_equal(pulses[2].start, 3.5)
+    assert_equal(pulses[2].stop, 10.0)
+    assert_equal(pulses[2].duration, 6.5)
 
 
 def test_sequence_compilation3():
-    # Test comiling a flat sequence with circular references.
-    pass
+    # Test compiling a flat sequence in two passes.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{2_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
+    root.items.extend([pulse1, pulse2, pulse3])
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 3)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 1.5)
+    assert_equal(pulses[0].duration, 0.5)
+    assert_equal(pulses[1].start, 2.5)
+    assert_equal(pulses[1].stop, 3.0)
+    assert_equal(pulses[1].duration, 0.5)
+    assert_equal(pulses[2].start, 3.5)
+    assert_equal(pulses[2].stop, 10.0)
+    assert_equal(pulses[2].duration, 6.5)
 
 
 def test_sequence_compilation4():
-    # Test comiling a flat sequence with evaluation errors.
-    pass
+    # Test compiling a flat sequence with circular references.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{2_start} - 1.0')
+    pulse2 = Pulse(def_1='{1_stop} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
+    root.items.extend([pulse1, pulse2, pulse3])
+
+    res, (missings, errors) = root.compile_sequence(False)
+    assert_false(res)
+    assert_equal(len(missings), 2)
+    assert_in('1_stop', missings)
+    assert_in('2_start', missings)
+    assert_equal(len(errors), 0)
 
 
 def test_sequence_compilation5():
-    # Test compiling a nested sequence.
-    pass
+    # Test compiling a flat sequence with evaluation errors.
+    # missing global
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.fix_sequence_duration = True
+    root.sequence_duration = '10.0'
+
+    pulse1 = Pulse(def_1='1.0', def_2='{a}')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='{sequence_end}')
+    root.items.extend([pulse1, pulse2, pulse3])
+
+    res, (missings, errors) = root.compile_sequence(False)
+    assert_false(res)
+    assert_equal(len(missings), 1)
+    assert_in('a', missings)
+    assert_equal(len(errors), 0)
 
 
 def test_sequence_compilation6():
-    # Test compiling a nested sequence in two passes on the external sequence.
-    pass
+    # Test compiling a flat sequence with evaluation errors.
+    # wrong string value
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+    root.fix_sequence_duration = True
+    root.sequence_duration = '*10.0*'
+
+    pulse1 = Pulse(def_1='1.0', def_2='{a}')
+    pulse2 = Pulse(def_1='{a} +* 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10.0')
+    root.items.extend([pulse1, pulse2, pulse3])
+
+    res, (missings, errors) = root.compile_sequence(False)
+    assert_false(res)
+    assert_false(missings)
+    assert_equal(len(errors), 2)
+    assert_in('2_start', errors)
+    assert_in('root_seq_duration', errors)
 
 
 def test_sequence_compilation7():
-    # Test compiling a nested sequence with circular reference in the deep one.
-    pass
+    # Test compiling a nested sequence.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{a}')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='3.0', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = Sequence(items=[pulse2, sequence2, pulse4])
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 5)
+    assert_is(pulses[0], pulse1)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 1.5)
+    assert_equal(pulses[0].duration, 0.5)
+    assert_is(pulses[1], pulse2)
+    assert_equal(pulses[1].start, 2.5)
+    assert_equal(pulses[1].stop, 3.0)
+    assert_equal(pulses[1].duration, 0.5)
+    assert_is(pulses[2], pulse3)
+    assert_equal(pulses[2].start, 3.5)
+    assert_equal(pulses[2].stop, 10.0)
+    assert_equal(pulses[2].duration, 6.5)
+    assert_is(pulses[3], pulse4)
+    assert_equal(pulses[3].start, 2.0)
+    assert_equal(pulses[3].stop, 2.5)
+    assert_equal(pulses[3].duration, 0.5)
+    assert_is(pulses[4], pulse5)
+    assert_equal(pulses[4].start, 3.0)
+    assert_equal(pulses[4].stop, 3.5)
+    assert_equal(pulses[4].duration, 0.5)
 
 
 def test_sequence_compilation8():
-    # Test compiling a nested sequence with errors in the deep one.
-    pass
+    # Test compiling a nested sequence in two passes on the external sequence.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='3.0', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = Sequence(items=[pulse2, sequence2, pulse4])
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 5)
+    assert_is(pulses[0], pulse1)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 2.0)
+    assert_equal(pulses[0].duration, 1.0)
+    assert_is(pulses[1], pulse2)
+    assert_equal(pulses[1].start, 2.5)
+    assert_equal(pulses[1].stop, 3.0)
+    assert_equal(pulses[1].duration, 0.5)
+    assert_is(pulses[2], pulse3)
+    assert_equal(pulses[2].start, 3.5)
+    assert_equal(pulses[2].stop, 10.0)
+    assert_equal(pulses[2].duration, 6.5)
+    assert_is(pulses[3], pulse4)
+    assert_equal(pulses[3].start, 2.0)
+    assert_equal(pulses[3].stop, 2.5)
+    assert_equal(pulses[3].duration, 0.5)
+    assert_is(pulses[4], pulse5)
+    assert_equal(pulses[4].start, 3.0)
+    assert_equal(pulses[4].stop, 3.5)
+    assert_equal(pulses[4].duration, 0.5)
+
+
+def test_sequence_compilation9():
+    # Test compiling a nested sequence in multi passes.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='{6_start} + 1.0')
+    pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='3.0', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = Sequence(items=[pulse2, sequence2, pulse4])
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 5)
+    assert_is(pulses[0], pulse1)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 2.0)
+    assert_equal(pulses[0].duration, 1.0)
+    assert_is(pulses[1], pulse2)
+    assert_equal(pulses[1].start, 2.5)
+    assert_equal(pulses[1].stop, 3.0)
+    assert_equal(pulses[1].duration, 0.5)
+    assert_is(pulses[2], pulse3)
+    assert_equal(pulses[2].start, 3.5)
+    assert_equal(pulses[2].stop, 10.0)
+    assert_equal(pulses[2].duration, 6.5)
+    assert_is(pulses[3], pulse4)
+    assert_equal(pulses[3].start, 2.0)
+    assert_equal(pulses[3].stop, 2.5)
+    assert_equal(pulses[3].duration, 0.5)
+    assert_is(pulses[4], pulse5)
+    assert_equal(pulses[4].start, 3.0)
+    assert_equal(pulses[4].stop, 3.5)
+    assert_equal(pulses[4].duration, 0.5)
+
+
+def test_sequence_compilation10():
+    # Test compiling a nested sequence with circular reference in the deep one.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='{6_start} + 1.0')
+    pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='{1_stop}', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = Sequence(items=[pulse2, sequence2, pulse4])
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, (missings, errors) = root.compile_sequence(False)
+    assert_false(res)
+    assert_equal(len(missings), 2)
+    assert_in('7_start', missings)
+    assert_in('1_stop', missings)
+    assert_false(errors)
+
+
+def test_sequence_compilation11():
+    # Test compiling a nested sequence with circular reference in the deep one.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='{6_start} + 1.0')
+    pulse3 = Pulse(def_1='{3_stop} + *0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='3.0', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = Sequence(items=[pulse2, sequence2, pulse4])
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, (missings, errors) = root.compile_sequence(False)
+    assert_false(res)
+    assert_equal(len(errors), 1)
+    assert_in('5_start', errors)
 
 
 def test_conditional_sequence_compilation1():
     # Test compiling a conditional sequence whose condition evaluates to False.
-    pass
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5, 'include': True}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='3.0', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = ConditionalSequence(items=[pulse2, sequence2, pulse4],
+                                    condition='{include}')
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 5)
+    assert_is(pulses[0], pulse1)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 2.0)
+    assert_equal(pulses[0].duration, 1.0)
+    assert_is(pulses[1], pulse2)
+    assert_equal(pulses[1].start, 2.5)
+    assert_equal(pulses[1].stop, 3.0)
+    assert_equal(pulses[1].duration, 0.5)
+    assert_is(pulses[2], pulse3)
+    assert_equal(pulses[2].start, 3.5)
+    assert_equal(pulses[2].stop, 10.0)
+    assert_equal(pulses[2].duration, 6.5)
+    assert_is(pulses[3], pulse4)
+    assert_equal(pulses[3].start, 2.0)
+    assert_equal(pulses[3].stop, 2.5)
+    assert_equal(pulses[3].duration, 0.5)
+    assert_is(pulses[4], pulse5)
+    assert_equal(pulses[4].start, 3.0)
+    assert_equal(pulses[4].stop, 3.5)
+    assert_equal(pulses[4].duration, 0.5)
 
 
 def test_conditional_sequence_compilation2():
     # Test compiling a conditional sequence whose condition evaluates to True.
-    pass
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5, 'include': False}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='3.0', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = ConditionalSequence(items=[pulse2, sequence2, pulse4],
+                                    condition='{include}')
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, pulses = root.compile_sequence(False)
+    assert_true(res)
+    assert_equal(len(pulses), 2)
+    assert_is(pulses[0], pulse1)
+    assert_equal(pulses[0].start, 1.0)
+    assert_equal(pulses[0].stop, 2.0)
+    assert_equal(pulses[0].duration, 1.0)
+    assert_is(pulses[1], pulse5)
+    assert_equal(pulses[1].start, 3.0)
+    assert_equal(pulses[1].stop, 3.5)
+    assert_equal(pulses[1].duration, 0.5)
 
 
-def test_root_sequence_compilation():
-    pass
+def test_conditional_sequence_compilation3():
+    # Test compiling a conditional sequence whose condition evaluates to True.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5, 'include': False}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+    pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+    pulse5 = Pulse(def_1='3.0', def_2='0.5', def_mode='Start/Duration')
+
+    sequence2 = Sequence(items=[pulse3])
+    sequence1 = ConditionalSequence(items=[pulse2, sequence2, pulse4],
+                                    condition='{include}*/')
+
+    root.items = [pulse1, sequence1, pulse5]
+
+    res, (missings, errors) = root.compile_sequence(False)
+    assert_false(res)
+    assert_in('2_condition', errors)

@@ -9,7 +9,8 @@ from atom.api import (Int, Instance, Str, Enum, Float, Dict, List, Typed, Bool,
                       set_default)
 from itertools import chain
 
-from hqc_meas.utils.atom_util import HasPrefAtom
+from hqc_meas.utils.atom_util import (HasPrefAtom, tagged_members,
+                                      member_from_str)
 from .contexts.base_context import BaseContext
 from .shapes.base_shapes import AbstractShape
 from .shapes.modulation import Modulation
@@ -91,7 +92,27 @@ class Pulse(Item):
     shape = Instance(AbstractShape).tag(pref=True)
 
     def eval_entries(self, sequence_locals, missings, errors):
-        """
+        """ Attempt to eval the string parameters of the pulse.
+
+        The string parameters are def_1, def_2 and all the parameters of the
+        modulation and shape if pertinent.
+
+        Parameters
+        ----------
+        sequence_locals : dict
+            Dictionary of local variables.
+
+        missings : set
+            Set of unfound local variables.
+
+        errors : dict
+            Dict of the errors which happened when performing the evaluation.
+
+        Returns
+        -------
+        flag : bool
+            Boolean indicating whether or not the evaluation succeeded.
+
         """
         # Flag indicating good completion.
         success = True
@@ -112,17 +133,15 @@ class Pulse(Item):
         if d1 is not None and d1 >= 0 and (par1 == 'start' or d1 != 0):
             setattr(self, par1, d1)
             sequence_locals[prefix + par1] = d1
+        elif d1 is None:
+            success = False
         else:
             success = False
-            if d1 is None:
-                m = 'Failed to evaluate {} expression: {}'.format(par1,
-                                                                  self.def_1)
-            else:
-                if par1 == 'start':
-                    m = 'Got a negative value for start: {}'.format(d1)
+            if par1 == 'start':
+                m = 'Got a negative value for start: {}'.format(d1)
 
-                else:
-                    m = 'Got a negative value for duration: {}'.format(d1)
+            else:
+                m = 'Got a negative value for duration: {}'.format(d1)
 
             errors[prefix + par1] = m
 
@@ -134,23 +153,19 @@ class Pulse(Item):
             errors[prefix + par2] = repr(e)
 
         # Check the value makes sense as a duration or stop time.
-        if d2 is not None and d2 > 0 and d2 > d1:
+        if d2 is not None and d2 > 0 and (par2 == 'duration' or d2 > d1):
             setattr(self, par2, d2)
             sequence_locals[prefix + par2] = d2
+        elif d2 is None:
+            success = False
         else:
             success = False
-            if d2 is None:
-                m = 'Failed to evaluate {} expression: {}'.format(par2,
-                                                                  self.def_2)
-            else:
-                if par2 == 'stop' and d2 <= 0:
-                    m = 'Got a negative or null value for stop: {}'.format(d2)
-                elif par2 == 'stop':
-                    m = 'Got a stop smaller than start: {} < {}'.format(d1, d2)
-                elif d2 < d1:
-                    m = 'Stop is smaller than duration: {} < {}'.format(d1, d2)
-                else:
-                    m = 'Got a negative value for duration: {}'.format(d2)
+            if par2 == 'stop' and d2 <= 0.0:
+                m = 'Got a negative or null value for stop: {}'.format(d2)
+            elif par2 == 'stop':
+                m = 'Got a stop smaller than start: {} < {}'.format(d1, d2)
+            elif d2 <= 0.0:
+                m = 'Got a negative value for duration: {}'.format(d2)
 
             errors[prefix + par2] = m
 
@@ -211,7 +226,26 @@ class Sequence(Item):
     parent = ForwardInstance(lambda: Sequence)
 
     def compile_sequence(self, sequence_locals, missing_locals, errors):
-        """
+        """ Compile the sequence in a flat list of pulses.
+
+        Parameters
+        ----------
+        sequence_locals : dict
+            Dictionary of local variables.
+
+        missings : set
+            Set of unfound local variables.
+
+        errors : dict
+            Dict of the errors which happened when performing the evaluation.
+
+        Returns
+        -------
+        flag : bool
+            Boolean indicating whether or not the evaluation succeeded.
+
+        pulses : list
+            List of pulses in which all the string entries have been evaluated.
 
         """
         compiled = [None for i in xrange(len(self.items))]
@@ -243,7 +277,7 @@ class Sequence(Item):
             # If none of the variables found missing during last pass is now
             # known stop compilation as we now reached a dead end. Same if an
             # error occured.
-            if errors or not known_locals & missings:
+            if errors or missings and(not known_locals & missings):
                 # Update the missings given by caller so that it knows it this
                 # failure is linked to circle references.
                 missing_locals.update(missings)
@@ -283,6 +317,32 @@ class Sequence(Item):
 
         return answer
 
+    def preferences_from_members(self):
+        """ Get the members values as string to store them in .ini files.
+
+        Reimplemented here to save items.
+
+        """
+        pref = super(Sequence, self).preferences_from_members()
+
+        for i, item in enumerate(self.items):
+            pref['item_{}'.format(i)] = item.preferences_from_members()
+
+        return pref
+
+    def update_members_from_preferences(self, **parameters):
+        """ Use the string values given in the parameters to update the members
+
+        This function will call itself on any tagged HasPrefAtom member.
+        Reimplemented here to update items.
+
+        """
+        super(Sequence, self).update_members_from_preferences(**parameters)
+
+        for i, item in enumerate(self.items):
+            para = parameters['item_{}'.format(i)]
+            item.update_members_from_preferences(**para)
+
     #--- Private API ----------------------------------------------------------
 
     #: Last index used by the sequence.
@@ -297,59 +357,87 @@ class Sequence(Item):
         answers.update({k: c(obj) for k, c in callables.iteritems()})
         return answers
 
-    def _observe_items(self, change):
+    def _observe_root(self, change):
+        """ Observer passing the root to all children.
+
+        This allow to build a sequence without a root and parent it later.
+
+        """
+        if change['value']:
+            for item in self.items:
+                item.context = self.context
+                item.root = self.root
+                if isinstance(item, Sequence):
+                    item.observe('_last_index', self._item_last_index_updated)
+                    item.parent = self
+            # Connect only now to avoid cleaning up in an unwanted way the
+            # root linkable vars attr.
+            self.observe('items', self._items_updated)
+
+        else:
+            self.unobserve('items', self._items_updated)
+            for item in self.items:
+                item.context = None
+                item.root = None
+                if isinstance(item, Sequence):
+                    item.unobserve('_last_index',
+                                   self._item_last_index_updated)
+            self.observe('items', self._items_updated)
+
+    def _items_updated(self, change):
         """ Observer for the items list.
 
         """
-        # The whole list changed.
-        if change['type'] == 'update':
-            added = set(change['value']) - set(change['oldvalue'])
-            removed = set(change['oldvalue']) - set(change['value'])
-            for item in removed:
-                self._item_removed(item)
-            for item in added:
-                self._item_added(item)
+        if self.root:
+            # The whole list changed.
+            if change['type'] == 'update':
+                added = set(change['value']) - set(change['oldvalue'])
+                removed = set(change['oldvalue']) - set(change['value'])
+                for item in removed:
+                    self._item_removed(item)
+                for item in added:
+                    self._item_added(item)
 
-        # An operation has been performed on the list.
-        elif change['type'] == 'container':
-            op = change['operation']
+            # An operation has been performed on the list.
+            elif change['type'] == 'container':
+                op = change['operation']
 
-            # itemren have been added
-            if op in ('__iadd__', 'append', 'extend', 'insert'):
-                if 'item' in change:
-                    self._item_added(change['item'])
-                if 'items' in change:
-                    for item in change['items']:
-                        self._item_added(item)
+                # itemren have been added
+                if op in ('__iadd__', 'append', 'extend', 'insert'):
+                    if 'item' in change:
+                        self._item_added(change['item'])
+                    if 'items' in change:
+                        for item in change['items']:
+                            self._item_added(item)
 
-            # itemren have been removed.
-            elif op in ('__delitem__', 'remove', 'pop'):
-                if 'item' in change:
-                    self._item_removed(change['item'])
-                if 'items' in change:
-                    for item in change['items']:
-                        self._item_removed(item)
+                # itemren have been removed.
+                elif op in ('__delitem__', 'remove', 'pop'):
+                    if 'item' in change:
+                        self._item_removed(change['item'])
+                    if 'items' in change:
+                        for item in change['items']:
+                            self._item_removed(item)
 
-            # One item was replaced.
-            elif op in ('__setitem__'):
-                old = change['olditem']
-                if isinstance(old, list):
-                    for item in old:
-                        self._item_removed(item)
-                else:
-                    self._item_removed(old)
+                # One item was replaced.
+                elif op in ('__setitem__'):
+                    old = change['olditem']
+                    if isinstance(old, list):
+                        for item in old:
+                            self._item_removed(item)
+                    else:
+                        self._item_removed(old)
 
-                new = change['newitem']
-                if isinstance(new, list):
-                    for item in new:
-                        self._item_added(item)
-                else:
-                    self._item_added(new)
+                    new = change['newitem']
+                    if isinstance(new, list):
+                        for item in new:
+                            self._item_added(item)
+                    else:
+                        self._item_added(new)
 
-        self._recompute_indexes()
+            self._recompute_indexes()
 
     def _item_added(self, item):
-        """
+        """ Fill in the attributes of a newly added item.
 
         """
         item.context = self.context
@@ -359,7 +447,7 @@ class Sequence(Item):
             item.parent = self
 
     def _item_removed(self, item):
-        """
+        """ Clear the attributes of a removed item.
 
         """
         del item.context
@@ -387,13 +475,13 @@ class Sequence(Item):
         # Cleanup the linkable_vars for all the pulses which will be reindexed.
         linked_vars = self.root.linkable_vars
         for var in linked_vars[:]:
-            if int(var[0]) >= free_index:
+            if var[0].isdigit() and int(var[0]) >= free_index:
                 linked_vars.remove(var)
 
         for item in self.items[first_index:]:
 
             item.index = free_index
-            prefix = '{}_'.format(item.index)
+            prefix = '{}_'.format(free_index)
             linkable_vars = [prefix + var for var in item.linkable_vars]
             linked_vars.extend(linkable_vars)
 
@@ -428,25 +516,48 @@ class ConditionalSequence(Sequence):
     linkable_vars = set_default(['condition'])
 
     def compile_sequence(self, sequence_locals, missing_locals, errors):
-        """
+        """ Compile the sequence in a flat list of pulses.
+
+        The list of pulse will be not empty only if the condition specified
+        for the sequence is met.
+
+        Parameters
+        ----------
+        sequence_locals : dict
+            Dictionary of local variables.
+
+        missings : set
+            Set of unfound local variables.
+
+        errors : dict
+            Dict of the errors which happened when performing the evaluation.
+
+        Returns
+        -------
+        flag : bool
+            Boolean indicating whether or not the evaluation succeeded.
+
+        pulses : list
+            List of pulses in which all the string entries have been evaluated.
 
         """
         cond = None
         try:
-            cond = eval_entry(self.condition, sequence_locals, missing_locals)
+            cond = bool(eval_entry(self.condition,
+                                   sequence_locals, missing_locals))
         except Exception as e:
-            errors['{}'.format(self.index) + 'condition'] = repr(e)
+            errors['{}_'.format(self.index) + 'condition'] = repr(e)
 
         if cond is None:
             return False, []
 
-        local = '{}'.format(self.index) + 'condition'
+        local = '{}_'.format(self.index) + 'condition'
         sequence_locals[local] = cond
 
         if cond:
             return super(ConditionalSequence,
                          self).compile_sequence(sequence_locals,
-                                                missing_locals)
+                                                missing_locals, errors)
 
         else:
             return True, []
@@ -489,9 +600,16 @@ class RootSequence(Sequence):
 
     #: Duration of the sequence when it is fixed. The unit of this time is
     # fixed by the context.
-    sequence_duration = Float().tag(pref=True)
+    sequence_duration = Str().tag(pref=True)
 
     index = set_default(0)
+
+    def __init__(self, **kwargs):
+        """
+
+        """
+        super(RootSequence, self).__init__(**kwargs)
+        self.root = self
 
     def compile_sequence(self, use_context=True):
         """ Compile a sequence to useful format.
@@ -506,42 +624,69 @@ class RootSequence(Sequence):
         result : bool
             Flag indicating whether or not the compilation succeeded.
 
-        *args :
+        args : iterable
             Objects depending on the result and use_context flag.
-            In case of failure:
+            In case of failure: tuple
                 - a set of the entries whose values where never found and a
                 dict of the errors which occured during compilation.
             In case of success:
-                - a flat list of Pulse if use_context is false
+                - a flat list of Pulse if use_context is False
                 - a context dependent result.
 
         """
-        sequence_locals = self.external_variables.copy()
-        if self.fix_sequence_duration:
-            sequence_locals['sequence_end'] = self.sequence_duration
-
         missings = set()
         errors = {}
+        sequence_locals = self.external_variables.copy()
+
+        if self.fix_sequence_duration:
+            try:
+                duration = eval_entry(self.sequence_duration, sequence_locals,
+                                      missings)
+                sequence_locals['sequence_end'] = duration
+            except Exception as e:
+                errors['root_seq_duration'] = repr(e)
 
         res, pulses = super(RootSequence,
                             self).compile_sequence(sequence_locals,
                                                    missings, errors)
 
         if not res:
-            return False, missings, errors
+            return False, (missings, errors)
 
         elif not use_context:
             return True, pulses
 
         else:
-            return self.context.compile_sequence(pulses)
+            kwargs = {}
+            if self.fix_sequence_duration:
+                kwargs['sequence_duration'] = duration
+            return self.context.compile_sequence(pulses, **kwargs)
 
-    #--- Private API ----------------------------------------------------------
-    def _default_root(self):
-        """ Initialise the root member to reference the root sequence itself.
+    def preferences_from_members(self):
+        """ Get the members values as string to store them in .ini files.
+
+        Reimplemented here to save context.
 
         """
-        return self
+        pref = super(RootSequence, self).preferences_from_members()
+
+        pref['context'] = self.context.preferences_from_members()
+
+        return pref
+
+    def update_members_from_preferences(self, **parameters):
+        """ Use the string values given in the parameters to update the members
+
+        This function will call itself on any tagged HasPrefAtom member.
+        Reimplemented here to update items.
+
+        """
+        super(RootSequence, self).update_members_from_preferences(**parameters)
+
+        para = parameters['context']
+        self.context.update_members_from_preferences(**para)
+
+    #--- Private API ----------------------------------------------------------
 
     def _observe_fix_sequence_duration(self, change):
         """ Keep the linkable_vars list in sync with fix_sequence_duration.
