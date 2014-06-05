@@ -688,9 +688,9 @@ class ComplexTask(BaseTask):
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        parameters : dict(str)
             Dictionary holding the new values to give to the members in string
-            format.
+            format (save for the children).
 
         Notes
         -----
@@ -712,7 +712,7 @@ class ComplexTask(BaseTask):
 
                 setattr(self, name, validated)
 
-            # Then we deal with the choild tasks
+            # Then we deal with the child tasks
             elif meta and 'child' in meta:
                 if name not in parameters:
                     continue
