@@ -9,8 +9,7 @@ from atom.api import (Int, Instance, Str, Enum, Float, Dict, List, Typed, Bool,
                       set_default)
 from itertools import chain
 
-from hqc_meas.utils.atom_util import (HasPrefAtom, tagged_members,
-                                      member_from_str)
+from hqc_meas.utils.atom_util import HasPrefAtom
 from .contexts.base_context import BaseContext
 from .shapes.base_shapes import AbstractShape
 from .shapes.modulation import Modulation
@@ -236,7 +235,8 @@ class Sequence(Item):
         missings : set
             Set of unfound local variables.
 
-        errors : dict
+        errors : dict, tagged_members,
+                                      member_from_str)
             Dict of the errors which happened when performing the evaluation.
 
         Returns
