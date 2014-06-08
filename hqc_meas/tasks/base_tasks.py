@@ -105,7 +105,7 @@ class BaseTask(Atom):
         to update the entries in the preference object before saving'
         raise NotImplementedError(cleandoc(err_str))
 
-    def update_members_from_preferences(self, **parameters):
+    def update_members_from_preferences(self, parameters):
         """ Method used to update the trait values using the info extracted
         from a config file.
 
@@ -318,6 +318,13 @@ class SimpleTask(BaseTask):
     #Class attribute specifying if instances of that class can be used in loop
     loopable = False
 
+    # Is the task parallel and what is its execution pool.
+    parallel = Dict(Str(),
+                    default={'activated': False, 'pool': ''}).tag(pref=True)
+
+    # Is the task waiting for execution pools and which.
+    wait = Dict(Str(), List()).tag(pref=True)
+
     #--- Public API -----------------------------------------------------------
 
     def write_in_database(self, name, value):
@@ -403,7 +410,7 @@ class SimpleTask(BaseTask):
 
     update_preferences_from_members = register_preferences
 
-    def update_members_from_preferences(self, **parameters):
+    def update_members_from_preferences(self, parameters):
         """ Update the members values using a dict.
 
         Parameters
@@ -422,80 +429,32 @@ class SimpleTask(BaseTask):
             converted = member_from_str(member, value)
             setattr(self, name, converted)
 
-    def make_parallel(self, pool, switch=''):
-        """ Make the execution of a task happens in parallel.
-
-        This method should be called in __init__ when there is no need to
-        wait for the process method to return to start the next task,ie the
-        process method decorated don't use any data succeptible to be corrupted
-        by the next task.
-
-        Parameters
-        ----------
-        pool : str
-            Name of the pool this task is part of.
-
-        switch : str
-            Name of the member indicating whether or not to run this task in
-            parallel.
-
-        """
-        par = self._parallel
-        par['pool'] = pool
-        par['activated'] = getattr(self, switch, True)
-        if switch:
-            self.observe('switch', self._redefine_process_)
-        self._redefine_process_()
-
-    def make_wait(self, wait=[], no_wait=[]):
-        """ Make the execution of a task wait for the completion fo others.
-
-        This method should be be called in __init__ when the process method
-        need to access data in the database or need to be sure that physical
-        quantities reached their expected values.
-
-        Parameters
-        ----------
-        wait : list(str)
-            Names of the pools this task waits to complete before starting .
-
-        no_wait : list(str)
-            Names of the pools this task does not wait to complete before
-            starting .
-
-        This parameters are mutually exclusive.
-        """
-        _wait = self._wait
-        _wait['wait'] = wait
-        _wait['no_wait'] = no_wait
-        self._redefine_process_()
-
     #--- Private API ----------------------------------------------------------
 
-    # Is the task parallel and what is its execution pool.
-    _parallel = Dict(Str(), default={'activated': False, 'pool': ''})
+    @observe('wait', 'parallel')
+    def _parallell_wait_update(self, change):
+        """
 
-    # Is the task waiting for execution pools and which.
-    _wait = Dict(Str(), List())
+        """
+        self._redefine_process_()
 
-    def _redefine_process_(self, change={}):
+    def _redefine_process_(self):
         """ Make process_ refects the parallel/wait settings.
 
         """
-        if change:
-            self._parallel['activated'] = change['value']
-        process = self.process.__func__
-        parallel = self._parallel
+        perform_func = self.perform.__func__
+        parallel = self.parallel
         if parallel['activated'] and parallel['pool']:
-            process = self._make_parallel_process_(process, parallel['pool'])
+            perform_func = self._make_parallel_process_(perform_func,
+                                                        parallel['pool'])
 
-        wait = self._wait
+        wait = self.wait
         if 'wait' in wait and 'no_wait' in wait:
-            process = self._make_wait_process_(process,
-                                               wait['wait'],
-                                               wait['no_wait'])
+            perform_func = self._make_wait_process_(perform_func,
+                                                    wait['wait'],
+                                                    wait['no_wait'])
 
-        self.process_ = make_stoppable(process)
+        self.perform_ = make_stoppable(perform_func)
 
     @staticmethod
     def _make_parallel_process_(process, pool):
@@ -902,7 +861,7 @@ class ComplexTask(BaseTask):
         for child in self._gather_children_task():
             child.update_preferences_from_members()
 
-    def update_members_from_preferences(self, **parameters):
+    def update_members_from_preferences(self, parameters):
         """ Update the members values using a dict.
 
         Parameters
