@@ -6,10 +6,10 @@
 #==============================================================================
 """
 """
-from atom.api import Atom, ForwardInstance, Instance
+from atom.api import Atom, ForwardInstance, Instance, Str
 
 from hqc_meas.atom_util import HasPrefAtom
-from hqc_meas.tasks.base_tasks import SimpleTask
+from hqc_meas.tasks.base_tasks import SimpleTask, BaseTask
 from ..utils.atom_util import member_from_str, tagged_members
 
 
@@ -20,17 +20,40 @@ class InterfaceableTaskMixin(Atom):
     #: A reference to the current interface for the task.
     interface = ForwardInstance(lambda: TaskInterface)
 
-    def check(self, **kwargs):
-        """
-
-        """
-        return self.interface.check(**kwargs)
-
     def perform(self, *args, **kwargs):
         """
 
         """
         return self.interface.perform(*args, **kwargs)
+
+    def answer(self, members, callables):
+        """ Method used by to retrieve information about a task.
+
+        Reimplemented here to also explore the interface.
+
+        Parameters
+        ----------
+        members : list(str)
+            List of members names whose values should be returned.
+
+        callables : dict(str, callable)
+            Dict of name callable to invoke on the task or interface to get
+            some infos.
+
+        Returns
+        -------
+        infos : dict
+            Dict holding all the answers for the specified members and
+            callables.
+
+        """
+        #XXXX Here I will assume that answer is the one from the BaseTask
+        # and assume the interface does not override any task method.
+        # For the callables only the not None answer will be updated.
+        answers = BaseTask.answer(self, members, callables)
+        interface_answers = self.interface.answer(members, callables)
+        answers.update(interface_answers)
+        return answers
 
     def register_preferences(self):
         """ Register the task preferences into the preferences system.
@@ -49,32 +72,41 @@ class InterfaceableTaskMixin(Atom):
 
     update_preferences_from_members = register_preferences
 
-    def update_members_from_preferences(self, parameters):
-        """ Update the members values using a dict.
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        config : dict(str)
             Dictionary holding the new values to give to the members in string
-            format, save for the interface which is assumed to have been
-            reconstructed.
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+            This is assembled by the TaskManager.
+
+        Returns
+        -------
+        task :
+            Newly built task.
 
         """
-        for name, member in tagged_members(self, 'pref').iteritems():
+        task = cls()
+        for name, member in tagged_members(task, 'pref').iteritems():
 
-            if name not in parameters:
+            if name not in config:
                 continue
 
-            old_val = getattr(self, name)
-            if isinstance(old_val, HasPrefAtom):
-                old_val.update_members_from_preferences(**parameters[name])
-
-            value = parameters[name]
+            value = config[name]
             converted = member_from_str(member, value)
-            setattr(self, name, converted)
+            setattr(task, name, converted)
 
-        if 'interface' in parameters:
-            self.interface = parameters['interface']
+        if 'interface' in config:
+            inter_class_name = config['interface'].pop('interface_class')
+            inter_class = dependencies['interfaces'][inter_class_name]
+            task.interface = inter_class.build_from_config(config['interface'],
+                                                           dependencies)
 
     def _observe_interface(self, change):
         """ Observer.
@@ -91,3 +123,63 @@ class TaskInterface(HasPrefAtom):
     """
     #: A reference to which this interface is linked.
     task = Instance(SimpleTask)
+
+    #: Name of the class of the interface. Used for persistence purposes.
+    interface_class = Str().tag(pref=True)
+
+    def check(self, *args, **kwargs):
+        """
+
+        This is the reponsability of the task to call this method.
+
+        """
+        return True, {}
+
+    def perform(self, *args, **kwargs):
+        """
+
+        """
+        raise NotImplementedError()
+
+    def answer(self, members, callables):
+        """ Method used by to retrieve information about a task.
+
+        Parameters
+        ----------
+        members : list(str)
+            List of members names whose values should be returned.
+
+        callables : dict(str, callable)
+            Dict of name callable to invoke on the task or interface to get
+            some infos.
+
+        Returns
+        -------
+        infos : dict
+            Dict holding all the answers for the specified members and
+            callables. Contrary to what happens for task this one will never
+            contain None as a value.
+
+        """
+        answers = {m: getattr(self, m, None) for m in members}
+        answers.update({k: c(self) for k, c in callables.iteritems()})
+        for key, val in answers.copy().iteritems():
+            if val is None:
+                del answers[key]
+
+        return answers
+
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create an interface using the provided dict.
+
+        """
+        interface = cls()
+        interface.update_members_from_preferences(**config)
+        return interface
+
+    def _default_interface_class(self):
+        """ Default value for the class_name member.
+
+        """
+        return type(self).__name__

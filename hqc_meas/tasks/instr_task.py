@@ -9,9 +9,10 @@
 from atom.api import (Str, Instance)
 from inspect import cleandoc
 
-from .base_tasks import SimpleTask
 from hqc_meas.instruments.drivers.driver_tools import (BaseInstrument,
                                                        InstrIOError)
+from .base_tasks import SimpleTask
+from .task_interface import TaskInterface
 
 
 class InstrumentTask(SimpleTask):
@@ -83,5 +84,14 @@ class InstrumentTask(SimpleTask):
 
         """
         self.driver.close_connection()
+
+
+class InstrTaskInterface(TaskInterface):
+    """
+
+    """
+    #: List of acceptable drivers. (class attribute)
+    driver_list = []
+
 
 TASK_PACKAGES = ['tasks_instr']

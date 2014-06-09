@@ -35,19 +35,46 @@ class BaseTask(Atom):
 
     """
     #--- Public API -----------------------------------------------------------
+    #: Name of the class, used for persistence.
     task_class = Str().tag(pref=True)
-    task_name = Str().tag(pref=True)
-    task_label = Str()
-    task_depth = Int()
-    task_preferences = Instance(Section)
-    task_database = Typed(TaskDatabase)
-    task_database_entries = Dict(Str(), Value())
-    task_path = Str()
-    root_task = ForwardTyped(lambda: RootTask)
-    parent_task = ForwardTyped(lambda: BaseTask)
-    process_ = Callable()
 
-    def process(self):
+    #: Name of the task this should be unique in hierarchy.
+    task_name = Str().tag(pref=True)
+
+    #: Label of the task to display in the tree editor.
+    # XXXX this requires some reformating.
+    task_label = Str()
+
+    #: Depth of the task in the hierarchy. this should not be manipulated
+    #: directly by user code.
+    task_depth = Int()
+
+    #: Reference to the Section in which the task stores its preferences.
+    task_preferences = Instance(Section)
+
+    #: Reference to the database used by the task to exchange information.
+    task_database = Typed(TaskDatabase)
+
+    #: Entries the task declares in the database and the associated default
+    #: values.
+    task_database_entries = Dict(Str(), Value())
+
+    #: Path of the task in the hierarchy. This refers to the parent task and
+    #: is used when writing in the database.
+    task_path = Str()
+
+    #: Reference to the root task in the hierarchy.
+    root_task = ForwardTyped(lambda: RootTask)
+
+    #: Refrence to the parent task.
+    parent_task = ForwardTyped(lambda: BaseTask)
+
+    #: Unbound method called when the task is asked to do its job. This is
+    #: basically the perform method but wrapped with useful stuff such as
+    #: interruption check or parallel, wait features.
+    perform_ = Callable()
+
+    def perform(self):
         """ The main method of any task as it is this one which is called when
         the measurement is performed. This method should always be decorated
         with make_stoppable, and return True if things went well.
@@ -67,6 +94,29 @@ class BaseTask(Atom):
         AbstractTask. This method is called when the program requires the task\
         to check that all parameters are ok'
         raise NotImplementedError(cleandoc(err_str))
+
+    def answer(self, members, callables):
+        """ Method used by to retrieve information about a task.
+
+        Parameters
+        ----------
+        members : list(str)
+            List of members names whose values should be returned.
+
+        callables : dict(str, callable)
+            Dict of name callable to invoke on the task or interface to get
+            some infos.
+
+        Returns
+        -------
+        infos : dict
+            Dict holding all the answers for the specified members and
+            callables.
+
+        """
+        answers = {m: getattr(self, m, None) for m in members}
+        answers.update({k: c(self) for k, c in callables.iteritems()})
+        return answers
 
     def register_in_database(self):
         """ Method used to create entries in the database.
@@ -105,19 +155,24 @@ class BaseTask(Atom):
         to update the entries in the preference object before saving'
         raise NotImplementedError(cleandoc(err_str))
 
-    def update_members_from_preferences(self, parameters):
-        """ Method used to update the trait values using the info extracted
-        from a config file.
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
 
-        Parameters:
+        Parameters
         ----------
-        parameters : dict
+        config : dict(str)
+            Dictionary holding the new values to give to the members in string
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+            This is assembled by the TaskManager.
 
         """
-        err_str = 'This method should be implemented by subclasses of\
-        AbstractTask. This method is called when the program requires the task\
-        to update update the trait values using the info extracted from\
-        a config file.'
+        err_str = '''This method should be implemented by subclasses of
+        AbstractTask. This method is called when the program requires the task
+        to reconstruct itself using the infos stored in a dictionary.'''
         raise NotImplementedError(cleandoc(err_str))
 
     def accessible_database_entries(self):
@@ -315,14 +370,17 @@ class SimpleTask(BaseTask):
     """ Task with no child task, written in pure Python.
 
     """
-    #Class attribute specifying if instances of that class can be used in loop
+    #: Class attribute specifying if that task can be used in a loop
     loopable = False
 
-    # Is the task parallel and what is its execution pool.
-    parallel = Dict(Str(),
-                    default={'activated': False, 'pool': ''}).tag(pref=True)
+    #: Dictionary indicating whether the task is executed in parallel
+    #: ('activated' key) and which is pool it belongs to ('pool' key).
+    parallel = Dict(Str()).tag(pref=True)
 
-    # Is the task waiting for execution pools and which.
+    #: Dictionary indicating whether the task should wait on any pool before
+    #: performing its job. Two valid keys can be used :
+    #: - 'wait' : the list should then specify which pool should be waited.
+    #: - 'no_wait' : the list should specify which pool not to wait on.
     wait = Dict(Str(), List()).tag(pref=True)
 
     #--- Public API -----------------------------------------------------------
@@ -410,24 +468,32 @@ class SimpleTask(BaseTask):
 
     update_preferences_from_members = register_preferences
 
-    def update_members_from_preferences(self, parameters):
-        """ Update the members values using a dict.
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        config : dict(str)
             Dictionary holding the new values to give to the members in string
-            format.
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+            This is assembled by the TaskManager.
 
         """
-        for name, member in tagged_members(self, 'pref').iteritems():
+        task = cls()
+        for name, member in tagged_members(task, 'pref').iteritems():
 
-            if name not in parameters:
+            if name not in config:
                 continue
 
-            value = parameters[name]
+            value = config[name]
             converted = member_from_str(member, value)
-            setattr(self, name, converted)
+            setattr(task, name, converted)
+
+        return task
 
     #--- Private API ----------------------------------------------------------
 
@@ -436,9 +502,9 @@ class SimpleTask(BaseTask):
         """
 
         """
-        self._redefine_process_()
+        self._redefine_perform_()
 
-    def _redefine_process_(self):
+    def _redefine_perform_(self):
         """ Make process_ refects the parallel/wait settings.
 
         """
@@ -449,15 +515,15 @@ class SimpleTask(BaseTask):
                                                         parallel['pool'])
 
         wait = self.wait
-        if 'wait' in wait and 'no_wait' in wait:
+        if 'wait' in wait or 'no_wait' in wait:
             perform_func = self._make_wait_process_(perform_func,
-                                                    wait['wait'],
-                                                    wait['no_wait'])
+                                                    wait.get('wait'),
+                                                    wait.get('no_wait'))
 
         self.perform_ = make_stoppable(perform_func)
 
     @staticmethod
-    def _make_parallel_process_(process, pool):
+    def _make_parallel_perform_(process, pool):
         """ Machinery to execute process_ in parallel.
 
         Create a wrapper around a method to execute it in a thread and
@@ -638,10 +704,10 @@ class ComplexTask(BaseTask):
             List summarizing the result of the exploration.
 
         """
-        answer = [self._answer(self, members, callables)]
+        answer = [self.answer(members, callables)]
         for task in self.children_task:
             if isinstance(task, SimpleTask):
-                answer.append(self._answer(task, members, callables))
+                answer.append(task.answer(members, callables))
             else:
                 answer.append(task.walk(members, callables))
 
@@ -861,14 +927,24 @@ class ComplexTask(BaseTask):
         for child in self._gather_children_task():
             child.update_preferences_from_members()
 
-    def update_members_from_preferences(self, parameters):
-        """ Update the members values using a dict.
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        config : dict(str)
             Dictionary holding the new values to give to the members in string
-            format.
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+            This is assembled by the TaskManager.
+
+        Returns
+        -------
+        task :
+            Newly created and initiliazed task.
 
         Notes
         -----
@@ -876,33 +952,42 @@ class ComplexTask(BaseTask):
         don't override it without checking that it works.
 
         """
-        for name, member in self.members().iteritems():
+        task = cls()
+        for name, member in task.members().iteritems():
 
             # First we set the preference members
             meta = member.metadata
             if meta and 'pref' in meta:
-                if name not in parameters:
+                if name not in config:
                     continue
 
                 # member_from_str handle containers
-                value = parameters[name]
+                value = config[name]
                 validated = member_from_str(member, value)
-
-                setattr(self, name, validated)
 
             # Then we deal with the child tasks
             elif meta and 'child' in meta:
-                if name not in parameters:
-                    continue
+                if isinstance(member, (ContainerList, List)):
+                    i = 0
+                    pref = name + '_{}'
+                    validated = []
+                    while True:
+                        child_name = pref.format(i)
+                        if child_name not in config:
+                            break
+                        child_class_name = config[child_name].pop('task_class')
+                        child_class = dependencies['tasks'][child_class_name]
+                        child = child_class.build_from_config(config,
+                                                              dependencies)
+                        validated.append(child)
 
-                value = parameters[name]
-
-                if isinstance(member, ContainerList):
-                    validated = value
                 else:
-                    validated = value[0]
+                    child_class_name = config[name].pop('task_class')
+                    child_class = dependencies['tasks'][child_class_name]
+                    validated = child_class.build_from_config(config,
+                                                              dependencies)
 
-                setattr(self, name, validated)
+            setattr(task, name, validated)
 
     #--- Private API ----------------------------------------------------------
 
@@ -1077,6 +1162,8 @@ class ComplexTask(BaseTask):
         # Update preferences, cleanup database
         self.register_preferences()
         child.unregister_from_database()
+        child.root_task = None
+        child.parent_task = None
 
         # Remove all access exception linked to that child from
         # exceptions.
@@ -1250,14 +1337,6 @@ class ComplexTask(BaseTask):
                 change['object'].unobserve('access_exs',
                                            self._child_access_exs_changed)
 
-    @staticmethod
-    def _answer(obj, members, callables):
-        """ Collect answers for the walk method.
-
-        """
-        answers = {m: getattr(obj, m, None) for m in members}
-        answers.update({k: c(obj) for k, c in callables.iteritems()})
-        return answers
 
 from multiprocessing.synchronize import Event
 
