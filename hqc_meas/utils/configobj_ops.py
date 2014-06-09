@@ -7,6 +7,7 @@
 """
 """
 from configobj import Section
+from collections import defaultdict
 
 
 def include_configobj(new_parent, config):
@@ -30,3 +31,34 @@ def include_configobj(new_parent, config):
 
         else:
             new_parent[key] = val
+
+
+def flatten_config(config, entries):
+    """ Gather entries from a configbj in sets.
+
+    Parameters
+    ----------
+    config : Section
+        Section from which the values of some entries should be extracted.
+
+    entries : list(str)
+        The list of entries to look for in the configobj.
+
+    Returns
+    -------
+    results : dict(str: set)
+        Dict containing the values of the entries as sets. This dict can then
+        be used to gather function and or classes needed when rebuilding.
+
+    """
+    results = defaultdict(set)
+    for entry in entries:
+        if entry in config.scalars:
+            results[entry].add(config[entry])
+
+    for section in config.sections:
+        aux = flatten_config(section, entries)
+        for key in aux:
+            results[key].update(aux[key])
+
+    return results

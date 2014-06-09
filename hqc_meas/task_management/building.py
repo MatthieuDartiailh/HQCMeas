@@ -4,13 +4,18 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-"""
+""" This module gather routines linked to building tasks.
+
+Save for build_task_from_config, all this function are rather method of the
+TaskManager and should be called on their own. There are implemented here only
+to simplify the manager.
+
 """
 from enaml.widgets.api import FileDialogEx
 
-from .config.api import IniConfigTask
+from hqc_meas.utils.configobj_ops import flatten_config
+from hqc_meas.tasks.api import RootTask
 from .templates import load_template
-
 
 import enaml
 with enaml.imports():
@@ -42,6 +47,64 @@ def build_task(manager, parent_ui=None):
         return task
     else:
         return None
+
+
+def _gather_build_dep_from_config(manager, config):
+    """ Read a ConfigObj object to determine all the build dependencies of
+    a task hierarchy and get the in a dict.
+
+    Parameters
+    ----------
+    manager : TaskManager
+        Instance of the task manager.
+
+    coonfig : Section
+        Section representing the task hierarchy.
+
+    Returns
+    -------
+    build_dep : nested dict
+        Dictionary holding all the build dependencies of a task hierarchy. With
+        this dict and the config the tas hierarchy can be reconstructed without
+        accessing the workbech.
+
+    """
+    members = []
+    for build_dep in manager._build_dep_collectors:
+        members.extend(build_dep.walk_members)
+
+    flat_config = flatten_config(config, members)
+
+    build_dep = {}
+    for build_dep in manager._build_dep_collectors:
+        build_dep.update(build_dep.collect(flat_config))
+
+    return build_dep
+
+
+def build_task_from_config(config, dep_source):
+    """ Rebuild a task hierarchy from a Section.
+
+    Parameters
+    ----------
+    config : Section
+        Section representing the task hierarchy.
+
+    dep_source :
+        Source of the build dependencies of the hierarchy. This can either
+        be the instance of the TaskManager of a dict of dependencies.
+
+    Returns
+    -------
+    task :
+        Newly built task.
+
+    """
+    if not isinstance(dep_source, dict):
+        dep_source = _gather_build_dep_from_config(dep_source, config)
+
+    task_class = dep_source[config.pop('task_class')]
+    return task_class.build_from_config(config, dep_source)
 
 
 def build_root(manager, mode, config=None, parent_ui=None):
@@ -83,4 +146,6 @@ def build_root(manager, mode, config=None, parent_ui=None):
         config, _ = load_template(path)
 
     if config:
-        return IniConfigTask(manager=manager).build_task_from_config(config)
+        build_dep = _gather_build_dep_from_config(manager, config)
+        config.pop('task_class')
+        return RootTask.build_from_config(config, build_dep)
