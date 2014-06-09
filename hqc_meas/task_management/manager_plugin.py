@@ -16,9 +16,11 @@ from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                              FileDeletedEvent, FileMovedEvent)
 from inspect import cleandoc
+from collections import defaultdict
 
-from ..utils.has_pref_plugin import HasPrefPlugin
-from ..tasks.api import BaseTask
+from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
+from hqc_meas.tasks.api import BaseTask, TaskInterface
+from hqc_meas.tasks.tools.walks import flatten_walk
 from .filters.api import AbstractTaskFilter, TASK_FILTERS
 from .config.api import (SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask,
                          IniView)
@@ -26,11 +28,16 @@ from .config.api import (SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask,
 from .building import build_task, build_root
 from .saving import save_task
 from .templates import load_template
+from .dependencies import BuildDependencies, RuntimeDependencies
 
 
 MODULE_PATH = os.path.dirname(__file__)
 
 MODULE_ANCHOR = 'hqc_meas.task_management'
+
+BUILD_DEP_POINT = u'hqc_meas.task_manager.build-dependencies'
+
+RUNTIME_DEP_POINT = u'hqc_meas.measure.runtime-dependencies'
 
 
 # XXXX Filters and Config being less prone to frequent udpates, no dynamic
@@ -42,23 +49,26 @@ MODULE_ANCHOR = 'hqc_meas.task_management'
 class TaskManagerPlugin(HasPrefPlugin):
     """
     """
-    # Folders containings templates which should be loaded.
+    #: Folders containings templates which should be loaded.
     templates_folders = List(Unicode(),
                              [os.path.realpath(
                                  os.path.join(MODULE_PATH,
                                               '../tasks/templates'))]
                              ).tag(pref=True)
 
-    # Tasks and packages loading exception.
+    #: Tasks and packages loading exception.
     tasks_loading = List(Unicode()).tag(pref=True)
 
-    # Task views loading exception.
+    #: Task views loading exception.
     views_loading = List(Unicode()).tag(pref=True)
 
-    # List of all the known tasks.
+    #: Task interfaces loading exceptions.
+    interface_exceptions = List(Unicode()).tag(pref=True)
+
+    #: List of all the known tasks.
     tasks = List()
 
-    # List of the filters.
+    #: List of the filters.
     filters = List(Str(), TASK_FILTERS.keys())
 
     def start(self):
@@ -90,6 +100,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._unbind_observers()
         self._py_tasks.clear()
         self._template_tasks.clear()
+        self._interfaces.clear()
         self._filters.clear()
         self._task_views.clear()
         self._configs.clear()
@@ -162,6 +173,54 @@ class TaskManagerPlugin(HasPrefPlugin):
         return {t_class: view for t_class, view in views.iteritems()
                 if t_class in task_classes}, missing
 
+    def interfaces_request(self, names, use_i_names=False):
+        """ Give acces to interfaces classes.
+
+        Parameters
+        ----------
+        interfaces : iterable
+            Iterable of interfaces names whose class should be returned.
+
+        Returns
+        -------
+        views : dict
+            Dict mapping the interface names to their associated class.
+
+        """
+        if not use_i_names:
+            i_names = []
+            for name in name:
+                i_names.extend(self.interfaces[name])
+        else:
+            i_names = names
+
+        known_interfaces = self._interfaces
+        missing = [interface for interface in i_names
+                   if interface not in known_interfaces]
+        return {interface: i_class
+                for interface, i_class in known_interfaces.iteritems()
+                if interface in i_names}, missing
+
+    def interface_views_request(self, interface_classes):
+        """ Give acces to task views.
+
+        Parameters
+        ----------
+        interface_classes : iterable
+            Iterable of class names for which a view should be returned.
+
+        Returns
+        -------
+        views : dict
+            Dict mapping the task class names to their associated views.
+
+        """
+        views = self._interface_views
+        missing = [i_class for i_class in interface_classes
+                   if i_class not in views]
+        return {i_class: view for i_class, view in views.iteritems()
+                if i_class in interface_classes}, missing
+
     def filter_tasks(self, filter):
         """ Filter the known tasks using the specified filter.
 
@@ -213,6 +272,60 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         return None, None
 
+    def collect_dependencies(self, task, dependencies=['build', 'runtime']):
+        """ Build a dict of dependencies for a given task.
+
+        NB : This assumes the task is a complex task.
+
+        Parameters
+        ----------
+        task : ComplexTask
+            Task for which dependencies should be computed.
+
+        dependencies : {['build'], ['runtime'], ['build', 'runtime']}
+            Kind of dependencies which should be gathered.
+
+        Returns
+        -------
+        dependencies : dict or dicts
+            Dict holding all the classes or other dependencies to build, run
+            or build and run a task without any access to the workbench.
+            If a single kind of dependencies is requested a single dict is
+            returned otherwise two are returned one for the build ones and one
+            for the runtime ones
+
+        """
+        members = []
+        callables = {}
+
+        if 'build' in dependencies:
+            for build_dep in self._build_dep_collectors:
+                members.extend(build_dep.walk_members)
+
+        if 'runtime' in dependencies:
+            for runtime_dep in self._runtime_dep_collectors:
+                members.extend(runtime_dep.walk_members)
+                callables.update(runtime_dep.walk_callables)
+
+        walk = task.walk(members, callables)
+        flat_walk = flatten_walk(walk, members + callables.keys())
+
+        deps = ({}, {})
+        if 'build' in dependencies:
+            for build_dep in self._build_dep_collectors:
+                deps[0].update(build_dep.collect(flat_walk))
+
+        if 'runtime' in dependencies:
+            for runtime_dep in self._runtime_dep_collectors:
+                deps[1].update(runtime_dep.collect(flat_walk))
+
+        if 'build' in dependencies and 'runtime' in dependencies:
+            return deps
+        elif 'build' in dependencies:
+            return deps[0]
+        else:
+            return deps[1]
+
     def report(self):
         """ Give access to the failures which happened at startup.
 
@@ -228,25 +341,46 @@ class TaskManagerPlugin(HasPrefPlugin):
     build_root = build_root
 
     #--- Private API ----------------------------------------------------------
-    # Tasks implemented in Python
+    #: Tasks implemented in Python
     _py_tasks = Dict(Str(), Subclass(BaseTask))
 
-    # Template tasks (store full path to .ini)
+    #: Template tasks (store full path to .ini)
     _template_tasks = Dict(Str(), Unicode())
 
-    # Tasks views (task_class: view)
+    #: Tasks views (task_class: view)
     _task_views = Dict(Str())
 
-    # Task filters
+    #: Dict linking task to their interfaces.
+    _task_interfaces = Dict(Str(), List())
+
+    #: Interfaces
+    _interfaces = Dict(Str(), Subclass(TaskInterface))
+
+    #: Interfaces views
+    _interfaces_view = Dict(Str())
+
+    #: Task filters
     _filters = Dict(Str(), Subclass(AbstractTaskFilter), TASK_FILTERS)
 
-    # Task config dict for python tasks (task_class: (config, view))
+    #: Task config dict for python tasks (task_class: (config, view))
     _configs = Dict(Subclass(BaseTask), Tuple())
 
-    # Dict holding the list of failures which happened during loading
+    #: Dict holding the list of failures which happened during loading
     _failed = Dict()
 
-    # Watchdog observer
+    #: List holding all the build dependency collector.
+    _build_dep_collectors = List()
+
+    #: Dict storing which extension declared which build dependency.
+    _build_dep_extensions = Typed(defaultdict, (list,))
+
+    #: List holding all the runtime dependency collector.
+    _runtime_dep_collectors = List()
+
+    #: Dict storing which extension declared which runtime dependency.
+    _runtime_dep_extensions = Typed(defaultdict, (list,))
+
+    #: Watchdog observer
     _observer = Typed(Observer, ())
 
     def _refresh_template_tasks(self):
@@ -283,10 +417,12 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         tasks = {}
         views = {}
+        interfaces = {}
+        interface_views = {}
         tasks_packages = []
-        self._explore_modules(modules, tasks, tasks_packages, failed,
-                              prefix='tasks')
-        self._explore_views(v_modules, views, failed)
+        self._explore_modules(modules, tasks, interfaces, tasks_packages,
+                              failed, prefix='tasks')
+        self._explore_views(v_modules, views, interface_views, failed)
 
         # Remove packages which should not be explored
         for pack in tasks_packages[:]:
@@ -299,9 +435,9 @@ class TaskManagerPlugin(HasPrefPlugin):
             pack_path = os.path.join(MODULE_PATH, '..', *pack.split('.'))
             modules, v_modules = self._explore_package(pack, pack_path, failed)
 
-            self._explore_modules(modules, tasks, tasks_packages, failed,
-                                  prefix=pack)
-            self._explore_views(v_modules, views, failed)
+            self._explore_modules(modules, tasks, interfaces, tasks_packages,
+                                  failed, prefix=pack)
+            self._explore_views(v_modules, views, interface_views, failed)
 
             # Remove packages which should not be explored
             for pack in tasks_packages[:]:
@@ -316,7 +452,13 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         self._py_tasks = valid_tasks
         self._task_views = valid_views
+        self._task_interfaces = {k: [i.__name__ for i in v]
+                                 for k, v in interfaces.iteritems()}
+        self._interfaces = {i.__name__: i for v in interfaces.values()
+                            for i in v}
+        self._interface_views = interface_views
         self.tasks = list(tasks.keys()) + list(self._template_tasks.keys())
+
         self._failed = failed
         # TODO do something with failed
 
@@ -415,8 +557,8 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         return modules, v_modules
 
-    def _explore_modules(self, modules, tasks, packages, failed,
-                         prefix=None):
+    def _explore_modules(self, modules, tasks, interfaces, packages, failed,
+                         prefix):
         """ Explore a list of modules, looking for tasks.
 
         Parameters
@@ -427,11 +569,17 @@ class TaskManagerPlugin(HasPrefPlugin):
         tasks : dict
             A dict in which discovered tasks will be stored.
 
+        interfaces : dict
+            A dict in which discovered interfaces will be stored.
+
         packages : list
             A list in which discovered packages will be stored.
 
         failed : list
             A dict in which failed imports will be stored.
+
+        prefix : str
+            Prefix to add to discovered packages to make them importable.
 
         """
         for mod in modules:
@@ -448,14 +596,14 @@ class TaskManagerPlugin(HasPrefPlugin):
                 tasks.update({self._normalise_name(task.__name__): task
                               for task in m.KNOWN_PY_TASKS})
 
+            if hasattr(m, 'INTERFACES'):
+                interfaces.update(m.INTERFACES)
+
             if hasattr(m, 'TASK_PACKAGES'):
-                if prefix is not None:
-                    packs = [prefix + '.' + pack for pack in m.TASK_PACKAGES]
-                else:
-                    packs = m.TASK_PACKAGES
+                packs = [prefix + '.' + pack for pack in m.TASK_PACKAGES]
                 packages.extend(packs)
 
-    def _explore_views(self, modules, views, failed):
+    def _explore_views(self, modules, views, interface_views, failed):
         """ Explore a list of modules, looking for views.
 
         Parameters
@@ -465,6 +613,9 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         views : dict
             A dict in which discovered views will be stored.
+
+        interface_views : dict
+            A dict in which discovered interface views will be stored.
 
         failed : list
             A list in which failed imports will be stored.
@@ -483,6 +634,140 @@ class TaskManagerPlugin(HasPrefPlugin):
 
             if hasattr(m, 'TASK_VIEW_MAPPING'):
                 views.update(m.TASK_VIEW_MAPPING)
+
+            if hasattr(m, 'INTERFACE_VIEW_MAPPING'):
+                interface_views.update(m.INTERFACE_VIEW_MAPPING)
+
+    def _refresh_build_deps(self):
+        """ Refresh the list of known build dependency collectors.
+
+        """
+        workbench = self.workbench
+        point = workbench.get_extension_point(BUILD_DEP_POINT)
+        extensions = point.extensions
+        if not extensions:
+            self._build_dep_collectors.clear()
+            self._build_dep_extensions.clear()
+            return
+
+        # Get the monitors declarations for all extensions.
+        new_extensions = defaultdict(list)
+        old_extensions = self._build_dep_extensions
+        for extension in extensions:
+            if extensions in old_extensions:
+                build_deps = old_extensions[extension]
+            else:
+                build_deps = self._load_build_deps(extension)
+            new_extensions[extension].extend(build_deps)
+
+        # Create mapping between monitor id and declaration.
+        build_deps = {}
+        for extension in extensions:
+            for build_dep in new_extensions[extension]:
+                if build_dep.id in build_deps:
+                    msg = "build_dep '%s' is already registered"
+                    raise ValueError(msg % build_dep.id)
+                if not build_dep.walk_members and not build_dep.walk_callables:
+                    msg = "build_dep '%s' does not declare any dependencies"
+                    raise ValueError(msg % build_dep.id)
+                if build_dep.collector is None:
+                    msg = "build_dep '%s' does not declare a collector"
+                    raise ValueError(msg % build_dep.id)
+                build_deps[build_dep.id] = build_dep
+
+        self.build_deps = build_deps
+
+    def _load_build_deps(self, extension):
+        """ Load the Monitor object for the given extension.
+
+        Parameters
+        ----------
+        extension : Extension
+            The extension object of interest.
+
+        Returns
+        -------
+        build_deps : list(BuildDependencies)
+            The list of BuildDependencies declared by the extension.
+
+        """
+        workbench = self.workbench
+        build_deps = extension.get_children(BuildDependencies)
+        if extension.factory is not None and not build_deps:
+            for build_dep in extension.factory(workbench):
+                if not isinstance(build_dep, BuildDependencies):
+                    msg = "extension '%s' created non-Monitor."
+                    args = (extension.qualified_id)
+                    raise TypeError(msg % args)
+                build_deps.append(build_dep)
+
+        return build_deps
+
+    def _refresh_runtime_deps(self):
+        """ Refresh the list of known monitors.
+
+        """
+        workbench = self.workbench
+        point = workbench.get_extension_point(RUNTIME_DEP_POINT)
+        extensions = point.extensions
+        if not extensions:
+            self._runtime_dep_collectors.clear()
+            self._runtime_dep_extensions.clear()
+            return
+
+        # Get the monitors declarations for all extensions.
+        new_extensions = defaultdict(list)
+        old_extensions = self._runtime_dep_extensions
+        for extension in extensions:
+            if extensions in old_extensions:
+                runtime_deps = old_extensions[extension]
+            else:
+                runtime_deps = self._load_monitors(extension)
+            new_extensions[extension].extend(runtime_deps)
+
+        # Create mapping between monitor id and declaration.
+        runtime_deps = {}
+        for extension in extensions:
+            for runtime_dep in new_extensions[extension]:
+                if runtime_dep.id in runtime_deps:
+                    msg = "runtime_dep '%s' is already registered"
+                    raise ValueError(msg % runtime_dep.id)
+                if not runtime_dep.walk_members\
+                        and not runtime_dep.walk_callables:
+                    msg = "build_dep '%s' does not declare any dependencies"
+                    raise ValueError(msg % runtime_dep.id)
+                if runtime_dep.collector is None:
+                    msg = "build_dep '%s' does not declare a collector"
+                    raise ValueError(msg % runtime_dep.id)
+                runtime_deps[runtime_dep.id] = runtime_dep
+
+        self.runtime_deps = runtime_deps
+
+    def _load_runtime_deps(self, extension):
+        """ Load the RuntimeDependencies objects for the given extension.
+
+        Parameters
+        ----------
+        extension : Extension
+            The extension object of interest.
+
+        Returns
+        -------
+        runtime_deps : list(RuntimeDependencies)
+            The list of RuntimeDependencies declared by the extension.
+
+        """
+        workbench = self.workbench
+        runtime_deps = extension.get_children(RuntimeDependencies)
+        if extension.factory is not None and not runtime_deps:
+            for runtime_dep in extension.factory(workbench):
+                if not isinstance(runtime_dep, RuntimeDependencies):
+                    msg = "extension '%s' created non-RuntimeDependencies."
+                    args = (extension.qualified_id)
+                    raise TypeError(msg % args)
+                runtime_deps.append(runtime_dep)
+
+        return runtime_deps
 
     def _bind_observers(self):
         """ Setup the observers for the plugin.

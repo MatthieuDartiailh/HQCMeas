@@ -10,9 +10,11 @@ from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
 from enaml.workbench.core.api import Command
 from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 
-from ..utils.pref_plugin import Preferences
-from ..utils.state_plugin import State
+from hqc_meas.utils.pref_plugin import Preferences
+from hqc_meas.utils.state_plugin import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
+
+from .dependencies import BuildDependencies
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
@@ -20,6 +22,8 @@ def manager_plugin_factory():
     """
     from .manager_plugin import TaskManagerPlugin
     return TaskManagerPlugin()
+
+#--- Command handlers ---------------------------------------------------------
 
 # TODO implement a true manager
 #def show_manager(event):
@@ -55,6 +59,32 @@ def views_request(event):
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.views_request(**event.parameters)
 
+
+def interfaces_request(event):
+    """ Handler for the 'hqc_meas.task_manager.interfaces_request' command.
+
+    Two keywords can be used in parameters :
+    - 'tasks' : the provided names will then be assumed to be the ones of tasks
+                for which the corresponding interfaces should be returned.
+
+    - 'interfaces' : the provided names will be used directly as interfaces
+                     names.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    if 'tasks' in event.parameters:
+        return manager.interfaces_request(event.parameters['tasks'])
+    elif 'interfaces' in event.parameters:
+        return manager.interfaces_request(event.parameters['interfaces'],
+                                          True)
+
+def interface_views_request(event):
+    """ Handler for the 'hqc_meas.task_manager.interface_views_request'
+    command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.interface_views_request(**event.parameters)
 
 def filter_tasks(event):
     """ Handler for the 'hqc_meas.task_manager.filter_tasks' command.
@@ -95,14 +125,15 @@ def build_root(event):
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.build_root(**event.parameters)
 
+#--- Command and extension point descriptions ---------------------------------
 
-INSTR_USERS_DESCRIPTION = \
-""" Extensions to this point can be used to provide the id of a plugin
-which will use instruments. Plugins which do not provides an extension to this
-point won't be allowed to use the command defined by the manager.Additionally
-the default policy concerning the release of instrument can be provided, as
-well as the name of the method to call when the manager need to get an
-instrument back."""
+BUILD_DEP_DESCRIPTION = \
+""" Plugin can contribute to this extensions point extension BuildDependencies
+declaration."""
+
+RUNTIME_DEP_DESCRIPTION = \
+""" Plugin can contribute to this extensions point extension
+RunTimeDependencies declaration."""
 
 SHOW_MANAGER_DESCRIPTION = \
 """ Show the task manager window."""
@@ -115,6 +146,12 @@ TASK_REQUEST_DESCRIPTION = \
 
 VIEW_REQUEST_DESCRIPTION = \
 """ Request the views associated to a list of tasks. """
+
+INTERFACE_REQUEST_DESCRIPTION = \
+""" Request the interfaces associated to a list of tasks or of names. """
+
+INTERFACE_VIEWS_REQUEST_DESCRIPTION = \
+""" Request the views associated to a list of interfaces. """
 
 FILTER_TASKS_DESCRIPTION = \
 """ Filter tasks using the provided filter (filter). """
@@ -135,11 +172,40 @@ MANAGER_STATE_DESCRIPTION = \
 """ The tasks manager gives access to the known tasks and filters."""
 
 
+def collect_tasks_and_interfaces(workbench, flat_walk):
+    """ Collector function for the build-dependencies extensions.
+
+    """
+    core = workbench.get_plugin('enaml.workbench.core')
+    classes = core.invoke_command('hqc_meas.task_manager.tasks_request',
+                                  {'tasks' : flat_walk['task_class']})
+    i_classes = core.invoke_command('hqc_meas.task_manager.interfaces_request',
+                                    {'interfaces' :
+                                     flat_walk['interface_class'],
+                                    })
+    return {'tasks': classes, 'interfaces': i_classes}
+
+#--- Manifest -----------------------------------------------------------------
+
 enamldef TaskManagerManifest(PluginManifest):
     """
     """
     id = 'hqc_meas.task_manager'
     factory = manager_plugin_factory
+
+    ExtensionPoint:
+        id = 'build-dependencies'
+        description = BUILD_DEP_DESCRIPTION
+    ExtensionPoint:
+        id = 'runtime-dependencies'
+        description = RUNTIME_DEP_DESCRIPTION
+
+    Extension:
+        id = 'task_classes'
+        point = 'hqc_meas.task_manager.build_dependencies'
+        BuildDependence:
+            walk_members = ['task_class', 'interface_class']
+            collect = collect_tasks_and_interfaces
     Extension:
         id = 'prefs'
         point = 'hqc_meas.preferences.pref_plugin'
@@ -173,6 +239,14 @@ enamldef TaskManagerManifest(PluginManifest):
             id = 'hqc_meas.task_manager.views_request'
             description = VIEW_REQUEST_DESCRIPTION
             handler = views_request
+        Command:
+            id = 'hqc_meas.task_manager.interfacess_request'
+            description = INTERFACE_REQUEST_DESCRIPTION
+            handler = interfaces_request
+        Command:
+            id = 'hqc_meas.task_manager.interface_views_request'
+            description = INTERFACE_VIEW_REQUEST_DESCRIPTION
+            handler = interface_views_request
         Command:
             id = 'hqc_meas.task_manager.filter_tasks'
             description = FILTER_TASKS_DESCRIPTION
