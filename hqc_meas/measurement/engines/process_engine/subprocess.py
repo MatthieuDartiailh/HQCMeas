@@ -14,7 +14,7 @@ from logging.handlers import RotatingFileHandler
 from multiprocessing import Process
 
 from hqc_meas.log_system.tools import (StreamToLogRedirector)
-from hqc_meas.task_management.config.api import IniConfigTask
+from hqc_meas.task_management.building import build_task_from_config
 from ..tools import MeasureSpy
 
 
@@ -107,23 +107,21 @@ class TaskProcess(Process):
                     break
 
                 # Get the measure.
-                name, config, runtimes, monitored_entries = self.pipe.recv()
+                name, config, build, runtime, mon_entries = self.pipe.recv()
 
                 # Build it by first extracting task classes from runtimes.
-                tasks = runtimes.pop('task_classes')
-                builder = IniConfigTask(task_classes=tasks)
-                root = builder.build_task_from_config(config)
+                root = build_task_from_config(config, build)
 
                 # Give all runtime dependencies to the root task.
-                root.run_time = runtimes
+                root.run_time = runtime
 
                 logger.info('Task built')
 
                 # There are entries in the database we are supposed to
                 # monitor start a spy to do it.
-                if monitored_entries:
+                if mon_entries:
                     spy = MeasureSpy(
-                        self.monitor_queue, monitored_entries,
+                        self.monitor_queue, mon_entries,
                         root.task_database)
 
                 # Set up the logger for this specific measurement.
@@ -189,7 +187,7 @@ class TaskProcess(Process):
                     logger.critical(message)
 
                 # If a spy was started kill it
-                if monitored_entries:
+                if mon_entries:
                     spy.close()
                     del spy
 
