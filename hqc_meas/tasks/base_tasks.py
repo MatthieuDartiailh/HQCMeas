@@ -74,12 +74,6 @@ class BaseTask(Atom):
     #: interruption check or parallel, wait features.
     perform_ = Callable()
 
-    def __init__(self, **kwargs):
-        """ Overridden init to make sure perform is wrapped correctly.
-
-        """
-        super(SimpleTask, self).__init__(**kwargs)
-        self._redefine_perform_()
 
     def perform(self):
         """ The main method of any task as it is this one which is called when
@@ -377,6 +371,8 @@ class SimpleTask(BaseTask):
     """ Task with no child task, written in pure Python.
 
     """
+    #--- Public API -----------------------------------------------------------
+
     #: Class attribute specifying if that task can be used in a loop
     loopable = False
 
@@ -390,7 +386,12 @@ class SimpleTask(BaseTask):
     #: - 'no_wait' : the list should specify which pool not to wait on.
     wait = Dict(Str(), List()).tag(pref=True)
 
-    #--- Public API -----------------------------------------------------------
+    def __init__(self, **kwargs):
+        """ Overridden init to make sure perform is wrapped correctly.
+
+        """
+        super(SimpleTask, self).__init__(**kwargs)
+        self._redefine_perform_()
 
     def write_in_database(self, name, value):
         """ Write a value to the right database entry.

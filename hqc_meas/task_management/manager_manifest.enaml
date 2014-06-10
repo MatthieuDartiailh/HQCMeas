@@ -14,7 +14,7 @@ from hqc_meas.utils.pref_plugin import Preferences
 from hqc_meas.utils.state_plugin import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 
-from .dependencies import BuildDependencies
+from .dependencies import BuildDependency
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
@@ -207,7 +207,7 @@ enamldef TaskManagerManifest(PluginManifest):
     Extension:
         id = 'task_classes'
         point = 'hqc_meas.task_manager.build_dependencies'
-        BuildDependence:
+        BuildDependency:
             walk_members = ['task_class', 'interface_class']
             collect = collect_tasks_and_interfaces
     Extension:

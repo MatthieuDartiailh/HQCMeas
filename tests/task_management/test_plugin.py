@@ -290,6 +290,9 @@ class Test(object):
         task = conf.build_task()
         assert_equal(task.task_name, 'Test')
 
+    def test_collect_dependencies(self):
+        pass
+
     #--- Test BuildDependencies -----------------------------------------------
 
     def test_build_dep_registation1(self):

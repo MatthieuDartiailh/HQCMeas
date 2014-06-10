@@ -8,7 +8,7 @@
 """
 from atom.api import Atom, ForwardInstance, Instance, Str
 
-from hqc_meas.atom_util import HasPrefAtom
+from hqc_meas.utils.atom_util import HasPrefAtom
 from hqc_meas.tasks.base_tasks import SimpleTask, BaseTask
 from ..utils.atom_util import member_from_str, tagged_members
 
