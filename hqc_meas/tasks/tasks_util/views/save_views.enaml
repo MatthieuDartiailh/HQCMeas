@@ -10,11 +10,15 @@ from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 
 
 enamldef HeaderDialog(Dialog): dial:
+
     attr model
     alias header : field.text
+    title = 'Header'
+
     Container:
         constraints = [vbox(field,
-                            )]
+                            hbox(default, spacer, cancel, ok))]
+
         MultilineField: field:
             hug_height = 'weak'
         PushButton: default:
