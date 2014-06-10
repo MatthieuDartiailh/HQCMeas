@@ -64,6 +64,16 @@ def test_child_addition_handling2():
     assert_equal(task2.get_from_database('task2_val2'), 'r')
 
 
+def test_child_deletion_handling1():
+    # Test that adding a task to the root task is correctly handled.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1',
+                        task_database_entries={'val1': 2.0})
+    root.children_task.append(task1)
+
+    root.children_task = []
+
+
 def test_giving_root1():
     # Test assembling a hierarchy and giving it a root task only later.
     root = RootTask()
