@@ -77,7 +77,8 @@ class IPS12010(VisaInstrument):
         self.set_communications_protocol(False, True)
         self.set_mode('TESLA')
 
-    def go_to_field(self, value, rate, auto_stop_heater=True):
+    def go_to_field(self, value, rate, auto_stop_heater=True,
+                    post_switch_wait=30):
         """
         """
         if self.target_field != value:
@@ -100,7 +101,7 @@ class IPS12010(VisaInstrument):
 
         if auto_stop_heater:
             self.heater_state = 'OFF'
-            sleep(30)
+            sleep(post_switch_wait)
             self.activity = 'To zero'
             sleep(1)
             while self.check_output() == 'Changing':

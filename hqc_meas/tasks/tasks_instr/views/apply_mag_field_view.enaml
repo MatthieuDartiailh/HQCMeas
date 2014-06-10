@@ -60,4 +60,15 @@ enamldef ApplyMagFieldView(BaseInstrumentView): view:
         tool_tip = fill(cleandoc('''Check to enable the automatic switch off
                             of the switch heater after each new value'''),60)
 
+    Conditional:
+        condition << task.auto_stop_heater
+        Label:
+            text = 'Auto stop heater'
+        FloatField:
+            hug_width = 'strong'
+            value := task.rate
+            tool_tip = fill(cleandoc('''Time to wait after closing the switch
+                                     heater before bringing the field to
+                                     zero'''),60)
+
 TASK_VIEW_MAPPING = {'ApplyMagFieldTask' : ApplyMagFieldView}
