@@ -907,9 +907,9 @@ class ComplexTask(BaseTask):
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        parameters : dict(str)
             Dictionary holding the new values to give to the members in string
-            format.
+            format (save for the children).
 
         Notes
         -----
