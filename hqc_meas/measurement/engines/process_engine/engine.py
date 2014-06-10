@@ -235,7 +235,7 @@ class ProcessEngine(BaseEngine):
             if int_status == 'STOPPING':
                 self._cleanup()
 
-            # This event should be handled in the main thread so thta this one
+            # This event should be handled in the main thread so that this one
             # can stay responsive otherwise the engine will be unable to
             # shutdown.
             deferred_call(setattr, self, 'done', (meas_status, mess))

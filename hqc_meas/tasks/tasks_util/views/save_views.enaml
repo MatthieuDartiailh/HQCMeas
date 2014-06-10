@@ -67,6 +67,7 @@ enamldef SaveView(GroupBox):
         hug_height = 'strong'
         enabled << bool(task.saving_target != 'Array')
         GroupBox: folder:
+            title = 'Directory'
             constraints = [hbox(path, explore),
                             align('v_center', path, explore)]
             QtLineCompleter: path:
@@ -82,6 +83,7 @@ enamldef SaveView(GroupBox):
                     if path:
                         task.folder = path
         GroupBox: file:
+            title = 'File'
             constraints = [hbox(name, header),
                             align('v_center', name, header)]
             QtLineCompleter: name:

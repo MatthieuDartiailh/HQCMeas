@@ -13,6 +13,7 @@ from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 
 from ..utils.pref_plugin import Preferences
 from ..utils.state_plugin import State
+from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 
 
 def manager_plugin_factory():
@@ -31,6 +32,15 @@ def show_manager(event):
     with enaml.imports():
         from .manager_view import InstrManagerView
     InstrManagerView(manager=manager).show()
+
+def show_starting_errors(event):
+    """ Handler for the 'hqc_meas.task_manager.show_errors' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+    ui = event.workbench.get_plugin('enaml.workbench.ui')
+    ErrorsDisplay(ui.window, title='Instr manager start up errors',
+                  errors=manager.report()).exec_()
 
 
 def matching_drivers(event):
@@ -103,6 +113,9 @@ instrument back."""
 SHOW_MANAGER_DESCRIPTION = \
 """ Show the instrument manager window."""
 
+SHOW_ERRORS_DESCRIPTION = \
+""" Show the errors which happened on plugin startup."""
+
 MATCHING_DRIVERS_DESCRIPTION = \
 """ Return a list of drivers whose types matches one in the provided list. """
 
@@ -169,6 +182,10 @@ enamldef InstrManagerManifest(PluginManifest):
             description = SHOW_MANAGER_DESCRIPTION
             handler = show_manager
         Command:
+            id = 'hqc_meas.instr_manager.show_starting_errors'
+            description = SHOW_ERRORS_DESCRIPTION
+            handler = show_starting_errors
+        Command:
             id = 'hqc_meas.instr_manager.matching_drivers'
             description = MATCHING_DRIVERS_DESCRIPTION
             handler = matching_drivers
@@ -212,3 +229,7 @@ enamldef InstrManagerManifest(PluginManifest):
             path = 'tools/instr/show_manager'
             label = 'Manager'
             command = 'hqc_meas.instr_manager.show_manager'
+        ActionItem:
+            path = 'tools/instr/show_starting_errors'
+            label = 'Start up errors'
+            command = 'hqc_meas.instr_manager.show_starting_errors'

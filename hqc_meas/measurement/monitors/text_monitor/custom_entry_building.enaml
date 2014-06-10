@@ -7,6 +7,8 @@
 from atom.api import (Atom, Str, List, ContainerList, Dict, Instance)
 from enaml.widgets.api import (ObjectCombo, Dialog, Container, Field, Label,
                                PushButton)
+from enaml.layout.api import hbox, vbox, spacer
+
 from collections import Counter
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.widgets.list_editor import ListEditor
@@ -154,7 +156,7 @@ enamldef EntryDialog(Dialog): dial:
         ListEditor(_EntrySelection): list:
             list.model << builder
             list.iterable_name = 'used_entries'
-            list.factory = Entry
+            list.factory = _Entry
             list.kwargs = {'entries' : builder.map_entries.keys()}
 
         Label:for_lab:

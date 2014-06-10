@@ -10,6 +10,7 @@ from enaml.workbench.ui.api import ActionItem
 from inspect import cleandoc
 from hqc_meas.utils.preferences import Preferences
 from hqc_meas.app_closing import ClosingApp
+from hqc_meas.instruments.instr_user import InstrUser
 
 
 def measure_plugin_factory():
@@ -55,6 +56,12 @@ enamldef MeasureManifest(PluginManifest):
         point = u'hqc_meas.preferences.pref_plugin'
         Preferences:
             pass
+
+    Extension:
+        id = 'instr_user'
+        point = 'hqc_meas.instr_manager.users'
+        InstrUser:
+            default_policy = 'unreleasable'
 
     Extension:
         id = 'app_closing'

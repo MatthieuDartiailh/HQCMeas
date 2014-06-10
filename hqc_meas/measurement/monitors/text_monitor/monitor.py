@@ -64,7 +64,7 @@ class TextMonitor(BaseMonitor):
     def stop(self):
         if self._view.proxy_is_active:
             self._view.close()
-            self._view = None
+        self._view = None
 
     def process_news(self, news):
 

@@ -84,17 +84,17 @@ class BaseLoopTask(ComplexTask):
     def _on_timing_changed(self, change):
         """
         """
-        if change['type'] == 'update':
-            if change['value']:
-                self.process_ = self.process_with_timing
-                aux = self.task_database_entries.copy()
-                aux['elapsed_time'] = 1.0
-                self.task_database_entries = aux
-            else:
-                self.process_ = self.process_no_timing
-                aux = self.task_database_entries.copy()
-                aux.pop('elapsed_time')
-                self.task_database_entries = aux
+        if change['value']:
+            self.process_ = self.process_with_timing
+            aux = self.task_database_entries.copy()
+            aux['elapsed_time'] = 1.0
+            self.task_database_entries = aux
+        else:
+            self.process_ = self.process_no_timing
+            aux = self.task_database_entries.copy()
+            if 'elapsed_time' in aux:
+                del aux['elapsed_time']
+            self.task_database_entries = aux
 
 
 class SimpleLoopTask(BaseLoopTask):

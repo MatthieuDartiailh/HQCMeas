@@ -14,6 +14,7 @@ from configobj import Section, ConfigObj
 from threading import Thread
 from itertools import chain
 from inspect import cleandoc
+from copy import deepcopy
 import os
 
 from ..utils.atom_util import member_from_str, tagged_members
@@ -143,8 +144,8 @@ class BaseTask(Atom):
                 for entry in removed:
                     self.remove_from_database(self.task_name + '_' + entry)
                 for entry in added:
-                    self.write_in_database(entry,
-                                           self.task_database_entries[entry])
+                    new_value = deepcopy(self.task_database_entries[entry])
+                    self.write_in_database(entry, new_value)
 
     def _list_database_entries(self):
         """ Convenience to get the accesible entries in the database.
@@ -214,9 +215,13 @@ class SimpleTask(BaseTask):
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
+                # Perform a deepcopy of the entry value as I don't want to
+                # alter that default value when delaing with the database later
+                # on (apply for list and dict).
+                value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
                                              self.task_name + '_' + entry,
-                                             self.task_database_entries[entry])
+                                             value)
 
     def unregister_from_database(self):
         """ Remove the task entries from the database.
@@ -577,9 +582,13 @@ class ComplexTask(BaseTask):
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
+                # Perform a deepcopy of the entry value as I don't want to
+                # alter that default value when delaing with the database later
+                # on (apply for list and dict).
+                value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
                                              self.task_name + '_' + entry,
-                                             self.task_database_entries[entry])
+                                             value)
 
         self.task_database.create_node(self.task_path, self.task_name)
 
@@ -679,9 +688,9 @@ class ComplexTask(BaseTask):
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        parameters : dict(str)
             Dictionary holding the new values to give to the members in string
-            format.
+            format (save for the children).
 
         Notes
         -----
@@ -703,7 +712,7 @@ class ComplexTask(BaseTask):
 
                 setattr(self, name, validated)
 
-            # Then we deal with the choild tasks
+            # Then we deal with the child tasks
             elif meta and 'child' in meta:
                 if name not in parameters:
                     continue
@@ -937,7 +946,7 @@ class RootTask(ComplexTask):
         for child in self.children_task:
             result &= child.process_(child)
         pools = self.task_database.get_value('root', 'threads')
-        for pool in pools.items():
+        for pool in pools.values():
             for thread in pool:
                 thread.join()
         instrs = self.task_database.get_value('root', 'instrs')
@@ -955,9 +964,15 @@ class RootTask(ComplexTask):
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
+                # Perform a deepcopy of the entry value as I don't want to
+                # alter that default value when delaing with the database later
+                # on (apply for list and dict).
+                # The 'instrs' and 'threads' entries were the principal .
+                # motivations for using that mechanism.
+                value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
                                              entry,
-                                             self.task_database_entries[entry])
+                                             value)
 
         self.task_database.create_node(self.task_path, self.task_name)
 

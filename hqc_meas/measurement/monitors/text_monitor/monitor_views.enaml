@@ -132,13 +132,12 @@ enamldef TextMonitorPage(Page): dial:
 # TODO refactor
         PushButton: edit_rules:
             text = 'Edit rules'
-            enabled = False
-#            clicked ::
-#                d = EditRulesView(parent = dial, monitor = monitor)
-#                d.exec_()
-#                if d.edition_performed:
-#                    monitor.save_rules()
-#                    monitor.refresh_monitored_entries()
+#            enabled = False
+            clicked ::
+                d = EditRulesView(parent=dial, monitor=monitor)
+                d.exec_()
+                if d.edition_performed:
+                    monitor.refresh_monitored_entries()
 
         PushButton: manual_entries:
             text = 'Add entry'

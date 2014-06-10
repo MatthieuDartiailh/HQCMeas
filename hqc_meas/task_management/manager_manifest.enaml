@@ -12,6 +12,7 @@ from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 
 from ..utils.pref_plugin import Preferences
 from ..utils.state_plugin import State
+from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
@@ -28,6 +29,15 @@ def manager_plugin_factory():
 #    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
 #    from .manager_view import TaskManagerView
 #    TaskManagerView(manager=manager).show()
+
+def show_starting_errors(event):
+    """ Handler for the 'hqc_meas.task_manager.show_errors' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    ui = event.workbench.get_plugin('enaml.workbench.ui')
+    ErrorsDisplay(ui.window, title='Task manager start up errors',
+                  errors=manager.report()).exec_()
 
 
 def tasks_request(event):
@@ -85,6 +95,7 @@ def build_root(event):
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.build_root(**event.parameters)
 
+
 INSTR_USERS_DESCRIPTION = \
 """ Extensions to this point can be used to provide the id of a plugin
 which will use instruments. Plugins which do not provides an extension to this
@@ -94,8 +105,10 @@ well as the name of the method to call when the manager need to get an
 instrument back."""
 
 SHOW_MANAGER_DESCRIPTION = \
-""" Show the instrument manager window."""
+""" Show the task manager window."""
 
+SHOW_ERRORS_DESCRIPTION = \
+""" Show the errors which happened on plugin startup."""
 
 TASK_REQUEST_DESCRIPTION = \
 """ Request the infos associated to a list of tasks. """
@@ -149,6 +162,10 @@ enamldef TaskManagerManifest(PluginManifest):
 #            description = SHOW_MANAGER_DESCRIPTION
 #            handler = show_manager
         Command:
+            id = 'hqc_meas.task_manager.show_starting_errors'
+            description = SHOW_ERRORS_DESCRIPTION
+            handler = show_starting_errors
+        Command:
             id = 'hqc_meas.task_manager.tasks_request'
             description = TASK_REQUEST_DESCRIPTION
             handler = tasks_request
@@ -189,3 +206,7 @@ enamldef TaskManagerManifest(PluginManifest):
 #            path = '/tasks/show_manager'
 #            label = 'Manager'
 #            command = 'hqc_meas.task_manager.show_manager'
+        ActionItem:
+            path = 'tools/tasks/show_manager'
+            label = 'Start up errors'
+            command = 'hqc_meas.task_manager.show_starting_errors'

@@ -87,6 +87,8 @@ class TaskProcess(Process):
         logger = logging.getLogger()
         redir_stdout = StreamToLogRedirector(logger)
         sys.stdout = redir_stdout
+        redir_stderr = StreamToLogRedirector(logger, 'stderr')
+        sys.stderr = redir_stderr
         logger.info('Logger parametrised')
 
         logger.info('Process running')
@@ -177,7 +179,7 @@ class TaskProcess(Process):
 
                 # They fail, mark the measure as failed and go on.
                 else:
-                    mes = 'Tests failed see log for full records.'
+                    mes = 'Tests failed, see log for full records.'
                     self.pipe.send(('FAILED', 'READY', mes))
 
                     # Log the tests that failed.

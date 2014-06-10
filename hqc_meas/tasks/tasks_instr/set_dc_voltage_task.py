@@ -36,7 +36,7 @@ class SetDCVoltageTask(InstrumentTask):
     use_parallel = Bool(True).tag(pref=True)
 
     #Actually a Float but I don't want it to get initialised at 0
-    last_value = Value
+    last_value = Value()
 
     driver_list = ['YokogawaGS200', 'Yokogawa7651']
     loopable = True
@@ -62,7 +62,7 @@ class SetDCVoltageTask(InstrumentTask):
                     configured to output a voltage'''.format(self.task_name))
                 log.fatal(mes)
                 self.root_task.task_stop.set()
-                return
+                return False
 
         if target_value is not None:
             value = target_value

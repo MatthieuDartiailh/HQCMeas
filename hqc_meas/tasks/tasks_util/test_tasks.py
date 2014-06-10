@@ -67,6 +67,7 @@ class SleepTask(SimpleTask):
 
     def process(self):
         """ Sleep.
+
         """
         sleep(self.time)
         return True
@@ -84,6 +85,7 @@ class DefinitionTask(SimpleTask):
 
     def process(self):
         """ Do nothing.
+
         """
         return True
 

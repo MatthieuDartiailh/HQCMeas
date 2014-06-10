@@ -11,8 +11,10 @@ from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 
 from .rules import (AbstractMonitorRule, RejectRule, FormatRule)
 
+
 enamldef NoneView(Container):
     attr rule
+
 
 enamldef RejectRuleView(Form):
     attr rule
@@ -24,6 +26,7 @@ enamldef RejectRuleView(Form):
         text = 'Suffix'
     Field:
         text := rule.suffixes[0]
+
 
 enamldef SuffixField(Dialog): dial:
     alias suffix : field.text
@@ -39,6 +42,7 @@ enamldef SuffixField(Dialog): dial:
         PushButton: cancel:
             text = 'Cancel'
             clicked :: dial.reject()
+
 
 enamldef FormatRuleView(Container):
     attr rule
@@ -85,11 +89,13 @@ enamldef FormatRuleView(Container):
         text = 'Formatting'
     QtLineCompleter: for_val:
         text := rule.new_entry_formatting
-        entries_updater = rule.get_suffixes
+        entries << rule.suffixes
+
 
 RULES_VIEWS = {type(None) : NoneView,
               RejectRule : RejectRuleView,
               FormatRule : FormatRuleView}
+
 
 enamldef CreateRuleDialog(Dialog): dial:
     attr rule = None
@@ -119,6 +125,7 @@ enamldef CreateRuleDialog(Dialog): dial:
             clicked ::
                 dial.reject()
 
+
 enamldef EditRuleDialog(Dialog): dial:
     attr rule
     title = 'Editing : {}'.format(rule.name)
@@ -135,6 +142,7 @@ enamldef EditRuleDialog(Dialog): dial:
             text = 'Close'
             clicked ::
                 dial.accept()
+
 
 enamldef EditRulesView(Dialog): dial:
     attr monitor

@@ -126,7 +126,7 @@ class YokogawaGS200(VisaInstrument):
         value = self.ask('SOURce:FUNCtion?')
         if value is not None:
             #Stripping leading and trailing '
-            return value[1:-1]
+            return value
         else:
             raise InstrIOError('Instrument did not return the function')
 
