@@ -53,11 +53,13 @@ def flatten_config(config, entries):
     """
     results = defaultdict(set)
     for entry in entries:
+        # Make sure that all entries exists in the dict.
+        results[entry]
         if entry in config.scalars:
             results[entry].add(config[entry])
 
     for section in config.sections:
-        aux = flatten_config(section, entries)
+        aux = flatten_config(config[section], entries)
         for key in aux:
             results[key].update(aux[key])
 
