@@ -149,7 +149,7 @@ class PNASetPowerTask(SingleChannelPNATask):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        if not power:
+        if power is None:
             power = self.format_and_eval_string(self.power)
         self.channel_driver.port = self.port
         self.channel_driver.power = power
