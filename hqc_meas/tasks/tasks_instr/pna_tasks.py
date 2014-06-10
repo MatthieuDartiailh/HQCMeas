@@ -117,12 +117,13 @@ class PNASetFreqTask(SingleChannelPNATask):
         """
         """
         test, traceback = super(PNASetFreqTask, self).check(*args, **kwargs)
-        try:
-            self.format_and_eval_string(self.frequency)
-        except Exception:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-freq'] = \
-                'Failed to eval the power formula {}'.format(self.frequency)
+        if self.frequency:
+            try:
+                self.format_and_eval_string(self.frequency)
+            except Exception:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-freq'] = \
+                    'Failed to eval the power formula {}'.format(self.frequency)
 
         return test, traceback
 
@@ -161,12 +162,13 @@ class PNASetPowerTask(SingleChannelPNATask):
         """
         """
         test, traceback = super(PNASetPowerTask, self).check(*args, **kwargs)
-        try:
-            self.format_and_eval_string(self.power)
-        except Exception:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-power'] = \
-                'Failed to eval the power formula {}'.format(self.power)
+        if self.power:
+            try:
+                self.format_and_eval_string(self.power)
+            except Exception:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-power'] = \
+                    'Failed to eval the power formula {}'.format(self.power)
         return test, traceback
 
 

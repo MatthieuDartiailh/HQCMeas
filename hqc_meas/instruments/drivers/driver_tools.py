@@ -255,10 +255,11 @@ class BaseInstrument(object):
 
         """
         test = lambda obj: isinstance(obj, instrument_property)
+        cache = self._cache
         if properties:
             for name, instr_prop in inspect.getmembers(self.__class__, test):
-                if name in properties:
-                    del self._cache[name]
+                if name in properties and name in cache:
+                    del cache[name]
         else:
             self._cache = {}
 
