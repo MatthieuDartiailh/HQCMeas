@@ -1171,7 +1171,7 @@ class ComplexTask(BaseTask):
 
     def _refresh_access_exceptions(self, added=[], removed=[], child=None,
                                    observer=False):
-        """ Refresh the database access execptions.
+        """ Refresh the database access exceptions.
 
         This method leave the access_exs attribute unchanged it is the
         responsability of the caller to update it.
@@ -1337,6 +1337,7 @@ class RootTask(ComplexTask):
         super(RootTask, self).__init__(*args, **kwargs)
         self.register_in_database()
         self.root_task = self
+        self.parent_task = self
 
     def check(self, *args, **kwargs):
         traceback = {}
