@@ -72,11 +72,12 @@ class PNATasks(InstrumentTask):
             return False, traceback
 
         return True, traceback
-        
+
+
 class SingleChannelPNATask(PNATasks):
-    
+
     channel_driver = Value()
-    
+
     @observe('channel')
     def _update_channels(self, change):
         self.channels = [change['value']]
