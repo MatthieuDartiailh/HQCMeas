@@ -125,7 +125,8 @@ class SaveTask(SimpleTask):
 
         #Closing
         if self.line_index == self.array_length:
-            self.write_in_database('array', self.array)
+            if self.saving_target != 'File':
+                self.write_in_database('array', self.array)
             self.file_object.close()
             self.initialized = False
 
