@@ -28,7 +28,7 @@ from .config.api import (SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask,
 from .building import build_task, build_root
 from .saving import save_task
 from .templates import load_template
-from .dependencies import BuildDependencies, RuntimeDependencies
+from .dependencies import BuildDependency, RuntimeDependency
 
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -287,12 +287,20 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        dependencies : dict or dicts
-            Dict holding all the classes or other dependencies to build, run
+        result : bool
+            Flag indicating the success of the operation.
+
+        dependencies : dict
+            In case of success:
+            - Dict holding all the classes or other dependencies to build, run
             or build and run a task without any access to the workbench.
             If a single kind of dependencies is requested a single dict is
             returned otherwise two are returned one for the build ones and one
             for the runtime ones
+
+            Otherwise:
+            - dict holding the id of the dependencie and the asssociated
+            error message.
 
         """
         members = []
@@ -311,20 +319,30 @@ class TaskManagerPlugin(HasPrefPlugin):
         flat_walk = flatten_walk(walk, members + callables.keys())
 
         deps = ({}, {})
+        errors = {}
         if 'build' in dependencies:
             for build_dep in self._build_dep_collectors:
-                deps[0].update(build_dep.collect(flat_walk))
+                try:
+                    deps[0].update(build_dep.collect(flat_walk))
+                except ValueError as e:
+                    errors[build_dep.id] = e.message
 
         if 'runtime' in dependencies:
             for runtime_dep in self._runtime_dep_collectors:
-                deps[1].update(runtime_dep.collect(flat_walk))
+                try:
+                    deps[1].update(runtime_dep.collect(flat_walk))
+                except ValueError as e:
+                    errors[runtime_dep.id] = e.message
+
+        if errors:
+            return False, errors
 
         if 'build' in dependencies and 'runtime' in dependencies:
-            return deps
+            return True, deps[0], deps[1]
         elif 'build' in dependencies:
-            return deps[0]
+            return True, deps[0]
         else:
-            return deps[1]
+            return True, deps[1]
 
     def report(self):
         """ Give access to the failures which happened at startup.
@@ -667,7 +685,7 @@ class TaskManagerPlugin(HasPrefPlugin):
                 if build_dep.id in build_deps:
                     msg = "build_dep '%s' is already registered"
                     raise ValueError(msg % build_dep.id)
-                if not build_dep.walk_members and not build_dep.walk_callables:
+                if not build_dep.walk_members:
                     msg = "build_dep '%s' does not declare any dependencies"
                     raise ValueError(msg % build_dep.id)
                 if build_dep.collector is None:
@@ -687,15 +705,15 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        build_deps : list(BuildDependencies)
-            The list of BuildDependencies declared by the extension.
+        build_deps : list(BuildDependency)
+            The list of BuildDependency declared by the extension.
 
         """
         workbench = self.workbench
-        build_deps = extension.get_children(BuildDependencies)
+        build_deps = extension.get_children(BuildDependency)
         if extension.factory is not None and not build_deps:
             for build_dep in extension.factory(workbench):
-                if not isinstance(build_dep, BuildDependencies):
+                if not isinstance(build_dep, BuildDependency):
                     msg = "extension '%s' created non-Monitor."
                     args = (extension.qualified_id)
                     raise TypeError(msg % args)
@@ -744,7 +762,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         self.runtime_deps = runtime_deps
 
     def _load_runtime_deps(self, extension):
-        """ Load the RuntimeDependencies objects for the given extension.
+        """ Load the RuntimeDependency objects for the given extension.
 
         Parameters
         ----------
@@ -753,16 +771,16 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         Returns
         -------
-        runtime_deps : list(RuntimeDependencies)
-            The list of RuntimeDependencies declared by the extension.
+        runtime_deps : list(RuntimeDependency)
+            The list of RuntimeDependency declared by the extension.
 
         """
         workbench = self.workbench
-        runtime_deps = extension.get_children(RuntimeDependencies)
+        runtime_deps = extension.get_children(RuntimeDependency)
         if extension.factory is not None and not runtime_deps:
             for runtime_dep in extension.factory(workbench):
-                if not isinstance(runtime_dep, RuntimeDependencies):
-                    msg = "extension '%s' created non-RuntimeDependencies."
+                if not isinstance(runtime_dep, RuntimeDependency):
+                    msg = "extension '%s' created non-RuntimeDependency."
                     args = (extension.qualified_id)
                     raise TypeError(msg % args)
                 runtime_deps.append(runtime_dep)

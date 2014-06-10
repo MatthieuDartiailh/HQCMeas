@@ -11,6 +11,7 @@ TaskManager and should be called on their own. There are implemented here only
 to simplify the manager.
 
 """
+import logging
 from enaml.widgets.api import FileDialogEx
 
 from hqc_meas.utils.configobj_ops import flatten_config
@@ -63,10 +64,11 @@ def _gather_build_dep_from_config(manager, config):
 
     Returns
     -------
-    build_dep : nested dict
+    build_dep : nested dict or None
         Dictionary holding all the build dependencies of a task hierarchy. With
         this dict and the config the tas hierarchy can be reconstructed without
         accessing the workbech.
+        None is case of failure.
 
     """
     members = []
@@ -77,7 +79,12 @@ def _gather_build_dep_from_config(manager, config):
 
     build_dep = {}
     for build_dep in manager._build_dep_collectors:
-        build_dep.update(build_dep.collect(flat_config))
+        try:
+            build_dep.update(build_dep.collect(flat_config))
+        except ValueError as e:
+            logger = logging.getLogger(__name__)
+            logger.error(e.message)
+            return None
 
     return build_dep
 
@@ -102,6 +109,8 @@ def build_task_from_config(config, dep_source):
     """
     if not isinstance(dep_source, dict):
         dep_source = _gather_build_dep_from_config(dep_source, config)
+        if dep_source is None:
+            return None
 
     task_class = dep_source[config.pop('task_class')]
     return task_class.build_from_config(config, dep_source)
@@ -147,5 +156,8 @@ def build_root(manager, mode, config=None, parent_ui=None):
 
     if config:
         build_dep = _gather_build_dep_from_config(manager, config)
+        if build_dep is None:
+            return None
+
         config.pop('task_class')
         return RootTask.build_from_config(config, build_dep)

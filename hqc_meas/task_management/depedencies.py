@@ -11,7 +11,7 @@ from atom.api import (Callable, List, Dict, Str, Unicode)
 from enaml.core.declarative import Declarative, d_
 
 
-class BuildDependencies(Declarative):
+class BuildDependency(Declarative):
     """Extension to the 'build-dependencies' extensions point of the
     TaskManagerPlugin.
 
@@ -27,7 +27,8 @@ class BuildDependencies(Declarative):
         Callable in charge of collecting the identified build dependencies.
         It should take as arguments the workbench of the application and a dict
         in the format {name: set()}. It should return a dict holding the
-        dependencies (as dictionaries) in categories.
+        dependencies (as dictionaries) in categories. In case of failure it
+        should raise a value error.
 
     """
     id = d_(Unicode())
@@ -37,7 +38,7 @@ class BuildDependencies(Declarative):
     collect = d_(Callable())
 
 
-class RuntimeDependencies(Declarative):
+class RuntimeDependency(Declarative):
     """Extension to the 'runtime-dependencies' extensions point of the
     TaskManagerPlugin.
 

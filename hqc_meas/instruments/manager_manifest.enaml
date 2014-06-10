@@ -156,9 +156,11 @@ enamldef InstrManagerManifest(PluginManifest):
     """
     id = 'hqc_meas.instr_manager'
     factory = manager_plugin_factory
+
     ExtensionPoint:
         id = 'users'
         description = INSTR_USERS_DESCRIPTION
+
     Extension:
         id = 'prefs'
         point = 'hqc_meas.preferences.pref_plugin'

@@ -177,13 +177,17 @@ def collect_tasks_and_interfaces(workbench, flat_walk):
 
     """
     core = workbench.get_plugin('enaml.workbench.core')
-    classes = core.invoke_command('hqc_meas.task_manager.tasks_request',
-                                  {'tasks' : flat_walk['task_class']})
-    i_classes = core.invoke_command('hqc_meas.task_manager.interfaces_request',
-                                    {'interfaces' :
-                                     flat_walk['interface_class'],
-                                    })
-    return {'tasks': classes, 'interfaces': i_classes}
+    t_res = core.invoke_command('hqc_meas.task_manager.tasks_request',
+                                {'tasks' : flat_walk['task_class']})
+    i_res = core.invoke_command('hqc_meas.task_manager.interfaces_request',
+                                {'interfaces' : flat_walk['interface_class']})
+
+    if t_res[1] or i_res[1]:
+        mess = 'Missing tasks: {}, missing interfaces: {}'.format(t_res[1],
+                                                                  i_res[1])
+        raise ValueError(mess)
+
+    return {'tasks': t_res[0], 'interfaces': i_res[0]}
 
 #--- Manifest -----------------------------------------------------------------
 
