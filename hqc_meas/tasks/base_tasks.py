@@ -74,7 +74,6 @@ class BaseTask(Atom):
     #: interruption check or parallel, wait features.
     perform_ = Callable()
 
-
     def perform(self):
         """ The main method of any task as it is this one which is called when
         the measurement is performed. This method should always be decorated

@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 """
-from atom.api import (Float, Bool, Value, Str, set_default)
+from atom.api import (Float, Bool, Value, Str, Int, set_default)
 
 import time
 import logging
 from inspect import cleandoc
 
-from hqc_meas.tasks.api import InstrumentTask
-from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
+from hqc_meas.tasks.api import InstrumentTask, InstrTaskInterface
 
 
 class SetDCVoltageTask(InstrumentTask):
@@ -30,38 +29,42 @@ class SetDCVoltageTask(InstrumentTask):
     # Whether the current value of the instr should be checked each time.
     check_value = Bool(False).tag(pref=True)
 
-    # Whether to perform the task action in parallel.
-    use_parallel = Bool(True).tag(pref=True)
-
     #Actually a Float but I don't want it to get initialised at 0
     last_value = Value()
 
-    driver_list = ['YokogawaGS200', 'Yokogawa7651']
+    parallel = set_default({'activated': True, 'pool': 'instr'})
     loopable = True
     task_database_entries = set_default({'voltage': 1.0})
 
-    def __init__(self, **kwargs):
-        super(SetDCVoltageTask, self).__init__(**kwargs)
-        self.make_parallel('instr', 'use_parallel')
+#    @smooth_instr_crash
+#    def process(self, target_value=None):
+#        """ Set the output of the instr.
+#
+#        """
+#        if not self.driver:
+#            self.start_driver()
+#
+#        if self.driver.owner != self.task_name:
+#            self.driver.owner = self.task_name
+#            if self.driver.function != 'VOLT':
+#                log = logging.getLogger()
+#                mes = cleandoc('''Instrument assigned to task {} is not
+#                    configured to output a voltage'''.format(self.task_name))
+#                log.fatal(mes)
+#                self.root_task.task_stop.set()
+#                return False
 
-    @smooth_instr_crash
-    def process(self, target_value=None):
-        """ Set the output of the instr.
+    def smooth_set(self, target_value, setter):
+        """ Smoothly set the voltage.
+
+        target_value : float
+            Voltage to reach.
+
+        setter : callable
+            Function to set the voltage, should take as single argument the
+            value.
 
         """
-        if not self.driver:
-            self.start_driver()
-
-        if self.driver.owner != self.task_name:
-            self.driver.owner = self.task_name
-            if self.driver.function != 'VOLT':
-                log = logging.getLogger()
-                mes = cleandoc('''Instrument assigned to task {} is not
-                    configured to output a voltage'''.format(self.task_name))
-                log.fatal(mes)
-                self.root_task.task_stop.set()
-                return False
-
         if target_value is not None:
             value = target_value
         else:
@@ -80,7 +83,7 @@ class SetDCVoltageTask(InstrumentTask):
 
         elif self.back_step == 0:
             self.write_in_database('voltage', value)
-            self.driver.voltage = value
+            setter(value)
             return True
 
         else:
@@ -93,13 +96,13 @@ class SetDCVoltageTask(InstrumentTask):
             while True:
                 # Avoid the accumulation of rounding errors
                 last_value = round(last_value + step, 9)
-                self.driver.voltage = last_value
+                setter(last_value)
                 if abs(value-last_value) > abs(step):
                     time.sleep(self.delay)
                 else:
                     break
 
-        self.driver.voltage = value
+        setter(value)
         self.last_value = value
         self.write_in_database('voltage', value)
 
@@ -122,3 +125,68 @@ class SetDCVoltageTask(InstrumentTask):
         return test, traceback
 
 KNOWN_PY_TASKS = [SetDCVoltageTask]
+
+
+class SimpleSourceInterface(InstrTaskInterface):
+    """
+    """
+
+    drivers_list = ['YokogawaGS200', 'Yokogawa7651']
+
+    def perform(self, value=None):
+        """
+        """
+        task = self.task
+        if not task.driver:
+            task.start_driver()
+
+        if task.driver.owner != task.task_name:
+            task.driver.owner = task.task_name
+            if hasattr(task.driver, 'function') and\
+                    self.driver.function != 'VOLT':
+                log = logging.getLogger()
+                mes = cleandoc('''Instrument assigned to task {} is not
+                    configured to output a voltage'''.format(task.task_name))
+                log.fatal(mes)
+                task.root_task.task_stop.set()
+                return False
+
+        setter = lambda value: setattr(task.driver, 'voltage', value)
+
+        return task.smooth_set(value, setter)
+
+
+class MultiChannelSourceInterface(InstrTaskInterface):
+    """
+    """
+    drivers_list = ['TinyBilt']
+
+    #: Id of the channel to use.
+    channel = Int().tag(pref=True)
+
+    #: Reference to the driver for the channel.
+    channel_driver = Value()
+
+    def perform(self, value=None):
+        """
+        """
+        task = self.task
+        if not task.driver:
+            task.start_driver()
+
+
+
+        if task.driver.owner != task.task_name:
+            task.driver.owner = task.task_name
+            if hasattr(task.driver, 'function') and\
+                    self.driver.function != 'VOLT':
+                log = logging.getLogger()
+                mes = cleandoc('''Instrument assigned to task {} is not
+                    configured to output a voltage'''.format(task.task_name))
+                log.fatal(mes)
+                task.root_task.task_stop.set()
+                return False
+
+        setter = lambda value: setattr(task.driver, 'voltage', value)
+
+        return task.smooth_set(value, setter)
