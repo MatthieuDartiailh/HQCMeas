@@ -246,20 +246,23 @@ enamldef _AccessEditor(GroupBox):
     title = task.task_name if task else ''
 
     FlowArea:
-        hug_height = 'strong'
+        hug_height = 'medium'
         Looper:
             iterable << _model.children_entries
             FlowItem:
                 Container:
+                    padding = 0
                     Conditional:
                         condition << task.task_depth == 0 if task else False
                         Container:
+                            padding = 0
                             Label:
                                 text << loop_item
 
                     Conditional:
                         condition << task.task_depth > 0 if task else True
                         Container:
+                            padding = 0
                             CheckBox:
                                 text << loop_item
                                 checked = loop_item in task.access_exs\
@@ -299,7 +302,7 @@ enamldef DatabaseAccessEditor(BaseEditor): editor:
         model.unbind_observers()
 
     Container:
-        ScrollArea:
+        ScrollArea: scroll:
             _AccessEditor:
                 task << selected_task
                 _model << model
