@@ -37,8 +37,10 @@ class InstrumentTask(SimpleTask):
         traceback = {}
 
         if self.selected_profile:
-            if run_time:
-                config = run_time['profiles'][self.selected_profile]
+            if 'profiles' in run_time:
+                # Here use get to avoid errors if we were not granted the use
+                # of the profile. In that case config won't be used.
+                config = run_time['profiles'].get(self.selected_profile)
         else:
             traceback[self.task_path + '/' + self.task_name] =\
                 'You must provide an instrument profile'
