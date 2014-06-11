@@ -123,7 +123,8 @@ class PNASetFreqTask(SingleChannelPNATask):
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
-                    'Failed to eval the power formula {}'.format(self.frequency)
+                    'Failed to eval the power formula {}'.format(
+                        self.frequency)
 
         return test, traceback
 
@@ -254,7 +255,7 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
                 data = self.channel_driver.read_formatted_data()[0]
             else:
                 data = self.channel_driver.read_raw_data()[0]
-            self.write_in_database(':'.join(self.measures[i]), data)
+            self.write_in_database('_'.join(self.measures[i]), data)
 
         return True
 
@@ -264,7 +265,7 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
         entries = {}
         for measure in change['value']:
             if measure[1]:
-                entries[':'.join(measure)] = 1.0
+                entries['_'.join(measure)] = 1.0
             else:
                 entries[measure[0]] = 1.0 + 1j
 
@@ -273,7 +274,8 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
 
 class PNASweepTask(SingleChannelPNATask):
     """Measure the specified parameters while sweeping either the frequency or
-    the power.
+    the power. Measure are saved in an array with named fields : Frequency or
+    Power and then 'Measure'_'Format' (S21_MLIN, S33 if Raw)
 
     Wait for any parallel operation before execution.
 
@@ -356,7 +358,7 @@ class PNASweepTask(SingleChannelPNATask):
             else:
                 data.append(self.channel_driver.read_raw_data(meas_name))
 
-        names = [self.sweep_type] + [':'.join(measure) 
+        names = [self.sweep_type] + ['_'.join(measure)
                                      for measure in self.measures]
         final_arr = np.rec.fromarrays(data, names=names)
         self.write_in_database('sweep_data', final_arr)
