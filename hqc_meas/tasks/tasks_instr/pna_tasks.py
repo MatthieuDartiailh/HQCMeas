@@ -356,7 +356,8 @@ class PNASweepTask(SingleChannelPNATask):
             else:
                 data.append(self.channel_driver.read_raw_data(meas_name))
 
-        names = [self.sweep_type] + meas_names
+        names = [self.sweep_type] + [':'.join(measure) 
+                                     for measure in self.measures]
         final_arr = np.rec.fromarrays(data, names=names)
         self.write_in_database('sweep_data', final_arr)
 
