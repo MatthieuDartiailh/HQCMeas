@@ -16,18 +16,18 @@ enamldef ArrayExtremaView(GroupBox): view:
         text = 'Target array'
     QtLineCompleter: arr_val:
         hug_width = 'ignore'
-        text >> task.target_array
+        text := task.target_array
         entries_updater << task.accessible_database_entries
         tool_tip = EVALUATER_TOOLTIP
     Label: col_lab:
         text = 'Column name'
     Field: col_val:
         hug_width = 'ignore'
-        text >> task.column_name
+        text := task.column_name
     Label: mod_lab:
         text = 'Mode'
     ObjectCombo: mod_val:
         items = list(task.get_member('mode').items)
-        selected >> mode
+        selected := task.mode
 
 TASK_VIEW_MAPPING = {'ArrayExtremaTask' : ArrayExtremaView}
