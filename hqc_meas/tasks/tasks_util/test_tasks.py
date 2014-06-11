@@ -94,12 +94,12 @@ class DefinitionTask(SimpleTask):
 
         for i, entry in enumerate(self.definitions):
             try:
-                val = safe_eval(entry.definition)
-                self.write_in_database(entry.label, val)
+                val = safe_eval(entry[1])
+                self.write_in_database(entry[0], val)
             except Exception:
                 test = False
                 path = self.task_path + '/' + self.task_name + \
-                    '-' + entry.label
+                    '-' + entry[0]
                 traceback[path] = cleandoc('''Failed to eval definition {}
                             '''.format(entry.definition))
         return test, traceback
