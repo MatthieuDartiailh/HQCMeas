@@ -8,6 +8,7 @@
 """
 
 import logging
+from time import sleep
 from ...instruments.drivers.driver_tools import InstrIOError
 
 
@@ -18,8 +19,15 @@ def make_stoppable(function_to_decorate):
     parallelism or waiting.
     """
     def decorator(*args, **kwargs):
-        if args[0].root_task.should_stop.is_set():
-            return False
+        stop_flag = args[0].root_task.should_stop
+        if stop_flag.is_set():
+            return
+
+        pause_flag = args[0].root_task.should_pause
+        while pause_flag.is_set():
+            sleep(0.05)
+            if stop_flag.is_set():
+                return
 
         return function_to_decorate(*args, **kwargs)
 

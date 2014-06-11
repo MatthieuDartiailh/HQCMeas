@@ -1366,6 +1366,9 @@ class RootTask(ComplexTask):
     #: Inter-process event signaling the task it should stop execution.
     should_stop = Instance(Event)
 
+    #: Inter-process event signaling the task it should pause execution.
+    should_pause = Instance(Event)
+
     # Seeting default values for the root task.
     has_root = set_default(True)
     task_name = set_default('Root')
