@@ -276,7 +276,7 @@ class SaveArrayTask(SimpleTask):
                 return
 
             numpy.save(full_path, array_to_save)
-            
+
         return True
 
     def check(self, *args, **kwargs):
@@ -318,8 +318,9 @@ class SaveArrayTask(SimpleTask):
                 'Failed to open the specified file'
             return False, traceback
 
-        entries = self.task_database.list_accessible_entries(self.task_path)
-        if self.target_array[1:-1] not in entries:
+        try:
+            self.get_from_database(self.target_array[1:-1])
+        except KeyError:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Specified array is absent from the database'
             return False, traceback

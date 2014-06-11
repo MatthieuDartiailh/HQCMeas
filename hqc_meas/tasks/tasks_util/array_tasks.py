@@ -57,9 +57,10 @@ class ArrayExtremaTask(SimpleTask):
         test = True
         traceback = {}
 
-        entries = self.task_database.list_accessible_entries(self.task_path)
         array_entry = self.target_array[1:-1]
-        if array_entry not in entries:
+        try:
+            array = self.get_from_database(array_entry)
+        except KeyError:
             traceback[self.task_path + '/' + self.task_name] = \
                 '''Invalid entry name for the target array'''
             return False, traceback

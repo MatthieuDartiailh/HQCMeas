@@ -205,7 +205,11 @@ class TaskDatabase(Atom):
                 for name in entries}
 
     def list_accessible_entries(self, node_path):
-        """ Method used to get a list of all entries accessible from a node
+        """ Method used to get a list of all entries accessible from a node.
+
+        DO NOT USE THIS METHOD IN RUNNING MODE (ie never in the check method
+        of a task, use a try except clause instead and get_value or
+        get_entries_indexes).
 
         Parameters:
         ----------
