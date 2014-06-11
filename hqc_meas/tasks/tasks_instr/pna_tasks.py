@@ -7,7 +7,7 @@
 """
 """
 from atom.api import (Str, Int, List, observe, Enum, set_default,
-                      Tuple, ContainerList)
+                      Tuple, ContainerList, Value)
 
 import time
 from inspect import cleandoc
@@ -74,7 +74,16 @@ class PNATasks(InstrumentTask):
         return True, traceback
 
 
-class PNASetFreqTask(PNATasks):
+class SingleChannelPNATask(PNATasks):
+
+    channel_driver = Value()
+
+    @observe('channel')
+    def _update_channels(self, change):
+        self.channels = [change['value']]
+
+
+class PNASetFreqTask(SingleChannelPNATask):
     """Set the central frequecny to be used for the specified channel.
 
     """
@@ -108,21 +117,18 @@ class PNASetFreqTask(PNATasks):
         """
         """
         test, traceback = super(PNASetFreqTask, self).check(*args, **kwargs)
-        try:
-            self.format_and_eval_string(self.frequency)
-        except Exception:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-freq'] = \
-                'Failed to eval the power formula {}'.format(self.frequency)
+        if self.frequency:
+            try:
+                self.format_and_eval_string(self.frequency)
+            except Exception:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-freq'] = \
+                    'Failed to eval the power formula {}'.format(self.frequency)
 
         return test, traceback
 
-    @observe('channel')
-    def _update_channels(self, change):
-        self.channels = [change['value']]
 
-
-class PNASetPowerTask(PNATasks):
+class PNASetPowerTask(SingleChannelPNATask):
     """Set the central power to be used for the specified channel.
     """
     channel = Int(1).tag(pref=True)
@@ -144,7 +150,7 @@ class PNASetPowerTask(PNATasks):
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
 
-        if not power:
+        if power is None:
             power = self.format_and_eval_string(self.power)
         self.channel_driver.port = self.port
         self.channel_driver.power = power
@@ -156,20 +162,17 @@ class PNASetPowerTask(PNATasks):
         """
         """
         test, traceback = super(PNASetPowerTask, self).check(*args, **kwargs)
-        try:
-            self.format_and_eval_string(self.power)
-        except Exception:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-power'] = \
-                'Failed to eval the power formula {}'.format(self.power)
+        if self.power:
+            try:
+                self.format_and_eval_string(self.power)
+            except Exception:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-power'] = \
+                    'Failed to eval the power formula {}'.format(self.power)
         return test, traceback
 
-    @observe('channel')
-    def _update_channels(self, change):
-        self.channels = [change['value']]
 
-
-class PNASinglePointMeasureTask(PNATasks):
+class PNASinglePointMeasureTask(SingleChannelPNATask):
     """Measure the specified parameters. Frequency and power can be set before.
 
     Wait for any parallel operation before execution.
@@ -251,15 +254,9 @@ class PNASinglePointMeasureTask(PNATasks):
                 data = self.channel_driver.read_formatted_data()[0]
             else:
                 data = self.channel_driver.read_raw_data()[0]
-            self.write_in_database(measure, data)
+            self.write_in_database(':'.join(self.measures[i]), data)
 
         return True
-
-    @observe('channel')
-    def _update_channels(self, change):
-        """
-        """
-        self.channels = [change['value']]
 
     def _observe_measures(self, change):
         """
@@ -274,7 +271,7 @@ class PNASinglePointMeasureTask(PNATasks):
         self.task_database_entries = entries
 
 
-class PNASweepTask(PNATasks):
+class PNASweepTask(SingleChannelPNATask):
     """Measure the specified parameters while sweeping either the frequency or
     the power.
 
@@ -395,10 +392,6 @@ class PNASweepTask(PNATasks):
 
         self.write_in_database('sweep_data', final_arr)
         return test, traceback
-
-    @observe('channel')
-    def _update_channels(self, change):
-        self.channels = [change['value']]
 
 
 KNOWN_PY_TASKS = [PNASetFreqTask, PNASetPowerTask, PNASinglePointMeasureTask,

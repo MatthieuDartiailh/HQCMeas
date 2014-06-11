@@ -27,6 +27,10 @@ class ApplyMagFieldTask(InstrumentTask):
     # Whether to stop the switch heater after setting the field.
     auto_stop_heater = Bool(True).tag(pref=True)
 
+    # Time to wait before bringing the field to zero after closing the switch
+    # heater.
+    post_switch_wait = Float().tag(pref=True)
+
     task_database_entries = set_default({'Bfield': 0.01})
     driver_list = ['IPS12010']
     loopable = True
@@ -49,7 +53,8 @@ class ApplyMagFieldTask(InstrumentTask):
 
         if target_value is None:
             target_value = self.format_and_eval_string(self.target_field)
-        self.driver.go_to_field(target_value, self.rate, self.auto_stop_heater)
+        self.driver.go_to_field(target_value, self.rate, self.auto_stop_heater,
+                                self.post_switch_wait)
         self.write_in_database('Bfield', target_value)
 
         return True

@@ -166,8 +166,8 @@ enamldef PNASinglePointView(BaseInstrumentView): view:
             ed.alignment = 'v_center'
 
 
-def label_maker(label, type):
-    if type == 'Freq':
+def label_maker(label, mode):
+    if mode == 'Frequency':
         return label + '(Hz)'
     else:
         return label + '(dBm)'
