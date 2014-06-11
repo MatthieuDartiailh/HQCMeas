@@ -276,6 +276,8 @@ class SaveArrayTask(SimpleTask):
                 return
 
             numpy.save(full_path, array_to_save)
+            
+        return True
 
     def check(self, *args, **kwargs):
         """ Check folder path and filename.
