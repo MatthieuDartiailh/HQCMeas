@@ -16,6 +16,13 @@ from ..utils.atom_util import member_from_str, tagged_members
 class InterfaceableTaskMixin(Atom):
     """ Mixin class for defining simple task using interfaces.
 
+    When defining a new interfaceablke task this mixin should always be the
+    letf most class when defining the inheritance. This is due to the Python
+    Method Resolution Order (mro) and the fact that this mixin must override
+    methods defined in tasks.
+    ex : Toto(InterfaceableTaskMixin, MyTask):
+
+
     """
     #: A reference to the current interface for the task.
     interface = ForwardInstance(lambda: TaskInterface)
@@ -48,7 +55,7 @@ class InterfaceableTaskMixin(Atom):
 
         """
         #XXXX Here I will assume that answer is the one from the BaseTask
-        # and assume the interface does not override any task method.
+        # and assume the interface does not override any task member.
         # For the callables only the not None answer will be updated.
         answers = BaseTask.answer(self, members, callables)
         interface_answers = self.interface.answer(members, callables)
