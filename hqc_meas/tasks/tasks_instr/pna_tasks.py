@@ -390,7 +390,7 @@ class PNASweepTask(SingleChannelPNATask):
 
         data = [np.array([0.0, 1.0])] + \
             [np.array([0.0, 1.0]) for meas in self.measures]
-        names = [self.sweep_type] + [':'.join(meas) for meas in self.measures]
+        names = [self.sweep_type] + ['_'.join(meas) for meas in self.measures]
         final_arr = np.rec.fromarrays(data, names=names)
 
         self.write_in_database('sweep_data', final_arr)
