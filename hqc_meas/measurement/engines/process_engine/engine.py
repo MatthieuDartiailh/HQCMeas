@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import Typed, Value, Tuple
+from atom.api import Typed, Value, Tuple, Bool
 from enaml.workbench.api import Workbench
 from enaml.application import deferred_call
 from multiprocessing import Pipe
@@ -15,7 +15,6 @@ from threading import Event as tEvent
 import logging
 
 from hqc_meas.log_system.tools import QueueLoggerThread
-from hqc_meas.tasks.tools.walks import flatten_walk
 
 from ..base_engine import BaseEngine
 from ..tools import ThreadMeasureMonitor
@@ -32,34 +31,23 @@ class ProcessEngine(BaseEngine):
     # Reference to the workbench got at __init__
     workbench = Typed(Workbench)
 
-    def prepare_to_run(self, name, root, monitored_entries):
-        # Get all the tasks classes we need to rebuild the measure in the
-        # process.
-        walk = root.walk(['task_class'])
-        task_names = flatten_walk(walk, ['task_class'])['task_class']
+    def prepare_to_run(self, name, root, monitored_entries, build_deps):
 
-        # Get core plugin to request tasks.
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.task_manager.tasks_request'
-        task_classes, _ = core.invoke_command(com, {'tasks': task_names,
-                                                    'use_class_names': True},
-                                              self)
-
-        # Gather all runtime dependencies in a single dict.
-        runtimes = root.run_time
-        runtimes['task_classes'] = task_classes
+        runtime_deps = root.run_time
 
         # Get ConfigObj describing measure.
         root.update_preferences_from_members()
         config = root.task_preferences
 
         # Make infos tuple to send to the subprocess.
-        self._temp = (name, config, runtimes, monitored_entries)
+        self._temp = (name, config, build_deps, runtime_deps,
+                      monitored_entries)
 
         # Clear all the flags.
         self._meas_stop.clear()
         self._stop.clear()
         self._force_stop.clear()
+        self._stop_requested = False
 
         # If the process does not exist or is dead create a new one.
         if not self._process or not self._process.is_alive():
@@ -67,6 +55,7 @@ class ProcessEngine(BaseEngine):
             self._process = TaskProcess(process_pipe,
                                         self._log_queue,
                                         self._monitor_queue,
+                                        self._meas_pause,
                                         self._meas_stop,
                                         self._stop)
             self._process.daemon = True
@@ -95,15 +84,24 @@ class ProcessEngine(BaseEngine):
 
         self._starting_allowed.set()
 
+    def pause(self):
+        self._meas_pause.set()
+
+    def resume(self):
+        self._meas_pause.clear()
+
     def stop(self):
+        self._stop_requested = True
         self._meas_stop.set()
 
     def exit(self):
+        self._stop_requested = True
         self._meas_stop.set()
         self._stop.set()
         # Everything else handled by the _com_thread and the process.
 
     def force_stop(self):
+        self._stop_requested = True
         # Just in case the user calls this directly. Will signal all threads to
         # stop (save _com_thread).
         self._stop.set()
@@ -133,6 +131,12 @@ class ProcessEngine(BaseEngine):
 
     #--- Private API ----------------------------------------------------------
 
+    # Flag indicating that the user requested the measure to stop.
+    _stop_requested = Bool()
+
+    # Interprocess event used to pause the subprocess current measure.
+    _meas_pause = Typed(Event, ())
+
     # Interprocess event used to stop the subprocess current measure.
     _meas_stop = Typed(Event, ())
 
@@ -142,7 +146,7 @@ class ProcessEngine(BaseEngine):
     # Flag signaling that a forced exit has been requested
     _force_stop = Value(tEvent())
 
-    # Flag indicating the process is processing for a measure.
+    # Flag indicating the process is waiting for a measure.
     _processing = Value(tEvent())
 
     # Flag indicating the communication thread it can send the next measure.
@@ -234,6 +238,10 @@ class ProcessEngine(BaseEngine):
 
             if int_status == 'STOPPING':
                 self._cleanup()
+
+            if meas_status == 'INTERRUPTED' and not self._stop_requested:
+                meas_status = 'FAILED'
+                mess = mess.replace('was stopped', 'failed')
 
             # This event should be handled in the main thread so that this one
             # can stay responsive otherwise the engine will be unable to

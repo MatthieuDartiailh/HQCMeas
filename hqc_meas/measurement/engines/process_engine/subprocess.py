@@ -61,10 +61,11 @@ class TaskProcess(Process):
 
     """
 
-    def __init__(self, pipe, log_queue, monitor_queue,
+    def __init__(self, pipe, log_queue, monitor_queue, task_pause,
                  task_stop, process_stop):
         super(TaskProcess, self).__init__(name='MeasureProcess')
         self.daemon = True
+        self.task_pause = task_pause
         self.task_stop = task_stop
         self.process_stop = process_stop
         self.pipe = pipe
@@ -109,7 +110,7 @@ class TaskProcess(Process):
                 # Get the measure.
                 name, config, build, runtime, mon_entries = self.pipe.recv()
 
-                # Build it by first extracting task classes from runtimes.
+                # Build it by using the given build dependencies.
                 root = build_task_from_config(config, build)
 
                 # Give all runtime dependencies to the root task.
@@ -144,8 +145,9 @@ class TaskProcess(Process):
                 self.meas_log_handler.setFormatter(formatter)
                 logger.addHandler(self.meas_log_handler)
 
-                # Pass the event signaling the task it should stop
+                # Pass the events signaling the task it should stop or pause
                 # to the task and make the database ready.
+                root.should_pause = self.task_pause
                 root.should_stop = self.task_stop
                 root.task_database.prepare_for_running()
 
@@ -155,18 +157,14 @@ class TaskProcess(Process):
                 # They pass perform the measure.
                 if check:
                     logger.info('Check successful')
-                    meas_result = root.process()
+                    root.perform_(root)
                     result = ['', '', '']
                     if self.task_stop.is_set():
                         result[0] = 'INTERRUPTED'
                         result[2] = 'Measure {} was stopped'.format(name)
                     else:
-                        if meas_result:
-                            result[0] = 'COMPLETED'
-                            result[2] = 'Measure {} succeeded'.format(name)
-                        else:
-                            result[0] = 'FAILED'
-                            result[2] = 'Measure {} failed'.format(name)
+                        result[0] = 'COMPLETED'
+                        result[2] = 'Measure {} succeeded'.format(name)
 
                     if self.process_stop.is_set():
                         result[1] = 'STOPPING'
