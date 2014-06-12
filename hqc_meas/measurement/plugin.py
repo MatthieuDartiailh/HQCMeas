@@ -258,6 +258,18 @@ class MeasurePlugin(HasPrefPlugin):
         # Ask the engine to start the measure.
         engine.run()
 
+    def pause_measure(self):
+        """ Pause the currently active measure.
+
+        """
+        self.engine_instance.pause()
+
+    def resume_measure(self):
+        """ Remuse the currently paused measure.
+
+        """
+        self.engine_instance.resume()
+
     def stop_measure(self):
         """ Stop the currently active measure.
 

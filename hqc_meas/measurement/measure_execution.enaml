@@ -99,6 +99,18 @@ enamldef MeasView(GroupBox): widget:
                 measure.plugin.workspace.reenqueue_measure(measure)
 
 
+def label_maker(running, paused):
+    """ Helper determining the proper label for the start button.
+
+    """
+    if not running:
+        return 'Start'
+    else:
+        if paused:
+            return 'Resume'
+        else:
+            return 'Pause'
+
 enamldef ExecutionDockItem(DockItem):
 
     attr workspace
@@ -117,11 +129,18 @@ enamldef ExecutionDockItem(DockItem):
             ed.operations = ['move', 'remove']
 
         PushButton: start:
-            text = 'Start'
-            enabled << bool(workspace.plugin.enqueued_measures) \
-                and not 'processing' in workspace.plugin.flags
+            attr running << 'processing' in workspace.plugin.flags
+            attr paused : bool = False
+            text << label_maker(running, paused)
+            enabled << bool(workspace.plugin.enqueued_measures)
             clicked ::
-                workspace.start_processing_measures()
+                if not running:
+                    workspace.start_processing_measures()
+                else:
+                    if paused:
+                        workspace.resume_current_measure()
+                    else:
+                        workspace.pause_current_measure()
 
         PushButton: stop:
             text = 'Stop measure'

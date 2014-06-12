@@ -336,6 +336,18 @@ class MeasureSpace(Workspace):
 
         self.plugin.start_measure(measure)
 
+    def pause_current_measure(self):
+        """ Pause the currently active measure.
+
+        """
+        self.plugin.pause()
+
+    def resume_current_measure(self):
+        """ Remuse the currently paused measure.
+
+        """
+        self.plugin.resume()
+
     def stop_current_measure(self):
         """
         """

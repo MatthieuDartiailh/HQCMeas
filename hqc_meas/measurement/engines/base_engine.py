@@ -29,19 +29,25 @@ class BaseEngine(Atom):
     # Bool representing the current state of the engine.
     active = Bool()
 
-    def prepare_to_run(self, root, monitored_entries):
+    def prepare_to_run(self, name, root, monitored_entries, build_deps):
         """ Make the engine ready to perform a measure.
 
         This method does not start the engine.
 
         Parameters
         ----------
+        name : str
+            Name of the measure.
+
         root : RootTask
             The root task representing the measure to perform.
 
         monitored_entries : iterable
             The database entries to observe. Any change of one of these entries
             will be notified by the news event.
+
+        build_deps : dict
+            Dict holding the build dependencies of the task.
 
         """
         mes = cleandoc('''''')
@@ -51,6 +57,24 @@ class BaseEngine(Atom):
         """ Start the execution of the measure by the engine.
 
         This method must not wait for the measure to complete to return.
+
+        """
+        mes = cleandoc('''''')
+        raise NotImplementedError(mes)
+
+    def pause(self):
+        """ Ask the engine to pause the current measure.
+
+        This method should not wait for the engine to pause the measure.
+
+        """
+        mes = cleandoc('''''')
+        raise NotImplementedError(mes)
+
+    def resume(self):
+        """ Ask the engine to resume the currently paused measure.
+
+        This method should not wait for the engine to resume the measure.
 
         """
         mes = cleandoc('''''')
