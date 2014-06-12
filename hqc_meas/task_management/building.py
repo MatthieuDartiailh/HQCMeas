@@ -116,7 +116,7 @@ def build_task_from_config(config, dep_source):
     return task_class.build_from_config(config, dep_source)
 
 
-def build_root(manager, mode, config=None, parent_ui=None):
+def build_root(manager, mode, config=None, parent_ui=None, build_dep=None):
     """ Create a new RootTask.
 
     Parameters
@@ -133,6 +133,9 @@ def build_root(manager, mode, config=None, parent_ui=None):
 
     parent_ui : optional
         Optional parent widget for the dialog.
+
+    build_dep : optional
+        Optionnal dict containing the build dependencies.
 
     Returns:
     -------
@@ -155,7 +158,8 @@ def build_root(manager, mode, config=None, parent_ui=None):
         config, _ = load_template(path)
 
     if config:
-        build_dep = _gather_build_dep_from_config(manager, config)
+        if build_dep is None:
+            build_dep = _gather_build_dep_from_config(manager, config)
         if build_dep is None:
             return None
 

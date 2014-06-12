@@ -400,6 +400,9 @@ enamldef MeasureEditorDialog(Dialog): main:
     attr workspace
     attr measure
     title = 'Edit measure {}'.format(measure.name)
+    closed::
+        if 'build_deps' in measure.store:
+            del measure.store['build_dep']
 
     Container:
         constraints = [vbox(editor, hbox(save, spacer))]

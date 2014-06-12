@@ -17,7 +17,6 @@ from textwrap import fill
 from .measure import Measure
 from .plugin import MeasurePlugin
 
-from ..tasks.tools.walks import flatten_walk
 from ..tasks.api import RootTask
 
 with enaml.imports():
@@ -214,60 +213,50 @@ class MeasureSpace(Workspace):
         logger = logging.getLogger(__name__)
 
         # First of all build the runtime dependencies
-        walk = measure.root_task.walk(['selected_driver', 'selected_profile'])
-        res = flatten_walk(walk, ['selected_driver',
-                                  'selected_profile'])
-        drivs = res['selected_driver']
-        profs = res['selected_profile']
         core = self.workbench.get_plugin('enaml.workbench.core')
-        com = u'hqc_meas.instr_manager.drivers_request'
-        drivers, missing = core.invoke_command(com, {'drivers': list(drivs)},
-                                               self)
-        if missing:
-            mes = cleandoc('''Failed to get all drivers for the measure,
-                           missing :{}'''.format(missing))
-            logger.warn(mes)
+        cmd = u'hqc_meas.task_manager.collect_dependencies'
+        res = core.invoke_command(cmd, {'task': measure.root_task})
+        if not res:
+            for id in res[1]:
+                logger.warn(res[1][id])
             return False
 
-        com = u'hqc_meas.instr_manager.profiles_request'
-        profiles, missing = core.invoke_command(com, {'profiles': list(profs)},
-                                                self.plugin)
-        if not profiles and missing:
-            mes = cleandoc('''Failed to get all profiles for the measure,
-                           missing :{}'''.format(missing))
-            logger.warn(mes)
-            return False
+        build_deps = res[1]
+        runtime_deps = res[2]
 
-        test_instr = bool(profiles)
-        if not test_instr and profs:
+        test_instr = 'profiles' in runtime_deps and runtime_deps['profiles']
+        if 'profiles' in runtime_deps and test_instr:
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, instr tests will be skipped and
                            performed before actually starting the
                            measure.'''.format(measure.name))
             logger.info(mes)
 
-        measure.root_task.run_time = {'drivers': drivers,
-                                      'profiles': profiles}
+        measure.root_task.run_time = runtime_deps
 
         check, errors = measure.run_checks(self.workbench,
                                            test_instr=test_instr)
 
         measure.root_task.run_time.clear()
 
-        core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
-                            {'profiles': profiles.keys()}, self.plugin)
+        profs = []
+        if 'profiles' in runtime_deps:
+            profs = runtime_deps.pop('profiles').keys()
+            core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
+                                {'profiles': profs}, self.plugin)
 
         if check:
             default_filename = measure.name + '_last_run.ini'
             path = os.path.join(measure.root_task.default_path,
                                 default_filename)
             measure.save_measure(path)
-            meas = Measure.load_measure(self.plugin, path)
+            meas = Measure.load_measure(self.plugin, path, build_deps)
             # Here don't keep the profiles in the runtime as it will defeat the
             # purpose of the manager.
-            meas.root_task.run_time = {'drivers': drivers}
+            meas.root_task.run_time = runtime_deps
             # Keep only a list of profiles to request (avoid to re-walk)
             meas.store['profiles'] = profs
+            meas.store['build_deps'] = build_deps
             meas.status = 'READY'
             meas.infos = 'The measure is ready to be performed by an engine.'
             self.plugin.enqueued_measures.append(meas)
