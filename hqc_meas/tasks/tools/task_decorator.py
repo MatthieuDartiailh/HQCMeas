@@ -9,7 +9,6 @@
 
 import logging
 from time import sleep
-from ...instruments.drivers.driver_tools import InstrIOError
 
 
 def make_stoppable(function_to_decorate):
@@ -37,23 +36,21 @@ def make_stoppable(function_to_decorate):
     return decorator
 
 
-def smooth_instr_crash(function_to_decorate):
-    """This decorator should be used on any instr task. It handles possible
-    communications errors during the processing of the task. If the command
-    fails it asks the immediate end of the measurement to prevent any damages
-    to the sample.
+def smooth_crash(function_to_decorate):
+    """This decorator is automatically applied to all perform function. It
+    ensures that any unhandled error will cause the measure to stop in a nice
+    way.
     """
     def decorator(*args, **kwargs):
         obj = args[0]
 
         try:
             return function_to_decorate(*args, **kwargs)
-        except (InstrIOError) as error:
-            log = logging.getLogger()
-            log.error('Instrument crashed')
-            log.exception(error.message)
+        except Exception:
+            log = logging.getLogger(__name__)
+            mes = 'The following unhandled exception occured in {} :'
+            log.exception(mes.format(obj.task_name))
             obj.root_task.should_stop.set()
-            return False
 
     decorator.__name__ = function_to_decorate.__name__
     decorator.__doc__ = function_to_decorate.__doc__

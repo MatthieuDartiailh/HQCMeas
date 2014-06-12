@@ -20,7 +20,7 @@ import os
 
 from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
-from .tools.task_decorator import make_stoppable
+from .tools.task_decorator import make_stoppable, smooth_crash
 from .tools.string_evaluation import safe_eval
 
 
@@ -337,11 +337,11 @@ class BaseTask(Atom):
         """
         return self.__class__.__name__
 
-    def _default_process_(self):
+    def _default_perform_(self):
         """ Default value for the process_ member.
 
         """
-        return self.process.__func__
+        return make_stoppable(smooth_crash(self.perform.__func__))
 
     def _observe_task_name(self, change):
         """ Update the label any time the task name changes.
@@ -515,7 +515,7 @@ class SimpleTask(BaseTask):
         """ Make process_ refects the parallel/wait settings.
 
         """
-        perform_func = self.perform.__func__
+        perform_func = smooth_crash(self.perform.__func__)
         parallel = self.parallel
         if parallel['activated'] and parallel['pool']:
             perform_func = self._make_parallel_process_(perform_func,
@@ -659,7 +659,6 @@ class ComplexTask(BaseTask):
         self.observe('task_path', self._update_paths)
         self.observe('task_depth', self._update_paths)
 
-    @make_stoppable
     def process(self):
         """ Run sequentially all child tasks.
 
@@ -1400,14 +1399,12 @@ class RootTask(ComplexTask):
         traceback.update(check[1])
         return test, traceback
 
-    @make_stoppable
     def process(self):
         """ Run sequentially all child tasks, and close ressources.
 
         """
-        result = True
         for child in self.children_task:
-            result &= child.process_(child)
+            child.process_(child)
         pools = self.task_database.get_value('root', 'threads')
         for pool in pools.values():
             for thread in pool:
@@ -1415,8 +1412,6 @@ class RootTask(ComplexTask):
         instrs = self.task_database.get_value('root', 'instrs')
         for instr_profile in instrs:
             instrs[instr_profile].close_connection()
-
-        return result
 
     def register_in_database(self):
         """ Create a node in the database and register all entries.
