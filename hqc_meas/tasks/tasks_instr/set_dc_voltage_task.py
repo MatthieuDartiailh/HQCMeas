@@ -7,29 +7,31 @@ import time
 import logging
 from inspect import cleandoc
 
-from hqc_meas.tasks.api import InstrumentTask, InstrTaskInterface
+from hqc_meas.tasks.api import (InstrumentTask, InstrTaskInterface,
+                                InterfaceableTaskMixin)
 
 
-class SetDCVoltageTask(InstrumentTask):
+class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     """Set a DC voltage to the specified value.
 
     The user can choose to limit the rate by choosing an appropriate back step
     (larger step allowed), and a waiting time between each step.
 
     """
-    # Target value for the source (dynamically evaluated)
+    #: Target value for the source (dynamically evaluated)
     target_value = Str().tag(pref=True)
 
-    # Largest allowed step when changing the output of the instr.
+    #: Largest allowed step when changing the output of the instr.
     back_step = Float().tag(pref=True)
 
-    # Time to wait between changes of the output of the instr.
+    #: Time to wait between changes of the output of the instr.
     delay = Float(0.01).tag(pref=True)
 
-    # Whether the current value of the instr should be checked each time.
+    #: Whether the current value of the instr should be checked each time.
     check_value = Bool(False).tag(pref=True)
 
-    #Actually a Float but I don't want it to get initialised at 0
+    #: Last value to which the voltage was set.
+    #: Actually a float but I don't want it to get initialised at 0
     last_value = Value()
 
     parallel = set_default({'activated': True, 'pool': 'instr'})

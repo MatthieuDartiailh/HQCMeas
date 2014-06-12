@@ -20,17 +20,15 @@ class PrintTask(SimpleTask):
 
     """
 
-    # Message to print in stdout when the task is executed.
+    #: Message to print in stdout when the task is executed.
     message = Str().tag(pref=True)
 
     loopable = True
     task_database_entries = set_default({'message': ''})
 
-    def __init__(self, **kwargs):
-        super(PrintTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self, *args, **kwargs):
+    def perform(self, *args, **kwargs):
         """ Format the message and print it.
 
         """
@@ -54,14 +52,12 @@ class SleepTask(SimpleTask):
     Wait for any parallel operation before execution.
 
     """
-    # Time during which to sleep.
+    #: Time during which to sleep.
     time = Float().tag(pref=True)
 
-    def __init__(self, **kwargs):
-        super(SleepTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """ Sleep.
 
         """
@@ -79,7 +75,7 @@ class DefinitionTask(SimpleTask):
     # List of definitions.
     definitions = ContainerList(Tuple()).tag(pref=True)
 
-    def process(self):
+    def perform(self):
         """ Do nothing.
 
         """

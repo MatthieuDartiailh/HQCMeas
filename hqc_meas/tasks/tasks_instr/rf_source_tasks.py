@@ -5,7 +5,6 @@ from atom.api import (Str, Bool, set_default, Enum)
 from inspect import cleandoc
 
 from hqc_meas.tasks.api import InstrumentTask
-from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
 
 
 class RFSourceSetFrequencyTask(InstrumentTask):
@@ -25,8 +24,7 @@ class RFSourceSetFrequencyTask(InstrumentTask):
     task_database_entries = set_default({'frequency': 1.0, 'unit': 'GHz'})
     loopable = True
 
-    @smooth_instr_crash
-    def process(self, frequency=None):
+    def perform(self, frequency=None):
         """
         """
         if not self.driver:
@@ -75,8 +73,7 @@ class RFSourceSetPowerTask(InstrumentTask):
     task_database_entries = set_default({'power': -10})
     loopable = True
 
-    @smooth_instr_crash
-    def process(self, power=None):
+    def perform(self, power=None):
         """
         """
         if not self.driver:
@@ -120,8 +117,7 @@ class RFSourceSetOnOffTask(InstrumentTask):
     task_database_entries = {'output': 0}
     loopable = True
 
-    @smooth_instr_crash
-    def process(self, switch=None):
+    def perform(self, switch=None):
         """
         """
         if not self.driver:

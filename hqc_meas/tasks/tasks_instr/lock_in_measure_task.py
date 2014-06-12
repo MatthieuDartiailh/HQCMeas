@@ -6,7 +6,6 @@ from atom.api import (Enum, Float, set_default)
 from time import sleep
 
 from hqc_meas.tasks.api import InstrumentTask
-from hqc_meas.tasks.tools.task_decorator import smooth_instr_crash
 
 
 class LockInMeasureTask(InstrumentTask):
@@ -25,12 +24,9 @@ class LockInMeasureTask(InstrumentTask):
     driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830']
     task_database_entries = set_default({'x': 1.0})
 
-    def __init__(self, **kwargs):
-        super(LockInMeasureTask, self).__init__(**kwargs)
-        self.make_wait(wait=['instr'])
+    wait = set_default({'wait': ['instr']})  # Wait on instr pool by default.
 
-    @smooth_instr_crash
-    def process(self):
+    def perform(self):
         """
         """
         if not self.driver:

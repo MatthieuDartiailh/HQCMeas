@@ -27,46 +27,44 @@ class SaveTask(SimpleTask):
     Currently only support saving floats.
 
     """
-    # Folder in which to save the data.
+    #: Folder in which to save the data.
     folder = Unicode().tag(pref=True)
 
-    # Name of the file in which to write the data.
+    #: Name of the file in which to write the data.
     filename = Str().tag(pref=True)
 
-    # Currently opened file object. (File mode)
+    #: Currently opened file object. (File mode)
     file_object = Value()
 
-    # Header to write at the top of the file.
+    #: Header to write at the top of the file.
     header = Str().tag(pref=True)
 
-    # Numpy array in which data are stored (Array mode)
+    #: Numpy array in which data are stored (Array mode)
     array = Value()  # Array
 
-    # Kind of object in which to save the data.
+    #: Kind of object in which to save the data.
     saving_target = Enum('File', 'Array', 'File and array').tag(pref=True)
 
-    # Size of the data to be saved. (Evaluated at runtime)
+    #: Size of the data to be saved. (Evaluated at runtime)
     array_size = Str().tag(pref=True)
 
-    # Computed size of the data (post evaluation)
+    #: Computed size of the data (post evaluation)
     array_length = Int()
 
-    # Index of the current line.
+    #: Index of the current line.
     line_index = Int(0)
 
-    # List of values to be saved store as (label, value).
+    #: List of values to be saved store as (label, value).
     saved_values = ContainerList(Tuple()).tag(pref=True)
 
-    # Flag indicating whether or not initialisation has been performed.
+    #: Flag indicating whether or not initialisation has been performed.
     initialized = Bool(False)
 
     task_database_entries = set_default({'file': None})
 
-    def __init__(self, **kwargs):
-        super(SaveTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """ Collect all data and write them to array or file according to mode.
 
         On first call initialise the systemby creating file and/or array. Close
@@ -207,29 +205,27 @@ class SaveArrayTask(SimpleTask):
 
     """
 
-    # Folder in which to save the data.
+    #: Folder in which to save the data.
     folder = Unicode().tag(pref=True)
 
-    # Name of the file in which to write the data.
+    #: Name of the file in which to write the data.
     filename = Str().tag(pref=True)
 
-    # Currently opened file object.
+    #: Currently opened file object.
     file_object = Value()
 
-    # Header to write at the top of the file.
+    #: Header to write at the top of the file.
     header = Str().tag(pref=True)
 
-    # Name of the array to save in the database.
+    #: Name of the array to save in the database.
     target_array = Str().tag(pref=True)
 
-    # Flag indicating whether to save as csv or .npy.
+    #: Flag indicating whether to save as csv or .npy.
     mode = Enum('Text file', 'Binary file').tag(pref=True)
 
-    def __init__(self, **kwargs):
-        super(SaveArrayTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """ Save array to file.
 
         """

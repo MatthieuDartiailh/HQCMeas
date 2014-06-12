@@ -6,7 +6,7 @@
 #==============================================================================
 """
 """
-from atom.api import (Tuple, ContainerList)
+from atom.api import (Tuple, ContainerList, set_default)
 
 from ..base_tasks import SimpleTask
 
@@ -15,14 +15,12 @@ class FormulaTask(SimpleTask):
     """Compute values according to formulas. Any valid python expression can be
     evaluated and replacement to access to the database data can be used.
     """
-    # List of formulas.
+    #: List of formulas.
     formulas = ContainerList(Tuple()).tag(pref=True)
 
-    def __init__(self, **kwargs):
-        super(FormulaTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """
         """
         for i, formula in enumerate(self.formulas):

@@ -14,7 +14,6 @@ from inspect import cleandoc
 import numpy as np
 
 from hqc_meas.tasks.api import InstrumentTask
-from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
 from hqc_meas.instruments.drivers.driver_tools import InstrIOError
 
 
@@ -94,8 +93,7 @@ class PNASetFreqTask(SingleChannelPNATask):
     task_database_entries = set_default({'frequency': 1e9})
     loopable = True
 
-    @smooth_instr_crash
-    def process(self, freq=None):
+    def perform(self, freq=None):
         """
         """
         if not self.driver:
@@ -122,8 +120,9 @@ class PNASetFreqTask(SingleChannelPNATask):
                 self.format_and_eval_string(self.frequency)
             except Exception:
                 test = False
+                mes = 'Failed to eval the frequency formula {}'
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
-                    'Failed to eval the power formula {}'.format(self.frequency)
+                    mes.format(self.frequency)
 
         return test, traceback
 
@@ -139,8 +138,7 @@ class PNASetPowerTask(SingleChannelPNATask):
     task_database_entries = set_default({'power': -10})
     loopable = True
 
-    @smooth_instr_crash
-    def process(self, power=None):
+    def perform(self, power=None):
         """
         """
         if not self.driver:
@@ -186,12 +184,9 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
 
     driver_list = ['AgilentPNA']
 
-    def __init__(self, **kwargs):
-        super(PNASinglePointMeasureTask, self).__init__(**kwargs)
-        self.make_wait(wait=['instr'])
+    wait = set_default({'wait': ['instr']})  # Wait on instr pool by default.
 
-    @smooth_instr_crash
-    def process(self):
+    def perform(self):
         """
         """
         waiting_time = 1.0/self.if_bandwidth
@@ -294,15 +289,11 @@ class PNASweepTask(SingleChannelPNATask):
 
     window = Int(1).tag(pref=True)
 
+    wait = set_default({'wait': ['instr']})  # Wait on instr pool by default.
     driver_list = ['AgilentPNA']
     task_database_entries = set_default({'sweep_data': np.array([0])})
 
-    def __init__(self, **kwargs):
-        super(PNASweepTask, self).__init__(**kwargs)
-        self.make_wait(wait=['instr'])
-
-    @smooth_instr_crash
-    def process(self):
+    def perform(self):
         """
         """
         if not self.driver:

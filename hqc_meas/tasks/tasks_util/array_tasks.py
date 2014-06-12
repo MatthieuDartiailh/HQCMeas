@@ -15,22 +15,20 @@ class ArrayExtremaTask(SimpleTask):
     Wait for any parallel operation before execution.
 
     """
-    # Name of the target in the database.
+    #: Name of the target in the database.
     target_array = Str().tag(pref=True)
 
-    # Name of the column into which the extrema should be looked for.
+    #: Name of the column into which the extrema should be looked for.
     column_name = Str().tag(pref=True)
 
-    # Flag indicating which extremum shiul be lookd for.
+    #: Flag indicating which extremum shiul be lookd for.
     mode = Enum('Max', 'Min', 'Max & min').tag(pref=True)
 
     task_database_entries = set_default({'max_ind': 0, 'max_value': 1.0})
 
-    def __init__(self, **kwargs):
-        super(ArrayExtremaTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """ Find extrema of database array and store index/value pairs.
 
         """

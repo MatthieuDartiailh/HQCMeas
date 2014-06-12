@@ -11,7 +11,6 @@ from atom.api import (Str, Float, Bool, set_default)
 from inspect import cleandoc
 
 from hqc_meas.tasks.api import InstrumentTask
-from hqc_meas.tasks.tools.task_decorator import (smooth_instr_crash)
 
 
 class ApplyMagFieldTask(InstrumentTask):
@@ -31,16 +30,12 @@ class ApplyMagFieldTask(InstrumentTask):
     # heater.
     post_switch_wait = Float().tag(pref=True)
 
+    parallel = set_default({'activated': True, 'pool': 'instr'})
     task_database_entries = set_default({'Bfield': 0.01})
     driver_list = ['IPS12010']
     loopable = True
 
-    def __init__(self, **kwargs):
-        super(ApplyMagFieldTask, self).__init__(**kwargs)
-        self.make_parallel('instr')
-
-    @smooth_instr_crash
-    def process(self, target_value=None):
+    def perform(self, target_value=None):
         """
         """
         if not self.driver:
