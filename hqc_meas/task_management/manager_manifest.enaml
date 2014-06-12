@@ -102,6 +102,14 @@ def config_request(event):
     return manager.config_request(**event.parameters)
 
 
+def collect_dependencies(event):
+    """ Handler for the 'hqc_meas.task_manager.config_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.collect_dependencies(**event.parameters)
+
+
 def save_task(event):
     """ Handler for the 'hqc_meas.task_manager.save_task' command.
 
@@ -157,7 +165,10 @@ FILTER_TASKS_DESCRIPTION = \
 """ Filter tasks using the provided filter (filter). """
 
 CONFIG_REQUEST_DESCRIPTION = \
-""" Request the appropriate config for a task (task) """
+""" Request the appropriate config for a task (task). """
+
+COLLECT_DEPENDENCIES_DESCRIPTION = \
+""" Collect the dependencies of a task hierarchy. """
 
 SAVE_TASK_DESCRIPTION = \
 """ Save a task to a file or object. """
@@ -176,18 +187,27 @@ def collect_tasks_and_interfaces(workbench, flat_walk):
     """ Collector function for the build-dependencies extensions.
 
     """
-    core = workbench.get_plugin('enaml.workbench.core')
-    t_res = core.invoke_command('hqc_meas.task_manager.tasks_request',
-                                {'tasks' : flat_walk['task_class']})
-    i_res = core.invoke_command('hqc_meas.task_manager.interfaces_request',
-                                {'interfaces' : flat_walk['interface_class']})
+    # Here we use direct call to plugin methods as this is internal to the
+    # plugin
+    manager = workbench.get_plugin('hqc_meas.task_manager')
+
+    t_res = manager.tasks_request(flat_walk['task_class'],
+                                  use_class_names=True)
+    i_res = manager.interfaces_request(flat_walk['interface_class'],
+                                       use_i_names=True)
 
     if t_res[1] or i_res[1]:
         mess = 'Missing tasks: {}, missing interfaces: {}'.format(t_res[1],
                                                                   i_res[1])
         raise ValueError(mess)
 
-    return {'tasks': t_res[0], 'interfaces': i_res[0]}
+    dependencies = {}
+    if flat_walk['task_class']:
+        dependencies['tasks'] = t_res[0]
+    if flat_walk['interface_class']:
+        dependencies['interfaces'] = i_res[0]
+
+    return dependencies
 
 #--- Manifest -----------------------------------------------------------------
 
@@ -259,6 +279,10 @@ enamldef TaskManagerManifest(PluginManifest):
             id = 'hqc_meas.task_manager.config_request'
             description = CONFIG_REQUEST_DESCRIPTION
             handler = config_request
+        Command:
+            id = 'hqc_meas.task_manager.collect_dependencies'
+            description = COLLECT_DEPENDENCIES_DESCRIPTION
+            handler = collect_dependencies
         Command:
             id = 'hqc_meas.task_manager.save_task'
             description = SAVE_TASK_DESCRIPTION

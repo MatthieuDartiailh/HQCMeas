@@ -303,16 +303,18 @@ class TaskManagerPlugin(HasPrefPlugin):
             error message.
 
         """
-        members = []
+        # Use a set to avoid collecting several times the same entry, which
+        # could happen if an entry is both a build and a runtime dependency.
+        members = set()
         callables = {}
 
         if 'build' in dependencies:
             for build_dep in self._build_dep_collectors:
-                members.extend(build_dep.walk_members)
+                members.update(set(build_dep.walk_members))
 
         if 'runtime' in dependencies:
             for runtime_dep in self._runtime_dep_collectors:
-                members.extend(runtime_dep.walk_members)
+                members.update(set(runtime_dep.walk_members))
                 callables.update(runtime_dep.walk_callables)
 
         walk = task.walk(members, callables)

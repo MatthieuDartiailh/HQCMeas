@@ -27,7 +27,9 @@ class BuildDependency(Declarative):
         Callable in charge of collecting the identified build dependencies.
         It should take as arguments the workbench of the application and a dict
         in the format {name: set()}. It should return a dict holding the
-        dependencies (as dictionaries) in categories. In case of failure it
+        dependencies (as dictionaries) in categories. If there is no dependence
+        for a given category this category should be absent from the dict.
+        The input falt_walk should be left untouched. In case of failure it
         should raise a value error.
 
     """
@@ -57,7 +59,10 @@ class RuntimeDependency(Declarative):
         Callable in charge of collecting the identified build dependencies.
         It should take as arguments the workbench of the application and a dict
         in the format {name: set()}. It should return a dict holding the
-        dependencies (as dictionaries) in categories.
+        dependencies (as dictionaries) in categories. If there is no dependence
+        for a given category this category should be absent from the dict.
+        The input falt_walk should be left untouched. In case of failure it
+        should raise a value error.
 
 
     """
