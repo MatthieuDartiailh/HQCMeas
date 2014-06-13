@@ -109,10 +109,12 @@ def collect_dependencies(event):
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    if event.trigger:
+        event.parameters['caller'] = event.trigger.manifest.id
     return manager.collect_dependencies(**event.parameters)
 
 
-def save_task(event):
+def save_task_handler(event):
     """ Handler for the 'hqc_meas.task_manager.save_task' command.
 
     """
@@ -120,7 +122,7 @@ def save_task(event):
     return save_task(manager, **event.parameters)
 
 
-def build_task(event):
+def build_task_handler(event):
     """ Handler for the 'hqc_meas.task_manager.build_task' command.
 
     """
@@ -128,7 +130,7 @@ def build_task(event):
     return build_task(manager, **event.parameters)
 
 
-def build_root(event):
+def build_root_handler(event):
     """ Handler for the 'hqc_meas.task_manager.build_root' command.
 
     """
@@ -289,15 +291,15 @@ enamldef TaskManagerManifest(PluginManifest):
         Command:
             id = 'hqc_meas.task_manager.save_task'
             description = SAVE_TASK_DESCRIPTION
-            handler = save_task
+            handler = save_task_handler
         Command:
             id = 'hqc_meas.task_manager.build_task'
             description = BUILD_TASK_DESCRIPTION
-            handler = build_task
+            handler = build_task_handler
         Command:
             id = 'hqc_meas.task_manager.build_root'
             description = BUILD_ROOT_DESCRIPTION
-            handler = build_root
+            handler = build_root_handler
     Extension:
         id = 'menu'
         point = 'enaml.workbench.ui.actions'

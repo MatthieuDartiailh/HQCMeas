@@ -215,7 +215,8 @@ class MeasureSpace(Workspace):
         # First of all build the runtime dependencies
         core = self.workbench.get_plugin('enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.collect_dependencies'
-        res = core.invoke_command(cmd, {'task': measure.root_task})
+        res = core.invoke_command(cmd, {'task': measure.root_task},
+                                  self.plugin)
         if not res:
             for id in res[1]:
                 logger.warn(res[1][id])

@@ -182,7 +182,7 @@ class MeasurePlugin(HasPrefPlugin):
             # re-requested.
             core = self.workbench.get_plugin('enaml.workbench.core')
             cmd = u'hqc_meas.task_manager.collect_dependencies'
-            res = core.invoke_command(cmd, {'task': measure.root_task})
+            res = core.invoke_command(cmd, {'task': measure.root_task}, self)
             if not res:
                 for id in res[1]:
                     logger.warn(res[1][id])
@@ -196,7 +196,7 @@ class MeasurePlugin(HasPrefPlugin):
 
             measure.store['build_deps'] = build_deps
 
-        if instr_use_granted:
+        if not instr_use_granted:
             mes = cleandoc('''The instrument profiles requested for the
                            measurement {} are not available, the measurement
                            cannot be performed.'''.format(measure.name))
@@ -210,7 +210,7 @@ class MeasurePlugin(HasPrefPlugin):
             enaml.application.deferred_call(self._listen_to_engine, done)
             return
 
-        if profs:
+        else:
             logger.info(cleandoc('''The use of the instrument profiles has been
                                 granted by the manager.'''))
 
@@ -366,7 +366,7 @@ class MeasurePlugin(HasPrefPlugin):
         logger.info(mess)
 
         # Releasing instrument profiles.
-        profs = self.running_measure.store.get('profiles', set([]))
+        profs = self.running_measure.store.get('profiles', set())
         core = self.workbench.get_plugin('enaml.workbench.core')
 
         com = u'hqc_meas.instr_manager.profiles_released'
@@ -551,7 +551,7 @@ class MeasurePlugin(HasPrefPlugin):
                 monitors[monitor.id] = monitor
 
         self.monitors = monitors
-        self._monitors_extensions = new_extensions
+        self._monitor_extensions = new_extensions
 
     def _load_monitors(self, extension):
         """ Load the Monitor object for the given extension.

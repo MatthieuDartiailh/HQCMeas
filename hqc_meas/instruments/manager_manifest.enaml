@@ -152,7 +152,7 @@ profiles ('all_profiles') defined for the current session, and to the
 currently available profiles ('available_profiles'). """
 
 
-def collect_drivers_and_profiles(workbench, flat_walk):
+def collect_drivers_and_profiles(workbench, flat_walk, caller):
     """ Collect the drivers and profiles listed in walk.
 
     The profiles are requested and the returned dictionnary will be empty if
@@ -178,7 +178,7 @@ def collect_drivers_and_profiles(workbench, flat_walk):
     # Directly call plugin method (internal)
     manager = workbench.get_plugin('hqc_meas.instr_manager')
     d_res = manager.drivers_request(flat_walk['selected_driver'])
-    p_res = manager.profiles_request(flat_walk['selected_profile'])
+    p_res = manager.profiles_request(caller, flat_walk['selected_profile'])
 
     if d_res[1] or p_res[1]:
         mess = 'Missing drivers: {}, missing profiles: {}'.format(d_res[1],
@@ -205,11 +205,11 @@ enamldef InstrManagerManifest(PluginManifest):
         description = INSTR_USERS_DESCRIPTION
 
     Extension:
-        id : 'runtime_dep'
+        id = 'runtime_dep'
         point = 'hqc_meas.task_manager.runtime_dependencies'
-        RuntimeDependencies:
+        RuntimeDependency:
             walk_members = ['selected_driver', 'selected_profile']
-            collect =
+            collect = collect_drivers_and_profiles
     Extension:
         id = 'prefs'
         point = 'hqc_meas.preferences.pref_plugin'

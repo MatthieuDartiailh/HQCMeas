@@ -248,7 +248,10 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         mapping = self._used_profiles
         for prof in profiles:
-            del mapping[prof]
+            try:
+                del mapping[prof]
+            except KeyError:
+                pass
 
         avail = list(self.available_profiles)
         self.available_profiles = avail + profiles

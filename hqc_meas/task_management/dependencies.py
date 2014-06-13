@@ -57,10 +57,11 @@ class RuntimeDependency(Declarative):
 
     collect : callable(workbench, flatten_walk)
         Callable in charge of collecting the identified build dependencies.
-        It should take as arguments the workbench of the application and a dict
-        in the format {name: set()}. It should return a dict holding the
-        dependencies (as dictionaries) in categories. If there is no dependence
-        for a given category this category should be absent from the dict.
+        It should take as arguments the workbench of the application, a dict
+        in the format {name: set()} and the calling plugin id. It should return
+        a dict holding the dependencies (as dictionaries) in categories. If
+        there is no dependence for a given category this category should be
+        absent from the dict.
         The input falt_walk should be left untouched. In case of failure it
         should raise a value error.
 

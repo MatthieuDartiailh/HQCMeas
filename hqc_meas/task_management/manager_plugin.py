@@ -279,7 +279,8 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         return None, None
 
-    def collect_dependencies(self, task, dependencies=['build', 'runtime']):
+    def collect_dependencies(self, task, dependencies=['build', 'runtime'],
+                             caller=None):
         """ Build a dict of dependencies for a given task.
 
         NB : This assumes the task is a complex task.
@@ -314,6 +315,9 @@ class TaskManagerPlugin(HasPrefPlugin):
         # could happen if an entry is both a build and a runtime dependency.
         members = set()
         callables = {}
+        if 'runtime' in dependencies and caller is None:
+            raise RuntimeError(cleandoc('''Cannot collect runtime dependencies
+                without knowing the caller plugin'''))
 
         if 'build' in dependencies:
             for build_dep in self._build_dep_manager.collectors.values():
@@ -341,7 +345,7 @@ class TaskManagerPlugin(HasPrefPlugin):
             for runtime_dep in self._runtime_dep_manager.collectors.values():
                 try:
                     deps[1].update(runtime_dep.collect(self.workbench,
-                                                       flat_walk))
+                                                       flat_walk, caller))
                 except ValueError as e:
                     errors[runtime_dep.id] = e.message
 
