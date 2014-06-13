@@ -128,6 +128,10 @@ class InterfaceableTaskMixin(Atom):
 class TaskInterface(HasPrefAtom):
     """
     """
+    #: Flag indicating to the manager whether to expect a view or not.
+    #: Class attribute
+    has_view = False
+
     #: A reference to which this interface is linked.
     task = Instance(SimpleTask)
 

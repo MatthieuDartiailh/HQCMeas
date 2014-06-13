@@ -517,20 +517,20 @@ class SimpleTask(BaseTask):
         """
         perform_func = smooth_crash(self.perform.__func__)
         parallel = self.parallel
-        if parallel['activated'] and parallel['pool']:
-            perform_func = self._make_parallel_process_(perform_func,
+        if parallel.get('activated') and parallel.get('pool'):
+            perform_func = self._make_parallel_perform_(perform_func,
                                                         parallel['pool'])
 
         wait = self.wait
         if 'wait' in wait or 'no_wait' in wait:
-            perform_func = self._make_wait_process_(perform_func,
+            perform_func = self._make_wait_perform_(perform_func,
                                                     wait.get('wait'),
                                                     wait.get('no_wait'))
 
         self.perform_ = make_stoppable(perform_func)
 
     @staticmethod
-    def _make_parallel_perform_(process, pool):
+    def _make_parallel_perform_(perform, pool):
         """ Machinery to execute process_ in parallel.
 
         Create a wrapper around a method to execute it in a thread and
@@ -549,7 +549,7 @@ class SimpleTask(BaseTask):
 
             obj = args[0]
             thread = Thread(group=None,
-                            target=process,
+                            target=perform,
                             args=args,
                             kwargs=kwargs)
             all_threads = obj.task_database.get_value('root', 'threads')
@@ -561,12 +561,12 @@ class SimpleTask(BaseTask):
 
             return thread.start()
 
-        wrapper.__name__ = process.__name__
-        wrapper.__doc__ = process.__doc__
+        wrapper.__name__ = perform.__name__
+        wrapper.__doc__ = perform.__doc__
         return wrapper
 
     @staticmethod
-    def _make_wait_process_(process, wait, no_wait):
+    def _make_wait_perform_(perform, wait, no_wait):
         """ Machinery to make process_ wait on other tasks execution.
 
         Create a wrapper around a method to wait for some threads to terminate
@@ -601,7 +601,7 @@ class SimpleTask(BaseTask):
                 all_threads.update({w: [] for w in wait if w in all_threads})
 
                 obj.task_database.set_value('root', 'threads', all_threads)
-                return process(*args, **kwargs)
+                return perform(*args, **kwargs)
 
         elif no_wait:
             def wrapper(*args, **kwargs):
@@ -616,7 +616,7 @@ class SimpleTask(BaseTask):
                 all_threads.update({p: [] for p in pools})
 
                 obj.task_database.set_value('root', 'threads', all_threads)
-                return process(*args, **kwargs)
+                return perform(*args, **kwargs)
         else:
             def wrapper(*args, **kwargs):
 
@@ -629,10 +629,10 @@ class SimpleTask(BaseTask):
                 all_threads.update({w: [] for w in all_threads})
 
                 obj.task_database.set_value('root', 'threads', all_threads)
-                return process(*args, **kwargs)
+                return perform(*args, **kwargs)
 
-        wrapper.__name__ = process.__name__
-        wrapper.__doc__ = process.__doc__
+        wrapper.__name__ = perform.__name__
+        wrapper.__doc__ = perform.__doc__
 
         return wrapper
 
@@ -971,6 +971,8 @@ class ComplexTask(BaseTask):
                 value = config[name]
                 validated = member_from_str(member, value)
 
+                setattr(task, name, validated)
+
             # Then we deal with the child tasks
             elif meta and 'child' in meta:
                 if isinstance(member, (ContainerList, List)):
@@ -981,19 +983,24 @@ class ComplexTask(BaseTask):
                         child_name = pref.format(i)
                         if child_name not in config:
                             break
-                        child_class_name = config[child_name].pop('task_class')
+                        child_config = config[child_name]
+                        child_class_name = child_config.pop('task_class')
                         child_class = dependencies['tasks'][child_class_name]
-                        child = child_class.build_from_config(config,
+                        child = child_class.build_from_config(child_config,
                                                               dependencies)
                         validated.append(child)
+                        i += 1
 
                 else:
-                    child_class_name = config[name].pop('task_class')
+                    child_config = config[child_name]
+                    child_class_name = child_config.pop('task_class')
                     child_class = dependencies['tasks'][child_class_name]
-                    validated = child_class.build_from_config(config,
+                    validated = child_class.build_from_config(child_config,
                                                               dependencies)
 
-            setattr(task, name, validated)
+                setattr(task, name, validated)
+
+        return task
 
     #--- Private API ----------------------------------------------------------
 
