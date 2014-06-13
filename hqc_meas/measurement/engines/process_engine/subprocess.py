@@ -111,7 +111,7 @@ class TaskProcess(Process):
                 name, config, build, runtime, mon_entries = self.pipe.recv()
 
                 # Build it by using the given build dependencies.
-                root = build_task_from_config(config, build)
+                root = build_task_from_config(config, build, True)
 
                 # Give all runtime dependencies to the root task.
                 root.run_time = runtime
