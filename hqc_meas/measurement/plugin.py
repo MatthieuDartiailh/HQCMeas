@@ -136,10 +136,15 @@ class MeasurePlugin(HasPrefPlugin):
 
         # Clear ressources.
         self.engines.clear()
+        self._engine_extensions.clear()
         self.monitors.clear()
+        self._monitor_extensions.clear()
         self.headers.clear()
+        self._header_extensions.clear()
         self.checks.clear()
+        self._check_extensions.clear()
         self.editors.clear()
+        self._editor_extensions.clear()
 
     def start_measure(self, measure):
         """ Start a new measure.
@@ -467,6 +472,7 @@ class MeasurePlugin(HasPrefPlugin):
             self.selected_engine = ''
 
         self.engines = engines
+        self._engine_extensions = new_extensions
 
     def _load_engines(self, extension):
         """ Load the Engine object for the given extension.
@@ -545,6 +551,7 @@ class MeasurePlugin(HasPrefPlugin):
                 monitors[monitor.id] = monitor
 
         self.monitors = monitors
+        self._monitors_extensions = new_extensions
 
     def _load_monitors(self, extension):
         """ Load the Monitor object for the given extension.
@@ -607,6 +614,7 @@ class MeasurePlugin(HasPrefPlugin):
                 headers[header.id] = header
 
         self.headers = headers
+        self._header_extensions = new_extensions
 
     def _load_headers(self, extension):
         """ Load the Header object for the given extension.
@@ -669,6 +677,7 @@ class MeasurePlugin(HasPrefPlugin):
                 checks[check.id] = check
 
         self.checks = checks
+        self._check_extensions = new_extensions
 
     def _load_checks(self, extension):
         """ Load the Check object for the given extension.
@@ -731,6 +740,7 @@ class MeasurePlugin(HasPrefPlugin):
                 editors[editor.id] = editor
 
         self.editors = editors
+        self._editor_extensions = new_extensions
 
     def _load_editors(self, extension):
         """ Load the Check object for the given extension.
