@@ -16,28 +16,23 @@ from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                              FileDeletedEvent, FileMovedEvent)
 from inspect import cleandoc
-from collections import defaultdict
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
 from hqc_meas.tasks.api import BaseTask, TaskInterface
 from hqc_meas.tasks.tools.walks import flatten_walk
+from hqc_meas.utils.configobj_ops import flatten_config
 from .filters.api import AbstractTaskFilter, TASK_FILTERS
 from .config.api import (SPECIAL_CONFIG, CONFIG_MAP_VIEW, IniConfigTask,
                          IniView)
 
-from .building import build_task, build_root
-from .saving import save_task
 from .templates import load_template
-from .dependencies import BuildDependency, RuntimeDependency
+from .dependencies_manager import (BuildDependenciesManager,
+                                   RuntimeDependenciesManager)
 
 
 MODULE_PATH = os.path.dirname(__file__)
 
 MODULE_ANCHOR = 'hqc_meas.task_management'
-
-BUILD_DEP_POINT = u'hqc_meas.task_manager.build-dependencies'
-
-RUNTIME_DEP_POINT = u'hqc_meas.measure.runtime-dependencies'
 
 
 # XXXX Filters and Config being less prone to frequent udpates, no dynamic
@@ -83,6 +78,8 @@ class TaskManagerPlugin(HasPrefPlugin):
                                              '../tasks/templates'))
         if not os.path.isdir(path):
             os.mkdir(path)
+        self._build_dep_manager.start()
+        self._runtime_dep_manager.start()
         self._refresh_template_tasks()
         self._refresh_tasks()
         self._refresh_filters()
@@ -98,6 +95,8 @@ class TaskManagerPlugin(HasPrefPlugin):
         """
         super(TaskManagerPlugin, self).stop()
         self._unbind_observers()
+        self._build_dep_manager.stop()
+        self._runtime_dep_manager.stop()
         self._py_tasks.clear()
         self._template_tasks.clear()
         self._interfaces.clear()
@@ -178,28 +177,36 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         Parameters
         ----------
-        interfaces : iterable
-            Iterable of interfaces names whose class should be returned.
+        names : iterable
+            Iterable of task/interfaces names whose class should be returned.
+
+        use_i_names : bool
+            Flag indicating whether to consider the names as task names or
+            interfaces names.
 
         Returns
         -------
-        views : dict
-            Dict mapping the interface names to their associated class.
+        interfaces : dict
+            Dict mapping the task/interface name to the associated list of
+            class/class .
 
         """
-        if not use_i_names:
-            i_names = []
-            for name in name:
-                i_names.extend(self.interfaces[name])
-        else:
-            i_names = names
-
         known_interfaces = self._interfaces
-        missing = [interface for interface in i_names
-                   if interface not in known_interfaces]
-        return {interface: i_class
-                for interface, i_class in known_interfaces.iteritems()
-                if interface in i_names}, missing
+        if not use_i_names:
+            t_names = self._task_interfaces
+            missing = [task for task in names
+                       if task not in t_names]
+            return {name: [known_interfaces[i_name]
+                           for i_name in t_names[name]]
+                    for name in t_names if name in names}, missing
+
+        else:
+            missing = [interface for interface in names
+                       if interface not in self._interfaces]
+
+            return {interface: i_class
+                    for interface, i_class in known_interfaces.iteritems()
+                    if interface in names}, missing
 
     def interface_views_request(self, interface_classes):
         """ Give acces to task views.
@@ -309,30 +316,32 @@ class TaskManagerPlugin(HasPrefPlugin):
         callables = {}
 
         if 'build' in dependencies:
-            for build_dep in self._build_dep_collectors:
+            for build_dep in self._build_dep_manager.collectors.values():
                 members.update(set(build_dep.walk_members))
 
         if 'runtime' in dependencies:
-            for runtime_dep in self._runtime_dep_collectors:
+            for runtime_dep in self._runtime_dep_manager.collectors.values():
                 members.update(set(runtime_dep.walk_members))
                 callables.update(runtime_dep.walk_callables)
 
         walk = task.walk(members, callables)
-        flat_walk = flatten_walk(walk, members + callables.keys())
+        flat_walk = flatten_walk(walk, list(members) + callables.keys())
 
         deps = ({}, {})
         errors = {}
         if 'build' in dependencies:
-            for build_dep in self._build_dep_collectors:
+            for build_dep in self._build_dep_manager.collectors.values():
                 try:
-                    deps[0].update(build_dep.collect(flat_walk))
+                    deps[0].update(build_dep.collect(self.workbench,
+                                                     flat_walk))
                 except ValueError as e:
                     errors[build_dep.id] = e.message
 
         if 'runtime' in dependencies:
-            for runtime_dep in self._runtime_dep_collectors:
+            for runtime_dep in self._runtime_dep_manager.collectors.values():
                 try:
-                    deps[1].update(runtime_dep.collect(flat_walk))
+                    deps[1].update(runtime_dep.collect(self.workbench,
+                                                       flat_walk))
                 except ValueError as e:
                     errors[runtime_dep.id] = e.message
 
@@ -346,19 +355,50 @@ class TaskManagerPlugin(HasPrefPlugin):
         else:
             return True, deps[1]
 
+    def collect_build_dep_from_config(self, config):
+        """ Read a ConfigObj object to determine all the build dependencies of
+        a task hierarchy and get the in a dict.
+
+        Parameters
+        ----------
+        manager : TaskManager
+            Instance of the task manager.
+
+        coonfig : Section
+            Section representing the task hierarchy.
+
+        Returns
+        -------
+        build_dep : nested dict or None
+            Dictionary holding all the build dependencies of a task hierarchy.
+            With this dict and the config the tas hierarchy can be
+            reconstructed without accessing the workbech.
+            None is case of failure.
+
+        """
+        members = []
+        for build_dep in self._build_dep_manager.collectors.values():
+            members.extend(build_dep.walk_members)
+
+        flat_config = flatten_config(config, members)
+
+        build_deps = {}
+        for build_dep in self._build_dep_manager.collectors.values():
+            try:
+                build_deps.update(build_dep.collect(self.workbench,
+                                                    flat_config))
+            except ValueError as e:
+                logger = logging.getLogger(__name__)
+                logger.error(e.message)
+                return None
+
+        return build_deps
+
     def report(self):
         """ Give access to the failures which happened at startup.
 
         """
         return self._failed
-
-    # Declared as method here simply to avoid breaking the delayed import of
-    # the manifest.
-    save_task = save_task
-
-    build_task = build_task
-
-    build_root = build_root
 
     #--- Private API ----------------------------------------------------------
     #: Tasks implemented in Python
@@ -377,7 +417,7 @@ class TaskManagerPlugin(HasPrefPlugin):
     _interfaces = Dict(Str(), Subclass(TaskInterface))
 
     #: Interfaces views
-    _interfaces_view = Dict(Str())
+    _interface_views = Dict(Str())
 
     #: Task filters
     _filters = Dict(Str(), Subclass(AbstractTaskFilter), TASK_FILTERS)
@@ -388,17 +428,11 @@ class TaskManagerPlugin(HasPrefPlugin):
     #: Dict holding the list of failures which happened during loading
     _failed = Dict()
 
-    #: List holding all the build dependency collector.
-    _build_dep_collectors = List()
+    #: Hanbdler for extensions to the 'build-dependencies' extension point.
+    _build_dep_manager = Typed(BuildDependenciesManager)
 
-    #: Dict storing which extension declared which build dependency.
-    _build_dep_extensions = Typed(defaultdict, (list,))
-
-    #: List holding all the runtime dependency collector.
-    _runtime_dep_collectors = List()
-
-    #: Dict storing which extension declared which runtime dependency.
-    _runtime_dep_extensions = Typed(defaultdict, (list,))
+    #: Handler for extensions to the 'runtime-dependencies' extension point.
+    _runtime_dep_manager = Typed(RuntimeDependenciesManager)
 
     #: Watchdog observer
     _observer = Typed(Observer, ())
@@ -470,11 +504,17 @@ class TaskManagerPlugin(HasPrefPlugin):
         valid_views = {k: v for k, v in views.iteritems()
                        if k in aux_task_map or k == 'RootTask'}
 
+        valid_interfaces = {k: [i for i in v
+                                if not i.has_view
+                                or i.__name__ in interface_views]
+                            for k, v in interfaces.iteritems()
+                            }
+
         self._py_tasks = valid_tasks
         self._task_views = valid_views
         self._task_interfaces = {k: [i.__name__ for i in v]
-                                 for k, v in interfaces.iteritems()}
-        self._interfaces = {i.__name__: i for v in interfaces.values()
+                                 for k, v in valid_interfaces.iteritems()}
+        self._interfaces = {i.__name__: i for v in valid_interfaces.values()
                             for i in v}
         self._interface_views = interface_views
         self.tasks = list(tasks.keys()) + list(self._template_tasks.keys())
@@ -658,137 +698,6 @@ class TaskManagerPlugin(HasPrefPlugin):
             if hasattr(m, 'INTERFACE_VIEW_MAPPING'):
                 interface_views.update(m.INTERFACE_VIEW_MAPPING)
 
-    def _refresh_build_deps(self):
-        """ Refresh the list of known build dependency collectors.
-
-        """
-        workbench = self.workbench
-        point = workbench.get_extension_point(BUILD_DEP_POINT)
-        extensions = point.extensions
-        if not extensions:
-            self._build_dep_collectors.clear()
-            self._build_dep_extensions.clear()
-            return
-
-        # Get the monitors declarations for all extensions.
-        new_extensions = defaultdict(list)
-        old_extensions = self._build_dep_extensions
-        for extension in extensions:
-            if extensions in old_extensions:
-                build_deps = old_extensions[extension]
-            else:
-                build_deps = self._load_build_deps(extension)
-            new_extensions[extension].extend(build_deps)
-
-        # Create mapping between monitor id and declaration.
-        build_deps = {}
-        for extension in extensions:
-            for build_dep in new_extensions[extension]:
-                if build_dep.id in build_deps:
-                    msg = "build_dep '%s' is already registered"
-                    raise ValueError(msg % build_dep.id)
-                if not build_dep.walk_members:
-                    msg = "build_dep '%s' does not declare any dependencies"
-                    raise ValueError(msg % build_dep.id)
-                if build_dep.collector is None:
-                    msg = "build_dep '%s' does not declare a collector"
-                    raise ValueError(msg % build_dep.id)
-                build_deps[build_dep.id] = build_dep
-
-        self.build_deps = build_deps
-
-    def _load_build_deps(self, extension):
-        """ Load the Monitor object for the given extension.
-
-        Parameters
-        ----------
-        extension : Extension
-            The extension object of interest.
-
-        Returns
-        -------
-        build_deps : list(BuildDependency)
-            The list of BuildDependency declared by the extension.
-
-        """
-        workbench = self.workbench
-        build_deps = extension.get_children(BuildDependency)
-        if extension.factory is not None and not build_deps:
-            for build_dep in extension.factory(workbench):
-                if not isinstance(build_dep, BuildDependency):
-                    msg = "extension '%s' created non-Monitor."
-                    args = (extension.qualified_id)
-                    raise TypeError(msg % args)
-                build_deps.append(build_dep)
-
-        return build_deps
-
-    def _refresh_runtime_deps(self):
-        """ Refresh the list of known monitors.
-
-        """
-        workbench = self.workbench
-        point = workbench.get_extension_point(RUNTIME_DEP_POINT)
-        extensions = point.extensions
-        if not extensions:
-            self._runtime_dep_collectors.clear()
-            self._runtime_dep_extensions.clear()
-            return
-
-        # Get the monitors declarations for all extensions.
-        new_extensions = defaultdict(list)
-        old_extensions = self._runtime_dep_extensions
-        for extension in extensions:
-            if extensions in old_extensions:
-                runtime_deps = old_extensions[extension]
-            else:
-                runtime_deps = self._load_monitors(extension)
-            new_extensions[extension].extend(runtime_deps)
-
-        # Create mapping between monitor id and declaration.
-        runtime_deps = {}
-        for extension in extensions:
-            for runtime_dep in new_extensions[extension]:
-                if runtime_dep.id in runtime_deps:
-                    msg = "runtime_dep '%s' is already registered"
-                    raise ValueError(msg % runtime_dep.id)
-                if not runtime_dep.walk_members\
-                        and not runtime_dep.walk_callables:
-                    msg = "build_dep '%s' does not declare any dependencies"
-                    raise ValueError(msg % runtime_dep.id)
-                if runtime_dep.collector is None:
-                    msg = "build_dep '%s' does not declare a collector"
-                    raise ValueError(msg % runtime_dep.id)
-                runtime_deps[runtime_dep.id] = runtime_dep
-
-        self.runtime_deps = runtime_deps
-
-    def _load_runtime_deps(self, extension):
-        """ Load the RuntimeDependency objects for the given extension.
-
-        Parameters
-        ----------
-        extension : Extension
-            The extension object of interest.
-
-        Returns
-        -------
-        runtime_deps : list(RuntimeDependency)
-            The list of RuntimeDependency declared by the extension.
-
-        """
-        workbench = self.workbench
-        runtime_deps = extension.get_children(RuntimeDependency)
-        if extension.factory is not None and not runtime_deps:
-            for runtime_dep in extension.factory(workbench):
-                if not isinstance(runtime_dep, RuntimeDependency):
-                    msg = "extension '%s' created non-RuntimeDependency."
-                    args = (extension.qualified_id)
-                    raise TypeError(msg % args)
-                runtime_deps.append(runtime_dep)
-
-        return runtime_deps
-
     def _bind_observers(self):
         """ Setup the observers for the plugin.
 
@@ -812,7 +721,10 @@ class TaskManagerPlugin(HasPrefPlugin):
         self.unobserve('templates_folders', self._update_templates)
         self._observer.unschedule_all()
         self._observer.stop()
-        self._observer.join()
+        try:
+            self._observer.join()
+        except RuntimeError:
+            pass
 
     def _update_tasks(self, change):
         """ Observer ensuring that loading preferences are taken into account.
@@ -829,6 +741,18 @@ class TaskManagerPlugin(HasPrefPlugin):
         for folder in self.templates_folders:
             handler = _FileListUpdater(self._refresh_template_tasks)
             self._observer.schedule(handler, folder, recursive=True)
+
+    def _default__build_dep_manager(self):
+        """ Default value for _build_dep_manager.
+
+        """
+        return BuildDependenciesManager(workbench=self.workbench)
+
+    def _default__runtime_dep_manager(self):
+        """ Default value for _build_dep_manager.
+
+        """
+        return RuntimeDependenciesManager(workbench=self.workbench)
 
     @staticmethod
     def _normalise_name(name):

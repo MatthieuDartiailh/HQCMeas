@@ -15,6 +15,8 @@ from hqc_meas.utils.state_plugin import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 
 from .dependencies import BuildDependency
+from .building import build_task, build_root
+from .saving import save_task
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
@@ -115,7 +117,7 @@ def save_task(event):
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
-    return manager.save_task(**event.parameters)
+    return save_task(manager, **event.parameters)
 
 
 def build_task(event):
@@ -123,7 +125,7 @@ def build_task(event):
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
-    return manager.build_task(**event.parameters)
+    return build_task(manager, **event.parameters)
 
 
 def build_root(event):
@@ -131,7 +133,7 @@ def build_root(event):
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
-    return manager.build_root(**event.parameters)
+    return build_root(manager, **event.parameters)
 
 #--- Command and extension point descriptions ---------------------------------
 
@@ -218,16 +220,17 @@ enamldef TaskManagerManifest(PluginManifest):
     factory = manager_plugin_factory
 
     ExtensionPoint:
-        id = 'build-dependencies'
+        id = 'build_dependencies'
         description = BUILD_DEP_DESCRIPTION
     ExtensionPoint:
-        id = 'runtime-dependencies'
+        id = 'runtime_dependencies'
         description = RUNTIME_DEP_DESCRIPTION
 
     Extension:
         id = 'task_classes'
         point = 'hqc_meas.task_manager.build_dependencies'
         BuildDependency:
+            id = 'hqc_meas.task_manager.dependencies'
             walk_members = ['task_class', 'interface_class']
             collect = collect_tasks_and_interfaces
     Extension:
@@ -264,7 +267,7 @@ enamldef TaskManagerManifest(PluginManifest):
             description = VIEW_REQUEST_DESCRIPTION
             handler = views_request
         Command:
-            id = 'hqc_meas.task_manager.interfacess_request'
+            id = 'hqc_meas.task_manager.interfaces_request'
             description = INTERFACE_REQUEST_DESCRIPTION
             handler = interfaces_request
         Command:

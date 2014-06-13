@@ -11,10 +11,8 @@ TaskManager and should be called on their own. There are implemented here only
 to simplify the manager.
 
 """
-import logging
 from enaml.widgets.api import FileDialogEx
 
-from hqc_meas.utils.configobj_ops import flatten_config
 from hqc_meas.tasks.api import RootTask
 from .templates import load_template
 
@@ -50,46 +48,7 @@ def build_task(manager, parent_ui=None):
         return None
 
 
-def _gather_build_dep_from_config(manager, config):
-    """ Read a ConfigObj object to determine all the build dependencies of
-    a task hierarchy and get the in a dict.
-
-    Parameters
-    ----------
-    manager : TaskManager
-        Instance of the task manager.
-
-    coonfig : Section
-        Section representing the task hierarchy.
-
-    Returns
-    -------
-    build_dep : nested dict or None
-        Dictionary holding all the build dependencies of a task hierarchy. With
-        this dict and the config the tas hierarchy can be reconstructed without
-        accessing the workbech.
-        None is case of failure.
-
-    """
-    members = []
-    for build_dep in manager._build_dep_collectors:
-        members.extend(build_dep.walk_members)
-
-    flat_config = flatten_config(config, members)
-
-    build_dep = {}
-    for build_dep in manager._build_dep_collectors:
-        try:
-            build_dep.update(build_dep.collect(flat_config))
-        except ValueError as e:
-            logger = logging.getLogger(__name__)
-            logger.error(e.message)
-            return None
-
-    return build_dep
-
-
-def build_task_from_config(config, dep_source):
+def build_task_from_config(config, dep_source, root=False):
     """ Rebuild a task hierarchy from a Section.
 
     Parameters
@@ -108,12 +67,15 @@ def build_task_from_config(config, dep_source):
 
     """
     if not isinstance(dep_source, dict):
-        dep_source = _gather_build_dep_from_config(dep_source, config)
+        dep_source = dep_source.collect_build_dep_from_config(config)
         if dep_source is None:
             return None
 
-    task_class = dep_source[config.pop('task_class')]
-    return task_class.build_from_config(config, dep_source)
+    if root:
+        return RootTask.build_from_config(config, dep_source)
+    else:
+        task_class = dep_source['tasks'][config.pop('task_class')]
+        return task_class.build_from_config(config, dep_source)
 
 
 def build_root(manager, mode, config=None, parent_ui=None, build_dep=None):
@@ -159,7 +121,7 @@ def build_root(manager, mode, config=None, parent_ui=None, build_dep=None):
 
     if config:
         if build_dep is None:
-            build_dep = _gather_build_dep_from_config(manager, config)
+            build_dep = manager.collect_build_dep_from_config(config)
         if build_dep is None:
             return None
 

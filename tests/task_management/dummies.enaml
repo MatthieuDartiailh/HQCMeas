@@ -2,8 +2,8 @@
 from atom.api import Atom, Str
 from enaml.workbench.api import PluginManifest, Extension
 
-from hqc_meas.task_management.depedencies import (BuildDependency,
-                                                  RuntimeDependency)
+from hqc_meas.task_management.dependencies import (BuildDependency,
+                                                   RuntimeDependency)
 
 
 BUILD_DEP_POINT = 'hqc_meas.task_manager.build_dependencies'
@@ -26,7 +26,7 @@ enamldef DummyBuildDep1(PluginManifest):
         BuildDependency:
             id = 'dummy.build_dep1'
             walk_members = ['t']
-            collect = lambda workbench, flat_walk : return {}
+            collect = lambda workbench, flat_walk : {}
 
 enamldef DummyBuildDep1bis(PluginManifest):
     """ Valid BuildDependency contributor, clone used to check id uniqueness
@@ -41,20 +41,21 @@ enamldef DummyBuildDep1bis(PluginManifest):
         BuildDependency:
             id = 'dummy.build_dep1'
             walk_members = ['t']
-            collect = lambda workbench, flat_walk : return {}
+            collect = lambda workbench, flat_walk : {}
 
 
 def factory_build_dep(workbench):
-    kwargs = {'id': 'dummy.build_dep3',
-              'walk_members': ['t']
-              'collect': lambda workbench, flat_walk : return {}}
+    collect = lambda workbench, flat_walk : {}
+    kwargs = {'id': 'dummy.build_dep2',
+              'walk_members': ['t'],
+              'collect': collect}
     return [BuildDependency(**kwargs)]
 
 
-enamldef DummyBuildDep3(PluginManifest):
+enamldef DummyBuildDep2(PluginManifest):
     """ Valid BuildDependency contributor using a factory.
     """
-    id = u'dummy.build_dep3'
+    id = u'dummy.build_dep2'
 
     Extension:
         id = 'build_deps'
@@ -66,26 +67,26 @@ enamldef DummyBuildDep3(PluginManifest):
     """ Unvalid BuildDependency contributor, not declaring dependencies.
 
     """
-    id = u'dummy.build_dep2'
+    id = u'dummy.build_dep3'
 
     Extension:
         id = 'build_deps'
         point = BUILD_DEP_POINT
         BuildDependency:
-            id = 'dummy.build_dep2'
-            collect = lambda workbench, flat_walk : return {}
+            id = 'dummy.build_dep3'
+            collect = lambda workbench, flat_walk : {}
 
 enamldef DummyBuildDep4(PluginManifest):
     """ Unvalid BuildDependency contributor, not declaring collect.
 
     """
-    id = u'dummy.build_dep2'
+    id = u'dummy.build_dep4'
 
     Extension:
         id = 'build_deps'
         point = BUILD_DEP_POINT
         BuildDependency:
-            id = 'dummy.build_dep2'
+            id = 'dummy.build_dep4'
             walk_members = ['t']
 
 
@@ -111,11 +112,11 @@ enamldef DummyRuntimeDep1(PluginManifest):
 
     Extension:
         id = 'runtime_deps'
-        point = BUILD_DEP_POINT
+        point = RUNTIME_DEP_POINT
         RuntimeDependency:
             id = 'dummy.runtime_dep1'
             walk_members = ['t']
-            collect = lambda workbench, flat_walk : return {}
+            collect = lambda workbench, flat_walk : {}
 
 enamldef DummyRuntimeDep1bis(PluginManifest):
     """ Valid RuntimeDependency contributor, clone used to check id uniqueness
@@ -126,28 +127,29 @@ enamldef DummyRuntimeDep1bis(PluginManifest):
 
     Extension:
         id = 'runtime_deps'
-        point = BUILD_DEP_POINT
+        point = RUNTIME_DEP_POINT
         RuntimeDependency:
             id = 'dummy.runtime_dep1'
             walk_members = ['t']
-            collect = lambda workbench, flat_walk : return {}
+            collect = lambda workbench, flat_walk : {}
 
 
 def factory_runtime_dep(workbench):
-    kwargs = {'id': 'dummy.runtime_dep3',
-              'walk_callables': {'t': lambda : None}
-              'collect': lambda workbench, flat_walk : return {}}
+    collect = lambda workbench, flat_walk : {}
+    kwargs = {'id': 'dummy.runtime_dep2',
+              'walk_callables': {'t': lambda : None},
+              'collect': collect}
     return [RuntimeDependency(**kwargs)]
 
 
-enamldef DummyRuntimeDep3(PluginManifest):
+enamldef DummyRuntimeDep2(PluginManifest):
     """ Valid RuntimeDependency contributor using a factory.
     """
-    id = u'dummy.runtime_dep3'
+    id = u'dummy.runtime_dep2'
 
     Extension:
         id = 'runtime_deps'
-        point = BUILD_DEP_POINT
+        point = RUNTIME_DEP_POINT
         factory = factory_runtime_dep
 
 
@@ -155,26 +157,26 @@ enamldef DummyRuntimeDep3(PluginManifest):
     """ Unvalid RuntimeDependency contributor, not declaring dependencies.
 
     """
-    id = u'dummy.runtime_dep2'
+    id = u'dummy.runtime_dep3'
 
     Extension:
         id = 'runtime_deps'
-        point = BUILD_DEP_POINT
+        point = RUNTIME_DEP_POINT
         RuntimeDependency:
-            id = 'dummy.runtime_dep2'
-            collect = lambda workbench, flat_walk : return {}
+            id = 'dummy.runtime_dep3'
+            collect = lambda workbench, flat_walk : {}
 
 enamldef DummyRuntimeDep4(PluginManifest):
     """ Unvalid RuntimeDependency contributor, not declaring collect.
 
     """
-    id = u'dummy.runtime_dep2'
+    id = u'dummy.runtime_dep4'
 
     Extension:
         id = 'runtime_deps'
-        point = BUILD_DEP_POINT
+        point = RUNTIME_DEP_POINT
         RuntimeDependency:
-            id = 'dummy.runtime_dep2'
+            id = 'dummy.runtime_dep4'
             walk_members = ['t']
 
 
@@ -182,9 +184,9 @@ enamldef DummyRuntimeDep5(PluginManifest):
     """ Unvalid RuntimeDependency contributor, wrong type returned by factory.
 
     """
-    id = u'dummy.runtime_dep4'
+    id = u'dummy.runtime_dep5'
 
     Extension:
         id = 'runtime_deps'
-        point = BUILD_DEP_POINT
+        point = RUNTIME_DEP_POINT
         factory = lambda workbench: [None]

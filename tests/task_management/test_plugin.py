@@ -4,7 +4,8 @@ import enaml
 import os
 import shutil
 from configobj import ConfigObj
-from nose.tools import assert_in, assert_not_in, assert_equal, raises
+from nose.tools import (assert_in, assert_not_in, assert_equal, raises,
+                        assert_not_equal, assert_true, assert_false)
 from nose.plugins.skip import SkipTest
 
 with enaml.imports():
@@ -57,7 +58,8 @@ class Test(object):
 
         # Creating tasks preferences.
         task_path = os.path.join(directory, '..', '..', 'hqc_meas', 'tasks')
-        task_api = set(('base_tasks.py', 'instr_task.py', 'tasks_util'))
+        task_api = set(('base_tasks.py', 'instr_task.py', 'tasks_util',
+                        'tasks_instr'))
         task_loading = [unicode('tasks.' + mod[:-3])
                         for mod in os.listdir(task_path)
                         if mod.endswith('.py') and mod not in task_api]
@@ -124,7 +126,6 @@ class Test(object):
         self.workbench.unregister(u'hqc_meas.state')
         self.workbench.unregister(u'enaml.workbench.core')
 
-    # XXXX Must also test interfaces
     def test_init(self):
         self.workbench.register(TaskManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
@@ -135,6 +136,10 @@ class Test(object):
         assert_in('Print', plugin.tasks)
         assert_in('Definition', plugin.tasks)
         assert_in('Sleep', plugin.tasks)
+
+        # Testing interface exploration
+        assert_in('SetDCVoltageTask', plugin._task_interfaces)
+        assert_not_equal(plugin._task_interfaces['SetDCVoltageTask'], [])
 
         # Testing templates
         assert_in('Template',  plugin.tasks)
@@ -168,6 +173,7 @@ class Test(object):
         assert_in('Template',  plugin.tasks)
 
     def test_tasks_request1(self):
+        # Test requesting a task using its name.
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.tasks_request'
@@ -180,6 +186,7 @@ class Test(object):
         assert_equal(miss, ['XXXX'])
 
     def test_tasks_request2(self):
+        # Test requesting a task using its class name.
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.tasks_request'
@@ -194,16 +201,25 @@ class Test(object):
         assert_equal(miss, [])
 
     def test_interface_request1(self):
-        pass
+        # Test requesting interfaces using the task class name
+        self.workbench.register(TaskManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.interfaces_request'
+        interfaces, miss = core.invoke_command(com,
+                                               {'tasks': ['SetDCVoltageTask',
+                                                          'XXXX']},
+                                               self)
+        assert_equal(interfaces.keys(), ['SetDCVoltageTask'])
+        assert_equal(miss, ['XXXX'])
 
     def test_interfaces_request2(self):
-        pass
-
-    def test_interface_views_request1(self):
-        pass
-
-    def test_interface_views_request2(self):
-        pass
+        # Test requesting interfaces using the interface class name
+        self.workbench.register(TaskManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.interfaces_request'
+        kwargs = {'interfaces': ['SimpleVoltageSourceInterface']}
+        inter, miss = core.invoke_command(com, kwargs, self)
+        assert_equal(inter.keys(), ['SimpleVoltageSourceInterface'])
 
     def test_views_request(self):
         self.workbench.register(TaskManagerManifest())
@@ -216,6 +232,15 @@ class Test(object):
                                           self)
         assert_in('ComplexTask', views)
         assert_equal(views['ComplexTask'], ComplexView)
+        assert_equal(miss, [])
+
+    def test_interface_views_request1(self):
+        self.workbench.register(TaskManagerManifest())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.interface_views_request'
+        kwargs = {'interface_classes': ['MultiChannelVoltageSourceInterface']}
+        views, miss = core.invoke_command(com, kwargs, self)
+        assert_in('MultiChannelVoltageSourceInterface', views)
         assert_equal(miss, [])
 
     def test_filter_tasks(self):
@@ -270,6 +295,10 @@ class Test(object):
         assert_equal(conf.config_ready, True)
         task = conf.build_task()
         assert_equal(task.task_name, 'Test')
+        assert_equal(len(task.children_task), 1)
+        task2 = task.children_task[0]
+        assert_equal(task2.task_name, 'a')
+        assert_equal(task2.task_class, 'PrintTask')
 
     def test_config_request_build3(self):
         self.workbench.register(TaskManagerManifest())
@@ -291,7 +320,25 @@ class Test(object):
         assert_equal(task.task_name, 'Test')
 
     def test_collect_dependencies(self):
-        pass
+        # Test collecting build dependencies.
+        self.workbench.register(TaskManagerManifest())
+        from hqc_meas.tasks.api import RootTask, ComplexTask
+        from hqc_meas.tasks.tasks_util.test_tasks import PrintTask
+        aux = [PrintTask(task_name='r')]
+        root = RootTask(task_name='root')
+        root.children_task = [ComplexTask(task_name='complex',
+                                          children_task=aux),
+                              PrintTask(task_name='t')]
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.task_manager.collect_dependencies'
+        res, build, run = core.invoke_command(com, {'task': root})
+        assert_true(res)
+        assert_in('tasks', build)
+        assert_equal(sorted(['PrintTask', 'ComplexTask']),
+                     sorted(build['tasks'].keys()))
+        assert_not_in('interfaces', build)
+        assert_false(run)
 
     #--- Test BuildDependencies -----------------------------------------------
 
@@ -302,12 +349,13 @@ class Test(object):
         self.workbench.register(DummyBuildDep1())
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
 
-        assert_in(u'dummy.check1', plugin.checks)
+        manager = plugin._build_dep_manager
 
-        self.workbench.unregister(u'dummy.check1')
+        assert_in(u'dummy.build_dep1', manager.collectors)
 
-        assert_not_in(u'dummy.check1', plugin.checks)
-        assert_equal(plugin._check_extensions, {})
+        self.workbench.unregister(u'dummy.build_dep1')
+
+        assert_not_in(u'dummy.build_dep1', manager.collectors)
 
     def test_build_dep_registration2(self):
         # Test build deps update when a new plugin is registered.
@@ -316,11 +364,13 @@ class Test(object):
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
         self.workbench.register(DummyBuildDep1())
 
-        assert_in(u'dummy.check1', plugin.checks)
+        manager = plugin._build_dep_manager
 
-        self.workbench.unregister(u'dummy.check1')
+        assert_in(u'dummy.build_dep1', manager.collectors)
 
-        assert_not_in(u'dummy.check1', plugin.checks)
+        self.workbench.unregister(u'dummy.build_dep1')
+
+        assert_not_in(u'dummy.build_dep1', manager.collectors)
 
     def test_build_dep_factory(self):
         # Test getting the BuildDependency decl from a factory.
@@ -329,11 +379,13 @@ class Test(object):
         self.workbench.register(DummyBuildDep2())
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
 
-        assert_in(u'dummy.check3', plugin.checks)
+        manager = plugin._build_dep_manager
 
-        self.workbench.unregister(u'dummy.check3')
+        assert_in(u'dummy.build_dep2', manager.collectors)
 
-        assert_not_in(u'dummy.check3', plugin.checks)
+        self.workbench.unregister(u'dummy.build_dep2')
+
+        assert_not_in(u'dummy.build_dep1', manager.collectors)
 
     @raises(ValueError)
     def test_build_dep_errors1(self):
@@ -377,12 +429,14 @@ class Test(object):
         self.workbench.register(DummyRuntimeDep1())
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
 
-        assert_in(u'dummy.check1', plugin.checks)
+        manager = plugin._runtime_dep_manager
 
-        self.workbench.unregister(u'dummy.check1')
+        assert_in(u'dummy.runtime_dep1', manager.collectors)
 
-        assert_not_in(u'dummy.check1', plugin.checks)
-        assert_equal(plugin._check_extensions, {})
+        self.workbench.unregister(u'dummy.runtime_dep1')
+
+        assert_not_in(u'dummy.runtime_dep1', manager.collectors)
+        assert_equal(manager._extensions, {})
 
     def test_runtime_dep_registration2(self):
         # Test runtime deps update when a new plugin is registered.
@@ -391,11 +445,13 @@ class Test(object):
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
         self.workbench.register(DummyRuntimeDep1())
 
-        assert_in(u'dummy.check1', plugin.checks)
+        manager = plugin._runtime_dep_manager
 
-        self.workbench.unregister(u'dummy.check1')
+        assert_in(u'dummy.runtime_dep1', manager.collectors)
 
-        assert_not_in(u'dummy.check1', plugin.checks)
+        self.workbench.unregister(u'dummy.runtime_dep1')
+
+        assert_not_in(u'dummy.runtime_dep1', manager.collectors)
 
     def test_runtime_dep_factory(self):
         # Test getting the RuntimeDependency decl from a factory.
@@ -404,11 +460,13 @@ class Test(object):
         self.workbench.register(DummyRuntimeDep2())
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
 
-        assert_in(u'dummy.check3', plugin.checks)
+        manager = plugin._runtime_dep_manager
 
-        self.workbench.unregister(u'dummy.check3')
+        assert_in(u'dummy.runtime_dep2', manager.collectors)
 
-        assert_not_in(u'dummy.check3', plugin.checks)
+        self.workbench.unregister(u'dummy.runtime_dep2')
+
+        assert_not_in(u'dummy.runtime_dep2', manager.collectors)
 
     @raises(ValueError)
     def test_runtime_dep_errors1(self):
