@@ -62,8 +62,7 @@ class TestMonitor(BaseMonitor):
     def stop(self):
         self.black_box.append('Stopped')
 
-    def process_news(self, change):
-        news = change['value']
+    def process_news(self, news):
         self.engine_news[news[0]] = news[1]
 
     def get_editor_page(self):
@@ -94,7 +93,7 @@ class TestEngine(BaseEngine):
     running = Bool()
     ready = Bool()
 
-    def prepare_to_run(self, name, root, monitored_entries):
+    def prepare_to_run(self, name, root, build_deps, monitored_entries):
         if not self.ready:
             self.ready = True
 
@@ -102,7 +101,7 @@ class TestEngine(BaseEngine):
         self.running = True
         self.active = True
         sleep(0.1)
-        self.news = ('root/default_path', 'test')
+        self.news(('root/default_path', 'test'))
 
     def stop(self):
         state = self.running

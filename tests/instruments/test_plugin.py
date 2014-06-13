@@ -39,7 +39,7 @@ class Test_DriverManagement(BaseClass):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
         assert_equal(plugin.driver_types, ['Dummy'])
-        assert_equal(plugin.drivers, ['PanelTestDummy'])
+        assert_in('PanelTestDummy', plugin.drivers)
         assert_in('Dummy', plugin.all_profiles)
         assert_in('Dummy', plugin.available_profiles)
 
@@ -136,9 +136,9 @@ class Test_DriverManagement(BaseClass):
         self.workbench.register(InstrManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.matching_drivers'
-        [driver_name] = core.invoke_command(com, {'driver_types': ['Dummy']},
-                                            self)
-        assert driver_name == 'PanelTestDummy'
+        driver_names = core.invoke_command(com, {'driver_types': ['Dummy']},
+                                           self)
+        assert_in('PanelTestDummy', driver_names)
 
     def test_matching_form1(self):
         self.workbench.register(InstrManagerManifest())

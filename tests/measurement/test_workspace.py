@@ -238,7 +238,7 @@ class TestMeasureSpace(object):
         assert_equal(en_meas.status, 'READY')
         assert_equal(en_meas.infos,
                      'The measure is ready to be performed by an engine.')
-        assert_in('drivers', en_meas.root_task.run_time)
+        assert_in('build_deps', en_meas.store)
         assert_in('profiles', en_meas.store)
 
     def test_enqueue_measure2(self):
@@ -499,6 +499,9 @@ class TestMeasureSpace(object):
         plugin.enqueued_measures.append(measure1)
 
         measure1.store['profiles'] = ['Test']
+        # Here to avoid looking for build deps and concluing the measure does
+        # not actually need any profile.
+        measure1.store['build_deps'] = {}
 
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'

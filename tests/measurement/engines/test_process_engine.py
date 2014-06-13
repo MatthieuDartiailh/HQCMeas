@@ -245,11 +245,16 @@ class TestProcessEngine(object):
         measure = self._create_measure(plugin)
         monitor = measure.monitors.values()[0]
 
+        core = self.workbench.get_plugin('enaml.workbench.core')
+        cmd = 'hqc_meas.task_manager.collect_dependencies'
+        _, b_deps = core.invoke_command(cmd, {'task': measure.root_task,
+                                              'dependencies': ['build']})
+
         engine = ProcessEngine(workbench=self.workbench)
         engine.observe('news', measure.monitors.values()[0].process_news)
 
         engine.prepare_to_run('test', measure.root_task,
-                              measure.collect_entries_to_observe())
+                              measure.collect_entries_to_observe(), b_deps)
 
         monitor.start(None)
 
@@ -303,8 +308,13 @@ class TestProcessEngine(object):
         measure = self._create_measure(plugin)
         measure.root_task.default_path = ''
 
+        core = self.workbench.get_plugin('enaml.workbench.core')
+        cmd = 'hqc_meas.task_manager.collect_dependencies'
+        b_deps = core.invoke_command(cmd, {'task': measure.root_task,
+                                           'dependencies': ['build']})
+
         engine = ProcessEngine(workbench=self.workbench)
-        engine.prepare_to_run('test', measure.root_task,
+        engine.prepare_to_run('test', measure.root_task, b_deps,
                               measure.collect_entries_to_observe())
 
         # Check engine state.
