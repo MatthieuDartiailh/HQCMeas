@@ -659,13 +659,13 @@ class ComplexTask(BaseTask):
         self.observe('task_path', self._update_paths)
         self.observe('task_depth', self._update_paths)
 
-    def process(self):
+    def perform(self):
         """ Run sequentially all child tasks.
 
         """
         result = True
         for child in self.children_task:
-            result &= child.process_(child)
+            result &= child.perform_(child)
 
         return result
 
@@ -1406,12 +1406,12 @@ class RootTask(ComplexTask):
         traceback.update(check[1])
         return test, traceback
 
-    def process(self):
+    def perform(self):
         """ Run sequentially all child tasks, and close ressources.
 
         """
         for child in self.children_task:
-            child.process_(child)
+            child.perform_(child)
         pools = self.task_database.get_value('root', 'threads')
         for pool in pools.values():
             for thread in pool:

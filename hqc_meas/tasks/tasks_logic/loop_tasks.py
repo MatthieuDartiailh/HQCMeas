@@ -12,7 +12,7 @@ from atom.api\
 from numpy import linspace
 from timeit import default_timer
 
-from ..tools.task_decorator import make_stoppable
+from ..tools.task_decorator import make_stoppable, smooth_crash
 from ..base_tasks import (SimpleTask, ComplexTask)
 
 
@@ -67,9 +67,9 @@ class BaseLoopTask(ComplexTask):
                 'Loop task did not success to compute the point number'
 
         if self.timing:
-            self.process_ = self.process_with_timing.__func__
+            self.perform_ = self.perform_with_timing.__func__
         else:
-            self.process_ = self.process_no_timing.__func__
+            self.perform_ = self.perform_no_timing.__func__
 
         check = super(BaseLoopTask, self).check(*args, **kwargs)
         test = test and check[0]
@@ -81,12 +81,12 @@ class BaseLoopTask(ComplexTask):
         """
         """
         if change['value']:
-            self.process_ = self.process_with_timing
+            self.perform_ = self.perform_with_timing
             aux = self.task_database_entries.copy()
             aux['elapsed_time'] = 1.0
             self.task_database_entries = aux
         else:
-            self.process_ = self.process_no_timing
+            self.perform_ = self.perform_no_timing
             aux = self.task_database_entries.copy()
             if 'elapsed_time' in aux:
                 del aux['elapsed_time']
@@ -101,7 +101,8 @@ class SimpleLoopTask(BaseLoopTask):
                                          'value': 0})
 
     @make_stoppable
-    def process_no_timing(self):
+    @smooth_crash
+    def perform_no_timing(self):
         """
         """
         start = self.format_and_eval_string(self.task_start)
@@ -117,12 +118,13 @@ class SimpleLoopTask(BaseLoopTask):
             self.write_in_database('index', i+1)
             self.write_in_database('value', value)
             for child in self.children_task:
-                result &= child.process_(child)
+                result &= child.perform_(child)
 
         return result
 
     @make_stoppable
-    def process_with_timing(self):
+    @smooth_crash
+    def perform_with_timing(self):
         """
         """
         start = self.format_and_eval_string(self.task_start)
@@ -139,7 +141,7 @@ class SimpleLoopTask(BaseLoopTask):
             self.write_in_database('value', value)
             tic = default_timer()
             for child in self.children_task:
-                result &= child.process_(child)
+                result &= child.perform_(child)
             self.write_in_database('elapsed_time', default_timer()-tic)
 
         return result
@@ -156,7 +158,8 @@ class LoopTask(BaseLoopTask):
     task_database_entries = set_default({'point_number': 11, 'index': 1})
 
     @make_stoppable
-    def process_no_timing(self):
+    @smooth_crash
+    def perform_no_timing(self):
         """
         """
         start = self.format_and_eval_string(self.task_start)
@@ -170,14 +173,15 @@ class LoopTask(BaseLoopTask):
             if self.root_task.should_stop.is_set():
                 break
             self.write_in_database('index', i+1)
-            self.task.process_(self.task, value)
+            self.task.perform_(self.task, value)
             for child in self.children_task:
-                result &= child.process_(child)
+                result &= child.perform_(child)
 
         return result
 
     @make_stoppable
-    def process_with_timing(self):
+    @smooth_crash
+    def perform_with_timing(self):
         """
         """
         start = self.format_and_eval_string(self.task_start)
@@ -192,9 +196,9 @@ class LoopTask(BaseLoopTask):
                 break
             self.write_in_database('index', i+1)
             tic = default_timer()
-            self.task.process_(self.task, value)
+            self.task.perform_(self.task, value)
             for child in self.children_task:
-                result &= child.process_(child)
+                result &= child.perform_(child)
             self.write_in_database('elapsed_time', default_timer()-tic)
 
         return result
