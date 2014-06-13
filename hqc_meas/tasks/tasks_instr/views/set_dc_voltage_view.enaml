@@ -1,6 +1,6 @@
-from enaml.core.api import Conditional
+from enaml.core.api import Conditional, Include
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
-from enaml.stdlib.fields import FloatField
+from enaml.stdlib.fields import FloatField, IntField
 from enaml.layout.api import factory
 
 from inspect import cleandoc
@@ -60,3 +60,19 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
                             it'''), 60)
 
 TASK_VIEW_MAPPING = {'SetDCVoltageTask' : SetDcVoltageView}
+
+
+enamldef MultiChannelVoltageSourceILabel(Label):
+
+    attr interface
+    attr index = 4
+    text = 'Channel'
+
+enamldef MultiChannelVoltageSourceIChannel(IntField):
+
+    attr interface
+    value := interface.channel
+
+INTERFACE_VIEW_MAPPING = {'MultiChannelVoltageSourceInterface':
+                          [MultiChannelVoltageSourceILabel,
+                           MultiChannelVoltageSourceIChannel]}

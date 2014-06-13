@@ -107,7 +107,7 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
 KNOWN_PY_TASKS = [SetDCVoltageTask]
 
 
-class SimpleSourceInterface(InstrTaskInterface):
+class SimpleVoltageSourceInterface(InstrTaskInterface):
     """
     """
 
@@ -135,9 +135,11 @@ class SimpleSourceInterface(InstrTaskInterface):
         return task.smooth_set(value, setter)
 
 
-class MultiChannelSourceInterface(InstrTaskInterface):
+class MultiChannelVoltageSourceInterface(InstrTaskInterface):
     """
     """
+    has_view = True
+
     drivers_list = ['TinyBilt']
 
     #: Id of the channel to use.
@@ -170,5 +172,5 @@ class MultiChannelSourceInterface(InstrTaskInterface):
 
         return task.smooth_set(value, setter)
 
-INTERFACES = {'SetDCVoltageTask': [SimpleSourceInterface,
-                                   MultiChannelSourceInterface]}
+INTERFACES = {'SetDCVoltageTask': [SimpleVoltageSourceInterface,
+                                   MultiChannelVoltageSourceInterface]}
