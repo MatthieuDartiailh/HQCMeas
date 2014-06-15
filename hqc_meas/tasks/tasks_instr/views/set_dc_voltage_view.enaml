@@ -8,7 +8,7 @@ from textwrap import fill
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.layouts import auto_grid_layout
-from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
 from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 
@@ -21,7 +21,7 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
     Label:
         text = 'Driver'
     ObjectCombo:
-        items << sorted(task.driver_list)
+        items << sorted(drivers)
         selected := task.selected_driver
 
     Label:

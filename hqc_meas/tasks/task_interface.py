@@ -74,8 +74,9 @@ class InterfaceableTaskMixin(Atom):
             else:
                 self.task_preferences[name] = repr(val)
 
-        prefs = self.interface.preferences_from_members()
-        self.task_preferences['interface'] = prefs
+        if self.interface:
+            prefs = self.interface.preferences_from_members()
+            self.task_preferences['interface'] = prefs
 
     update_preferences_from_members = register_preferences
 
@@ -119,10 +120,10 @@ class InterfaceableTaskMixin(Atom):
         """ Observer.
 
         """
-        if 'oldvalue' in change:
+        if 'oldvalue' in change and change['oldvalue']:
             change['oldvalue'].task = None
-
-        change['value'].task = self
+        if change['value']:
+            change['value'].task = self
 
 
 class TaskInterface(HasPrefAtom):

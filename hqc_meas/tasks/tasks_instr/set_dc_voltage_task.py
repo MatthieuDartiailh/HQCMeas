@@ -111,7 +111,7 @@ class SimpleVoltageSourceInterface(InstrTaskInterface):
     """
     """
 
-    drivers_list = ['YokogawaGS200', 'Yokogawa7651']
+    driver_list = ['YokogawaGS200', 'Yokogawa7651']
 
     def perform(self, value=None):
         """
@@ -140,7 +140,7 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
     """
     has_view = True
 
-    drivers_list = ['TinyBilt']
+    driver_list = ['TinyBilt']
 
     #: Id of the channel to use.
     channel = Int().tag(pref=True)

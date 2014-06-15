@@ -567,7 +567,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 m = import_module('.' + mod, MODULE_ANCHOR)
             except Exception as e:
                 log = logging.getLogger(__name__)
-                mess = 'Failed to import {} : {}'.format(mod, e.message)
+                mess = 'Failed to import {} : {}'.format(mod, e)
                 log.error(mess)
                 failed[mod] = mess
                 continue
