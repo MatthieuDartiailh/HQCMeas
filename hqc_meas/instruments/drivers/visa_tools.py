@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # TODO this is not compatible with PyVisa 1.5
 try:
-    from pyvisa.visa import Instrument, VisaIOError
-except ImportError:
+    from pyvisa.visa import Instrument, VisaIOError, VisaTypeError
+except Exception:
     raise
 
 from .driver_tools import BaseInstrument, InstrIOError
