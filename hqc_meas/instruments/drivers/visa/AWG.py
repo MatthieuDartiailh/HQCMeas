@@ -4,9 +4,7 @@
 # author : Pierre Heidmann
 # license : MIT license
 #==============================================================================
-"""
-
-This module defines drivers for TinyBilt using VISA library.
+""" This module defines drivers for TinyBilt using VISA library.
 
 :Contains:
     AWGChannel
@@ -39,6 +37,9 @@ class AWGChannel(BaseInstrument):
 
     @contextmanager
     def secure(self):
+        """ Lock acquire and release method
+
+        """
         i = 0
         while not self._AWG.lock.acquire():
             time.sleep(0.1)
@@ -53,7 +54,8 @@ class AWGChannel(BaseInstrument):
     @instrument_property
     @secure_communication()
     def output_state(self):
-        """Output getter method
+        """ Output getter method
+
         """
         with self.secure():
             output = self._AWG.ask_for_values('OUTP{}:STAT?'
@@ -63,13 +65,15 @@ class AWGChannel(BaseInstrument):
             elif output == 0:
                 return 'OFF'
             else:
-                mes = 'AWG did not return its output'
+                mes = cleandoc('AWG channel {} did not return its output'
+                               .format(self._channel))
                 raise InstrIOError(mes)
 
     @output_state.setter
     @secure_communication()
     def output_state(self, value):
-        """Output setter method. 'ON', 'OFF'
+        """ Output setter method. 'ON', 'OFF'
+
         """
         with self.secure():
             on = re.compile('on', re.IGNORECASE)
@@ -172,9 +176,9 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:MARK1:VOLTage:LOW?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
                                             correctly the marker1 low
-                                            voltage'''))
+                                            voltage'''.format(self._channel)))
 
     @instrument_property
     @secure_communication()
@@ -200,14 +204,14 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:MARK2:VOLTage:LOW?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
                                             correctly the marker2 low
-                                            voltage'''))
+                                            voltage'''.format(self._channel)))
 
     @instrument_property
     @secure_communication()
     def marker1_delay(self):
-        """marker1 delay getter method. Unity = seconds
+        """marker1 delay getter method. Unit = seconds
         """
         with self.secure():
             m1_delay = self._AWG.ask_for_values("SOURce{}:MARK1:DEL?"
@@ -220,7 +224,7 @@ class AWGChannel(BaseInstrument):
     @marker1_delay.setter
     @secure_communication()
     def marker1_delay(self, value):
-        """marker1 delay setter method. Unity = seconds
+        """marker1 delay setter method. Unit = seconds
         """
         with self.secure():
             self._AWG.write("SOURce{}:MARK1:DEL {}"
@@ -228,14 +232,14 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:MARK1:DEL?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
-                                            correctly the marker1
-                                            delay'''))
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
+                                            correctly the marker1 delay
+                                            '''.format(self._channel)))
 
     @instrument_property
     @secure_communication()
     def marker2_delay(self):
-        """marker2 delay getter method. Unity = seconds
+        """marker2 delay getter method. Unit = seconds
         """
         with self.secure():
             m2_delay = self._AWG.ask_for_values("SOURce{}:MARK2:DEL?"
@@ -248,7 +252,7 @@ class AWGChannel(BaseInstrument):
     @marker2_delay.setter
     @secure_communication()
     def marker2_delay(self, value):
-        """marker2 delay setter method. Unity = seconds
+        """marker2 delay setter method. Unit = seconds
         """
         with self.secure():
             self._AWG.write("SOURce{}:MARK2:DEL {}"
@@ -256,14 +260,14 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:MARK2:DEL?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
-                                            correctly the marker2
-                                            delay'''))
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
+                                            correctly the marker2 delay
+                                            '''.format(self._channel)))
 
     @instrument_property
     @secure_communication()
     def delay(self):
-        """delay getter method. Unity = seconds
+        """delay getter method. Unit = seconds
         """
         with self.secure():
             dela = self._AWG.ask_for_values("SOURce{}:DEL:ADJ?"
@@ -284,8 +288,9 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:DEL:ADJ?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
-                                            correctly the delay'''))
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
+                                            correctly the delay'''
+                                            .format(self._channel)))
 
     @instrument_property
     @secure_communication()
@@ -311,8 +316,9 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:VOLTage:LEVel:IMMediate:OFFSet?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
-                                            correctly the offset'''))
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
+                                            correctly the offset'''
+                                            .format(self._channel)))
 
     @instrument_property
     @secure_communication()
@@ -331,6 +337,7 @@ class AWGChannel(BaseInstrument):
     @secure_communication()
     def vpp(self, value):
         """vpp setter method
+
         """
         with self.secure():
             self._AWG.write("SOURce{}:VOLTage {}"
@@ -338,13 +345,15 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:VOLTage?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
-                                            correctly the vpp'''))
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
+                                            correctly the vpp'''
+                                            .format(self._channel)))
 
     @instrument_property
     @secure_communication()
     def phase(self):
         """phase getter method. Unity = degrees
+
         """
         with self.secure():
             phi = self._AWG.ask_for_values("SOURce{}:PHAS:ADJ?"
@@ -358,6 +367,7 @@ class AWGChannel(BaseInstrument):
     @secure_communication()
     def phase(self, value):
         """phase setter method. Unity = degrees
+
         """
         with self.secure():
             self._AWG.write("SOURce{}:PHAS:ADJ {}"
@@ -365,53 +375,14 @@ class AWGChannel(BaseInstrument):
             result = self._AWG.ask_for_values("SOURce{}:PHAS:ADJ?"
                                               .format(self._channel))[0]
             if abs(result - value) > 10**-12:
-                raise InstrIOError(cleandoc('''Instrument did not set
-                                            correctly the phase'''))
-
-#    @instrument_property
-#    @secure_communication()
-#    def save_waveform(self):
-#        """
-#        """
-#        with self.secure():
-#            save = self._AWG.ask_for_values("WLISt:NAME?")
-#            if save is not None:
-#                return save
-#            else:
-#                raise InstrIOError
-#
-#    @save_waveform.setter
-#    @secure_communication()
-#    def save_waveform(self, name):
-#        """
-#        """
-#        with self.secure():
-#            self._AWG.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
-#            self._AWG.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger"
-#                            .format(name, self._AGW.loop_length))
-#            self._AWG.write("SOURCE{}:WAVEFORM '{}'"
-#                            .format(self._channel, self.AGW.loop_length))
-#
-#    @secure_communication
-#    def to_send(self, name, waveform):
-#        """
-#        """
-#        with self.secure():
-#            if name not in self._AWG.ask_for_values("WLISt:NAME?"):
-#                raise InstrIOError(cleandoc('''There is no waveform
-#                                            called by this name'''))
-#            numbyte = '{}'.format(2 * self.AGW.loop_length)
-#            numApresDiese = '{}'.format(len(numbyte))
-#            header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name,
-#                                                            self.AGW
-#                                                            .loop_length,
-#                                                            numApresDiese,
-#                                                            numbyte)
-#            self._AWG.write('{} {}'.format(header, waveform))
+                raise InstrIOError(cleandoc('''AWG channel {} did not set
+                                            correctly the phase'''
+                                            .format(self._channel)))
 
     @secure_communication()
     def to_send(self, name, waveform, looplength):
-        """ command to send to the instrument. waveform = string d'un bytearray
+        """ command to send to the instrument. waveform = string of a bytearray
+
         """
         with self.secure():
             self._AWG.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
@@ -425,25 +396,6 @@ class AWGChannel(BaseInstrument):
                                                             numApresDiese,
                                                             numbyte)
             self._AWG.write('{},{}'.format(header, waveform))
-
-#    @secure_communication()
-#    def to_sendtest(self, name):
-#        """ command to send to the instrument
-#        """
-#        with self.secure():
-#            looplength = 4
-#            waveform = str(bytearray([0, 160, 0, 224, 0, 224, 0, 160]))
-#            self._AWG.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
-#            self._AWG.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger"
-#                            .format(name, looplength))
-#            self._AWG.write("SOURCE{}:WAVEFORM '{}'"
-#                            .format(self._channel, name))
-#            numbyte = 2 * looplength
-#            numApresDiese = len('{}'.format(numbyte))
-#            header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
-#                                                            numApresDiese,
-#                                                            numbyte)
-#            self._AWG.write('{},{}'.format(header, waveform))
 
 
 class AWG(VisaInstrument):
@@ -645,54 +597,5 @@ class AWG(VisaInstrument):
                                  run mode method''').format(value), 80)
             raise VisaTypeError(mess)
 
-#    @instrument_property
-#    @secure_communication()
-#    def loop_length(self, looplength):
-#        """Run mode getter method
-#        """
-#        return looplength
 
-#    @secure_communication()
-#    def save(self, value):
-#        """
-#        """
-#        if value < 1:
-#                raise InstrIOError(cleandoc('''incorrect looplength'''))
-#        self.write("WLIST:WAVEFORM:DELETE 'drive'")
-#        self.write("WLIST:WAVEFORM:NEW 'drive' , {}, INTeger"
-#                   .format(value))
-#        self.write("SOURCE3:WAVEFORM 'drive'")
-#        self.write("WLIST:WAVEFORM:DELETE 'readout'")
-#        self.write("WLIST:WAVEFORM:NEW 'readout' , {}, INTeger"
-#                   .format(value))
-#        self.write("SOURCE4:WAVEFORM 'readout'")
-#        self.write("WLIST:WAVEFORM:DELETE 'JPC'")
-#        self.write("WLIST:WAVEFORM:NEW 'JPC' , {}, INTeger"
-#                   .format(value))
-#        self.write("SOURCE1:WAVEFORM 'JPC'")
-#        self.write("WLIST:WAVEFORM:DELETE 'trig2'")
-#        self.write("WLIST:WAVEFORM:NEW 'trig2' , {}, INTeger"
-#                   .format(value))
-#        self.write("SOURCE2:WAVEFORM 'trig2'")
-#
-#        header = [0]*8
-#       4 first elements = header. 4 next = toSendLength
-#        numbyte = '{}'.format(2 * value)
-#        numApresDiese = '{}'.format(len(numbyte))
-#        header[1] = bytearray("WLIS:WAV:DATA 'trig2',0,{},#{}{}"
-#                              .format(value, numApresDiese, numbyte))
-#        header[0] = bytearray("WLIS:WAV:DATA 'JPC',0,{},#{}{}"
-#                              .format(value, numApresDiese, numbyte))
-#        header[2] = bytearray("WLIS:WAV:DATA 'drive',0,{},#{}{}"
-#                              .format(value, numApresDiese, numbyte))
-#        header[3] = bytearray("WLIS:WAV:DATA 'readout',0,{},#{}{}"
-#                              .format(value, numApresDiese, numbyte))
-#        for i in range(4, 8, 1):
-#            header[i] = len(header[i-4]) + 2 * value
-#        return header
-#
-#    @secure_communication()
-#    def to_send(self):
-
-
-DRIVERS = {'AWG': AWG}
+DRIVERS = {'AWG5014B': AWG}

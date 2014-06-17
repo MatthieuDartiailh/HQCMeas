@@ -11,8 +11,8 @@ This module defines drivers for Anritsu instrument using VISA library.
     AnritsuMG3694
 
 """
-from ..driver_tools import (InstrIOError, instrument_property,
-                            secure_communication)
+from ..driver_tools import (InstrIOError, secure_communication,
+                            instrument_property)
 from ..visa_tools import VisaInstrument
 from visa import VisaTypeError
 from textwrap import fill
@@ -32,8 +32,8 @@ class AnritsuMG3694(VisaInstrument):
                                             auto_open)
         self.frequency_unit = 'GHz'
         self.write("DSPL 4")
-        self.write("EBW3")  # 'si la reference externe est très stable en phase
-#        il faut choisir la plus grande EBW'
+        self.write("EBW3")  # if the external reference is very stable in phase
+#        The biggest EBW must be chosen'
         self.write("LO0")  # 'no offset on the power
         self.write("LOG")  # 'Selects logarithmic power level operation in dBm
         self.write("TR1")  # 'Sets 40 dB of attenuation when RF is switched off

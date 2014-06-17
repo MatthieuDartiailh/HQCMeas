@@ -38,6 +38,9 @@ class TinyBiltChannel(BaseInstrument):
 
     @contextmanager
     def secure(self):
+        """ Lock acquire and release method
+
+        """
         i = 0
         while not self._TB.lock.acquire():
             time.sleep(0.1)
@@ -52,7 +55,8 @@ class TinyBiltChannel(BaseInstrument):
     @instrument_property
     @secure_communication()
     def output(self):
-        """Output getter method
+        """ Output getter method
+
         """
         with self.secure():
             output = self._TB.ask_for_values('i{};OUTP?'
@@ -194,7 +198,7 @@ class TinyBiltChannel(BaseInstrument):
 
     @instrument_property
     @secure_communication()
-    def output_value(self):
+    def voltage(self):
         """output value getter method
         """
         with self.secure():
@@ -205,10 +209,11 @@ class TinyBiltChannel(BaseInstrument):
             else:
                 raise InstrIOError
 
-    @output_value.setter
+    @voltage.setter
     @secure_communication()
-    def output_value(self, value):
+    def voltage(self, value):
         """Output value setter method
+
         """
         with self.secure():
             self._TB.write('i{};Volt {}'.format(self._channel, value))
