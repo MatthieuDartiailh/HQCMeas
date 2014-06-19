@@ -50,15 +50,6 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
     FloatField:
         value := task.delay
 
-    Label:
-        text = 'Check Value'
-    CheckBox:
-        checked := task.check_value
-        tool_tip = fill(cleandoc(
-                            '''Should the program ask the instrument the value
-                            of the applied voltage each time it is about to set
-                            it'''), 60)
-
 TASK_VIEW_MAPPING = {'SetDCVoltageTask' : SetDcVoltageView}
 
 
