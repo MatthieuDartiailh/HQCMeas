@@ -7,6 +7,7 @@
 """
 """
 from atom.api import Atom, ForwardInstance, Instance, Str
+from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from hqc_meas.tasks.base_tasks import SimpleTask, BaseTask
@@ -26,6 +27,29 @@ class InterfaceableTaskMixin(Atom):
     """
     #: A reference to the current interface for the task.
     interface = ForwardInstance(lambda: TaskInterface)
+
+    def check(self, *args, **kwargs):
+        """
+
+        """
+        # Trick to call parent check by tweaking the mro.
+        # XXXX won't work if InterfaceableTaskMixin appears several times in
+        # the mro
+        ancestors = type(self).mro()
+        if ancestors.count(InterfaceableTaskMixin) > 1:
+            return False, {self.task_name: cleandoc('''Task cannot inherit
+                multiple times from InterfaceableTaskMixin''')}
+        i = ancestors.index(InterfaceableTaskMixin)
+        test, traceback = ancestors[i].check(self, *args, **kwargs)
+
+        if not self.interface:
+            traceback[self.task_name + '_interface'] = 'Missing interface'
+            return False, traceback
+
+        i_test, i_traceback = self.interface.check(*args, **kwargs)
+
+        traceback.update(i_traceback)
+        return test and i_test, traceback
 
     def perform(self, *args, **kwargs):
         """

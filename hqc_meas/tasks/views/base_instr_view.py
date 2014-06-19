@@ -14,8 +14,6 @@ from enaml.core.declarative import d_
 
 from hqc_meas.tasks.api import InstrumentTask, InterfaceableTaskMixin
 
-# XXXX add handling interfaces according to driver.
-
 
 class BaseInstrumentView(GroupBox):
     """ Base class for instrument task views.
