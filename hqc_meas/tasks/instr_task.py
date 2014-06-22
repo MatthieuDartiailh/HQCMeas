@@ -36,6 +36,7 @@ class InstrumentTask(SimpleTask):
         """
         run_time = self.root_task.run_time
         traceback = {}
+        config = None
 
         if self.selected_profile:
             if 'profiles' in run_time:
@@ -54,7 +55,7 @@ class InstrumentTask(SimpleTask):
                 'Failed to get the specified instr driver'''
             return False, traceback
 
-        if kwargs['test_instr']:
+        if kwargs.get('test_instr') and config:
             try:
                 instr = driver_class(config)
                 instr.close_connection()

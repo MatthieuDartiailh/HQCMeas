@@ -40,7 +40,7 @@ class InterfaceableTaskMixin(Atom):
             return False, {self.task_name: cleandoc('''Task cannot inherit
                 multiple times from InterfaceableTaskMixin''')}
         i = ancestors.index(InterfaceableTaskMixin)
-        test, traceback = ancestors[i].check(self, *args, **kwargs)
+        test, traceback = ancestors[i + 1].check(self, *args, **kwargs)
 
         if not self.interface:
             traceback[self.task_name + '_interface'] = 'Missing interface'
@@ -165,8 +165,6 @@ class TaskInterface(HasPrefAtom):
 
     def check(self, *args, **kwargs):
         """
-
-        This is the reponsability of the task to call this method.
 
         """
         return True, {}

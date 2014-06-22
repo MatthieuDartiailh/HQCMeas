@@ -36,6 +36,23 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     loopable = True
     task_database_entries = set_default({'voltage': 1.0})
 
+    def check(self, *args, **kwargs):
+        """
+        """
+        test, traceback = super(SetDCVoltageTask, self).check(*args, **kwargs)
+        val = None
+        if self.target_value:
+            try:
+                val = self.format_and_eval_string(self.target_value)
+            except Exception:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-volt'] = \
+                    cleandoc('''Failed to eval the target value formula
+                        {}'''.format(self.target_value))
+        self.write_in_database('voltage', val)
+
+        return test, traceback
+
     def smooth_set(self, target_value, setter):
         """ Smoothly set the voltage.
 
@@ -78,25 +95,7 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                     break
 
         setter(value)
-        self.last_value = value
         self.write_in_database('voltage', value)
-
-    def check(self, *args, **kwargs):
-        """
-        """
-        test, traceback = super(SetDCVoltageTask, self).check(*args, **kwargs)
-        val = None
-        if self.target_value:
-            try:
-                val = self.format_and_eval_string(self.target_value)
-            except Exception:
-                test = False
-                traceback[self.task_path + '/' + self.task_name + '-volt'] = \
-                    cleandoc('''Failed to eval the target value formula
-                        {}'''.format(self.target_value))
-        self.write_in_database('voltage', val)
-
-        return test, traceback
 
 KNOWN_PY_TASKS = [SetDCVoltageTask]
 
@@ -126,7 +125,7 @@ class SimpleVoltageSourceInterface(InstrTaskInterface):
 
         setter = lambda value: setattr(task.driver, 'voltage', value)
 
-        return task.smooth_set(value, setter)
+        task.smooth_set(value, setter)
 
 
 class MultiChannelVoltageSourceInterface(InstrTaskInterface):
@@ -164,36 +163,51 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
 
         setter = lambda value: setattr(self.channel_driver, 'voltage', value)
 
-        return task.smooth_set(value, setter)
+        task.smooth_set(value, setter)
 
     def check(self, *args, **kwargs):
-        if kwargs['test_instr']:
-            run_time = self.root_task.run_time
+        if kwargs.get('test_instr'):
+            task = self.task
+            run_time = task.root_task.run_time
             traceback = {}
+            config = None
 
-            if self.selected_profile:
+            if task.selected_profile:
                 if 'profiles' in run_time:
                     # Here use get to avoid errors if we were not granted the
                     # use of the profile. In that case config won't be used.
-                    config = run_time['profiles'].get(self.selected_profile)
+                    config = run_time['profiles'].get(task.selected_profile)
             else:
+                print 1
                 return False, traceback
 
-            if run_time and self.selected_driver in run_time['drivers']:
-                driver_class = run_time['drivers'][self.selected_driver]
+            if run_time and task.selected_driver in run_time['drivers']:
+                driver_class = run_time['drivers'][task.selected_driver]
             else:
+                print 2
                 return False, traceback
+
+            if not config:
+                return True, traceback
 
             try:
                 instr = driver_class(config)
                 if not self.channel in instr.defined_channels:
-                    key = self.task_path + '/' + self.task_name + '_interface'
+                    key = task.task_path + '/' + task.task_name + '_interface'
                     traceback[key] = 'Missing channel {}'.format(self.channel)
                 instr.close_connection()
-            except Exception:
+            except Exception as e:
+                print e
                 return False, traceback
 
-            return not traceback, traceback
+            if traceback:
+                print 4
+                return False, traceback
+            else:
+                return True, traceback
+
+        else:
+            return True, {}
 
 INTERFACES = {'SetDCVoltageTask': [SimpleVoltageSourceInterface,
                                    MultiChannelVoltageSourceInterface]}
