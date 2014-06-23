@@ -6,168 +6,165 @@
 #==============================================================================
 """
 """
-from atom.api import (Str, Int, List, observe, Enum, set_default,
+from atom.api import (Str, Int, Enum, set_default,
                       Tuple, ContainerList, Value)
 
 import time
 from inspect import cleandoc
 import numpy as np
 
-from hqc_meas.tasks.api import InstrumentTask
+from hqc_meas.tasks.api import InstrumentTask, InstrTaskInterface
 from hqc_meas.instruments.drivers.driver_tools import InstrIOError
 
 
-class PNATasks(InstrumentTask):
-    """ Helper class managing the notion of channel in the PNA.
+def check_channels_presence(task, channels, *args, **kwargs):
+    """ Check that all the channels are correctly defined on the PNA.
 
     """
-    # List of necessary channels.
-    channels = List(Int()).tag(pref=True)
-
-    def check(self, *args, **kwargs):
-        """ Add checking for channels to the base tests.
-
-        """
-        run_time = self.root_task.run_time
+    if kwargs.get('test_instr'):
+        run_time = task.root_task.run_time
         traceback = {}
-        if self.selected_profile:
-            if run_time:
-                config = run_time['profiles'][self.selected_profile]
-        else:
-            traceback[self.task_path + '/' + self.task_name] =\
-                'You must provide an instrument profile'
-            return False, traceback
-
-        if run_time and self.selected_driver in run_time['drivers']:
-            driver_class = run_time['drivers'][self.selected_driver]
-        else:
-            traceback[self.task_path + '/' + self.task_name] =\
-                'Failed to get the specified instr driver'''
-            return False, traceback
-
-        if kwargs['test_instr']:
-            try:
-                instr = driver_class(config)
-            except InstrIOError:
-                traceback[self.task_path + '/' + self.task_name] =\
-                    cleandoc('''Failed to establish the connection with the
-                             selected instrument''')
+        if task.selected_profile and run_time:
+            config = run_time['profiles'][task.selected_profile]
+            if not config:
                 return False, traceback
+        else:
+            return False, traceback
+
+        if run_time and task.selected_driver in run_time['drivers']:
+            driver_class = run_time['drivers'][task.selected_driver]
+        else:
+            return False, traceback
+
+        try:
+            instr = driver_class(config)
+        except InstrIOError:
+            return False, traceback
 
         channels_present = True
-        for channel in self.channels:
+        for channel in channels:
             if channel not in instr.defined_channels:
-                string = self.task_path + '/' + self.task_name +\
+                string = task.task_path + '/' + task.task_name +\
                     '_' + str(channel)
 
                 traceback[string] = cleandoc(
                     '''Channel {} is not defined in the PNA {}, please define
                     it yourself and try again.'''.format(channel,
-                    self.selected_profile))
+                    task.selected_profile))
 
                 channels_present = False
 
-        if not channels_present:
-            return False, traceback
+        return channels_present, traceback
 
-        return True, traceback
-
-
-class SingleChannelPNATask(PNATasks):
-
-    channel_driver = Value()
-
-    @observe('channel')
-    def _update_channels(self, change):
-        self.channels = [change['value']]
+    else:
+        return True, {}
 
 
-class PNASetFreqTask(SingleChannelPNATask):
+class PNASetRFFrequencyInterface(InstrTaskInterface):
     """Set the central frequecny to be used for the specified channel.
 
     """
+    # Id of the channel whose central frequency should be set.
     channel = Int(1).tag(pref=True)
-    frequency = Str().tag(pref=True)
+
+    # Driver for the channel.
+    channel_driver = Value()
 
     driver_list = ['AgilentPNA']
-    task_database_entries = set_default({'frequency': 1e9})
-    loopable = True
 
-    def perform(self, freq=None):
+    has_view = True
+
+    def perform(self, frequency=None):
         """
         """
-        if not self.driver:
-            self.start_driver()
-            self.channel_driver = self.driver.get_channel(self.channel)
+        task = self.task
+        if not task.driver:
+            task.start_driver()
+            self.channel_driver = task.driver.get_channel(self.channel)
 
-        if self.channel_driver.owner != self.task_name:
-            self.channel_driver.owner = self.task_name
+        task.driver.owner = task.task_name
+        self.channel_driver.owner = task.task_name
 
-        if freq is None:
-            freq = self.format_and_eval_string(self.frequency)
+        if frequency is None:
+            frequency = task.format_and_eval_string(task.frequency)
+            frequency = task.convert(frequency, 'Hz')
 
-        self.channel_driver.frequency = freq
-        self.write_in_database('frequency', freq)
-
-        return True
+        self.channel_driver.frequency = frequency
+        task.write_in_database('frequency', frequency)
 
     def check(self, *args, **kwargs):
         """
+
         """
-        test, traceback = super(PNASetFreqTask, self).check(*args, **kwargs)
-        if self.frequency:
-            try:
-                self.format_and_eval_string(self.frequency)
-            except Exception:
-                test = False
-                mes = 'Failed to eval the frequency formula {}'
-                traceback[self.task_path + '/' + self.task_name + '-freq'] = \
-                    mes.format(self.frequency)
-
-        return test, traceback
+        task = self.task
+        return check_channels_presence(task, [self.channel], *args, **kwargs)
 
 
-class PNASetPowerTask(SingleChannelPNATask):
+class PNASetRFPowerInterface(InstrTaskInterface):
     """Set the central power to be used for the specified channel.
+
     """
+    # Id of the channel whose central frequency should be set.
     channel = Int(1).tag(pref=True)
-    power = Str().tag(pref=True)
+
+    # Driver for the channel.
+    channel_driver = Value()
+
+    # Port whose output power should be set.
     port = Int(1).tag(pref=True)
 
     driver_list = ['AgilentPNA']
-    task_database_entries = set_default({'power': -10})
-    loopable = True
+
+    has_view = True
 
     def perform(self, power=None):
         """
         """
-        if not self.driver:
-            self.start_driver()
-            self.channel_driver = self.driver.get_channel(self.channel)
+        task = self.task
+        if not task.driver:
+            task.start_driver()
+            self.channel_driver = task.driver.get_channel(self.channel)
 
-        if self.channel_driver.owner != self.task_name:
-            self.channel_driver.owner = self.task_name
+        task.driver.owner = task.task_name
+        self.channel_driver.owner = task.task_name
 
         if power is None:
             power = self.format_and_eval_string(self.power)
+
         self.channel_driver.port = self.port
         self.channel_driver.power = power
-        self.write_in_database('power', power)
-
-        return True
+        task.write_in_database('power', power)
 
     def check(self, *args, **kwargs):
         """
+
         """
-        test, traceback = super(PNASetPowerTask, self).check(*args, **kwargs)
-        if self.power:
-            try:
-                self.format_and_eval_string(self.power)
-            except Exception:
-                test = False
-                traceback[self.task_path + '/' + self.task_name + '-power'] = \
-                    'Failed to eval the power formula {}'.format(self.power)
-        return test, traceback
+        task = self.task
+        return check_channels_presence(task, [self.channel], *args, **kwargs)
+
+
+INTERFACES = {'SetRFFrequencyTask': [PNASetRFFrequencyInterface],
+              'SetRFPowerTask': [PNASetRFPowerInterface]}
+
+
+class SingleChannelPNATask(InstrumentTask):
+    """ Helper class managing the notion of channel in the PNA.
+
+    """
+    # Id of the channel to use.
+    channel = Int(1).tag(pref=True)
+
+    def check(self, *args, **kwargs):
+        """ Add checking for channels to the base tests.
+
+        """
+        test, traceback = super(SingleChannelPNATask, self).check(*args,
+                                                                  **kwargs)
+        c_test, c_trace = check_channels_presence(self.task, [self.channel],
+                                                  *args, **kwargs)
+
+        traceback.update(c_trace)
+        return test and c_test, traceback
 
 
 class PNASinglePointMeasureTask(SingleChannelPNATask):
@@ -385,5 +382,5 @@ class PNASweepTask(SingleChannelPNATask):
         return test, traceback
 
 
-KNOWN_PY_TASKS = [PNASetFreqTask, PNASetPowerTask, PNASinglePointMeasureTask,
+KNOWN_PY_TASKS = [PNASinglePointMeasureTask,
                   PNASweepTask]

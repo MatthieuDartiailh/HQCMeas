@@ -15,84 +15,29 @@ from inspect import cleandoc
 from textwrap import fill
 
 from hqc_meas.utils.layouts import auto_grid_layout
-from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.tasks.tools.pair_editor import PairEditor
 from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
-enamldef PNASetFreqView(BaseInstrumentView): view:
 
-    attr in_loop : bool = False
-    title << task.task_name
-    constraints = [factory(auto_grid_layout)]
+enamldef IPNAChannelLabel(Label):
 
-    Label:
-        text = 'Driver'
-    ObjectCombo:
-        items << sorted(task.driver_list)
-        selected := task.selected_driver
+    attr interface
+    attr index = 4
+    text = 'Channel'
 
-    Label:
-        text = 'Instr'
-    ObjectCombo:
-        items << sorted(profiles)
-        selected := task.selected_profile
+enamldef IPNAChannelValue(IntField):
 
-    Label:
-        text = 'Channel'
-    IntField:
-        hug_width = 'weak'
-        value := task.channel
+    attr interface
+    hug_width = 'strong'
+    value := interface.channel
 
-    Conditional:
-        condition = not in_loop
-        Label:
-            text = 'Frequency (Hz)'
-        QtLineCompleter:
-            text := task.frequency
-            entries_updater << task.accessible_database_entries
-            tool_tip = EVALUATER_TOOLTIP
+INTERFACE_VIEW_MAPPING = {'PNASetRFFrequencyInterface':
+                          [IPNAChannelLabel, IPNAChannelValue],
+                          'PNASetRFPowerInterface':
+                          [IPNAChannelLabel, IPNAChannelValue]}
 
-
-enamldef PNASetPowerView(BaseInstrumentView): view:
-
-    attr in_loop : bool = False
-    title << task.task_name
-    constraints = [factory(auto_grid_layout),
-                   ch.width == po.width]
-
-    Label:
-        text = 'Driver'
-    ObjectCombo:
-        items << sorted(task.driver_list)
-        selected := task.selected_driver
-
-    Label:
-        text = 'Instr'
-    ObjectCombo:
-        items << sorted(profiles)
-        selected := task.selected_profile
-
-    Label:
-        text = 'Channel'
-    IntField: ch:
-        hug_width = 'weak'
-        value := task.channel
-
-    Label:
-        text = 'Port'
-    IntField: po:
-        hug_width = 'weak'
-        value := task.port
-
-    Conditional:
-        condition = not in_loop
-        Label:
-            text = 'Power (dBm)'
-        QtLineCompleter:
-            text := task.power
-            entries_updater << task.accessible_database_entries
-            tool_tip = EVALUATER_TOOLTIP
 
 MODES = {'Raw': '', 'Mag lin': 'MLIN', 'Mag log': 'MLOG', 'Phase': 'PHAS',
          'Real part': 'REAL','Imaginary part': 'IMAG'}
@@ -247,7 +192,5 @@ enamldef PNASweepMeasView(BaseInstrumentView): view:
             ed.iterable_name = 'measures'
             ed.alignment = 'v_center'
 
-TASK_VIEW_MAPPING = {'PNASetFreqTask': PNASetFreqView,
-                     'PNASetPowerTask': PNASetPowerView,
-                     'PNASinglePointMeasureTask': PNASinglePointView,
+TASK_VIEW_MAPPING = {'PNASinglePointMeasureTask': PNASinglePointView,
                      'PNASweepTask': PNASweepMeasView}
