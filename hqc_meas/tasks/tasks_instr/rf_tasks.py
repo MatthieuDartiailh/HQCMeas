@@ -42,13 +42,13 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
         if self.frequency:
             try:
                 freq = self.format_and_eval_string(self.frequency)
+                self.write_in_database('frequency', freq)
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
                     cleandoc('''Failed to eval the frequency
                         formula {}'''.format(self.frequency))
             self.write_in_database('unit', self.unit)
-            self.write_in_database('frequency', freq)
         return test, traceback
 
     def convert(self, frequency, unit):
@@ -90,7 +90,7 @@ class SimpleRFFrequencyInterface(InstrTaskInterface):
         if frequency is None:
             frequency = task.format_and_eval_string(task.frequency)
 
-        task.driver.frequency_unit = self.unit
+        task.driver.frequency_unit = task.unit
         task.driver.frequency = frequency
         task.write_in_database('frequency', frequency)
 
@@ -116,12 +116,12 @@ class SetRFPowerTask(InterfaceableTaskMixin, InstrumentTask):
         if self.power:
             try:
                 power = self.format_and_eval_string(self.power)
+                self.write_in_database('power', power)
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-power'] = \
                     'Failed to eval the power {}'.format(self.power)
 
-            self.write_in_database('power', power)
         return test, traceback
 
 
@@ -168,16 +168,16 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
             try:
                 switch = self.format_and_eval_string(self.switch)
             except Exception:
-                test = False
                 traceback[self.task_path + '/' + self.task_name + '-switch'] =\
-                    'Failed to eval the output state {}'.format(self.power)
+                    'Failed to eval the output state {}'.format(self.switch)
+                return False, traceback
 
             if switch not in ('Off', 'On', 0, 1):
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-switch'] =\
-                    '{} is not an acceptable value.'.format(self.power)
+                    '{} is not an acceptable value.'.format(self.switch)
 
-        self.write_in_database('output', self.switch)
+            self.write_in_database('output', switch)
 
         return test, traceback
 
