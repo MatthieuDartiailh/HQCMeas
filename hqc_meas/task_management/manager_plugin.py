@@ -16,6 +16,7 @@ from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                              FileDeletedEvent, FileMovedEvent)
 from inspect import cleandoc
+from collections import defaultdict
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
 from hqc_meas.tasks.api import BaseTask, TaskInterface
@@ -475,7 +476,7 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         tasks = {}
         views = {}
-        interfaces = {}
+        interfaces = defaultdict(list)
         interface_views = {}
         tasks_packages = []
         self._explore_modules(modules, tasks, interfaces, tasks_packages,
@@ -661,7 +662,8 @@ class TaskManagerPlugin(HasPrefPlugin):
                               for task in m.KNOWN_PY_TASKS})
 
             if hasattr(m, 'INTERFACES'):
-                interfaces.update(m.INTERFACES)
+                for k, v in m.INTERFACES.iteritems():
+                    interfaces[k].extend(v)
 
             if hasattr(m, 'TASK_PACKAGES'):
                 packs = [prefix + '.' + pack for pack in m.TASK_PACKAGES]
