@@ -12,7 +12,7 @@ from inspect import cleandoc
 from textwrap import fill
 
 from hqc_meas.utils.layouts import auto_grid_layout
-from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
 
 enamldef DCVoltMeasView(BaseInstrumentView): view:
 
