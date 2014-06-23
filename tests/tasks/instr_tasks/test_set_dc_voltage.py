@@ -6,8 +6,11 @@
 #==============================================================================
 """
 """
-from nose.tools import assert_equal, assert_true, assert_false, assert_in
+from nose.tools import (assert_equal, assert_true, assert_false, assert_in,
+                        assert_is_instance, assert_is)
+from nose.plugins.attrib import attr
 from multiprocessing import Event
+from enaml.workbench.api import Workbench
 
 from hqc_meas.tasks.api import RootTask
 from hqc_meas.tasks.tasks_instr.set_dc_voltage_task\
@@ -16,6 +19,12 @@ from hqc_meas.tasks.tasks_instr.set_dc_voltage_task\
 
 import enaml
 with enaml.imports():
+    from enaml.workbench.core.core_manifest import CoreManifest
+    from hqc_meas.utils.state_manifest import StateManifest
+    from hqc_meas.utils.pref_manifest import PreferencesManifest
+    from hqc_meas.task_management.manager_manifest import TaskManagerManifest
+    from hqc_meas.instruments.manager_manifest import InstrManagerManifest
+
     from hqc_meas.tasks.tasks_instr.views.set_dc_voltage_view\
         import SetDcVoltageView
 
@@ -37,9 +46,6 @@ class TestSetDCVoltageTask(object):
         # This is set simply to make sure the test of InstrTask pass.
         self.task.selected_driver = 'Test'
         self.task.selected_profile = 'Test1'
-
-    def teardown(self):
-        close_all_windows()
 
     def test_check_base_interface1(self):
         # Simply test that everything is ok if voltage can be evaluated.
@@ -161,10 +167,68 @@ class TestSetDCVoltageTask(object):
         self.task.perform()
         assert_equal(self.root.get_from_database('Test_voltage'), 1.0)
 
-#    def test_view1(self):
-#        # Intantiate a view with no selected interface and select one after
-#        pass
-#
-#    def test_view2(self):
-#        # Intantiate a view with a selected interface.
-#        pass
+
+@attr('ui')
+class TestSetDCVoltageView(object):
+
+    def setup(self):
+        self.workbench = Workbench()
+        self.workbench.register(CoreManifest())
+        self.workbench.register(StateManifest())
+        self.workbench.register(PreferencesManifest())
+        self.workbench.register(InstrManagerManifest())
+        self.workbench.register(TaskManagerManifest())
+
+        self.root = RootTask(should_stop=Event(), should_pause=Event())
+        self.task = SetDCVoltageTask(task_name='Test')
+        self.root.children_task.append(self.task)
+        self.root.run_time['drivers'] = {'Test': InstrHelper}
+
+        self.task.back_step = 0.1
+        self.task.delay = 0.1
+
+    def teardown(self):
+        close_all_windows()
+
+        self.workbench.unregister(u'hqc_meas.task_manager')
+        self.workbench.unregister(u'hqc_meas.instr_manager')
+        self.workbench.unregister(u'hqc_meas.preferences')
+        self.workbench.unregister(u'hqc_meas.state')
+        self.workbench.unregister(u'enaml.workbench.core')
+
+    def test_view1(self):
+        # Intantiate a view with no selected interface and select one after
+        window = enaml.widgets.api.Window()
+        core = self.workbench.get_plugin('enaml.workbench.core')
+        view = SetDcVoltageView(window, task=self.task, core=core)
+        window.show()
+
+        process_app_events()
+
+        assert_in('YokogawaGS200', view.drivers)
+        self.task.selected_driver = 'YokogawaGS200'
+        process_app_events()
+        assert_is_instance(self.task.interface, SimpleVoltageSourceInterface)
+
+        assert_in('TinyBilt', view.drivers)
+        self.task.selected_driver = 'TinyBilt'
+        process_app_events()
+        assert_is_instance(self.task.interface,
+                           MultiChannelVoltageSourceInterface)
+
+    def test_view2(self):
+        # Intantiate a view with a selected interface.
+        self.task.interface = SimpleVoltageSourceInterface(task=self.task)
+        self.task.target_value = '1.0'
+        self.task.selected_driver = 'YokogawaGS200'
+
+        interface = self.task.interface
+
+        window = enaml.widgets.api.Window()
+        core = self.workbench.get_plugin('enaml.workbench.core')
+        SetDcVoltageView(window, task=self.task, core=core)
+        window.show()
+
+        process_app_events()
+
+        assert_is(self.task.interface, interface)
