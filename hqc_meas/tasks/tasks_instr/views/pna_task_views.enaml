@@ -6,13 +6,16 @@
 #==============================================================================
 """
 """
+from atom.api import set_default, Value
 from enaml.core.api import Conditional
 from enaml.layout.api import grid, vbox, hbox, factory
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, Container)
 from enaml.stdlib.fields import IntField, FloatField
+from enaml.validator import Validator
 
 from inspect import cleandoc
 from textwrap import fill
+import re
 
 from hqc_meas.utils.layouts import auto_grid_layout
 from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
@@ -33,14 +36,44 @@ enamldef IPNAChannelValue(IntField):
     hug_width = 'strong'
     value := interface.channel
 
+enamldef IPNAPortLabel(Label):
+
+    attr interface
+    text = 'Port'
+
+enamldef IPNAPortValue(IntField):
+
+    attr interface
+    hug_width = 'strong'
+    value := interface.port
+
 INTERFACE_VIEW_MAPPING = {'PNASetRFFrequencyInterface':
                           [IPNAChannelLabel, IPNAChannelValue],
                           'PNASetRFPowerInterface':
-                          [IPNAChannelLabel, IPNAChannelValue]}
+                          [IPNAChannelLabel, IPNAChannelValue,
+                           IPNAPortLabel, IPNAPortValue]}
 
 
 MODES = {'Raw': '', 'Mag lin': 'MLIN', 'Mag log': 'MLOG', 'Phase': 'PHAS',
          'Real part': 'REAL','Imaginary part': 'IMAG'}
+
+class SParametersValidator(Validator):
+    """
+
+    """
+    pattern = Value()
+
+    message = set_default(cleandoc('''S parameters are of the form : Sij with
+                                    i, j in[1,4]'''))
+
+    def validate(self, text):
+        """
+
+        """
+        return self.pattern.match(text)
+
+    def _default_pattern(self):
+        return re.compile('S[1-4][1-4]')
 
 
 enamldef MeasField(Container):
@@ -51,6 +84,7 @@ enamldef MeasField(Container):
 
     Field: field:
         text := model.label
+        validator = SParameterValidator()
         tool_tip =  fill(cleandoc(
                         '''Measure should be described by the parameter to
                           measure.'''))

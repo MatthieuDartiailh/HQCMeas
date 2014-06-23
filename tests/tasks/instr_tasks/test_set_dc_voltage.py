@@ -75,7 +75,6 @@ class TestSetDCVoltageTask(object):
         profile = {'Test1': ({'defined_channels': [[1]]},
                              {})}
         self.root.run_time['profiles'] = profile
-        self.root.run_time['drivers'] = {'Test': InstrHelper}
 
         test, traceback = self.task.check(test_instr=True)
         print traceback
@@ -157,8 +156,7 @@ class TestSetDCVoltageTask(object):
         profile = {'Test1': ({'voltage': [0.0],
                               'funtion': ['VOLT'],
                               'owner': [None]},
-                             {'defined_channels': [1],
-                              'get_channel': lambda x, i: x}
+                             {'get_channel': lambda x, i: x}
                              )}
         self.root.run_time['profiles'] = profile
 

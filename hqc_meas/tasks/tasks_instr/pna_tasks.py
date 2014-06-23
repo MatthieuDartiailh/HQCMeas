@@ -6,10 +6,10 @@
 #==============================================================================
 """
 """
-from atom.api import (Str, Int, Enum, set_default,
-                      Tuple, ContainerList, Value)
+from atom.api import (Str, Int, Enum, set_default, Tuple, ContainerList, Value)
 
 import time
+import re
 from inspect import cleandoc
 import numpy as np
 
@@ -129,7 +129,7 @@ class PNASetRFPowerInterface(InstrTaskInterface):
         self.channel_driver.owner = task.task_name
 
         if power is None:
-            power = self.format_and_eval_string(self.power)
+            power = task.format_and_eval_string(task.power)
 
         self.channel_driver.port = self.port
         self.channel_driver.power = power
@@ -248,7 +248,23 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
                 data = self.channel_driver.read_raw_data()[0]
             self.write_in_database(':'.join(self.measures[i]), data)
 
-        return True
+    def check(self, *args, **kwargs):
+        """
+
+        """
+        test, traceback = super(PNASinglePointMeasureTask,
+                                self).check(*args, **kwargs)
+
+        pattern = re.compile('S[1-4][1-4]')
+        for i, s_par, f in enumerate(self.measures):
+            match = pattern.match(s_par)
+            if not match:
+                path = self.task_path + '/' + self.task_name
+                path += '_Meas_{}'.format(i)
+                traceback[path] = 'Unvalid parameter : {}'.format(s_par)
+                test = False
+
+        return test, traceback
 
     def _observe_measures(self, change):
         """
@@ -348,12 +364,20 @@ class PNASweepTask(SingleChannelPNATask):
         final_arr = np.rec.fromarrays(data, names=names)
         self.write_in_database('sweep_data', final_arr)
 
-        return True
-
     def check(self, *args, **kwargs):
         """
         """
         test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
+
+        pattern = re.compile('S[1-4][1-4]')
+        for i, s_par, f in enumerate(self.measures):
+            match = pattern.match(s_par)
+            if not match:
+                path = self.task_path + '/' + self.task_name
+                path += '_Meas_{}'.format(i)
+                traceback[path] = 'Unvalid parameter : {}'.format(s_par)
+                test = False
+
         try:
             self.format_and_eval_string(self.start)
         except:
