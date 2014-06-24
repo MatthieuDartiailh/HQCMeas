@@ -227,26 +227,25 @@ class TinyBiltChannel(BaseInstrument):
                                             value'''))
 
     @secure_communication()
-    def smooth_change(self, Volt_Destination, Volt_Step, Time_Step):
+    def smooth_change(self, volt_destination, volt_step, time_step):
         """ Set a ramp from the present voltage
-            to the Volt_Destination by step of Volt_Step
-            with time of Time_Step between each step
+            to the volt_destination by step of volt_step
+            with time of time_step between each step
         """
         with self.secure():
             present_voltage = round(self._TB.ask_for_values
                                    ('i{};MEAS:Volt?'.format(self._channel))[0],
                                     5)
-            while abs(round(present_voltage - Volt_Destination,
-                            5)) >= Volt_Step:
-                time.sleep(Time_Step)
+            while abs(round(present_voltage - volt_destination,
+                            5)) >= volt_step:
+                time.sleep(time_step)
                 self._TB.write('i{};volt {}'
                                .format(self._channel, present_voltage))
-                present_voltage = round(present_voltage + Volt_Step
-                                        * np.sign(Volt_Destination
-                                                  - present_voltage),
-                                        5)
+                present_voltage = round(present_voltage + volt_step
+                                        * np.sign(volt_destination
+                                                  - present_voltage), 5)
             self._TB.write('i{};volt {}'
-                           .format(self._channel, Volt_Destination))
+                           .format(self._channel, volt_destination))
 
 
 class TinyBilt(VisaInstrument):
