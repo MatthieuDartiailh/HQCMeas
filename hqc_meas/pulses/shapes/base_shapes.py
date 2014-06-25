@@ -5,6 +5,7 @@
 # license : MIT license
 #==============================================================================
 from atom.api import (Str, FloatRange)
+import numpy as np
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from ..entry_eval import eval_entry
@@ -42,18 +43,19 @@ class AbstractShape(HasPrefAtom):
     def compute(self, time, unit):
         """ Computes the shape of the pulse at a given time.
 
+
         Parameters
         ----------
-        time : float
-            Time at which to compute the modulation.
+        time : ndarray
+            Times at which to compute the modulation.
 
         unit : str
             Unit in which the time is expressed.
 
         Returns
         -------
-        shape : float
-            Amplitude of the pulse at the given time.
+        shape : ndarray
+            Amplitudes of the pulse at the given time.
 
         """
         raise NotImplementedError('')
@@ -111,19 +113,19 @@ class SquareShape(AbstractShape):
 
         Parameters
         ----------
-        time : float
-            Time at which to compute the modulation.
+        time : ndarray
+            Times at which to compute the modulation.
 
         unit : str
             Unit in which the time is expressed.
 
         Returns
         -------
-        shape : float
-            Amplitude of the pulse at the given time.
+        shape : ndarray
+            Amplitude of the pulse.
 
         """
-        return self._amplitude
+        return self._amplitude*np.ones(len(time))
 
     #--- Private API ----------------------------------------------------------
 

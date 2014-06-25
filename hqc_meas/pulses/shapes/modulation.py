@@ -4,9 +4,9 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (Str, Enum, Float, Bool, FloatRange)
-from math import cos, sin
+from atom.api import (Str, Enum, Float, Bool)
 from math import pi as Pi
+import numpy as np
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from ..entry_eval import eval_entry
@@ -30,9 +30,6 @@ class Modulation(HasPrefAtom):
 
     #: Kind of modulation to use : cos or sin
     kind = Enum('sin', 'cos').tag(pref=True)
-
-    #: Relative amplitude of the modulation.
-    amplitude = Str().tag(pref=True)
 
     #: Frequency of modulation to use.
     frequency = Str().tag(pref=True)
@@ -74,29 +71,6 @@ class Modulation(HasPrefAtom):
 
         prefix = '{}_'.format(index) + 'mod_'
         eval_success = True
-
-        # Computing amplitude
-        amp = None
-        try:
-            amp = eval_entry(self.amplitude, sequence_locals, missing)
-        except Exception as e:
-            eval_success = False
-            errors[prefix + 'amplitude'] = repr(e)
-
-        if amp is not None:
-            if -1.0 <= amp <= 1.0:
-                self._amplitude = amp
-                sequence_locals[prefix + 'amplitude'] = amp
-            else:
-                eval_success = False
-                m = 'The amplitude must be a float between -1.0 and 1.0: {}'
-                mess = m.format(amp)
-                errors[prefix + 'amplitude'] = mess
-        else:
-            eval_success = False
-            m = 'Failed to evaluate {} expression: {}'.format('amplitude',
-                                                              self.amplitude)
-            errors[prefix + 'amplitude'] = m
 
         # Computing frequency
         freq = None
@@ -140,17 +114,17 @@ class Modulation(HasPrefAtom):
 
         Parameters
         ----------
-        time : float
-            Time at which to compute the modulation.
+        time : ndarray
+            Times at which to compute the modulation.
 
         unit : str
             Unit in which the time is expressed.
 
         Returns
         -------
-        modulation : float
-            Value by which to multiply the shape to get the pulse value at time
-            t.
+        modulation : ndarray
+            Values by which to multiply the shape to get the pulse value at
+            time t.
 
         """
         if not self.activated:
@@ -162,13 +136,11 @@ class Modulation(HasPrefAtom):
             phase *= 2*Pi
 
         if self.kind == 'sin':
-            return self._amplitude*sin(unit_corr*self._frequency*time + phase)
+            return np.sin(unit_corr*self._frequency*time + phase)
         else:
-            return self._amplitude*cos(unit_corr*self._frequency*time + phase)
+            return np.cos(unit_corr*self._frequency*time + phase)
 
     #--- Private API ----------------------------------------------------------
-
-    _amplitude = FloatRange(-1.0, 1.0, 1.0)
 
     _frequency = Float()
 

@@ -5,9 +5,10 @@
 # license : MIT license
 #==============================================================================
 from atom.api import (Int, Instance, Str, Enum, Float, Dict, List, Typed, Bool,
-                      ContainerList, ForwardInstance, ForwardTyped,
+                      ContainerList, ForwardInstance, ForwardTyped, Property,
                       set_default)
 from itertools import chain
+import numpy as np
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from .contexts.base_context import BaseContext
@@ -84,6 +85,9 @@ class Pulse(Item):
     #: sequence. The unit of this time depends of the setting of the context.
     stop = Float()
 
+    #: Waveform
+    waveform = Property()
+
     #: Modulation to apply to the pulse. Only enabled in analogical mode.
     modulation = Typed(Modulation, ()).tag(pref=True)
 
@@ -125,6 +129,7 @@ class Pulse(Item):
         d1 = None
         try:
             d1 = eval_entry(self.def_1, sequence_locals, missings)
+            d1 = self.context.check_time(d1)
         except Exception as e:
             errors[prefix + par1] = repr(e)
 
@@ -137,7 +142,7 @@ class Pulse(Item):
         else:
             success = False
             if par1 == 'start':
-                m = 'Got a negative value for start: {}'.format(d1)
+                m = 'Got a strictly negative value for start: {}'.format(d1)
 
             else:
                 m = 'Got a negative value for duration: {}'.format(d1)
@@ -148,6 +153,7 @@ class Pulse(Item):
         d2 = None
         try:
             d2 = eval_entry(self.def_2, sequence_locals, missings)
+            d2 = self.context.check_time(d2)
         except Exception as e:
             errors[prefix + par2] = repr(e)
 
@@ -189,27 +195,18 @@ class Pulse(Item):
 
         return success
 
-    def compute(self, time):
-        """ Compute the relative strength of the pulse at a given time.
+    def _get_waveform(self):
+        """ Compute the pulse amplitude between start and stop.
 
         """
-        if self.start <= time <= self.stop:
-            if self.kind == 'analogical':
-                mod = self.modulation.compute(time, self.context.time_unit)
-                shape = self.shape.compute(time, self.context.time_unit)
-                return mod*shape
-            else:
-                return 1
-
+        n_points = self.context.len_sample(self.start, self.stop)
+        if self.kind == 'analogical':
+            time = np.linspace(self.start, self.stop, n_points, False)
+            mod = self.modulation.compute(time, self.context.time_unit)
+            shape = self.shape.compute(time, self.context.time_unit)
+            return mod*shape
         else:
-            return 0
-
-#    def update_members_from_preferences():
-#        """
-#        """
-#        NO #recreate shape before loading preferences if it makes senses
-#
-#        # Shape should be created by the loader.
+            return np.ones(n_points, dtype=np.int8)
 
 
 class Sequence(Item):
