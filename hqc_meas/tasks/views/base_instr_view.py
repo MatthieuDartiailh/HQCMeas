@@ -58,8 +58,13 @@ class BaseInstrumentView(GroupBox):
                                                 {'tasks':
                                                     [self.task.task_class]}
                                                 )
-            drivers = []
-            interfaces = {}
+            # Get the drivers defined on the tasks ie using the default
+            # interface implemented through i_perform
+            drivers = [] if not hasattr(self.task, 'driver_list')\
+                else self.task.driver_list
+            interfaces = {driver: type(None) for driver in drivers}
+
+            # Map driver to their interface.
             for i in inter[self.task.task_class]:
                 drivers.extend(i.driver_list)
                 interfaces.update({d: i for d in i.driver_list})
@@ -89,15 +94,27 @@ class BaseInstrumentView(GroupBox):
         """
         driver = self.task.selected_driver
         interface = self._interfaces[driver]
+
+        # The or clause handle the absence of an interface (ie None for both
+        # interface and task.interface).
         if type(self.task.interface) != interface:
+            # Destroy the views associated with the ancient interface.
+            for i_v in self.i_views:
+                i_v.destroy()
+
+            # If no interface is used simple assign None
+            if type(None) == interface:
+                self.task.interface = None
+                return
+
+            # Otherwise create interface and insert its views.
             self.task.interface = interface()
+
             cmd = 'hqc_meas.task_manager.interface_views_request'
             views, _ = self.core.invoke_command(cmd,
                                                 {'interface_classes':
                                                     [interface.__name__]}
                                                 )
-            for i_v in self.i_views:
-                i_v.destroy()
 
             if interface.has_view:
                 i_views = [v(self, interface=self.task.interface)

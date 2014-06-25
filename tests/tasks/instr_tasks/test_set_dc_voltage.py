@@ -14,7 +14,7 @@ from enaml.workbench.api import Workbench
 
 from hqc_meas.tasks.api import RootTask
 from hqc_meas.tasks.tasks_instr.set_dc_voltage_task\
-    import (SetDCVoltageTask, SimpleVoltageSourceInterface,
+    import (SetDCVoltageTask,
             MultiChannelVoltageSourceInterface)
 
 import enaml
@@ -49,7 +49,6 @@ class TestSetDCVoltageTask(object):
 
     def test_check_base_interface1(self):
         # Simply test that everything is ok if voltage can be evaluated.
-        self.task.interface = SimpleVoltageSourceInterface(task=self.task)
         self.task.target_value = '1.0'
 
         test, traceback = self.task.check(test_instr=True)
@@ -58,7 +57,6 @@ class TestSetDCVoltageTask(object):
 
     def test_check_base_interface2(self):
         # Check handling a wrong voltage.
-        self.task.interface = SimpleVoltageSourceInterface(task=self.task)
         self.task.target_value = '*1.0*'
 
         test, traceback = self.task.check(test_instr=True)
@@ -77,7 +75,6 @@ class TestSetDCVoltageTask(object):
         self.root.run_time['profiles'] = profile
 
         test, traceback = self.task.check(test_instr=True)
-        print traceback
         assert_true(test)
         assert_false(traceback)
 
@@ -127,15 +124,7 @@ class TestSetDCVoltageTask(object):
         assert_false(test)
         assert_equal(len(traceback), 1)
 
-    def test_check_no_interface(self):
-        self.task.target_value = '1.0'
-
-        test, traceback = self.task.check()
-        assert_false(test)
-        assert_equal(len(traceback), 1)
-
     def test_perform_base_interface(self):
-        self.task.interface = SimpleVoltageSourceInterface(task=self.task)
         self.task.target_value = '1.0'
 
         self.root.run_time['profiles'] = {'Test1': ({'voltage': [0.0],
@@ -206,7 +195,7 @@ class TestSetDCVoltageView(object):
         assert_in('YokogawaGS200', view.drivers)
         self.task.selected_driver = 'YokogawaGS200'
         process_app_events()
-        assert_is_instance(self.task.interface, SimpleVoltageSourceInterface)
+        assert_is(self.task.interface, None)
 
         assert_in('TinyBilt', view.drivers)
         self.task.selected_driver = 'TinyBilt'
@@ -216,9 +205,10 @@ class TestSetDCVoltageView(object):
 
     def test_view2(self):
         # Intantiate a view with a selected interface.
-        self.task.interface = SimpleVoltageSourceInterface(task=self.task)
+        interface = MultiChannelVoltageSourceInterface(task=self.task)
+        self.task.interface = interface
         self.task.target_value = '1.0'
-        self.task.selected_driver = 'YokogawaGS200'
+        self.task.selected_driver = 'TinyBilt'
 
         interface = self.task.interface
 

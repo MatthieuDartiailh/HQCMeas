@@ -36,6 +36,8 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     loopable = True
     task_database_entries = set_default({'voltage': 1.0})
 
+    driver_list = ['YokogawaGS200', 'Yokogawa7651']
+
     def check(self, *args, **kwargs):
         """
         """
@@ -52,6 +54,26 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
         self.write_in_database('voltage', val)
 
         return test, traceback
+
+    def i_perform(self, value=None):
+        """
+        """
+        if not self.driver:
+            self.start_driver()
+
+        if self.driver.owner != self.task_name:
+            self.driver.owner = self.task_name
+            if hasattr(self.driver, 'function') and\
+                    self.driver.function != 'VOLT':
+                log = logging.getLogger()
+                mes = cleandoc('''Instrument assigned to task {} is not
+                    configured to output a voltage'''.format(self.task_name))
+                log.fatal(mes)
+                self.root_task.should_stop.set()
+
+        setter = lambda value: setattr(self.driver, 'voltage', value)
+
+        self.smooth_set(value, setter)
 
     def smooth_set(self, target_value, setter):
         """ Smoothly set the voltage.
@@ -98,34 +120,6 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
         self.write_in_database('voltage', value)
 
 KNOWN_PY_TASKS = [SetDCVoltageTask]
-
-
-class SimpleVoltageSourceInterface(InstrTaskInterface):
-    """
-    """
-
-    driver_list = ['YokogawaGS200', 'Yokogawa7651']
-
-    def perform(self, value=None):
-        """
-        """
-        task = self.task
-        if not task.driver:
-            task.start_driver()
-
-        if task.driver.owner != task.task_name:
-            task.driver.owner = task.task_name
-            if hasattr(task.driver, 'function') and\
-                    self.driver.function != 'VOLT':
-                log = logging.getLogger()
-                mes = cleandoc('''Instrument assigned to task {} is not
-                    configured to output a voltage'''.format(task.task_name))
-                log.fatal(mes)
-                task.root_task.should_stop.set()
-
-        setter = lambda value: setattr(task.driver, 'voltage', value)
-
-        task.smooth_set(value, setter)
 
 
 class MultiChannelVoltageSourceInterface(InstrTaskInterface):
@@ -209,5 +203,4 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
         else:
             return True, {}
 
-INTERFACES = {'SetDCVoltageTask': [SimpleVoltageSourceInterface,
-                                   MultiChannelVoltageSourceInterface]}
+INTERFACES = {'SetDCVoltageTask': [MultiChannelVoltageSourceInterface]}

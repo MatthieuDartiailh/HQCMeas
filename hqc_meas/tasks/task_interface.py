@@ -29,7 +29,10 @@ class InterfaceableTaskMixin(Atom):
     interface = ForwardInstance(lambda: TaskInterface)
 
     def check(self, *args, **kwargs):
-        """
+        """ Check the interface.
+
+        This run the checks of the next parent class in the mro and check
+        if a valid interface (real or default one) exists.
 
         """
         # Trick to call parent check by tweaking the mro.
@@ -42,20 +45,37 @@ class InterfaceableTaskMixin(Atom):
         i = ancestors.index(InterfaceableTaskMixin)
         test, traceback = ancestors[i + 1].check(self, *args, **kwargs)
 
-        if not self.interface:
+        if not self.interface and not hasattr(self, 'i_perform'):
             traceback[self.task_name + '_interface'] = 'Missing interface'
             return False, traceback
 
-        i_test, i_traceback = self.interface.check(*args, **kwargs)
+        if self.interface:
+            i_test, i_traceback = self.interface.check(*args, **kwargs)
 
-        traceback.update(i_traceback)
-        return test and i_test, traceback
+            traceback.update(i_traceback)
+            test &= i_test
+
+        return test, traceback
 
     def perform(self, *args, **kwargs):
-        """
+        """ Implementation of perform relying on interfaces.
+
+        This method will be considered as the true perform method of the task,
+        it will either call the interface perform method or the special
+        i_perform method if there is no interface. This is meant to provide
+        an easy way to turn a non-interfaced task into an interfaced one :
+        - add the mixin as the left most inherited class
+        - rename the perform method to i_perform
+        - create new interfaces but keep the default 'standard' behaviour.
+
+        NEVER OVERRIDE IT IN SUBCLASSES OTHERWISE YOU WILL BREAK THE
+        INTERFACE SYSTEM.
 
         """
-        return self.interface.perform(*args, **kwargs)
+        if self.interface:
+            return self.interface.perform(*args, **kwargs)
+        else:
+            return self.i_perform(*args, **kwargs)
 
     def answer(self, members, callables):
         """ Method used by to retrieve information about a task.
