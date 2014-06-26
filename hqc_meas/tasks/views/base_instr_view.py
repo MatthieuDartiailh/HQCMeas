@@ -60,12 +60,11 @@ class BaseInstrumentView(GroupBox):
                                                 )
             # Get the drivers defined on the tasks ie using the default
             # interface implemented through i_perform
-            drivers = [] if not hasattr(self.task, 'driver_list')\
-                else self.task.driver_list
+            drivers = self.task.driver_list
             interfaces = {driver: type(None) for driver in drivers}
 
             # Map driver to their interface.
-            for i in inter[self.task.task_class]:
+            for i in inter.get(self.task.task_class, []):
                 drivers.extend(i.driver_list)
                 interfaces.update({d: i for d in i.driver_list})
             self.drivers = drivers

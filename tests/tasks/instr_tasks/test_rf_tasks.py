@@ -7,15 +7,14 @@
 """
 """
 from nose.tools import (assert_equal, assert_true, assert_false, assert_in,
-                        assert_is_instance, assert_is)
+                        assert_is)
 from nose.plugins.attrib import attr
 from multiprocessing import Event
 from enaml.workbench.api import Workbench
 
 from hqc_meas.tasks.api import RootTask
 from hqc_meas.tasks.tasks_instr.rf_tasks\
-    import (SetRFFrequencyTask, SimpleRFFrequencyInterface, SetRFPowerTask,
-            SimpleRFPowerInterface, SetRFOnOffTask, SimpleRFOnOffInterface)
+    import (SetRFFrequencyTask, SetRFPowerTask, SetRFOnOffTask)
 
 import enaml
 with enaml.imports():
@@ -48,7 +47,6 @@ class TestSetRFFrequencyTask(object):
 
     def test_check_base_interface1(self):
         # Simply test that everything is ok if voltage can be evaluated.
-        self.task.interface = SimpleRFFrequencyInterface(task=self.task)
         self.task.frequency = '1.0'
 
         test, traceback = self.task.check(test_instr=True)
@@ -57,22 +55,13 @@ class TestSetRFFrequencyTask(object):
 
     def test_check_base_interface2(self):
         # Check handling a wrong voltage.
-        self.task.interface = SimpleRFFrequencyInterface(task=self.task)
         self.task.frequency = '*1.0*'
 
         test, traceback = self.task.check(test_instr=True)
         assert_false(test)
         assert_equal(len(traceback), 1)
 
-    def test_check_no_interface(self):
-        self.task.frequency = '1.0'
-
-        test, traceback = self.task.check()
-        assert_false(test)
-        assert_equal(len(traceback), 1)
-
     def test_perform_base_interface(self):
-        self.task.interface = SimpleRFFrequencyInterface(task=self.task)
         self.task.frequency = '1.0'
 
         self.root.run_time['profiles'] = {'Test1': ({'frequency': [0.0],
@@ -122,24 +111,7 @@ class TestSetRFFrequencyView(object):
         assert_in('AgilentE8257D', view.drivers)
         self.task.selected_driver = 'AgilentE8257D'
         process_app_events()
-        assert_is_instance(self.task.interface, SimpleRFFrequencyInterface)
-
-    def test_view2(self):
-        # Intantiate a view with a selected interface.
-        self.task.interface = SimpleRFFrequencyInterface(task=self.task)
-        self.task.frequency = '1.0'
-        self.task.selected_driver = 'AgilentE8257D'
-
-        interface = self.task.interface
-
-        window = enaml.widgets.api.Window()
-        core = self.workbench.get_plugin('enaml.workbench.core')
-        RFFrequencyView(window, task=self.task, core=core)
-        window.show()
-
-        process_app_events()
-
-        assert_is(self.task.interface, interface)
+        assert_is(self.task.interface, None)
 
 
 class TestSetRFPowerTask(object):
@@ -156,7 +128,6 @@ class TestSetRFPowerTask(object):
 
     def test_check_base_interface1(self):
         # Simply test that everything is ok if voltage can be evaluated.
-        self.task.interface = SimpleRFPowerInterface(task=self.task)
         self.task.power = '1.0'
 
         test, traceback = self.task.check(test_instr=True)
@@ -165,22 +136,13 @@ class TestSetRFPowerTask(object):
 
     def test_check_base_interface2(self):
         # Check handling a wrong voltage.
-        self.task.interface = SimpleRFPowerInterface(task=self.task)
         self.task.power = '*1.0*'
 
         test, traceback = self.task.check(test_instr=True)
         assert_false(test)
         assert_equal(len(traceback), 1)
 
-    def test_check_no_interface(self):
-        self.task.power = '1.0'
-
-        test, traceback = self.task.check()
-        assert_false(test)
-        assert_equal(len(traceback), 1)
-
     def test_perform_base_interface(self):
-        self.task.interface = SimpleRFPowerInterface(task=self.task)
         self.task.power = '1.0'
 
         self.root.run_time['profiles'] = {'Test1': ({'power': [0.0],
@@ -229,24 +191,7 @@ class TestSetRFPowerView(object):
         assert_in('AgilentE8257D', view.drivers)
         self.task.selected_driver = 'AgilentE8257D'
         process_app_events()
-        assert_is_instance(self.task.interface, SimpleRFPowerInterface)
-
-    def test_view2(self):
-        # Intantiate a view with a selected interface.
-        self.task.interface = SimpleRFPowerInterface(task=self.task)
-        self.task.power = '1.0'
-        self.task.selected_driver = 'AgilentE8257D'
-
-        interface = self.task.interface
-
-        window = enaml.widgets.api.Window()
-        core = self.workbench.get_plugin('enaml.workbench.core')
-        RFPowerView(window, task=self.task, core=core)
-        window.show()
-
-        process_app_events()
-
-        assert_is(self.task.interface, interface)
+        assert_is(self.task.interface, None)
 
 
 class TestSetRFOnOffTask(object):
@@ -263,7 +208,6 @@ class TestSetRFOnOffTask(object):
 
     def test_check_base_interface1(self):
         # Simply test that everything is ok if voltage can be evaluated.
-        self.task.interface = SimpleRFOnOffInterface(task=self.task)
         self.task.switch = '1.0'
 
         test, traceback = self.task.check(test_instr=True)
@@ -272,22 +216,13 @@ class TestSetRFOnOffTask(object):
 
     def test_check_base_interface2(self):
         # Check handling a wrong voltage.
-        self.task.interface = SimpleRFOnOffInterface(task=self.task)
         self.task.switch = '*1.0*'
 
         test, traceback = self.task.check(test_instr=True)
         assert_false(test)
         assert_equal(len(traceback), 1)
 
-    def test_check_no_interface(self):
-        self.task.switch = '1.0'
-
-        test, traceback = self.task.check()
-        assert_false(test)
-        assert_equal(len(traceback), 1)
-
     def test_perform_base_interface(self):
-        self.task.interface = SimpleRFOnOffInterface(task=self.task)
         self.task.switch = '1.0'
 
         self.root.run_time['profiles'] = {'Test1': ({'output': [0.0],
@@ -336,21 +271,4 @@ class TestSetRFOnOffView(object):
         assert_in('AgilentE8257D', view.drivers)
         self.task.selected_driver = 'AgilentE8257D'
         process_app_events()
-        assert_is_instance(self.task.interface, SimpleRFOnOffInterface)
-
-    def test_view2(self):
-        # Intantiate a view with a selected interface.
-        self.task.interface = SimpleRFOnOffInterface(task=self.task)
-        self.task.switch = '1.0'
-        self.task.selected_driver = 'AgilentE8257D'
-
-        interface = self.task.interface
-
-        window = enaml.widgets.api.Window()
-        core = self.workbench.get_plugin('enaml.workbench.core')
-        RFSetOnOffView(window, task=self.task, core=core)
-        window.show()
-
-        process_app_events()
-
-        assert_is(self.task.interface, interface)
+        assert_is(self.task.interface, None)

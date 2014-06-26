@@ -9,8 +9,7 @@
 from atom.api import (Str, Bool, set_default, Enum)
 from inspect import cleandoc
 
-from hqc_meas.tasks.api import (InstrumentTask, InstrTaskInterface,
-                                InterfaceableTaskMixin)
+from hqc_meas.tasks.api import (InstrumentTask, InterfaceableTaskMixin)
 
 CONVERSION_FACTORS = {'GHz': {'Hz': 1e9, 'kHz': 1e6, 'MHz': 1e3, 'GHz': 1},
                       'MHz': {'Hz': 1e6, 'kHz': 1e3, 'MHz': 1, 'GHz': 1e-3},
@@ -33,6 +32,7 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'frequency': 1.0, 'unit': 'GHz'})
     loopable = True
+    driver_list = ['AgilentE8257D']
 
     def check(self, *args, **kwargs):
         """
@@ -50,6 +50,22 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
                         formula {}'''.format(self.frequency))
             self.write_in_database('unit', self.unit)
         return test, traceback
+
+    def i_perform(self, frequency=None):
+        """
+
+        """
+        if not self.driver:
+            self.start_driver()
+            if self.auto_start:
+                self.driver.output = 'On'
+
+        if frequency is None:
+            frequency = self.format_and_eval_string(self.frequency)
+
+        self.driver.frequency_unit = self.unit
+        self.driver.frequency = frequency
+        self.write_in_database('frequency', frequency)
 
     def convert(self, frequency, unit):
         """ Convert a frequency to the given unit.
@@ -70,31 +86,6 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
         return frequency*CONVERSION_FACTORS[self.unit][unit]
 
 
-class SimpleRFFrequencyInterface(InstrTaskInterface):
-    """ Basic interface for rf sources not using channels.
-
-    """
-    driver_list = ['AgilentE8257D']
-
-    def perform(self, frequency=None):
-        """
-
-        """
-        task = self.task
-
-        if not task.driver:
-            task.start_driver()
-            if task.auto_start:
-                task.driver.output = 'On'
-
-        if frequency is None:
-            frequency = task.format_and_eval_string(task.frequency)
-
-        task.driver.frequency_unit = task.unit
-        task.driver.frequency = frequency
-        task.write_in_database('frequency', frequency)
-
-
 class SetRFPowerTask(InterfaceableTaskMixin, InstrumentTask):
     """Set the power of the signal delivered by the source.
 
@@ -107,6 +98,7 @@ class SetRFPowerTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'power': -10})
     loopable = True
+    driver_list = ['AgilentE8257D']
 
     def check(self, *args, **kwargs):
         """
@@ -124,29 +116,20 @@ class SetRFPowerTask(InterfaceableTaskMixin, InstrumentTask):
 
         return test, traceback
 
-
-class SimpleRFPowerInterface(InstrTaskInterface):
-    """ Basic interface for rf sources not using channels.
-
-    """
-    driver_list = ['AgilentE8257D']
-
-    def perform(self, power=None):
+    def i_perform(self, power=None):
         """
 
         """
-        task = self.task
-
-        if not task.driver:
-            task.start_driver()
-            if task.auto_start:
-                task.driver.output = 'On'
+        if not self.driver:
+            self.start_driver()
+            if self.auto_start:
+                self.driver.output = 'On'
 
         if power is None:
-            power = task.format_and_eval_string(task.power)
+            power = self.format_and_eval_string(self.power)
 
-        task.driver.power = power
-        task.write_in_database('power', power)
+        self.driver.power = power
+        self.write_in_database('power', power)
 
 
 class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
@@ -158,6 +141,7 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = {'output': 0}
     loopable = True
+    driver_list = ['AgilentE8257D']
 
     def check(self, *args, **kwargs):
         """
@@ -181,35 +165,23 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
 
         return test, traceback
 
-
-class SimpleRFOnOffInterface(InstrTaskInterface):
-    """ Basic interface for rf sources not using channels.
-
-    """
-    driver_list = ['AgilentE8257D']
-
-    def perform(self, switch=None):
+    def i_perform(self, switch=None):
         """
 
         """
-        task = self.task
-        if not task.driver:
-            task.start_driver()
+        if not self.driver:
+            self.start_driver()
 
         if switch is None:
-            switch = task.format_and_eval_string(task.switch)
+            switch = self.format_and_eval_string(self.switch)
 
         if switch == 'On' or switch == 1:
-            task.driver.output = 'On'
-            task.write_in_database('output', 1)
+            self.driver.output = 'On'
+            self.write_in_database('output', 1)
         else:
-            task.driver.output = 'Off'
-            task.write_in_database('output', 0)
+            self.driver.output = 'Off'
+            self.write_in_database('output', 0)
 
 
 KNOWN_PY_TASKS = [SetRFFrequencyTask, SetRFPowerTask,
                   SetRFOnOffTask]
-
-INTERFACES = {'SetRFFrequencyTask': [SimpleRFFrequencyInterface],
-              'SetRFPowerTask': [SimpleRFPowerInterface],
-              'SetRFOnOffTask': [SimpleRFOnOffInterface]}
