@@ -7,6 +7,13 @@
 from atom.api import Enum, Str, Bool, Float, Property
 from hqc_meas.utils.atom_util import HasPrefAtom
 
+# Time conversion dictionary first key is the original unit, second the final
+# one.
+TIME_CONVERSION = {'s': {'s': 1, 'ms': 1e3, 'mus': 1e6, 'ns': 1e9},
+                   'ms': {'s': 1e3, 'ms': 1, 'mus': 1e-3, 'ns': 1e-6},
+                   'mus': {'s': 1e6, 'ms': 1e3, 'mus': 1, 'ns': 1e-3},
+                   'ns': {'s': 1e9, 'ms': 1e6, 'mus': 1e3, 'ns': 3}}
+
 
 class BaseContext(HasPrefAtom):
     """
@@ -16,7 +23,7 @@ class BaseContext(HasPrefAtom):
 
     #: Duration in unit of the context of a pulse. It is the responsability
     #: of subclasses to implement a getter.
-    sampling_time = Property()
+    sampling_time = Property(cached=True)
 
     #: Whether or not to round times to the nearest multiple of sampling time
     #: when checking.
