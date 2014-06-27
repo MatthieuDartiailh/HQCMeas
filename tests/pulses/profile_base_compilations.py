@@ -1,34 +1,33 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
-# module : benchmark_base_pulses.py
+# module : profile_base_pulses.py
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from functools import partial
-from timeit import repeat
+from cProfile import Profile
 
 
-def time(*args, **kwargs):
-    kwargs['number'] = 100
-    kwargs['repeat'] = 100
-    return min(repeat(*args, **kwargs))/kwargs['number']
+def profile(call, *args, **kwargs):
+    profiler = Profile()
+    profiler.runcall(call, *args, **kwargs)
+    profiler.print_stats()
 
 from hqc_meas.pulses.pulses import (RootSequence, Sequence, Pulse,
                                     ConditionalSequence)
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
 from hqc_meas.pulses.shapes.modulation import Modulation
 
-from .context import TestContext
+from tests.pulses.context import TestContext
 
 
-class BenchmarkCompilation(object):
+class ProfileCompilation(object):
 
     def setup(self):
         self.root = RootSequence()
         self.context = TestContext(sampling=0.5)
         self.root.context = self.context
 
-    def benchmark_sequence_compilation1(self):
+    def profile_sequence_compilation1(self):
         # Test compiling a flat sequence.
         self.root.external_variables = {'a': 1.5}
 
@@ -37,9 +36,9 @@ class BenchmarkCompilation(object):
         pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
         self.root.items.extend([pulse1, pulse2, pulse3])
 
-        print 'Sequence 1', time(partial(self.root.compile_sequence, False))
+        profile(self.root.compile_sequence, False)
 
-    def benchmark_sequence_compilation2(self):
+    def profile_sequence_compilation2(self):
         # Test compiling a flat sequence of fixed duration.
         self.root.external_variables = {'a': 1.5}
         self.root.fix_sequence_duration = True
@@ -50,9 +49,9 @@ class BenchmarkCompilation(object):
         pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='{sequence_end}')
         self.root.items.extend([pulse1, pulse2, pulse3])
 
-        print 'Sequence 2', time(partial(self.root.compile_sequence, False))
+        profile(self.root.compile_sequence, False)
 
-    def benchmark_sequence_compilation3(self):
+    def profile_sequence_compilation3(self):
         # Test compiling a flat sequence in two passes.
         self.root.external_variables = {'a': 1.5}
 
@@ -61,9 +60,9 @@ class BenchmarkCompilation(object):
         pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
         self.root.items.extend([pulse1, pulse2, pulse3])
 
-        print 'Sequence 3', time(partial(self.root.compile_sequence, False))
+        profile(self.root.compile_sequence, False)
 
-    def benchmark_sequence_compilation7(self):
+    def profile_sequence_compilation7(self):
         # Test compiling a nested sequence.
         self.root.external_variables = {'a': 1.5}
 
@@ -78,9 +77,9 @@ class BenchmarkCompilation(object):
 
         self.root.items = [pulse1, sequence1, pulse5]
 
-        print 'Sequence 7', time(partial(self.root.compile_sequence, False))
+        profile(self.root.compile_sequence, False)
 
-    def benchmark_sequence_compilation8(self):
+    def profile_sequence_compilation8(self):
         # Test compiling a nested sequence in two passes on the external
         # sequence.
         self.root.external_variables = {'a': 1.5}
@@ -96,9 +95,9 @@ class BenchmarkCompilation(object):
 
         self.root.items = [pulse1, sequence1, pulse5]
 
-        print 'Sequence 8', time(partial(self.root.compile_sequence, False))
+        profile(self.root.compile_sequence, False)
 
-    def benchmark_sequence_compilation9(self):
+    def profile_sequence_compilation9(self):
         # Test compiling a nested sequence in multi passes.
         self.root.external_variables = {'a': 1.5}
 
@@ -113,9 +112,9 @@ class BenchmarkCompilation(object):
 
         self.root.items = [pulse1, sequence1, pulse5]
 
-        print 'Sequence 9', time(partial(self.root.compile_sequence, False))
+        profile(self.root.compile_sequence, False)
 
-    def benchmark_conditional_sequence_compilation1(self):
+    def profile_conditional_sequence_compilation1(self):
         # Test compiling a conditional sequence whose condition evaluates to
         # False.
         self.root.external_variables = {'a': 1.5, 'include': True}
@@ -132,10 +131,9 @@ class BenchmarkCompilation(object):
 
         self.root.items = [pulse1, sequence1, pulse5]
 
-        print 'Conditional seq 1', time(partial(self.root.compile_sequence,
-                                                False))
+        profile(self.root.compile_sequence, False)
 
-    def benchmark_conditional_sequence_compilation2(self):
+    def profile_conditional_sequence_compilation2(self):
         # Test compiling a conditional sequence whose condition evaluates to
         # True.
         self.root.external_variables = {'a': 1.5, 'include': False}
@@ -152,5 +150,10 @@ class BenchmarkCompilation(object):
 
         self.root.items = [pulse1, sequence1, pulse5]
 
-        print 'Conditional seq 2', time(partial(self.root.compile_sequence,
-                                                False))
+        profile(self.root.compile_sequence, False)
+
+if __name__ == '__main__':
+    profiler = ProfileCompilation()
+    profiler.setup()
+
+    profiler.profile_sequence_compilation9()
