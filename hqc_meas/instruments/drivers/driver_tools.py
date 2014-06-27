@@ -61,6 +61,9 @@ class instrument_property(property):
             err = 'Need either a setter or getter for an instrument_property.'
             raise ValueError(err)
 
+        self.type = None
+        self.valid_values = []
+
     def __get__(self, obj, objtype=None):
         """
         """
