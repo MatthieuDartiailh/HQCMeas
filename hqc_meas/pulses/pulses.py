@@ -199,7 +199,7 @@ class Pulse(Item):
         """ Compute the pulse amplitude between start and stop.
 
         """
-        n_points = self.context.len_sample(self.start, self.stop)
+        n_points = self.context.len_sample(self.duration)
         if self.kind == 'analogical':
             time = np.linspace(self.start, self.stop, n_points, False)
             mod = self.modulation.compute(time, self.context.time_unit)

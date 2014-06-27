@@ -5,14 +5,17 @@
 # license : MIT license
 #==============================================================================
 from atom.api import Enum, Str, Bool, Float, Property
+from inspect import cleandoc
+
 from hqc_meas.utils.atom_util import HasPrefAtom
+
 
 # Time conversion dictionary first key is the original unit, second the final
 # one.
 TIME_CONVERSION = {'s': {'s': 1, 'ms': 1e3, 'mus': 1e6, 'ns': 1e9},
-                   'ms': {'s': 1e3, 'ms': 1, 'mus': 1e-3, 'ns': 1e-6},
-                   'mus': {'s': 1e6, 'ms': 1e3, 'mus': 1, 'ns': 1e-3},
-                   'ns': {'s': 1e9, 'ms': 1e6, 'mus': 1e3, 'ns': 3}}
+                   'ms': {'s': 1e-3, 'ms': 1, 'mus': 1e3, 'ns': 1e6},
+                   'mus': {'s': 1e-6, 'ms': 1e-3, 'mus': 1, 'ns': 1e3},
+                   'ns': {'s': 1e-9, 'ms': 1e-6, 'mus': 1e-3, 'ns': 1}}
 
 
 class BaseContext(HasPrefAtom):
@@ -40,19 +43,18 @@ class BaseContext(HasPrefAtom):
         """
 
         """
-        pass
+        mes = cleandoc('''compile_sequence should be implemented by subclass of
+                       BaseContext.''')
+        raise NotImplementedError(mes)
 
-    def len_sample(self, start, stop):
-        """ Compute the number of samples between two times.
+    def len_sample(self, duration):
+        """ Compute the number of points used to describe a lapse of time.
 
         Parameters
         ----------
-        start : float
-            Starting instant of the 'pulse'
+        duration : float
+            Duration of the interval to describe.
 
-        stop : float
-            Last instant of th pulse (ie true last instant not last instant
-            minus the sampling time).
 
         Returns
         -------
@@ -61,7 +63,7 @@ class BaseContext(HasPrefAtom):
             between start and stop
 
         """
-        return int(round(stop - start) / self.sampling_time)
+        return int(round(duration / self.sampling_time))
 
     def check_time(self, time):
         """ Check a given time can be represented by an int given the

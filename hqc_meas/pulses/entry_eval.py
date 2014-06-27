@@ -13,9 +13,6 @@ from math import pi as Pi
 def safe_eval(expr, local_var=None):
     """
     """
-    if expr.isalpha():
-        return expr
-
     if local_var:
         return eval(expr, globals(), local_var)
     else:

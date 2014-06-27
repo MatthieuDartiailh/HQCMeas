@@ -7,9 +7,8 @@
 """
 
 """
-from atom.api import Float, observe
+from atom.api import Float, observe, set_default
 import numpy as np
-from inspect import cleandoc
 from .base_context import BaseContext, TIME_CONVERSION
 
 
@@ -21,7 +20,9 @@ class AWGContext(BaseContext):
                 'Ch4_A', 'Ch4_M1', 'Ch4_M2')
 
     # Sampling frequency in Hz
-    sampling_frequency = Float()
+    sampling_frequency = Float(1e9)
+
+    time_unit = set_default('mus')
 
     def compile_sequence(self, pulses, **kwargs):
         """ Transform a sequence of pulse to a dict of waveform.
@@ -41,21 +42,25 @@ class AWGContext(BaseContext):
             or the traceback of the issues in case of failure.
 
         """
+        sequence_duration = max([pulse.stop for pulse in pulses])
         # Total length of the sequence to send to the AWG
         if 'sequence_duration' in kwargs:
-            sequence_duration = kwargs['sequence_duration']
-        else:
-            sequence_duration = max([pulse.stop for pulse in pulses])
+            if sequence_duration <= kwargs['sequence_duration']:
+                sequence_duration = kwargs['sequence_duration']
+            else:
+                return False, {'Sequence_duration':
+                               'Not all pulses fit in given duration'}
 
         # Collect the channels used in the pulses' sequence
         used_channels = set([pulse.channel[:3] for pulse in pulses])
 
         # Coefficient to convert the start and stop of pulses in second and
         # then in index integer for array
-        time_to_index = TIME_CONVERSION[self.time_unit]['s']*self.sampling_freq
+        time_to_index = TIME_CONVERSION[self.time_unit]['s'] * \
+            self.sampling_frequency
 
         # Length of the sequence
-        sequence_length = sequence_duration * time_to_index
+        sequence_length = int(round(sequence_duration * time_to_index))
 
         # create 3 array for each used_channels
         array_analog = {}
@@ -73,20 +78,22 @@ class AWGContext(BaseContext):
         for pulse in pulses:
 
             waveform = pulse.waveform
-
             channel = pulse.channel[:3]
             channeltype = pulse.channel[4:]
 
             start_index = int(round(pulse.start*time_to_index))
             stop_index = start_index + len(waveform)
 
-            if channeltype == 'A':
+            if channeltype == 'A' and pulse.kind == 'analogical':
                 array_analog[channel][start_index:stop_index] +=\
                     np.rint(8191*waveform)
-            elif channeltype == 'M1':
+            elif channeltype == 'M1' and pulse.kind == 'logical':
                 array_M1[channel][start_index:stop_index] += waveform
-            elif channeltype == 'M2':
+            elif channeltype == 'M2' and pulse.kind == 'logical':
                 array_M2[channel][start_index:stop_index] -= waveform
+            else:
+                return False, {'Kind issue':
+                               'Selected channel does not match kind.'}
 
         # Check the overflows
         traceback = {}
@@ -94,15 +101,15 @@ class AWGContext(BaseContext):
             analog = array_analog[channel]
             if analog.max() > 16383 or analog.min() < 0:
                 mes = 'Analogical values out of range.'
-                traceback['{}_A'.format(channel))] = mes
+                traceback['{}_A'.format(channel)] = mes
 
             elif array_M1[channel].max() > 1 or array_M1[channel].min() < 0:
                 mes = 'Overflow in marker 1.'
-                traceback['{}_M1'.format(channel))] = mes
+                traceback['{}_M1'.format(channel)] = mes
 
             elif array_M2[channel].max() > 1 or array_M2[channel].min() < 0:
                 mes = 'Overflow in marker 2.'
-                traceback['{}_M2'.format(channel))] = mes
+                traceback['{}_M2'.format(channel)] = mes
 
         if traceback:
             return False, traceback
@@ -113,13 +120,12 @@ class AWGContext(BaseContext):
             # Convert to sixteen bits integers
             array = array_analog[channel] +\
                 array_M1[channel]*(2**14) + array_M2[channel]*(2**15)
-
             # Creating and filling a byte array for each channel.
-            aux = bytearray(2*sequence_length)
-            aux[::2] = array[channel] % 2**8
-            aux[1::2] = array[channel] // 2**8
+            aux = np.empty(2*sequence_length, dtype=np.uint8)
+            aux[::2] = array % 2**8
+            aux[1::2] = array // 2**8
 
-            to_send[channel] = aux
+            to_send[channel] = bytearray(aux)
 
         return True, to_send
 
@@ -135,4 +141,4 @@ class AWGContext(BaseContext):
 
         """
         member = self.get_member('sampling_time')
-        member.reset_property(self)
+        member.reset(self)

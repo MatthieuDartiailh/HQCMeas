@@ -38,7 +38,7 @@ class Modulation(HasPrefAtom):
     frequency_unit = Enum('MHz', 'GHz', 'kHz', 'Hz').tag(pref=True)
 
     #: Phase to use in the modulation.
-    phase = Str().tag(pref=True)
+    phase = Str('0.0').tag(pref=True)
 
     #: Unit of the phase used in the modulation.
     phase_unit = Enum('rad', 'deg').tag(pref=True)
