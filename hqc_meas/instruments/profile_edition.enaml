@@ -8,14 +8,12 @@ Created on Sun Nov 03 18:18:39 2013
 from atom.api import Enum, set_default
 from enaml.widgets.api import (Dialog, Container, PushButton, Form,
                                ObjectCombo, Label, Field)
-from enaml.stdlib.mapped_view import MappedView
 from enaml.stdlib.message_box import critical
 from enaml.layout.api import vertical, horizontal, hbox, spacer, align, vbox
-from enaml.core.api import Conditional
+from enaml.core.api import Conditional, Include
 from inspect import cleandoc
 from textwrap import fill
 
-from .forms import FORMS_MAP_VIEWS
 from .drivers.driver_tools import InstrIOError
 
 
@@ -57,10 +55,8 @@ enamldef ProfileView(Form): instr_form_view:
             items << form.drivers
             selected := form.driver
 
-    MappedView:
-        model << form.connection_form
-        typemap = FORMS_MAP_VIEWS
-        kwargs = {'mode': mode}
+    Include:
+        objects << form.create_view(mode=mode) if form else []
 
 
 def _handle_close(view, is_ok):
@@ -125,8 +121,8 @@ enamldef ProfileDialog(Dialog): instr_dialog:
         ProfileView: form:
             hug_width = 'weak'
             hug_height = 'medium'
-            mode = instr_dialog.mode
             form << instr_dialog.model
+            mode = instr_dialog.mode
         PushButton: cancel:
             text = 'Cancel'
             hug_width = 'strong'
