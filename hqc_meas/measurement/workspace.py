@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : workspace.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 import logging
 import os
 import enaml
@@ -17,7 +17,7 @@ from textwrap import fill
 from .measure import Measure
 from .plugin import MeasurePlugin
 
-from ..tasks.tools.walks import flatten_walk
+from hqc_meas.utils.walks import flatten_walk
 from ..tasks.api import RootTask
 
 with enaml.imports():
@@ -33,7 +33,7 @@ LOG_ID = u'hqc_meas.measure.workspace'
 class MeasureSpace(Workspace):
     """
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     # Reference to the plugin to which the workspace is linked.
     plugin = Typed(MeasurePlugin)
@@ -188,7 +188,7 @@ class MeasureSpace(Workspace):
             self.plugin.paths['measure'] = os.path.dirname(full_path)
 
         elif mode == 'template':
-             # TODO create brand new measure using defaults from plugin and
+            # TODO create brand new measure using defaults from plugin and
             # load template
             pass
 
@@ -375,7 +375,7 @@ class MeasureSpace(Workspace):
         if self.content and self.content.children:
             return self.content.children[0]
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     def _new_measure(self):
         """ Create a new measure using the default tools.

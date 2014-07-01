@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : process_engine.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import Typed, Value, Tuple
 from enaml.workbench.api import Workbench
 from enaml.application import deferred_call
@@ -15,7 +15,7 @@ from threading import Event as tEvent
 import logging
 
 from hqc_meas.log_system.tools import QueueLoggerThread
-from hqc_meas.tasks.tools.walks import flatten_walk
+from hqc_meas.utils.walks import flatten_walk
 
 from ..base_engine import BaseEngine
 from ..tools import ThreadMeasureMonitor
@@ -27,7 +27,7 @@ class ProcessEngine(BaseEngine):
 
     """
 
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     # Reference to the workbench got at __init__
     workbench = Typed(Workbench)
@@ -131,7 +131,7 @@ class ProcessEngine(BaseEngine):
     def force_exit(self):
         self.force_stop()
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     # Interprocess event used to stop the subprocess current measure.
     _meas_stop = Typed(Event, ())

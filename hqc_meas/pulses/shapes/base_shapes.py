@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_shapes.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import (Str, FloatRange)
 import numpy as np
 
@@ -14,6 +14,8 @@ from ..entry_eval import eval_entry
 class AbstractShape(HasPrefAtom):
     """
     """
+
+    shape_class = Str().tag(pref=True)
 
     def eval_entries(self, sequence_locals, missing, errors, index):
         """ Evaluate the entries defining the shape.
@@ -59,6 +61,9 @@ class AbstractShape(HasPrefAtom):
 
         """
         raise NotImplementedError('')
+
+    def _default_shape_class(self):
+        return type(self).__name__
 
 
 class SquareShape(AbstractShape):

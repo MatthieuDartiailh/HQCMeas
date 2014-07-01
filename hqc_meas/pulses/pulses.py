@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : pulses.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import (Int, Instance, Str, Enum, Float, Dict, List, Typed, Bool,
                       ContainerList, ForwardInstance, ForwardTyped, Property,
                       set_default)
@@ -195,8 +195,33 @@ class Pulse(Item):
 
         return success
 
+    def _answer(self, members, callables):
+        """ Collect the answers for the walk method.
+
+        Dotted name are allowed for members to access either the modulation or
+        shape.
+        ex : 'modulation.amplitude', 'shape.shape_class'
+
+        """
+        answers = {m: getattr(self, m, None) for m in members}
+        if self.kind == 'analogical':
+            # Accessing modulation members.
+            mod_members = [m for m in members
+                           if m.startswith('modulation.')]
+            answers.update({m: getattr(self.modulation, m[11:], None)
+                            for m in mod_members})
+
+            # Accessing shape members.
+            sha_members = [m for m in members
+                           if m.startswith('shape.')]
+            answers.update({m: getattr(self.shape, m[6:], None)
+                            for m in sha_members})
+
+        answers.update({k: c(self) for k, c in callables.iteritems()})
+        return answers
+
     def _get_waveform(self):
-        """ Compute the pulse amplitude between start and stop.
+        """ Getter for the waveform property.
 
         """
         n_points = self.context.len_sample(self.duration)
@@ -213,7 +238,7 @@ class Sequence(Item):
     """ A sequence is an ensemble of pulses.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # -- Public API -----------------------------------------------------------
 
     #: List of items this sequence consists of.
     items = ContainerList(Instance(Item))
@@ -305,10 +330,10 @@ class Sequence(Item):
             List summarizing the result of the exploration.
 
         """
-        answer = [self._answer(self, members, callables)]
+        answer = [self._answer(members, callables)]
         for item in self.items:
             if isinstance(item, Pulse):
-                answer.append(self._answer(item, members, callables))
+                answer.append(item._answer(members, callables))
             else:
                 answer.append(item.walk(members, callables))
 
@@ -340,18 +365,17 @@ class Sequence(Item):
             para = parameters['item_{}'.format(i)]
             item.update_members_from_preferences(**para)
 
-    #--- Private API ----------------------------------------------------------
+    # -- Private API ----------------------------------------------------------
 
     #: Last index used by the sequence.
     _last_index = Int()
 
-    @staticmethod
-    def _answer(obj, members, callables):
+    def _answer(self, members, callables):
         """ Collect answers for the walk method.
 
         """
-        answers = {m: getattr(obj, m, None) for m in members}
-        answers.update({k: c(obj) for k, c in callables.iteritems()})
+        answers = {m: getattr(self, m, None) for m in members}
+        answers.update({k: c(self) for k, c in callables.iteritems()})
         return answers
 
     def _observe_root(self, change):
@@ -609,7 +633,7 @@ class RootSequence(Sequence):
         para = parameters['context']
         self.context.update_members_from_preferences(**para)
 
-    #--- Private API ----------------------------------------------------------
+    # -- Private API ----------------------------------------------------------
 
     def _observe_fix_sequence_duration(self, change):
         """ Keep the linkable_vars list in sync with fix_sequence_duration.
