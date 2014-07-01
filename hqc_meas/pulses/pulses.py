@@ -504,80 +504,6 @@ class Sequence(Item):
         self._recompute_indexes(index, free_index)
 
 
-class ConditionalSequence(Sequence):
-    """ Sequence whose child items will be included only if a condition is met.
-
-    """
-    condition = Str().tag(pref=True)
-
-    linkable_vars = set_default(['condition'])
-
-    def compile_sequence(self, sequence_locals, missing_locals, errors):
-        """ Compile the sequence in a flat list of pulses.
-
-        The list of pulse will be not empty only if the condition specified
-        for the sequence is met.
-
-        Parameters
-        ----------
-        sequence_locals : dict
-            Dictionary of local variables.
-
-        missings : set
-            Set of unfound local variables.
-
-        errors : dict
-            Dict of the errors which happened when performing the evaluation.
-
-        Returns
-        -------
-        flag : bool
-            Boolean indicating whether or not the evaluation succeeded.
-
-        pulses : list
-            List of pulses in which all the string entries have been evaluated.
-
-        """
-        cond = None
-        try:
-            cond = bool(eval_entry(self.condition,
-                                   sequence_locals, missing_locals))
-        except Exception as e:
-            errors['{}_'.format(self.index) + 'condition'] = repr(e)
-
-        if cond is None:
-            return False, []
-
-        local = '{}_'.format(self.index) + 'condition'
-        sequence_locals[local] = cond
-
-        if cond:
-            return super(ConditionalSequence,
-                         self).compile_sequence(sequence_locals,
-                                                missing_locals, errors)
-
-        else:
-            return True, []
-
-
-class RepeatSequence(Sequence):
-    """ Sequence whose child items will be included multiple times.
-
-    """
-    iter_duration = Str().tag(pref=True)
-
-    iter_number = Str().tag(pref=True)
-
-    linkable_vars = set_default(['iter_start', 'iter_stop'])
-
-    def compile_sequence(self, sequence_locals):
-        """
-
-        """
-        # TODO later will require some use of deepcopy.
-        pass
-
-
 class RootSequence(Sequence):
     """ Base of any pulse sequences.
 
@@ -675,7 +601,7 @@ class RootSequence(Sequence):
         """ Use the string values given in the parameters to update the members
 
         This function will call itself on any tagged HasPrefAtom member.
-        Reimplemented here to update items.
+        Reimplemented here to update context.
 
         """
         super(RootSequence, self).update_members_from_preferences(**parameters)
