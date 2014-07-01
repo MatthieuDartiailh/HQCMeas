@@ -25,7 +25,7 @@ def check_channels_presence(task, channels, *args, **kwargs):
         run_time = task.root_task.run_time
         traceback = {}
         if task.selected_profile and run_time:
-            config = run_time['profiles'][task.selected_profile]
+            config = run_time['profiles'].get(task.selected_profile)
             if not config:
                 return False, traceback
         else:
@@ -47,10 +47,11 @@ def check_channels_presence(task, channels, *args, **kwargs):
                 string = task.task_path + '/' + task.task_name +\
                     '_' + str(channel)
 
-                traceback[string] = cleandoc(
-                    '''Channel {} is not defined in the PNA {}, please define
-                    it yourself and try again.'''.format(channel,
-                    task.selected_profile))
+                mes = '''Channel {} is not defined in the PNA {}, please define
+                    it yourself and try again.'''
+                traceback[string] = cleandoc(mes.format(channel,
+                                                        task.selected_profile)
+                                             )
 
                 channels_present = False
 
