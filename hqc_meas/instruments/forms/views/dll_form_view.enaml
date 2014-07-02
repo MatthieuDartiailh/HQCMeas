@@ -22,6 +22,7 @@ enamldef DllFormView(Form):
         Field:
             text << model.lib_path
             read_only = True
+            tool_tip << model.lib_path
     Conditional:
         condition = bool(mode != 'static')
         HGroup:
