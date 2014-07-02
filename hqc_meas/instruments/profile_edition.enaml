@@ -56,7 +56,9 @@ enamldef ProfileView(Form): instr_form_view:
             selected := form.driver
 
     Include:
-        objects << form.create_view(mode=mode) if form else []
+        objects << [form.connection_form_view(model=form.connection_form,
+                                             mode=mode)]\
+                   if form.connection_form_view else []
 
 
 def _handle_close(view, is_ok):

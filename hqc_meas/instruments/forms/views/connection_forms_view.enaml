@@ -27,7 +27,7 @@ enamldef VisaFormView(Form):
     Conditional:
         condition = bool(mode != 'static')
         ObjectCombo:
-            items = model.protocoles.keys()
+            items << model.protocoles.keys()
             selected = None
             selected := model.connection_type
             selected ::

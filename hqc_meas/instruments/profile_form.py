@@ -58,15 +58,17 @@ class ProfileForm(Atom):
             self.driver_type = kwargs.pop('driver_type')
         if 'driver' in kwargs:
             self.driver = kwargs.pop('driver')
-        aux = self.driver if self.driver else self.driver_type
-        form_class, view = self.manager.matching_form(aux, view=True)
-        if form_class:
-            if self.driver:
-                aux, _ = self.manager.drivers_request([self.driver])
-                self.connection_form = form_class(driver=aux[self.driver],
-                                                  **kwargs)
-            else:
-                self.connection_form = form_class(**kwargs)
+
+        if self.driver or self.driver_type:
+            aux = self.driver if self.driver else self.driver_type
+            form_class, view = self.manager.matching_form(aux, view=True)
+            if form_class:
+                if self.driver:
+                    aux, _ = self.manager.drivers_request([self.driver])
+                    self.connection_form = form_class(driver=aux[self.driver],
+                                                      **kwargs)
+                else:
+                    self.connection_form = form_class(**kwargs)
 
     def dict(self):
         """ Return the informations of the form as a dict
@@ -77,13 +79,6 @@ class ProfileForm(Atom):
         if self.connection_form:
             infos.update(self.connection_form.connection_dict())
         return infos
-
-    def create_view(self, mode):
-        if self.connection_form and self.connection_form_view:
-            return [self.connection_form_view(model=self.connection_form,
-                                              mode=mode)]
-        else:
-            return []
 
     def _observe_driver_type(self, change):
         """Build the list of driver matching the selected type.
@@ -97,8 +92,10 @@ class ProfileForm(Atom):
             form_class, view = self.manager.matching_form(new_type, view=True)
             if form_class:
                 self.connection_form = form_class()
+                self.connection_form_view = view
             else:
                 self.connection_form = None
+                self.connection_form_view = None
 
     def _observe_driver(self, change):
         """ Select the right connection_form for the selected driver.
@@ -113,5 +110,7 @@ class ProfileForm(Atom):
                     self.connection_form.driver = aux[driver]
                 else:
                     self.connection_form = form_class(driver=driver)
+                self.connection_form_view = view
             else:
                 self.connection_form = None
+                self.connection_form_view = None
