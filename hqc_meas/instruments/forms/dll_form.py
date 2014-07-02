@@ -48,14 +48,14 @@ class DllForm(AbstractConnectionForm):
     instr_id = Str('')
 
     def check(self):
-        """Check whether or not the user provided a type and an address.
+        """ Check whether or not the user provided a type and an address.
 
         """
         path_valid = os.path.isfile(self.lib_path)
         return (path_valid and self.address != '')
 
     def required_fields(self):
-        """Return the mandatory fields for a Dll instrument.
+        """ Return the mandatory fields for a Dll instrument.
 
         """
         return 'library path and instrument id'
