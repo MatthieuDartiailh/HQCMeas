@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : conditional_sequence.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import Str, set_default
 
 from ..pulses import Sequence
@@ -64,3 +64,5 @@ class ConditionalSequence(Sequence):
 
         else:
             return True, []
+
+SEQUENCES = {'ConditionalSequence': ConditionalSequence}

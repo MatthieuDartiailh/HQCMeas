@@ -5,7 +5,7 @@
 # license : MIT license
 # =============================================================================
 from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
-                        assert_not_in, assert_in)
+                        assert_not_in, assert_in, assert_is_instance)
 from hqc_meas.pulses.pulses import (RootSequence, Sequence, Pulse)
 from hqc_meas.pulses.contexts.base_context import BaseContext
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
@@ -21,7 +21,8 @@ def test_flat_sequence_persistence1():
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
-    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10',
+                   kind='analogical', shape=SquareShape())
     root.items.extend([pulse1, pulse2, pulse3])
 
     pref = root.preferences_from_members()
@@ -30,6 +31,10 @@ def test_flat_sequence_persistence1():
                   'sequence_duration', 'enabled', 'fix_sequence_duration',
                   'item_0', 'item_1', 'item_2',
                   'context'])
+
+    assert_in('shape', pref['item_2'])
+    assert_in('shape_class', pref['item_2']['shape'])
+    assert_equal(pref['item_2']['shape']['shape_class'], 'SquareShape')
 
 
 def test_nested_sequence_persistence1():
@@ -80,3 +85,45 @@ def test_walk_sequence():
                  set(['Pulse', 'RootSequence', 'Sequence']))
     assert_in('shape.shape_class', flat)
     assert_equal(flat['shape.shape_class'], set(['SquareShape']))
+
+
+def test_build_from_config():
+    # Test building a pulse sequence.
+    root = RootSequence()
+    context = BaseContext()
+    root.context = context
+    root.external_variables = {'a': 1.5}
+
+    pulse1 = Pulse(def_1='1.0', def_2='{a}')
+    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10',
+                   kind='analogical', shape=SquareShape())
+    seq = Sequence(items=[Pulse(def_1='{2_stop} + 0.5', def_2='10',
+                                kind='analogical', shape=SquareShape())])
+    root.items.extend([pulse1, pulse2, pulse3, seq])
+
+    pref = root.preferences_from_members()
+    dependecies = {'pulses': {'Sequence': Sequence, 'Pulse': Pulse,
+                              'SquareShape': SquareShape,
+                              'BaseContext': BaseContext}}
+
+    aux = RootSequence.build_from_config(pref, dependecies)
+    assert_equal(aux.external_variables, {'a': 1.5})
+    assert_equal(len(aux.items), 4)
+
+    pulse1 = aux.items[0]
+    assert_equal(pulse1.def_1, '1.0')
+    assert_equal(pulse1.def_2, '{a}')
+
+    pulse2 = aux.items[1]
+    assert_equal(pulse2.def_1, '{a} + 1.0')
+    assert_equal(pulse2.def_2, '3.0')
+
+    pulse3 = aux.items[2]
+    assert_equal(pulse3.def_1, '{2_stop} + 0.5')
+    assert_equal(pulse3.def_2, '10')
+    assert_equal(pulse3.kind, 'analogical')
+    assert_is_instance(pulse3.shape, SquareShape)
+
+    seq = aux.items[3]
+    assert_equal(len(seq.items), 1)

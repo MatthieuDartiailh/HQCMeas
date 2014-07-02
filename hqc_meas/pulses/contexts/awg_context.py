@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : awg_context.py
 # author : Pierre Heidmann and Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 
 """
@@ -142,3 +142,5 @@ class AWGContext(BaseContext):
         """
         member = self.get_member('sampling_time')
         member.reset(self)
+
+CONTEXTS = {'AWG': AWGContext}

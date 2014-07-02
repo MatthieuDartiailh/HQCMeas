@@ -10,7 +10,7 @@ from atom.api import (Int, Instance, Str, Enum, Float, Dict, List, Typed, Bool,
 from itertools import chain
 import numpy as np
 
-from hqc_meas.utils.atom_util import HasPrefAtom
+from hqc_meas.utils.atom_util import HasPrefAtom, member_from_str
 from .contexts.base_context import BaseContext
 from .shapes.base_shapes import AbstractShape
 from .shapes.modulation import Modulation
@@ -21,6 +21,8 @@ class Item(HasPrefAtom):
     """ Base component a pulse sequence.
 
     """
+    # --- Public API ----------------------------------------------------------
+
     #: Index identifying the item inside the sequence.
     index = Int()
 
@@ -39,6 +41,8 @@ class Item(HasPrefAtom):
     #: Reference to the root sequence.
     root = ForwardTyped(lambda: RootSequence)
 
+    # --- Private API ---------------------------------------------------------
+
     def _default_item_class(self):
         """ Default value for the item_class member.
 
@@ -50,6 +54,8 @@ class Pulse(Item):
     """ Represent a pulse to perfom during a sequence.
 
     """
+    # --- Public API ----------------------------------------------------------
+
     #: The kind of pulse can be either logical or ananlogical.
     kind = Enum('logical', 'analogical').tag(pref=True)
 
@@ -195,6 +201,64 @@ class Pulse(Item):
 
         return success
 
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
+
+        Parameters
+        ----------
+        config : dict(str)
+            Dictionary holding the new values to give to the members in string
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+
+        Returns
+        -------
+        pulse : pulse
+            Newly created and initiliazed sequence.
+
+        Notes
+        -----
+        This method is fairly powerful and can handle a lot of cases so
+        don't override it without checking that it works.
+
+        """
+        pulse = cls()
+        for name, member in pulse.members().iteritems():
+
+            # First we set the preference members
+            meta = member.metadata
+            if meta and 'pref' in meta:
+                if name not in config:
+                    continue
+
+                if name not in ('modulation', 'shape'):
+                    # member_from_str handle containers
+                    value = config[name]
+                    validated = member_from_str(member, value)
+
+                    setattr(pulse, name, validated)
+
+                elif name == 'modulation':
+                    mod = pulse.modulation
+                    mod.update_members_from_preferences(**config[name])
+
+                else:
+                    shape_config = config[name]
+                    if shape_config == 'None':
+                        continue
+                    shape_class_name = shape_config.pop('shape_class')
+                    shape_class = dependencies['pulses'][shape_class_name]
+                    shape = shape_class()
+                    shape.update_members_from_preferences(**shape_config)
+                    pulse.shape = shape
+
+        return pulse
+
+    # --- Private API ---------------------------------------------------------
+
     def _answer(self, members, callables):
         """ Collect the answers for the walk method.
 
@@ -238,7 +302,7 @@ class Sequence(Item):
     """ A sequence is an ensemble of pulses.
 
     """
-    # -- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: List of items this sequence consists of.
     items = ContainerList(Instance(Item))
@@ -365,7 +429,65 @@ class Sequence(Item):
             para = parameters['item_{}'.format(i)]
             item.update_members_from_preferences(**para)
 
-    # -- Private API ----------------------------------------------------------
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
+
+        Parameters
+        ----------
+        config : dict(str)
+            Dictionary holding the new values to give to the members in string
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+
+        Returns
+        -------
+        sequence : Sequence
+            Newly created and initiliazed sequence.
+
+        Notes
+        -----
+        This method is fairly powerful and can handle a lot of cases so
+        don't override it without checking that it works.
+
+        """
+        sequence = cls()
+        for name, member in sequence.members().iteritems():
+
+            # First we set the preference members
+            meta = member.metadata
+            if meta and 'pref' in meta:
+                if name not in config:
+                    continue
+
+                # member_from_str handle containers
+                value = config[name]
+                validated = member_from_str(member, value)
+
+                setattr(sequence, name, validated)
+
+        i = 0
+        pref = 'item_{}'
+        validated = []
+        while True:
+            item_name = pref.format(i)
+            if item_name not in config:
+                break
+            item_config = config[item_name]
+            item_class_name = item_config.pop('item_class')
+            item_class = dependencies['pulses'][item_class_name]
+            item = item_class.build_from_config(item_config,
+                                                dependencies)
+            validated.append(item)
+            i += 1
+
+        setattr(sequence, 'items', validated)
+
+        return sequence
+
+    # --- Private API ---------------------------------------------------------
 
     #: Last index used by the sequence.
     _last_index = Int()
@@ -539,6 +661,8 @@ class RootSequence(Sequence):
     for the sequence.
 
     """
+    # --- Public API ----------------------------------------------------------
+
     #: Dict of external variables.
     external_variables = Dict().tag(pref=True)
 
@@ -633,7 +757,37 @@ class RootSequence(Sequence):
         para = parameters['context']
         self.context.update_members_from_preferences(**para)
 
-    # -- Private API ----------------------------------------------------------
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
+
+        Overridden here to allow context creation.
+
+        Parameters
+        ----------
+        config : dict(str)
+            Dictionary holding the new values to give to the members in string
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+
+        Returns
+        -------
+        sequence : Sequence
+            Newly created and initiliazed sequence.
+
+        """
+        context_config = config['context']
+        context_class_name = context_config.pop('context_class')
+        context_class = dependencies['pulses'][context_class_name]
+        context = context_class()
+        context.update_members_from_preferences(**context_config)
+        config['context'] = context
+        return super(RootSequence, cls).build_from_config(config,
+                                                          dependencies)
+
+    # --- Private API ---------------------------------------------------------
 
     def _observe_fix_sequence_duration(self, change):
         """ Keep the linkable_vars list in sync with fix_sequence_duration.
