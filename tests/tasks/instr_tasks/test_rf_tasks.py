@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_rf_tasks.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from nose.tools import (assert_equal, assert_true, assert_false, assert_in,
@@ -54,7 +54,7 @@ class TestSetRFFrequencyTask(object):
         assert_false(traceback)
 
     def test_check_base_interface2(self):
-        # Check handling a wrong voltage.
+        # Check handling a wrong frequency.
         self.task.frequency = '*1.0*'
 
         test, traceback = self.task.check(test_instr=True)
@@ -135,7 +135,7 @@ class TestSetRFPowerTask(object):
         assert_false(traceback)
 
     def test_check_base_interface2(self):
-        # Check handling a wrong voltage.
+        # Check handling a wrong power.
         self.task.power = '*1.0*'
 
         test, traceback = self.task.check(test_instr=True)

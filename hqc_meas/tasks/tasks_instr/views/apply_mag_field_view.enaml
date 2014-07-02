@@ -67,7 +67,7 @@ enamldef ApplyMagFieldView(BaseInstrumentView): view:
             text = 'Post heater wait'
         FloatField:
             hug_width = 'strong'
-            value := task.rate
+            value := task.post_switch_wait
             tool_tip = fill(cleandoc('''Time to wait after closing the switch
                                      heater before bringing the field to
                                      zero'''),60)

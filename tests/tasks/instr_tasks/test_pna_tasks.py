@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_rf_tasks.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from nose.tools import (assert_equal, assert_true, assert_false, assert_in,
@@ -51,7 +51,7 @@ class TestPNASetRFFrequencyTask(object):
         self.task.selected_profile = 'Test1'
 
     def test_check_pna_interface1(self):
-        # Simply test that everything is ok if voltage can be evaluated.
+        # Simply test that everything is ok if frequency can be evaluated.
         self.task.interface = PNASetRFFrequencyInterface(task=self.task,
                                                          channel=1)
         self.task.frequency = '1.0'
@@ -164,7 +164,7 @@ class TestPNASetRFPowerTask(object):
         self.task.selected_profile = 'Test1'
 
     def test_check_pna_interface1(self):
-        # Simply test that everything is ok if voltage can be evaluated.
+        # Simply test that everything is ok if power can be evaluated.
         self.task.interface = PNASetRFPowerInterface(task=self.task,
                                                      channel=1)
         self.task.power = '1.0'
@@ -263,46 +263,57 @@ class TestPNASetRFPowerView(object):
         assert_is(self.task.interface, interface)
 
 
-#class TestPNASinglePointMeasureTask(object):
-#
-#    def setup(self):
-#        self.root = RootTask(should_stop=Event(), should_pause=Event())
-#        self.task = PNASinglePointMeasureTask(task_name='Test')
-#        self.root.children_task.append(self.task)
-#        self.root.run_time['drivers'] = {'Test': InstrHelper}
-#
-#        # This is set simply to make sure the test of InstrTask pass.
-#        self.task.selected_driver = 'Test'
-#        self.task.selected_profile = 'Test1'
-#
-#    def test_check1(self):
-#        # Simply test that everything is ok if voltage can be evaluated.
-#        self.task.switch = '1.0'
-#
-#        test, traceback = self.task.check(test_instr=True)
-#        assert_true(test)
-#        assert_false(traceback)
-#
-#    def test_check2(self):
-#        # Check handling a wrong channel.
-#        self.task.switch = '*1.0*'
-#
-#        test, traceback = self.task.check(test_instr=True)
-#        assert_false(test)
-#        assert_equal(len(traceback), 1)
-#
-#    def test_perform(self):
-#        self.task.switch = '1.0'
-#
-#        self.root.run_time['profiles'] = {'Test1': ({'output': [0.0],
-#                                                     'owner': [None]}, {})}
-#
-#        self.root.task_database.prepare_for_running()
-#
-#        self.task.perform()
-#        assert_equal(self.root.get_from_database('Test_output'), 1.0)
-#
-#
+class TestPNASinglePointMeasureTask(object):
+
+    def setup(self):
+        self.root = RootTask(should_stop=Event(), should_pause=Event())
+        self.task = PNASinglePointMeasureTask(task_name='Test')
+        self.root.children_task.append(self.task)
+        self.root.run_time['drivers'] = {'Test': InstrHelper}
+
+        # This is set simply to make sure the test of InstrTask pass.
+        self.task.selected_driver = 'Test'
+        self.task.selected_profile = 'Test1'
+
+    def test_measure_observation(self):
+        pass
+
+    def test_check1(self):
+        # Simply test that everything is ok if voltage can be evaluated.
+        self.task.switch = '1.0'
+
+        test, traceback = self.task.check(test_instr=True)
+        assert_true(test)
+        assert_false(traceback)
+
+    def test_check2(self):
+        # Check handling a wrong channel.
+        self.task.switch = '*1.0*'
+
+        test, traceback = self.task.check(test_instr=True)
+        assert_false(test)
+        assert_equal(len(traceback), 1)
+
+    def test_check3(self):
+        # Check handling a wrong S parameter.
+        self.task.switch = '*1.0*'
+
+        test, traceback = self.task.check(test_instr=True)
+        assert_false(test)
+        assert_equal(len(traceback), 1)
+
+    def test_perform(self):
+        self.task.switch = '1.0'
+
+        self.root.run_time['profiles'] = {'Test1': ({'output': [0.0],
+                                                     'owner': [None]}, {})}
+
+        self.root.task_database.prepare_for_running()
+
+        self.task.perform()
+        assert_equal(self.root.get_from_database('Test_output'), 1.0)
+
+
 #@attr('ui')
 #class TestPNASinglePointMeasureView(object):
 #

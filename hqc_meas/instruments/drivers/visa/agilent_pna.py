@@ -72,6 +72,9 @@ class AgilentPNAChannel(BaseInstrument):
             Array of Floating points holding the data.
 
         """
+        if meas_name:
+            self.selected_measure = meas_name        
+        
         data_request = 'CALCulate{}:DATA? FDATA'.format(self._channel)
         if self._pna.data_format == 'REAL,32':
             data = self._pna.ask_for_values(data_request, single)

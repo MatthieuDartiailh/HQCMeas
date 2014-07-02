@@ -21,14 +21,14 @@ class ApplyMagFieldTask(InstrumentTask):
     target_field = Str().tag(pref=True)
 
     # Rate at which to sweep the field.
-    rate = Float().tag(pref=True)
+    rate = Float(0.01).tag(pref=True)
 
     # Whether to stop the switch heater after setting the field.
     auto_stop_heater = Bool(True).tag(pref=True)
 
     # Time to wait before bringing the field to zero after closing the switch
     # heater.
-    post_switch_wait = Float().tag(pref=True)
+    post_switch_wait = Float(30.0).tag(pref=True)
 
     parallel = set_default({'activated': True, 'pool': 'instr'})
     task_database_entries = set_default({'Bfield': 0.01})
