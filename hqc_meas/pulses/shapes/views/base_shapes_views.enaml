@@ -1,0 +1,34 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : base_shapes_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox, vbox
+from enaml.widgets.api import (Container, Label, GroupBox, CheckBox,
+                               FlowItem)
+from enaml.core.api import Conditional, Include
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+
+
+enamldef SquareShapeView(Flowitem):
+    """ View for the modulation of an analogical pulse.
+
+    """
+    attr item
+    attr modulation
+
+    GroupBox:
+        title = 'Square'
+
+        Label: kind_lab:
+            text = 'Kind'
+        QtLineCompleter: freq_val:
+            text := modulation.frequency
+            tool_tip = 'Relative amplitude of the pulse (should be between -1.0 and 1.0)'
+
+
+SHAPES_VIEWS = {'SquareShape': SquareShapeView}

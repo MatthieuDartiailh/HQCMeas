@@ -227,7 +227,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
                        if name not in class_names]
 
             answer.update({key: val for key, val in class_names.iteritems()
-                           if key in shapes}):
+                           if key in shapes})
 
         if no_view:
             answer = {k: v[0] for k, v in answer.iteritems()}
@@ -562,6 +562,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         """
         if name.endswith('.ini'):
             name = name[:-4] + '\0'
+        elif name.endswith('Shape'):
+            name = name[:-5] + '\0'
         else:
             name += '\0'
         aux = ''

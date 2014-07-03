@@ -6,12 +6,10 @@
 # =============================================================================
 """
 """
-from atom.api import Atom, Dict, Value
-from enaml.layout.api import hbox, align, spacer, vbox
-from enaml.widgets.api import (PushButton, Container, Label, Field,
-                               GroupBox, ScrollArea, Menu, Action, Stack,
-                               StackItem, CheckBox, Splitter, ToolButton)
-from enaml.core.api import Looper, Conditional, Include
+from enaml.layout.api import hbox, vbox
+from enaml.widgets.api import (Container, Label, GroupBox, CheckBox, Splitter,
+                               SplitItem, FlowItem, FlowArea)
+from enaml.core.api import Conditional, Include
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 
@@ -22,46 +20,51 @@ def default_add_displays(core, item):
 
         cmd = 'hqc_meas.pulses_manager.shapes_request'
         shapes, _ = core.invoke_command(cmd,
-                                        {'shapes': item.shape.shape_class]})
+                                        {'shapes': item.shape.shape_class,
+                                         'use_class_name': True})
         shape = shapes[item.shape.shape_class]
         add_displays.append(shape[1](item==item, shape=item.shape))
 
 
-enamldef ModulationView(Container):
+enamldef ModulationView(FlowItem):
     """ View for the modulation of an analogical pulse.
 
     """
     attr item
     attr modulation
 
-    Label: kind_lab:
-        text = 'Kind'
-    ObjectCombo: kiind_val:
-        items = list(modulation.get_member('kind').items)
-        selected := modulation.kind
+    GroupBox:
+        title = 'Modulation'
+        padding = 0
+        constraints << [hbox(*self.widgets)]
 
-    Splitter:
-        SplitItem:
-            Container:
-                constraints << [hbox(freq_lab, freq_val, freq_un)]
-                Label: freq_lab:
-                    text = 'Frequency'
-                QtLineCompleter: freq_val:
-                    text := modulation.frequency
-                ObjectCombo: freq_un:
-                    items = list(modulation.get_member('frequency_unit').items)
-                    selected := modulation.frequency_unit
-        SplitItem:
-            Container:
-                constraints << [hbox(phase_lab, phase_val, phase_un)]
-                Label: phase_lab:
-                    text = 'Phase'
-                QtLineCompleter: phase_val:
-                    text := modulation.phase
-                ObjectCombo: phase_un:
-                    items = list(modulation.get_member('phase_unit').items)
-                    selected := modulation.phase_unit
+        Label: kind_lab:
+            text = 'Kind'
+        ObjectCombo: kiind_val:
+            items = list(modulation.get_member('kind').items)
+            selected := modulation.kind
 
+        Splitter:
+            SplitItem:
+                Container:
+                    constraints << [hbox(freq_lab, freq_val, freq_un)]
+                    Label: freq_lab:
+                        text = 'Frequency'
+                    QtLineCompleter: freq_val:
+                        text := modulation.frequency
+                    ObjectCombo: freq_un:
+                        items = list(modulation.get_member('frequency_unit').items)
+                        selected := modulation.frequency_unit
+            SplitItem:
+                Container:
+                    constraints << [hbox(phase_lab, phase_val, phase_un)]
+                    Label: phase_lab:
+                        text = 'Phase'
+                    QtLineCompleter: phase_val:
+                        text := modulation.phase
+                    ObjectCombo: phase_un:
+                        items = list(modulation.get_member('phase_unit').items)
+                        selected := modulation.phase_unit
 
 
 enamldef PulseView(GroupBox): view:
@@ -76,12 +79,13 @@ enamldef PulseView(GroupBox): view:
                                             'hqc_meas.states.pulses_manager'})
 
     title << '{}'.format(item)
+    hug_height = 'strong'
 
     constraints << [vbox(
                         hbox(kind_lab, kind_val, ch_lab, ch_val, def_lab,
                              def_val, *analog.items),
                         defs,
-                        *add.objects)]
+                        *add.items)]
 
     Label: kind_lab:
         text = 'Kind'
@@ -136,7 +140,7 @@ enamldef PulseView(GroupBox): view:
             text = 'Shape'
         ObjectCombo:
             items << pulse_state.shapes
-            selected << item.shape.shape_class
+            selected << item.shape.shape_class[:-5]  # Assume ends in Shape
             selected ::
                 if change.get['oldvalue']:
                     add_displays.pop()
@@ -147,5 +151,10 @@ enamldef PulseView(GroupBox): view:
                 item.shape = shape[0]()
                 add_displays.append(shape[1](item==item, shape=shape))
 
-    Include: add:
-        objects << add_displays
+    Conditional: add:
+        condition << item.kind == 'analogical'
+        FlowArea:
+            margins = 2
+            vertical_spacing = 5
+            Include:
+                objects << add_displays
