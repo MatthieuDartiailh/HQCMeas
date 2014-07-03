@@ -65,4 +65,4 @@ class ConditionalSequence(Sequence):
         else:
             return True, []
 
-SEQUENCES = {'ConditionalSequence': ConditionalSequence}
+SEQUENCES = [ConditionalSequence]

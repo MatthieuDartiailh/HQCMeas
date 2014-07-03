@@ -1,0 +1,189 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : manager_manifest.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
+from enaml.workbench.core.api import Command
+from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
+
+from ..utils.pref_plugin import Preferences
+from ..utils.state_plugin import State
+from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
+
+def manager_plugin_factory():
+    """ Factory funcion for the instr manager plugin.
+
+    """
+    from .manager_plugin import PulsesManagerPlugin
+    return PulsesManagerPlugin()
+
+# TODO implement a true manager
+#def show_manager(event):
+#    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
+#
+#    """
+#    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+#    from .manager_view import TaskManagerView
+#    TaskManagerView(manager=manager).show()
+
+def show_starting_errors(event):
+    """ Handler for the 'hqc_meas.task_manager.show_errors' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    ui = event.workbench.get_plugin('enaml.workbench.ui')
+    ErrorsDisplay(ui.window, title='Task manager start up errors',
+                  errors=manager.report()).exec_()
+
+
+def sequences_request(event):
+    """ Handler for the 'hqc_meas.task_manager.sequences_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.sequences_request(**event.parameters)
+
+
+def contexts_request(event):
+    """ Handler for the 'hqc_meas.task_manager.contexts_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.contexts_request(**event.parameters)
+
+def shapes_request(event):
+    """ Handler for the 'hqc_meas.task_manager.shapes_request' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.shapes_request(**event.parameters)
+
+#TODO rr
+def save_task(event):
+    """ Handler for the 'hqc_meas.task_manager.save_task' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.save_task(**event.parameters)
+
+
+def build_task(event):
+    """ Handler for the 'hqc_meas.task_manager.build_task' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.build_task(**event.parameters)
+
+
+def build_root(event):
+    """ Handler for the 'hqc_meas.task_manager.build_root' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    return manager.build_root(**event.parameters)
+
+
+SHOW_MANAGER_DESCRIPTION = \
+""" Show the task manager window."""
+
+SHOW_ERRORS_DESCRIPTION = \
+""" Show the errors which happened on plugin startup."""
+
+SEQUENCES_REQUEST_DESCRIPTION = \
+""" Request the infos associated to a list of sequences. """
+
+CONTEXTS_REQUEST_DESCRIPTION = \
+""" Request the infos associated to a list of contexts. """
+
+SHAPES_REQUEST_DESCRIPTION = \
+""" Request the infos associated to a list of shapes. """
+
+SAVE_TASK_DESCRIPTION = \
+""" Save a task to a file or object. """
+
+BUILD_TASK_DESCRIPTION = \
+""" Build a task to insert in a task hierarchy. """
+
+BUILD_ROOT_DESCRIPTION = \
+""" Build a root task. """
+
+MANAGER_STATE_DESCRIPTION = \
+""" The tasks manager gives access to the known tasks and filters."""
+
+# --- Manifest ----------------------------------------------------------------
+
+enamldef PulsesManagerManifest(PluginManifest):
+    """
+    """
+    id = 'hqc_meas.pulses_manager'
+    factory = manager_plugin_factory
+    Extension:
+        id = 'prefs'
+        point = 'hqc_meas.preferences.pref_plugin'
+        Preferences:
+            saving_method = 'pref_from_members'
+            loading_method = 'members_from_preferences'
+            auto_save = []
+    Extension:
+        id = 'state'
+        point = 'hqc_meas.state.states'
+        State:
+            id = 'hqc_meas.states.pulses_manager'
+            description = MANAGER_STATE_DESCRIPTION
+            sync_members = ['sequences', 'contexts', 'shapes']
+    Extension:
+        id = 'commands'
+        point = 'enaml.workbench.core.commands'
+#        Command:
+#            id = 'hqc_meas.instr_manager.show_manager'
+#            description = SHOW_MANAGER_DESCRIPTION
+#            handler = show_manager
+        Command:
+            id = 'hqc_meas.task_manager.show_starting_errors'
+            description = SHOW_ERRORS_DESCRIPTION
+            handler = show_starting_errors
+        Command:
+            id = 'hqc_meas.task_manager.sequences_request'
+            description = SEQUENCES_REQUEST_DESCRIPTION
+            handler = sequences_request
+        Command:
+            id = 'hqc_meas.task_manager.contexts_request'
+            description = CONTEXTS_REQUEST_DESCRIPTION
+            handler = contexts_request
+        Command:
+            id = 'hqc_meas.task_manager.shapes_request'
+            description = SHAPES_REQUEST_DESCRIPTION
+            handler = shapes_request
+#        Command:
+#            id = 'hqc_meas.task_manager.save_task'
+#            description = SAVE_TASK_DESCRIPTION
+#            handler = save_task
+#        Command:
+#            id = 'hqc_meas.task_manager.build_task'
+#            description = BUILD_TASK_DESCRIPTION
+#            handler = build_task
+#        Command:
+#            id = 'hqc_meas.task_manager.build_root'
+#            description = BUILD_ROOT_DESCRIPTION
+#            handler = build_root
+    Extension:
+        id = 'menu'
+        point = 'enaml.workbench.ui.actions'
+        MenuItem:
+            path = '/tools/pulses'
+            label = 'Pulses'
+            after = 'tasks'
+            ItemGroup:
+                id = 'user'
+#        ActionItem:
+#            path = '/tasks/show_manager'
+#            label = 'Manager'
+#            command = 'hqc_meas.task_manager.show_manager'
+        ActionItem:
+            path = 'tools/pulses/show_errors'
+            label = 'Start up errors'
+            command = 'hqc_meas.pulses_manager.show_starting_errors'

@@ -96,14 +96,6 @@ def build_root(event):
     return manager.build_root(**event.parameters)
 
 
-INSTR_USERS_DESCRIPTION = \
-""" Extensions to this point can be used to provide the id of a plugin
-which will use instruments. Plugins which do not provides an extension to this
-point won't be allowed to use the command defined by the manager.Additionally
-the default policy concerning the release of instrument can be provided, as
-well as the name of the method to call when the manager need to get an
-instrument back."""
-
 SHOW_MANAGER_DESCRIPTION = \
 """ Show the task manager window."""
 
