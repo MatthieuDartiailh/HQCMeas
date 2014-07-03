@@ -127,13 +127,16 @@ def collect_pulses_dependecies(workbench, flat_walk):
 
     # Collect items.
     s_res = manager.sequences_request(flat_walk['item_class'],
-                                      use_class_names=True)
+                                      use_class_names=True,
+                                      no_view=True)
     # Collect contexts.
     c_res = manager.contexts_request(flat_walk['context_class'],
-                                     use_class_names=True)
+                                     use_class_names=True,
+                                     no_view=True)
     # Collect shapes.
     sh_res = manager.shapes_request(flat_walk['shape_class'],
-                                      use_class_names=True)
+                                      use_class_names=True,
+                                      no_view=True)
 
     if s_res[1] or c_res[1] or sh_res[1]:
         mess = 'Missing sequences: {}, contexts: {}, shapes :{}'

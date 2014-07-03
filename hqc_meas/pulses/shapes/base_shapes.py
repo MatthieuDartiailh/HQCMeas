@@ -132,6 +132,8 @@ class SquareShape(AbstractShape):
         """
         return self._amplitude*np.ones(len(time))
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     _amplitude = FloatRange(-1.0, 1.0, 1.0)
+
+SHAPES = [SquareShape]

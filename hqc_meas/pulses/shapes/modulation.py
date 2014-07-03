@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : modulation.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import (Str, Enum, Float, Bool)
 from math import pi as Pi
 import numpy as np
@@ -140,7 +140,7 @@ class Modulation(HasPrefAtom):
         else:
             return np.cos(unit_corr*self._frequency*time + phase)
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     _frequency = Float()
 

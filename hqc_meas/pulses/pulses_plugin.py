@@ -21,7 +21,8 @@ from ..utils.has_pref_plugin import HasPrefPlugin
 from .pulses import Sequence, Pulse, RootSequence
 from .templates import load_template
 with enaml.imports():
-    from .pulses_views import SequenceView, PulseView, RootSequenceView
+    from .pulse_views import PulseView
+    from .sequence_views import SequenceView, RootSequenceView
 
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -89,7 +90,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         self._contexts.clear()
         self._shapes.clear()
 
-    def sequences_request(self, sequences, use_class_names=False):
+    def sequences_request(self, sequences, use_class_names=False,
+                          no_view=False):
         """ Give access to sequence infos.
 
         Parameters
@@ -99,6 +101,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         use_class_names : bool, optional
             Should the search be performed using class names rather than
             sequence names.
+        no_view : bool
+            When true view are not returned alongside the class.
 
         Returns
         -------
@@ -136,9 +140,13 @@ class PulsesManagerPlugin(HasPrefPlugin):
             answer.update({key: val for key, val in class_names.iteritems()
                            if key in sequences})
 
+        if no_view:
+            answer = {k: v[0] for k, v in answer.iteritems()}
+
         return answer, missing
 
-    def contexts_request(self, contexts, use_class_names=False):
+    def contexts_request(self, contexts, use_class_names=False,
+                         no_view=False):
         """ Give access to context infos.
 
         Parameters
@@ -148,6 +156,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         use_class_names : bool, optional
             Should the search be performed using class names rather than
             context names.
+        no_view : bool
+            When true view are not returned alongside the class.
 
         Returns
         -------
@@ -175,9 +185,12 @@ class PulsesManagerPlugin(HasPrefPlugin):
             answer.update({key: val for key, val in class_names.iteritems()
                            if key in contexts})
 
+        if no_view:
+            answer = {k: v[0] for k, v in answer.iteritems()}
+
         return answer, missing
 
-    def shapes_request(self, shapes, use_class_names=False):
+    def shapes_request(self, shapes, use_class_names=False, no_view=False):
         """ Give access to shape infos.
 
         Parameters
@@ -187,6 +200,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         use_class_names : bool, optional
             Should the search be performed using class names rather than
             context names.
+        no_view : bool
+            When true view are not returned alongside the class.
 
         Returns
         -------
@@ -212,7 +227,10 @@ class PulsesManagerPlugin(HasPrefPlugin):
                        if name not in class_names]
 
             answer.update({key: val for key, val in class_names.iteritems()
-                           if key in shapes})
+                           if key in shapes}):
+
+        if no_view:
+            answer = {k: v[0] for k, v in answer.iteritems()}
 
         return answer, missing
 

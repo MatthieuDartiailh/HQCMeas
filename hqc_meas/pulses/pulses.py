@@ -304,6 +304,9 @@ class Sequence(Item):
     """
     # --- Public API ----------------------------------------------------------
 
+    #: Name of the sequence (help make a sequence more readable)
+    name = Str().tag(pref=True)
+
     #: List of items this sequence consists of.
     items = ContainerList(Instance(Item))
 
@@ -674,6 +677,7 @@ class RootSequence(Sequence):
     sequence_duration = Str().tag(pref=True)
 
     index = set_default(0)
+    name = set_default('Root')
 
     def __init__(self, **kwargs):
         """

@@ -1,0 +1,250 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : pulses_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from atom.api import Atom, Dict, Value
+from enaml.layout.api import hbox, align, spacer, vbox
+from enaml.widgets.api import (PushButton, Container, Label, Field,
+                               GroupBox, ScrollArea, Menu, Action, Stack,
+                               StackItem, Form, Notebook, Page)
+from enaml.core.api import Looper, Conditional, Include
+from enaml.workbench.core.core_plugin import CorePlugin
+
+from hqc_meas.utils.widgets.list_editor import PopupListMenu
+
+
+class ViewsManager(Atom):
+    """ Class responsible for instantiating the item view for _ItmeListView.
+
+    Using this class allow to request all the views in one pass when
+    instantiating a new editor.
+
+    """
+    #: Reference to the core plugin of the app.
+    core = Value()
+
+    #: Dict mapping Task names to their view.
+    views = Dict()
+
+    def __init__(self, children, **kwargs):
+        super(TaskViewManager, self).__init__(**kwargs)
+        t_classes = set([type(item).__name__ for item in children])
+        self.get_views(t_classes)
+
+    def instantiate_view(self, item, attrs):
+        """ A helper function instantiating a task view.
+
+        Parameters
+        ----------
+        item : Item
+            Item instance for which to create a view.
+
+        attrs : dict
+            Dict of additional object which should be passed to the view if it
+            defines the attribute.
+
+        Returns
+        -------
+        view :
+            Created item view.
+
+        """
+        name = type(item).__name__
+        views = self.views
+        if name not in views:
+            self.get_views([name])
+        view = views[name]
+        kwargs = {'item': item}
+        for key in attrs:
+            if hasattr(view, key):
+                kwargs[key] = attrs[key]
+        return view(**kwargs)
+
+    def get_views(self, class_names):
+        """ Helper method updating the known views with the ones associated
+        with the given names.
+
+        """
+        cmd = 'hqc_meas.pulses_manager.sequences_request'
+        items, _ = self.core.invoke_command(cmd,
+                                            {'contexts': class_names,
+                                             'use_class_name': True})
+        self.views.update({k: v[1] for k, v in items.iteritems()})
+
+
+enamldef _SequenceListView(Container): list_view:
+    """ A base custom container to edit the items of a sequence.
+
+    """
+    attr sequence
+    attr core
+    attr cache
+    attr operations = ['add', 'remove', 'move']
+    attr model = TaskViewManager(sequence.items, core=core)
+
+    hug_height = 'strong'
+    padding = 0
+
+    Looper:
+        #: Better refreshing of the system
+        iterable << sequence.items[:]
+        Container:
+            padding = 0
+            constraints = [hbox(button, *view.objects),
+                           align('top', button, *view.objects)]
+            PushButton: button:
+                constraints = [width == 15,
+                                height == 20]
+                font = 'bold 12pt Consolas'
+                text = '>'
+                clicked ::
+                    edited_list = item.items
+                    menu = PopupListMenu(
+                      model = edited_list,
+                      index = edited_list.index(loop_item),
+                      factory = core.invoke_command,
+                      operations = operations,
+                      args = ('hqc_meas.pulses_manager.build_item',),
+                      kwargs = {'parameters': {'parent_ui': button},
+                                'trigger': button})
+                    menu.popup()
+            Include: view:
+                objects << [model.instantiate_view(loop_item,
+                                                   {'core': core,
+                                                    'cache': cache})]
+
+
+enamldef SequenceEditor(Container): view:
+    """ A custom container to edit the items of a sequence. Support folding.
+
+    """
+
+    attr sequence
+    attr core
+    attr cache
+
+    padding = 0
+    Conditional:
+        condition << not bool(item.items)
+        PushButton:
+            text = 'Add first item'
+            clicked ::
+                obj = core.invoke_command('hqc_meas.pulses_manager.build_item',
+                                          {'parent_ui': view}, view)
+                if obj:
+                    sequence.items.append(obj)
+    Conditional:
+        condition << bool(sequence.items)
+        Container: box:
+            attr stack_index = cache.get(sequence.index, 1)
+            constraints = [vbox(hbox(folding, foldable_content),spacer),
+                           align('top', folding, foldable_content)]
+            padding = (0,5,2,2)
+            PushButton: folding:
+                text = '-' if stack_index == 1 else '+'
+                constraints = [width == 15, height == 20]
+                clicked ::
+                    if folding.text == '-':
+                        box.stack_index = 0
+                        cache[sequence.index] = 0
+                        folding.text = '+'
+                    else:
+                       box.stack_index = 1
+                       cache[sequence.index] = 1
+                       folding.text = '-'
+            Container: foldable_content:
+                padding = 0
+                Stack:
+                    size_hint_mode = 'current'
+                    hug_width = 'ignore'
+                    index << stack_index
+                    StackItem:
+                        Container:
+                            hug_height = 'strong'
+                            padding = 0
+                            Label:
+                                text = 'FOLDED ITEMS'
+                    StackItem:
+                        _TaskListView:
+                            sequence = view.sequence
+                            core = view.core
+                            cache = view.cache
+
+
+enamldef NonFoldingSequenceEditor(Container): view:
+    """ A custom container to edit the children of a task.
+
+    """
+    attr sequence
+    attr core
+    attr cache
+
+    Conditional:
+        condition << not bool(item.items)
+        PushButton:
+            text = 'Add first item'
+            clicked ::
+                obj = core.invoke_command('hqc_meas.pulses_manager.build_item',
+                                          {'parent_ui': view}, view)
+                if obj:
+                    sequence.items.append(obj)
+    Conditional:
+        condition << bool(task.children_task)
+        Container:
+            _TaskListView:
+                sequence = view.sequence
+                core = view.core
+                cache = view.cache
+
+
+enamldef SequenceView(Container): view:
+    """ View for complex task.
+
+    """
+    attr item
+    alias core : editor.core
+    alias cache : editor.cache
+
+    title << '{} {}'.format(sequence.index, sequence.name)
+    padding = 2
+
+    SequenceEditor: editor:
+        sequence := view.item
+
+
+def instantiate_context_view(core, context):
+    """ Instantiate the appropriate view for the given context.
+
+    """
+    cmd = 'hqc_meas.pulses_manager.contexts_request'
+    contexts, _ = self.core.invoke_command(cmd,
+                                           {'contexts': context.context_class,
+                                            'use_class_name': True})
+    view = contexts[context.context_class][1]
+    kwargs = {'context': context}
+    return view(**kwargs)
+
+
+enamldef RootSequenceView(GroupBox): view:
+    """ View for root task.
+
+    """
+    attr sequence
+    alias core : editor.core
+    alias cache : editor.cache
+
+    Notebook:
+        tabs_closable = False
+        Page:
+            title = 'Sequence'
+            NonFoldingTaskEditor: editor:
+                task := view.sequence
+
+        Page:
+            title = 'Context'
+            Include:
+                objects << [instantiate_context_view(sequence.context)]

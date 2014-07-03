@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import Enum, Str, Bool, Float, Property
+from atom.api import Enum, Str, Bool, Float, Property, Tuple
 from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import HasPrefAtom
@@ -27,6 +27,12 @@ class BaseContext(HasPrefAtom):
     #: Duration in unit of the context of a pulse. It is the responsability
     #: of subclasses to implement a getter.
     sampling_time = Property(cached=True)
+
+    #: List of analogical channels defined by this context.
+    analogical_channels = Tuple()
+
+    #: List of logical channels defined by this context
+    logical_channels = Tuple()
 
     #: Whether or not to round times to the nearest multiple of sampling time
     #: when checking.

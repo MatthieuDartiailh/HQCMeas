@@ -24,6 +24,11 @@ class AWGContext(BaseContext):
 
     time_unit = set_default('mus')
 
+    logical_channels = set_default(('Ch1_A', 'Ch2_A', 'Ch3_A', 'Ch4_A'))
+
+    analogical_channels = set_default(('Ch1_M1', 'Ch2_M1', 'Ch3_M1', 'Ch4_M1',
+                                       'Ch1_M2', 'Ch2_M2', 'Ch3_M2', 'Ch4_M2'))
+
     def compile_sequence(self, pulses, **kwargs):
         """ Transform a sequence of pulse to a dict of waveform.
 

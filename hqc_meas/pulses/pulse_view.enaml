@@ -1,0 +1,151 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : pulses_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from atom.api import Atom, Dict, Value
+from enaml.layout.api import hbox, align, spacer, vbox
+from enaml.widgets.api import (PushButton, Container, Label, Field,
+                               GroupBox, ScrollArea, Menu, Action, Stack,
+                               StackItem, CheckBox, Splitter, ToolButton)
+from enaml.core.api import Looper, Conditional, Include
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+
+
+def default_add_displays(core, item):
+    if item.kind == 'analogical':
+        mod_view = ModulationView(item, item.modulation)
+
+        cmd = 'hqc_meas.pulses_manager.shapes_request'
+        shapes, _ = core.invoke_command(cmd,
+                                        {'shapes': item.shape.shape_class]})
+        shape = shapes[item.shape.shape_class]
+        add_displays.append(shape[1](item==item, shape=item.shape))
+
+
+enamldef ModulationView(Container):
+    """ View for the modulation of an analogical pulse.
+
+    """
+    attr item
+    attr modulation
+
+    Label: kind_lab:
+        text = 'Kind'
+    ObjectCombo: kiind_val:
+        items = list(modulation.get_member('kind').items)
+        selected := modulation.kind
+
+    Splitter:
+        SplitItem:
+            Container:
+                constraints << [hbox(freq_lab, freq_val, freq_un)]
+                Label: freq_lab:
+                    text = 'Frequency'
+                QtLineCompleter: freq_val:
+                    text := modulation.frequency
+                ObjectCombo: freq_un:
+                    items = list(modulation.get_member('frequency_unit').items)
+                    selected := modulation.frequency_unit
+        SplitItem:
+            Container:
+                constraints << [hbox(phase_lab, phase_val, phase_un)]
+                Label: phase_lab:
+                    text = 'Phase'
+                QtLineCompleter: phase_val:
+                    text := modulation.phase
+                ObjectCombo: phase_un:
+                    items = list(modulation.get_member('phase_unit').items)
+                    selected := modulation.phase_unit
+
+
+
+enamldef PulseView(GroupBox): view:
+    """ View for a pulse item.
+
+    """
+    attr item
+    attr core
+    attr add_displays = default_add_displays(core, item)
+    attr pulse_state = core.invoke_command('hqc_meas.state.get',
+                                           {'state':
+                                            'hqc_meas.states.pulses_manager'})
+
+    title << '{}'.format(item)
+
+    constraints << [vbox(
+                        hbox(kind_lab, kind_val, ch_lab, ch_val, def_lab,
+                             def_val, *analog.items),
+                        defs,
+                        *add.objects)]
+
+    Label: kind_lab:
+        text = 'Kind'
+    ObjectCombo: kind_val:
+        items = list(item.get_member('kind').items)
+        selected := item.kind
+
+    Label: ch_lab:
+        text = 'Channel'
+    ObjectCombo: ch_val:
+        items << item.context.logical_channels if item.kind == 'logical' else\
+                 item.context.analogical_channels
+        selected := item.channel
+
+    Label: def_lab:
+        text = 'Mode'
+    ObjectCombo: def_val:
+        items << list(item.get_member('def_mode').items)
+        selected := item.def_mode
+
+    Splitter: defs:
+        SplitItem:
+            Container:
+                padding = 0
+                Label:
+                    text << item.def_mode.split('/')[0]
+                QtLineCompleter:
+                    text := item.def_1
+         SplitItem:
+            Container:
+                padding = 0
+                Label:
+                    text << item.def_mode.split('/')[1]
+                QtLineCompleter:
+                    text := item.def_2
+
+    Conditional: analog:
+        condition << item.kind == 'analogical'
+        Label:
+            text = 'Modulation'
+        CheckBox:
+            text = 'Active'
+            checked := item.modulation.active
+            checked ::
+                if change['value']:
+                    add_displays.insert(0, ModulationView(item,
+                                                          item.modulation))
+                else:
+                    add_displays.pop(0)
+
+        Label:
+            text = 'Shape'
+        ObjectCombo:
+            items << pulse_state.shapes
+            selected << item.shape.shape_class
+            selected ::
+                if change.get['oldvalue']:
+                    add_displays.pop()
+                cmd = 'hqc_meas.pulses_manager.shapes_request'
+                shapes, _ = core.invoke_command(cmd,
+                                                {'shapes': [change['value']]})
+                shape = shapes[change['value']]
+                item.shape = shape[0]()
+                add_displays.append(shape[1](item==item, shape=shape))
+
+    Include: add:
+        objects << add_displays
