@@ -18,10 +18,10 @@ from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
 from inspect import cleandoc
 
 from ..utils.has_pref_plugin import HasPrefPlugin
-from .pulses import Sequence
+from .pulses import Sequence, Pulse, RootSequence
 from .templates import load_template
 with enaml.imports():
-    from .pulses_views import SequenceView
+    from .pulses_views import SequenceView, PulseView, RootSequenceView
 
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -281,6 +281,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         valid_sequences = {k: (v, views[k]) for k, v in sequences.iteritems()
                            if k in views}
         valid_sequences['Sequence'] = (Sequence, SequenceView)
+        valid_sequences['RootSequence'] = (RootSequence, RootSequenceView)
+        valid_sequences['Pulse'] = (Pulse, PulseView)
 
         self._sequences = valid_sequences
         self.sequences = list(valid_sequences.keys()) +\

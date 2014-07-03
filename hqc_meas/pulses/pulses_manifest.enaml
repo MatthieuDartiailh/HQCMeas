@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : manager_manifest.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
@@ -21,6 +21,8 @@ def manager_plugin_factory():
     from .manager_plugin import PulsesManagerPlugin
     return PulsesManagerPlugin()
 
+
+# --- Command handlers --------------------------------------------------------
 # TODO implement a true manager
 #def show_manager(event):
 #    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
@@ -86,6 +88,7 @@ def build_root(event):
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
     return manager.build_root(**event.parameters)
 
+# --- Descritpion -------------------------------------------------------------
 
 SHOW_MANAGER_DESCRIPTION = \
 """ Show the task manager window."""
@@ -114,6 +117,40 @@ BUILD_ROOT_DESCRIPTION = \
 MANAGER_STATE_DESCRIPTION = \
 """ The tasks manager gives access to the known tasks and filters."""
 
+def collect_pulses_dependecies(workbench, flat_walk):
+    """ Collector function for the build-dependencies extensions.
+
+    """
+    # Here we use direct call to plugin methods as this is internal to the
+    # plugin
+    manager = workbench.get_plugin('hqc_meas.pulses_manager')
+
+    # Collect items.
+    s_res = manager.sequences_request(flat_walk['item_class'],
+                                      use_class_names=True)
+    # Collect contexts.
+    c_res = manager.contexts_request(flat_walk['context_class'],
+                                     use_class_names=True)
+    # Collect shapes.
+    sh_res = manager.shapes_request(flat_walk['shape_class'],
+                                      use_class_names=True)
+
+    if s_res[1] or c_res[1] or sh_res[1]:
+        mess = 'Missing sequences: {}, contexts: {}, shapes :{}'
+
+        raise ValueError(mess.format(s_res[1], c_res[1], sh_res[1]))
+
+    # Bundle all dependencies under a single dict.
+    dependencies = {}
+    dependencies.update(s_res[0])
+    dependencies.update(c_res[0])
+    dependencies.update(sh_res[0])
+
+    if dependencies:
+        return {'pulses': dependencies}
+    else:
+        return {}
+
 # --- Manifest ----------------------------------------------------------------
 
 enamldef PulsesManagerManifest(PluginManifest):
@@ -135,6 +172,13 @@ enamldef PulsesManagerManifest(PluginManifest):
             id = 'hqc_meas.states.pulses_manager'
             description = MANAGER_STATE_DESCRIPTION
             sync_members = ['sequences', 'contexts', 'shapes']
+    Extension:
+        id = 'item_classes'
+        point = 'hqc_meas.task_manager.build_dependencies'
+        BuildDependency:
+            id = 'hqc_meas.pulses_manager.dependencies'
+            walk_members = ['item_class', 'context_class', 'shape_class']
+            collect = collect_pulses_dependecies
     Extension:
         id = 'commands'
         point = 'enaml.workbench.core.commands'
