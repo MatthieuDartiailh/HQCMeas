@@ -26,9 +26,6 @@ class Item(HasPrefAtom):
     #: Index identifying the item inside the sequence.
     index = Int()
 
-    #: Reference to the executioner context of the item.
-    context = Instance(BaseContext)
-
     #: Flag to disable a particular item.
     enabled = Bool(True).tag(pref=True)
 
@@ -126,6 +123,9 @@ class Pulse(Item):
         # Flag indicating good completion.
         success = True
 
+        # Reference to the sequence context.
+        context = self.root.context
+
         # Name of the parameter which will be evaluated.
         par1 = self.def_mode.split('/')[0].lower()
         par2 = self.def_mode.split('/')[1].lower()
@@ -135,7 +135,7 @@ class Pulse(Item):
         d1 = None
         try:
             d1 = eval_entry(self.def_1, sequence_locals, missings)
-            d1 = self.context.check_time(d1)
+            d1 = context.check_time(d1)
         except Exception as e:
             errors[prefix + par1] = repr(e)
 
@@ -159,7 +159,7 @@ class Pulse(Item):
         d2 = None
         try:
             d2 = eval_entry(self.def_2, sequence_locals, missings)
-            d2 = self.context.check_time(d2)
+            d2 = context.check_time(d2)
         except Exception as e:
             errors[prefix + par2] = repr(e)
 
@@ -288,11 +288,12 @@ class Pulse(Item):
         """ Getter for the waveform property.
 
         """
-        n_points = self.context.len_sample(self.duration)
+        context = self.root.context
+        n_points = context.len_sample(self.duration)
         if self.kind == 'analogical':
             time = np.linspace(self.start, self.stop, n_points, False)
-            mod = self.modulation.compute(time, self.context.time_unit)
-            shape = self.shape.compute(time, self.context.time_unit)
+            mod = self.modulation.compute(time, context.time_unit)
+            shape = self.shape.compute(time, context.time_unit)
             return mod*shape
         else:
             return np.ones(n_points, dtype=np.int8)
@@ -511,7 +512,6 @@ class Sequence(Item):
         """
         if change['value']:
             for item in self.items:
-                item.context = self.context
                 item.root = self.root
                 if isinstance(item, Sequence):
                     item.observe('_last_index', self._item_last_index_updated)
@@ -523,7 +523,6 @@ class Sequence(Item):
         else:
             self.unobserve('items', self._items_updated)
             for item in self.items:
-                item.context = None
                 item.root = None
                 if isinstance(item, Sequence):
                     item.unobserve('_last_index',
@@ -586,7 +585,6 @@ class Sequence(Item):
         """ Fill in the attributes of a newly added item.
 
         """
-        item.context = self.context
         item.root = self.root
         if isinstance(item, Sequence):
             item.observe('_last_index', self._item_last_index_updated)
@@ -596,7 +594,6 @@ class Sequence(Item):
         """ Clear the attributes of a removed item.
 
         """
-        del item.context
         del item.root
         item.index = 0
         if isinstance(item, Sequence):
@@ -660,6 +657,9 @@ class RootSequence(Sequence):
     entries and then unravelling the pulse sequence (elimination of condition
     and loop flattening).
 
+    Notes
+    -----
+
     The linkable_vars of the RootSequence stores all the known linkable vars
     for the sequence.
 
@@ -675,6 +675,9 @@ class RootSequence(Sequence):
     #: Duration of the sequence when it is fixed. The unit of this time is
     # fixed by the context.
     sequence_duration = Str().tag(pref=True)
+
+    #: Reference to the executioner context of the sequence.
+    context = Instance(BaseContext)
 
     index = set_default(0)
     name = set_default('Root')
