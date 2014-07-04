@@ -176,7 +176,7 @@ enamldef SequenceEditor(Container): view:
 
 
 enamldef NonFoldingSequenceEditor(Container): view:
-    """ A custom container to edit the children of a task.
+    """ A custom container to edit the items of a sequence.
 
     """
     attr sequence
@@ -201,8 +201,8 @@ enamldef NonFoldingSequenceEditor(Container): view:
                 cache = view.cache
 
 
-enamldef SequenceView(Container): view:
-    """ View for complex task.
+enamldef SequenceView(GroupBox): view:
+    """ View for Sequence.
 
     """
     attr item
@@ -230,7 +230,7 @@ def instantiate_context_view(core, context):
 
 
 enamldef RootSequenceView(GroupBox): view:
-    """ View for root task.
+    """ View for root sequence.
 
     """
     attr sequence

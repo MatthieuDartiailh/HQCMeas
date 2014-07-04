@@ -1,0 +1,38 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : awg_context_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox, vbox
+from enaml.widgets.api import (Label, ObjectCombo, Form)
+from enaml.core.api import Conditional, Include
+from enaml.stdlib.fields import FloatField
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+
+
+enamldef AWGContextView(Form): view:
+    """ View for a pulse item.
+
+    """
+    attr context
+    attr core
+
+    hug_height = 'strong'
+
+    Label:
+        text = 'Time unit'
+    ObjectCombo:
+        items = list(context.get_member('time_unit').items)
+        selected := context.time_unit
+
+    Label:
+        text = 'Sampling freq (Hz)'
+    FloatField:
+        value := context.sampling_frequency
+
+CONTEXTS_VIEWS = {'AWGContext': AWGContextView}
+

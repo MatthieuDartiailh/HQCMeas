@@ -1,0 +1,36 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : conditional_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox, align, spacer, vbox
+from enaml.widgets.api import (PushButton, Container, Label, Field,
+                               GroupBox, ScrollArea, Menu, Action, Stack,
+                               StackItem, Form, Notebook, Page)
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+
+from ...sequences_views import SequenceEditor
+
+enamldef ConditionalSequenceView(GroupBox): view:
+    """ View for Sequence.
+
+    """
+    attr item
+    alias core : editor.core
+    alias cache : editor.cache
+
+    title << '{} {}'.format(sequence.index, sequence.name)
+    padding = 2
+    constraints = [vbox(hbox(cond_lab, cond_val), editor)]
+
+    Label: cond_lab:
+        text = 'Condition'
+    QtLineCompleter: cond_val:
+        text := item.condition
+
+    SequenceEditor: editor:
+        sequence := view.item
