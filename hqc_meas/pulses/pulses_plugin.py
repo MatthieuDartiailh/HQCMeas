@@ -21,8 +21,8 @@ from ..utils.has_pref_plugin import HasPrefPlugin
 from .pulses import Sequence, Pulse, RootSequence
 from .templates import load_template
 with enaml.imports():
-    from .pulse_views import PulseView
-    from .sequence_views import SequenceView, RootSequenceView
+    from .pulse_view import PulseView
+    from .sequences_views import (SequenceView, RootSequenceView)
 
 
 MODULE_PATH = os.path.dirname(__file__)
@@ -91,7 +91,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         self._shapes.clear()
 
     def sequences_request(self, sequences, use_class_names=False,
-                          no_view=False):
+                          views=True):
         """ Give access to sequence infos.
 
         Parameters
@@ -101,8 +101,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         use_class_names : bool, optional
             Should the search be performed using class names rather than
             sequence names.
-        no_view : bool
-            When true view are not returned alongside the class.
+        views : bool
+            When flase views are not returned alongside the class.
 
         Returns
         -------
@@ -140,13 +140,13 @@ class PulsesManagerPlugin(HasPrefPlugin):
             answer.update({key: val for key, val in class_names.iteritems()
                            if key in sequences})
 
-        if no_view:
+        if not views:
             answer = {k: v[0] for k, v in answer.iteritems()}
 
         return answer, missing
 
     def contexts_request(self, contexts, use_class_names=False,
-                         no_view=False):
+                         views=True):
         """ Give access to context infos.
 
         Parameters
@@ -156,8 +156,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         use_class_names : bool, optional
             Should the search be performed using class names rather than
             context names.
-        no_view : bool
-            When true view are not returned alongside the class.
+        views : bool
+            When false views are not returned alongside the class.
 
         Returns
         -------
@@ -169,8 +169,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         answer = {}
 
         if not use_class_names:
-            missing = set([name for name in contexts
-                           if name not in self._contexts.keys()])
+            missing = [name for name in contexts
+                       if name not in self._contexts.keys()]
 
             answer.update({key: val for key, val in self._contexts.iteritems()
                            if key in contexts})
@@ -185,12 +185,12 @@ class PulsesManagerPlugin(HasPrefPlugin):
             answer.update({key: val for key, val in class_names.iteritems()
                            if key in contexts})
 
-        if no_view:
+        if not views:
             answer = {k: v[0] for k, v in answer.iteritems()}
 
         return answer, missing
 
-    def shapes_request(self, shapes, use_class_names=False, no_view=False):
+    def shapes_request(self, shapes, use_class_names=False, views=True):
         """ Give access to shape infos.
 
         Parameters
@@ -200,8 +200,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         use_class_names : bool, optional
             Should the search be performed using class names rather than
             context names.
-        no_view : bool
-            When true view are not returned alongside the class.
+        views : bool
+            When flase views are not returned alongside the class.
 
         Returns
         -------
@@ -213,8 +213,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         answer = {}
 
         if not use_class_names:
-            missing = set([name for name in shapes
-                           if name not in self._shapes.keys()])
+            missing = [name for name in shapes
+                       if name not in self._shapes.keys()]
 
             answer.update({key: val for key, val in self._shapes.iteritems()
                            if key in shapes})
@@ -229,7 +229,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
             answer.update({key: val for key, val in class_names.iteritems()
                            if key in shapes})
 
-        if no_view:
+        if not views:
             answer = {k: v[0] for k, v in answer.iteritems()}
 
         return answer, missing
@@ -289,15 +289,17 @@ class PulsesManagerPlugin(HasPrefPlugin):
         path = os.path.join(MODULE_PATH, 'sequences')
         failed = {}
 
-        modules, v_modules = self._explore_package('sequences', path, failed)
+        modules, v_modules = self._explore_package('sequences', path, failed,
+                                                   self.sequences_loading)
 
         sequences = {}
         views = {}
         self._explore_modules(modules, sequences, 'SEQUENCES', failed)
         self._explore_views(v_modules, views, 'SEQUENCES_VIEWS', failed)
 
-        valid_sequences = {k: (v, views[k]) for k, v in sequences.iteritems()
-                           if k in views}
+        valid_sequences = {k: (v, views[v.__name__])
+                           for k, v in sequences.iteritems()
+                           if v.__name__ in views}
         valid_sequences['Sequence'] = (Sequence, SequenceView)
         valid_sequences['RootSequence'] = (RootSequence, RootSequenceView)
         valid_sequences['Pulse'] = (Pulse, PulseView)
@@ -315,15 +317,17 @@ class PulsesManagerPlugin(HasPrefPlugin):
         path = os.path.join(MODULE_PATH, 'contexts')
         failed = {}
 
-        modules, v_modules = self._explore_package('contexts', path, failed)
+        modules, v_modules = self._explore_package('contexts', path, failed,
+                                                   self.contexts_loading)
 
         contexts = {}
         views = {}
         self._explore_modules(modules, contexts, 'CONTEXTS', failed)
         self._explore_views(v_modules, views, 'CONTEXTS_VIEWS', failed)
 
-        valid_contexts = {k: (v, views[k]) for k, v in contexts.iteritems()
-                          if k in views}
+        valid_contexts = {k: (v, views[v.__name__])
+                          for k, v in contexts.iteritems()
+                          if v.__name__ in views}
 
         self._contexts = valid_contexts
         self.contexts = list(valid_contexts.keys())
@@ -337,22 +341,24 @@ class PulsesManagerPlugin(HasPrefPlugin):
         path = os.path.join(MODULE_PATH, 'shapes')
         failed = {}
 
-        modules, v_modules = self._explore_package('shapes', path, failed)
+        modules, v_modules = self._explore_package('shapes', path, failed,
+                                                   self.shapes_loading)
 
         shapes = {}
         views = {}
         self._explore_modules(modules, shapes, 'SHAPES', failed)
         self._explore_views(v_modules, views, 'SHAPES_VIEWS', failed)
 
-        valid_shapes = {k: (v, views[k]) for k, v in shapes.iteritems()
-                        if k in views}
+        valid_shapes = {k: (v, views[v.__name__])
+                        for k, v in shapes.iteritems()
+                        if v.__name__ in views}
 
         self._shapes = valid_shapes
         self.shapes = list(valid_shapes.keys())
 
         self._failed = failed
 
-    def _explore_package(self, pack, pack_path, failed):
+    def _explore_package(self, pack, pack_path, failed, exceptions):
         """ Explore a package.
 
         Parameters
@@ -366,6 +372,9 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
         failed : dict
             A dict in which failed imports will be stored.
+
+        exceptions: list
+            Names of the modules which should not be loaded.
 
         Returns
         -------
@@ -400,7 +409,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
         # Remove modules which should not be imported
         for mod in modules[:]:
-            if mod in self.tasks_loading:
+            if mod in exceptions:
                 modules.remove(mod)
 
         # Look for enaml definitions
@@ -427,7 +436,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
             return [], []
 
         for mod in v_modules[:]:
-            if mod in self.views_loading:
+            if mod in exceptions:
                 v_modules.remove(mod)
 
         return modules, v_modules
@@ -452,7 +461,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         """
         for mod in modules:
             try:
-                m = import_module(mod, MODULE_ANCHOR)
+                m = import_module('.' + mod, MODULE_ANCHOR)
             except Exception as e:
                 log = logging.getLogger(__name__)
                 mess = 'Failed to import {} : {}'.format(mod, e)
@@ -489,7 +498,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         for mod in modules:
             try:
                 with enaml.imports():
-                    m = import_module(mod, MODULE_ANCHOR)
+                    m = import_module('.' + mod, MODULE_ANCHOR)
             except Exception as e:
                 log = logging.getLogger(__name__)
                 mess = 'Failed to import {} : {}'.format(mod, e)
@@ -519,7 +528,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         """ Remove the observers for the plugin.
 
         """
-        self.unobserve('tasks_loading', self._update_tasks)
+        self.unobserve('sequences_loading', self._update_sequences)
         self.unobserve('contexts_loading', self._update_contexts)
         self.unobserve('shapes_loading', self._update_shapes)
         self.unobserve('templates_folders', self._update_templates)

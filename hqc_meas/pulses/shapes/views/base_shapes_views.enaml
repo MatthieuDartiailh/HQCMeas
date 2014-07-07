@@ -14,7 +14,7 @@ from enaml.core.api import Conditional, Include
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 
 
-enamldef SquareShapeView(Flowitem):
+enamldef SquareShapeView(FlowItem):
     """ View for the modulation of an analogical pulse.
 
     """

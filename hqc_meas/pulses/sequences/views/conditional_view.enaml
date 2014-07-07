@@ -34,3 +34,5 @@ enamldef ConditionalSequenceView(GroupBox): view:
 
     SequenceEditor: editor:
         sequence := view.item
+
+SEQUENCES_VIEWS = {'ConditionalSequence': ConditionalSequenceView}

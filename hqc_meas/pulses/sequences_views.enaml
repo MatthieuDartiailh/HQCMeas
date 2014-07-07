@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : pulses_views.enaml
+# module : sequences_views.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -169,7 +169,7 @@ enamldef SequenceEditor(Container): view:
                             Label:
                                 text = 'FOLDED ITEMS'
                     StackItem:
-                        _TaskListView:
+                        _SequenceListView:
                             sequence = view.sequence
                             core = view.core
                             cache = view.cache
@@ -195,7 +195,7 @@ enamldef NonFoldingSequenceEditor(Container): view:
     Conditional:
         condition << bool(task.children_task)
         Container:
-            _TaskListView:
+            _SequenceListView:
                 sequence = view.sequence
                 core = view.core
                 cache = view.cache
@@ -233,7 +233,7 @@ enamldef RootSequenceView(GroupBox): view:
     """ View for root sequence.
 
     """
-    attr sequence
+    attr item
     alias core : editor.core
     alias cache : editor.cache
 
@@ -241,8 +241,8 @@ enamldef RootSequenceView(GroupBox): view:
         tabs_closable = False
         Page:
             title = 'Sequence'
-            NonFoldingTaskEditor: editor:
-                task := view.sequence
+            NonFoldingSequenceEditor: editor:
+                sequence := view.item
 
         Page:
             title = 'Context'

@@ -83,7 +83,7 @@ class Test(object):
         print complete_line(__name__ +
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
-         # Removing pref files creating during tests.
+        # Removing pref files creating during tests.
         try:
             shutil.rmtree(cls.test_dir)
 

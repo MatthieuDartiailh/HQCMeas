@@ -7,7 +7,7 @@
 from atom.api import Str, set_default
 
 from ..pulses import Sequence
-from .entry_eval import eval_entry
+from ..entry_eval import eval_entry
 
 
 class ConditionalSequence(Sequence):

@@ -13,12 +13,13 @@ from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 from ..utils.pref_plugin import Preferences
 from ..utils.state_plugin import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
+from hqc_meas.task_management.dependencies import BuildDependency
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
 
     """
-    from .manager_plugin import PulsesManagerPlugin
+    from .pulses_plugin import PulsesManagerPlugin
     return PulsesManagerPlugin()
 
 
@@ -33,35 +34,35 @@ def manager_plugin_factory():
 #    TaskManagerView(manager=manager).show()
 
 def show_starting_errors(event):
-    """ Handler for the 'hqc_meas.task_manager.show_errors' command.
+    """ Handler for the 'hqc_meas.pulses_manager.show_errors' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
     ui = event.workbench.get_plugin('enaml.workbench.ui')
-    ErrorsDisplay(ui.window, title='Task manager start up errors',
+    ErrorsDisplay(ui.window, title='Pulses manager start up errors',
                   errors=manager.report()).exec_()
 
 
 def sequences_request(event):
-    """ Handler for the 'hqc_meas.task_manager.sequences_request' command.
+    """ Handler for the 'hqc_meas.pulses_manager.sequences_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
     return manager.sequences_request(**event.parameters)
 
 
 def contexts_request(event):
-    """ Handler for the 'hqc_meas.task_manager.contexts_request' command.
+    """ Handler for the 'hqc_meas.pulses_manager.contexts_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
     return manager.contexts_request(**event.parameters)
 
 def shapes_request(event):
-    """ Handler for the 'hqc_meas.task_manager.shapes_request' command.
+    """ Handler for the 'hqc_meas.pulses_manager.shapes_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.task_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
     return manager.shapes_request(**event.parameters)
 
 #TODO rr
@@ -190,19 +191,19 @@ enamldef PulsesManagerManifest(PluginManifest):
 #            description = SHOW_MANAGER_DESCRIPTION
 #            handler = show_manager
         Command:
-            id = 'hqc_meas.task_manager.show_starting_errors'
+            id = 'hqc_meas.pulses_manager.show_starting_errors'
             description = SHOW_ERRORS_DESCRIPTION
             handler = show_starting_errors
         Command:
-            id = 'hqc_meas.task_manager.sequences_request'
+            id = 'hqc_meas.pulses_manager.sequences_request'
             description = SEQUENCES_REQUEST_DESCRIPTION
             handler = sequences_request
         Command:
-            id = 'hqc_meas.task_manager.contexts_request'
+            id = 'hqc_meas.pulses_manager.contexts_request'
             description = CONTEXTS_REQUEST_DESCRIPTION
             handler = contexts_request
         Command:
-            id = 'hqc_meas.task_manager.shapes_request'
+            id = 'hqc_meas.pulses_manager.shapes_request'
             description = SHAPES_REQUEST_DESCRIPTION
             handler = shapes_request
 #        Command:
