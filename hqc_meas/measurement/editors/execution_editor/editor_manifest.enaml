@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : editor_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.workbench.api import PluginManifest, Extension
+from inspect import cleandoc
+
+from ..base_editor import Editor
+from .editor import ExecutionEditor
+
+
+EXECUTION_EDITOR_ID = u'hqc_meas.measure.editors.execution_editor'
+
+
+def editor_factory(declaration, workbench):
+    """ Create a standard editor.
+
+    """
+    return ExecutionEditor(declaration=declaration)
+
+def editor_test(workbench, selected_task):
+    """ Allow ExecutionEditor for all tasks.
+
+    """
+    return True
+
+
+enamldef ExecutionEditorManifest(PluginManifest):
+    """ Manifest contributing the ExecutionEditor to the MeasurePlugin.
+
+    """
+    id = EXECUTION_EDITOR_ID
+    Extension:
+        id = 'editor'
+        point = u'hqc_meas.measure.editors'
+        Editor:
+            id = EXECUTION_EDITOR_ID
+            name = 'Execution editor'
+            description = cleandoc(u'''Editor allowing to control how a task
+            is performed (parallel/wait/stop).''')
+            factory = editor_factory
+            test = editor_test
