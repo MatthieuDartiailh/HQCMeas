@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : task_interface.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import Atom, ForwardInstance, Instance, Str
 from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import HasPrefAtom
-from hqc_meas.tasks.base_tasks import SimpleTask, BaseTask
+from hqc_meas.tasks.base_tasks import SimpleTask
 from ..utils.atom_util import member_from_str, tagged_members
 
 
@@ -98,10 +98,14 @@ class InterfaceableTaskMixin(Atom):
             callables.
 
         """
-        #XXXX Here I will assume that answer is the one from the BaseTask
-        # and assume the interface does not override any task member.
+        # I assume the interface does not override any task member.
         # For the callables only the not None answer will be updated.
-        answers = BaseTask.answer(self, members, callables)
+
+        ancestors = type(self).mro()
+        # XXXX here no check that the mixin apperas only once.
+        i = ancestors.index(InterfaceableTaskMixin)
+        answers = ancestors[i + 1].answer(self, members, callables)
+
         interface_answers = self.interface.answer(members, callables)
         answers.update(interface_answers)
         return answers
