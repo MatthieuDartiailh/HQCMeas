@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_tasks.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api\
@@ -34,7 +34,7 @@ class BaseTask(Atom):
     members and methods.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
     #: Name of the class, used for persistence.
     task_class = Str().tag(pref=True)
 
@@ -321,7 +321,7 @@ class BaseTask(Atom):
             else:
                 return safe_eval(string)
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     #: Dictionary storing in infos necessary to perform fast formatting.
     #: Only used in running mode.
@@ -370,10 +370,13 @@ class SimpleTask(BaseTask):
     """ Task with no child task, written in pure Python.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: Class attribute specifying if that task can be used in a loop
     loopable = False
+
+    #: Flag indicating if this task can be stopped.
+    stopable = Bool(True).tag(pref=True)
 
     #: Dictionary indicating whether the task is executed in parallel
     #: ('activated' key) and which is pool it belongs to ('pool' key).
@@ -502,9 +505,9 @@ class SimpleTask(BaseTask):
 
         return task
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
-    @observe('wait', 'parallel')
+    @observe('wait', 'parallel', 'stopable')
     def _parallell_wait_update(self, change):
         """
 
@@ -527,7 +530,10 @@ class SimpleTask(BaseTask):
                                                     wait.get('wait'),
                                                     wait.get('no_wait'))
 
-        self.perform_ = make_stoppable(perform_func)
+        if self.stopable:
+            self.perform_ = make_stoppable(perform_func)
+        else:
+            self.perform_ = perform_func
 
     @staticmethod
     def _make_parallel_perform_(perform, pool):
@@ -641,7 +647,7 @@ class ComplexTask(BaseTask):
     """Task composed of several subtasks.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: List of all the children of the task.
     children_task = ContainerList(Instance(BaseTask)).tag(child=True)
@@ -1002,7 +1008,7 @@ class ComplexTask(BaseTask):
 
         return task
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     #: Last removed child and list of database access exceptions attached to
     #: it and necessity to observe its _access_exs.
@@ -1015,7 +1021,7 @@ class ComplexTask(BaseTask):
     #: child disabled some access_exs.
     _disabled_exs = List()
 
-    #@observe('task_name, task_path, task_depth')
+    # @observe('task_name, task_path, task_depth')
     def _update_paths(self, change):
         """Takes care that the paths, the database and the task names remains
         coherent.
@@ -1131,14 +1137,14 @@ class ComplexTask(BaseTask):
         child.task_database = self.task_database
         child.task_path = self.task_path + '/' + self.task_name
 
-        #Give him its root so that it can proceed to any child
-        #registration it needs to.
+        # Give him its root so that it can proceed to any child
+        # registration it needs to.
         child.root_task = self.root_task
         child.parent_task = self
 
-        #Ask the child to register in database
+        # Ask the child to register in database
         child.register_in_database()
-        #Register anew preferences to keep the right ordering for the childs
+        # Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
 
         if child is self._last_removed[0]:
@@ -1358,7 +1364,7 @@ class RootTask(ComplexTask):
     """Special task which is always the root of a measurement.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: Path to which log infos, prefernces, etc should be written by default.
     default_path = Unicode('').tag(pref=True)
@@ -1441,7 +1447,7 @@ class RootTask(ComplexTask):
 
         self.task_database.create_node(self.task_path, self.task_name)
 
-        #ComplexTask defines children_task so we always get something
+        # ComplexTask defines children_task so we always get something
         for name in tagged_members(self, 'child'):
             child = getattr(self, name)
             if child:
@@ -1451,23 +1457,23 @@ class RootTask(ComplexTask):
                 else:
                     child.register_in_database()
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     # Overrided here to give the child its root task right away.
     def _child_added(self, child):
-        #Give the child all the info it needs to register
+        # Give the child all the info it needs to register
         child.task_depth = self.task_depth + 1
         child.task_database = self.task_database
         child.task_path = self.task_path
 
-        #Give him its root so that it can proceed to any child
-        #registration it needs to.
+        # Give him its root so that it can proceed to any child
+        # registration it needs to.
         child.root_task = self.root_task
         child.parent_task = self
 
-        #Ask the child to register in database
+        # Ask the child to register in database
         child.register_in_database()
-        #Register anew preferences to keep the right ordering for the childs
+        # Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
 
     def _default_task_class(self):
