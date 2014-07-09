@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : task_database.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import Atom, Dict, Bool, Value, Event, List, Str, Typed
@@ -29,7 +29,7 @@ class TaskDatabase(Atom):
         change). In this mode the database is represented as a flat list.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: Event used to notify a value changed in the database. Thye update is
     #: passed as a tuple (path, value)
@@ -456,7 +456,7 @@ class TaskDatabase(Atom):
 
         self._database = None
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     #: Main container for the database.
     _database = Typed(DatabaseNode, ())
@@ -479,9 +479,9 @@ class TaskDatabase(Atom):
         if path == 'root':
             return node
 
-        #Decompose the path in database keys
+        # Decompose the path in database keys
         keys = path.split('/')
-        #Remove first key (ie 'root' as we are not trying to access it)
+        # Remove first key (ie 'root' as we are not trying to access it)
         del keys[0]
 
         for key in keys:

@@ -7,7 +7,7 @@
 from atom.api import Atom, ContainerList, Value, Str, Tuple, List
 from enaml.workbench.api import Workbench
 from enaml.widgets.api import (Container, GroupBox, CheckBox, ScrollArea,
-                               Label, FlowArea, FlowItem, Label)
+                               Label, CheckBox, Label)
 from enaml.core.api import Looper, Conditional
 from enaml.stdlib.mapped_view import MappedView
 from inspect import cleandoc
@@ -149,39 +149,6 @@ class _Model(Atom):
 
         self.entries = entries
 
-    def _model_entries_observer(self, change):
-        """
-
-        """
-        new = set(change['value'])
-        old = set(change['oldvalue'])
-        added = new - old
-        removed = old - new
-
-        c_entries = self.children_entries[:]
-        for entry in removed:
-            c_entries.remove(entry)
-        for entry in added:
-            c_entries.append(entry)
-        self.children_entries = c_entries
-
-    def _database_entries_observer(self, change):
-        """
-
-        """
-        new = change['value'].viewkeys()
-        old = change['oldvalue'].viewkeys()
-        task = change['object']
-        added = new - old
-        removed = old - new
-
-        c_entries = self.children_entries[:]
-        for entry in removed:
-            c_entries.remove(task.task_name + '_' + entry)
-        for entry in added:
-            c_entries.append(task.task_name + '_' + entry)
-        self.children_entries = c_entries
-
     def _children_observer(self, change):
         """
 
@@ -237,7 +204,74 @@ class _Model(Atom):
         self.children_entries = c_entries
 
 
-enamldef _AccessEditor(GroupBox):
+enamldef _SimpleExEditor(GroupBox):
+
+    attr task
+    attr _model
+    attr _lock : bool = False
+
+    title = task.task_name
+
+    CheckBox: stop:
+        text = 'Stoppable'
+        checked := task.stoppable
+        tool_tip = cleandoc('''Can the program be stopped or paused at this
+                            task. Disabling allow to skip some check and might
+                            be beneficial in very tight loops.''')
+
+    CheckBox: parallel:
+        text = 'Parallel'
+        tool_tip = cleandoc('''Should this task perform its job in parallel
+                            (new thread).''')
+        checked << bool(task.parallel.get('activated'))
+        checked ::
+            if not _lock:
+                _lock = True
+                aux = task.parallel.copy()
+                aux['activated'] = change['value']
+
+                # Avoid rebuilding twice perform_
+                with task.suppress_notifications():
+                    task.wait['activated'] = False
+
+                task.parallel = aux
+
+                if change['value']:
+                    wait.checked = False
+
+                _lock = False
+
+    CheckBox: wait:
+        text = 'Wait'
+        tool_tip = cleandoc('''Should this task wait for any other task
+                            currently working in parallel.''')
+        checked << bool(task.wait.get('activated'))
+        checked ::
+            if not _lock:
+                _lock = True
+                aux = task.wait.copy()
+                aux['activated'] = change['value']
+
+                # Avoid rebuilding twice perform_
+                with task.suppress_notifications():
+                    task.parallel['activated'] = False
+
+                task.wait = aux
+
+                if change['value']:
+                    parallel.checked = False
+
+                _lock = False
+
+    Conditional:
+        condition << parallel.checked
+        # TODO
+
+    Conditional:
+        condtion << wait.checked
+        # TODO
+
+enamldef _ComplexExEditor(GroupBox):
 
     attr task
     attr _model

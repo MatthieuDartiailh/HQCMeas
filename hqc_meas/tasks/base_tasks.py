@@ -376,14 +376,15 @@ class SimpleTask(BaseTask):
     loopable = False
 
     #: Flag indicating if this task can be stopped.
-    stopable = Bool(True).tag(pref=True)
+    stoppable = Bool(True).tag(pref=True)
 
     #: Dictionary indicating whether the task is executed in parallel
     #: ('activated' key) and which is pool it belongs to ('pool' key).
     parallel = Dict(Str()).tag(pref=True)
 
     #: Dictionary indicating whether the task should wait on any pool before
-    #: performing its job. Two valid keys can be used :
+    #: performing its job. Three valid keys can be used :
+    #: - 'activated' : a bool indicating whether or not to wait.
     #: - 'wait' : the list should then specify which pool should be waited.
     #: - 'no_wait' : the list should specify which pool not to wait on.
     wait = Dict(Str(), List()).tag(pref=True)
@@ -525,7 +526,7 @@ class SimpleTask(BaseTask):
                                                         parallel['pool'])
 
         wait = self.wait
-        if 'wait' in wait or 'no_wait' in wait:
+        if wait.get('activated') and ('wait' in wait or 'no_wait' in wait):
             perform_func = self._make_wait_perform_(perform_func,
                                                     wait.get('wait'),
                                                     wait.get('no_wait'))
@@ -573,7 +574,7 @@ class SimpleTask(BaseTask):
 
     @staticmethod
     def _make_wait_perform_(perform, wait, no_wait):
-        """ Machinery to make process_ wait on other tasks execution.
+        """ Machinery to make perform_ wait on other tasks execution.
 
         Create a wrapper around a method to wait for some threads to terminate
         before calling the method. Threads are grouped in execution pools.
