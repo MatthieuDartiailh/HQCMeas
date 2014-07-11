@@ -1,153 +1,147 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : editor.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
-from atom.api import Atom, ContainerList, Value, Str, Tuple, List
-from enaml.workbench.api import Workbench
+# =============================================================================
+from atom.api import Atom, Value, Typed, List
 from enaml.widgets.api import (Container, GroupBox, CheckBox, ScrollArea,
-                               Label, CheckBox, Label)
+                               PopupView, RadioButton, Field, ToolButton,
+                               ObjectCombo, PushButton)
 from enaml.core.api import Looper, Conditional
 from enaml.stdlib.mapped_view import MappedView
+from enaml.layout.api import hbox, spacer
 from inspect import cleandoc
+from collections import Counter
 
-from hqc_meas.tasks.api import ComplexTask
+from hqc_meas.tasks.api import ComplexTask, SimpleTask
+from hqc_meas.tasks.tools.walks import flatten_walk
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from ..base_editor import BaseEditor
+
 
 
 class _Model(Atom):
     """
 
     """
-    task = Value()
+    root = Value()
 
-    entries = List()
-
-    children_entries = List()
-
-    complexs = ContainerList()
+    pools = List()
 
     def bind_observers(self):
         """
 
         """
-        if not self.task:
-            return
+        counter = Counter()
+        self._bind_observers(self.root, counter)
 
-        self.task.observe('task_database_entries', self._task_observer)
-        self.task.observe('access_exs', self._task_observer)
-        # XXXX this assumes that children task is the only container.
-        self.task.observe('children_task', self._children_observer)
-        for child in self.task._gather_children_task():
-            child.observe('task_database_entries',
-                          self._database_entries_observer)
+        self._counter = counter
+        self.pools = list(set(counter.elements()))
 
-    def unbind_observers(self, task=None):
+    def unbind_observers(self):
         """
 
         """
-        if not task:
-            if not self.task:
-                return
-            task = self.task
+        self._unbind_observers(self.root, Counter())
 
-        task.unobserve('task_database_entries', self._task_observer)
-        task.unobserve('access_exs', self._task_observer)
-        # XXXX this assumes that children task is the only container.
-        task.unobserve('children_task', self._children_observer)
-        for child in task._gather_children_task():
-            child.unobserve('task_database_entries',
-                            self._database_entries_observer)
+    # --- Private API ---------------------------------------------------------
 
-    def build_entries(self):
+    _counter = Typed(Counter, ())
+
+    def _bind_observers(self, task, counter):
         """
 
         """
-        task = self.task
-        entries = [task.task_name + '_' + e
-                       for e in task.task_database_entries]
-        children_entries = []
-        complexs = []
-        for child in task._gather_children_task():
-            if isinstance(child, ComplexTask):
-                entries.extend(child.access_exs)
-                model = _Model(task=child)
-                model.observe('entries', self._model_entries_observer)
-                children_entries.extend(model.entries)
-                complexs.append((model, child))
-            else:
-                c_entries = [child.task_name + '_' + e
-                             for e in child.task_database_entries]
-                children_entries.extend(c_entries)
+        if isinstance(task, ComplexTask):
+            task.observe('children_task', self._children_observer)
+            for child in task._gather_children_task():
+                self._bind_observers(child, counter)
 
-        if task.task_depth == 0:
-            self.children_entries = entries + children_entries
         else:
-            self.children_entries = children_entries
+            pools = []
+            parallel = task.parallel
+            if parallel.get('activated'):
+                pool = parallel['pool']
+                if pool:
+                    pools.append(pool)
 
-        self.entries = entries
-        self.complexs = complexs
+            wait = task.wait
+            if wait.get('activated'):
+                pools.extend(wait.get('wait', []))
+                pools.extend(wait.get('no_wait', []))
 
-    #--- Private API ----------------------------------------------------------
+            counter.update(pools)
 
-    def _observe_task(self, change):
+            task.observe('parallel', self._task_observer)
+            task.observe('wait', self._task_observer)
+
+    def _unbind_observers(self, task, counter):
+        """
+
+        """
+        if isinstance(task, ComplexTask):
+            task.unobserve('children_task', self._children_observer)
+            for child in task._gather_children_task():
+                self._unbind_observers(child, counter)
+
+        else:
+            pools = []
+            parallel = task.parallel
+            if parallel.get('activated'):
+                pool = parallel['pool']
+                if pool:
+                    pools.append(pool)
+
+            wait = task.wait
+            if wait.get('activated'):
+                pools.extend(wait.get('wait', []))
+                pools.extend(wait.get('no_wait', []))
+
+            counter.subtract(pools)
+
+            task.unobserve('parallel', self._task_observer)
+            task.unobserve('wait', self._task_observer)
+
+    def _observe_root(self, change):
         """
 
         """
         if 'oldvalue' in change and change['oldvalue']:
             self.unbind_observers(change['oldvalue'])
 
-        task = change['value']
-        if task:
-            self.build_entries()
+        root = change['value']
+        if root:
             self.bind_observers()
 
     def _task_observer(self, change):
         """
 
         """
-        entries = self.entries[:]
+        if change['name'] == 'parallel':
+            activated = change['value'].get('activated')
+            pool = change['value'].get('pool')
+            if not activated and pool:
+                self._counter[pool] -= 1
+                self.pools = list(set(self._counter.elements()))
 
-        if change['name'] == 'task_database_entries':
-            new = change['value'].viewkeys()
-            old = change.get('oldvalue',{}).viewkeys()
-            added = new - old
-            removed = old - new
-
-            for entry in removed:
-                entries.remove(task.task_name + '_' + entry)
-            for entry in added:
-                entries.append(task.task_name + '_' + entry)
+            elif activated and pool:
+                self._counter[pool] += 1
+                self.pools = list(set(self._counter.elements()))
 
         else:
-            if change['type'] != 'container':
-                new = set(change['value'])
-                old = set(change.get('oldvalue',[]))
-                added = new - old
-                removed = old - new
+            activated = change['value'].get('activated')
+            wait = change['value'].get('wait', [])
+            no_wait = change['value'].get('no_wait', [])
+            counter = Counter(wait + no_wait)
 
-                for entry in removed:
-                    entries.remove(task.task_name + '_' + entry)
-                for entry in added:
-                    entries.append(task.task_name + '_' + entry)
+            if not activated and counter:
+                self._counter.substract(counter)
+                self.pools = list(set(self._counter.elements()))
 
-            else:
-                op = change['operation']
-                if op in ('__iadd__', 'append', 'extend', 'insert'):
-                    if 'item' in change:
-                        entries.append(change['item'])
-                    if 'items' in change:
-                        entries.extend(change['items'])
-
-                elif op in ('__delitem__', 'remove', 'pop'):
-                    if 'item' in change:
-                        entries.remove(change['item'])
-                    if 'items' in change:
-                        for e in change['items']:
-                            entries.remove(e)
-
-        self.entries = entries
+            elif activated and counter:
+                self._counter.update(counter)
+                self.pools = list(set(self._counter.elements()))
 
     def _children_observer(self, change):
         """
@@ -156,61 +150,82 @@ class _Model(Atom):
         added = set(change['value']) - set(change.get('oldvalue', []))
         removed = set(change.get('oldvalue', [])) - set(change['value'])
 
-        complexs = self.complexs[:]
-        entries = self.entries[:]
-        c_entries = self.children_entries[:]
+        counter = Counter()
 
         for child in removed:
-            if isinstance(child, ComplexTask):
-                child.unobserve('access_ex', self._exceptions_observer)
-                # XXXX this assumes that children task is the only container.
-                child.unobserve('children_task', self._children_observer)
-
-                for d in complexs:
-                    if d[1] is child:
-                        d[0].unbind_observers()
-                        complexs.remove(d)
-                        break
-
-                for ex in child.access_exs:
-                    entries.remove(child.task_name + '_' + ex)
-                    if self.task.task_depth == 0:
-                        c_entries.remove(child.task_name + '_' + ex)
-
-            child.unobserve('task_database_entries',
-                            self._database_entries_observer)
-            for entry in child.task_database_entries.keys():
-                c_entries.remove(child.task_name + '_' + entry)
+            self._unbind_observers(child, counter)
 
         for child in added:
-            if isinstance(child, ComplexTask):
+            self._bind_observers(child, counter)
 
-                model = _Model(task=child)
-                model.observe('entries', self._model_entries_observer)
-                complexs.append((model, child))
+        self._counter.update(counter)
+        self.pools = list(set(counter.elements()))
 
-                for ex in child.access_exs:
-                    entries.append(child.task_name + '_' + ex)
-                    if self.task.task_depth == 0:
-                        c_entries.append(child.task_name + '_' + ex)
 
-            child.observe('task_database_entries',
-                          self._database_entries_observer)
-            for entry in child.task_database_entries.keys():
-                c_entries.append(child.task_name + '_' + entry)
+enamldef _PopupField(PopupView): popup:
+    """
 
-        self.complexs = complexs
-        self.entries = entries
-        self.children_entries = c_entries
+    """
+    Container:
+        constraints = [vbox(field, hbox(ok, cancel))]
+
+        Field: field:
+            submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+        PushButton: ok:
+            enabled << bool(field.text)
+            text = 'Ok'
+            clicked ::
+                popup.close()
+                popup.parent.answer = field.text
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                popup.close()
+
+enamldef _PopupList(PopupView): popup:
+    """
+
+    """
+    attr pools
+    attr selected : set
+    Container:
+        constraints = [vbox(area, hbox(ok, cancel))]
+
+        ScrollArea: area:
+            Container:
+                padding = 0
+                Looper:
+                    iterable = pools
+                    CheckBox:
+                        text = loop_item
+                        checked << loop_item in selected
+                        checked::
+                            if change['value']:
+                                selected.add(loop_item)
+                            else:
+                                selected.remove(loop_item)
+        PushButton: ok:
+            text = 'Ok'
+            clicked ::
+                popup.close()
+                popup.parent.answer = selected
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                popup.close()
 
 
 enamldef _SimpleExEditor(GroupBox):
 
     attr task
     attr _model
+    attr _map
     attr _lock : bool = False
 
     title = task.task_name
+
+    constraints << [hbox(stop, parallel, wait,
+                         *tuple(par_cond.items + wai_cond.items))]
 
     CheckBox: stop:
         text = 'Stoppable'
@@ -218,15 +233,17 @@ enamldef _SimpleExEditor(GroupBox):
         tool_tip = cleandoc('''Can the program be stopped or paused at this
                             task. Disabling allow to skip some check and might
                             be beneficial in very tight loops.''')
+        hug_width = 'strong'
 
     CheckBox: parallel:
         text = 'Parallel'
         tool_tip = cleandoc('''Should this task perform its job in parallel
                             (new thread).''')
+        hug_width = 'strong'
         checked << bool(task.parallel.get('activated'))
         checked ::
-            if not _lock:
-                _lock = True
+            if not self.parent._lock:
+                self.parent._lock = True
                 aux = task.parallel.copy()
                 aux['activated'] = change['value']
 
@@ -239,16 +256,17 @@ enamldef _SimpleExEditor(GroupBox):
                 if change['value']:
                     wait.checked = False
 
-                _lock = False
+                self.parent._lock = False
 
     CheckBox: wait:
         text = 'Wait'
         tool_tip = cleandoc('''Should this task wait for any other task
                             currently working in parallel.''')
+        hug_width = 'strong'
         checked << bool(task.wait.get('activated'))
         checked ::
-            if not _lock:
-                _lock = True
+            if not self.parent._lock:
+                self.parent._lock = True
                 aux = task.wait.copy()
                 aux['activated'] = change['value']
 
@@ -261,15 +279,77 @@ enamldef _SimpleExEditor(GroupBox):
                 if change['value']:
                     parallel.checked = False
 
-                _lock = False
+                self.parent._lock = False
 
-    Conditional:
+    Conditional: par_cond:
         condition << parallel.checked
-        # TODO
 
-    Conditional:
-        condtion << wait.checked
-        # TODO
+        ObjectCombo:
+            items << _model.pools
+            selected << task.parallel.get('pool')
+            selected ::
+                aux = task.parallel.copy()
+                aux['pool'] = change['value']
+                task.parallel = aux
+
+        PushButton:
+            attr answer
+            text = 'New'
+            hug_width = 'strong'
+
+            initialized::
+                self.answer = '__gg__'
+            clicked ::
+                popup = _PopupField(self)
+                popup.show()
+            answer ::
+                aux = task.parallel.copy()
+                aux['pool'] = change['value']
+                task.parallel = aux
+
+    Conditional: wai_cond:
+        condition << wait.checked
+        attr selected = set(task.wait.get('wait', []) +
+                                task.wait.get('no_wait', []))
+
+        RadioButton:
+            text = 'Wait on'
+            tool_tip = 'Wait on the list of selected pools.'
+            checked << 'no_wait' not in task.wait
+            checked ::
+                task.wait = dict(activated=True, wait=list(selected))
+
+        RadioButton:
+            text = 'No wait on'
+            tool_tip = "Don't wait on the selected pools."
+            checked << 'no_wait' in task.wait
+            checked ::
+                task.wait = dict(activated=True, no_wait=list(selected))
+
+        Field:
+            read_only = True
+            text << ', '.join(wai_cond.selected)
+            hug_width = 'ignore'
+
+        PushButton:
+            attr answer
+            text = 'Edit'
+            hug_width = 'strong'
+
+            initialized::
+                self.answer = ['']
+            clicked ::
+                sel = wai_cond.selected.copy()
+                popup = _PopupList(self, selected=sel, pools=_model.pools)
+                popup.show()
+            answer ::
+                new_sel = change['value']
+                wai_cond.selected = new_sel
+                if 'no_wait' in task.wait:
+                    task.wait = dict(activated=True, no_wait=list(new_sel))
+                else:
+                    task.wait = dict(activated=True, wait=list(new_sel))
+
 
 enamldef _ComplexExEditor(GroupBox):
 
@@ -279,64 +359,45 @@ enamldef _ComplexExEditor(GroupBox):
 
     title = task.task_name if task else ''
 
-    FlowArea:
-        hug_height = 'medium'
-        Looper:
-            iterable << _model.children_entries
-            FlowItem:
-                Container:
-                    padding = 0
-                    Conditional:
-                        condition << task.task_depth == 0 if task else False
-                        Container:
-                            padding = 0
-                            Label:
-                                text << loop_item
-
-                    Conditional:
-                        condition << task.task_depth > 0 if task else True
-                        Container:
-                            padding = 0
-                            CheckBox:
-                                text << loop_item
-                                checked = loop_item in task.access_exs\
-                                    if task else False
-                                checked ::
-                                    if change['value']:
-                                        task.add_access_exception(loop_item)
-                                    else:
-                                        task.remove_access_exception(loop_item)
-
     Looper:
-        iterable << _model.complexs
+        iterable << task._gather_children_task() if task else []
         MappedView:
-            model = loop_item[0]
+            model = loop_item
             typemap = _map
-            kwargs = {'task': loop_item[1], '_map': _map}
-            modelkey = '_model'
+            kwargs = {'_model': _model, '_map': _map}
+            modelkey = 'task'
+
+enamldef _EmptyEd(GroupBox):
+
+    attr task
+    attr _model
+    attr _map
 
 
 enamldef ExecutionEditor(BaseEditor): editor:
     """
 
     """
-    attr model = _Model(task=selected_task)
-    attr _map = {_Model : _AccessEditor}
+    attr pool_model = _Model()
+    attr _map = {SimpleTask: _SimpleExEditor, ComplexTask: _ComplexExEditor,
+                 type(None): _EmptyEd}
 
     title = 'Execution editor'
     name = 'execution_editor'
 
-    selected_task >> model.task
-
     selected ::
-        model.bind_observers()
+        task.model = None
+        pool_model.root = selected_task.root_task
+        pool_model.bind_observers()
+        task.model = selected_task
 
     unselected ::
-        model.unbind_observers()
+        pool_model.unbind_observers()
 
     Container:
-        ScrollArea: scroll:
-            _AccessEditor:
-                task << selected_task
-                _model << model
-                _map = editor._map
+        ScrollArea:
+            MappedView: task:
+                model << selected_task
+                typemap = _map
+                kwargs = {'_model': pool_model, '_map': _map}
+                modelkey = 'task'

@@ -50,10 +50,10 @@ class LogPlugin(HasPrefPlugin):
         self.add_handler(u'hqc_meas.standard_log', handler)
 
         # Automatic redirection of stdout and stderr to the log system
-        redir_stdout = StreamToLogRedirector(logger)
-        redir_stderr = StreamToLogRedirector(logger, stream_type='stderr')
-        sys.stdout = redir_stdout
-        sys.stderr = redir_stderr
+#        redir_stdout = StreamToLogRedirector(logger)
+#        redir_stderr = StreamToLogRedirector(logger, stream_type='stderr')
+#        sys.stdout = redir_stdout
+#        sys.stderr = redir_stderr
 
         logger.info('Log system started.')
         # Clean up upon application exit.

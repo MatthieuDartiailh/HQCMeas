@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_task.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import (Str, Float, ContainerList, Tuple, set_default)
@@ -55,7 +55,7 @@ class SleepTask(SimpleTask):
     #: Time during which to sleep.
     time = Float().tag(pref=True)
 
-    wait = set_default({'no_wait': []})  # Wait on all pools by default.
+    wait = set_default({'activated': True})  # Wait on all pools by default.
 
     def perform(self):
         """ Sleep.

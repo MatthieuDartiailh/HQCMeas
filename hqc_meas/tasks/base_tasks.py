@@ -387,7 +387,7 @@ class SimpleTask(BaseTask):
     #: - 'activated' : a bool indicating whether or not to wait.
     #: - 'wait' : the list should then specify which pool should be waited.
     #: - 'no_wait' : the list should specify which pool not to wait on.
-    wait = Dict(Str(), List()).tag(pref=True)
+    wait = Dict(Str()).tag(pref=True)
 
     def __init__(self, **kwargs):
         """ Overridden init to make sure perform is wrapped correctly.
@@ -531,7 +531,7 @@ class SimpleTask(BaseTask):
                                                     wait.get('wait'),
                                                     wait.get('no_wait'))
 
-        if self.stopable:
+        if self.stoppable:
             self.perform_ = make_stoppable(perform_func)
         else:
             self.perform_ = perform_func
@@ -1067,15 +1067,23 @@ class ComplexTask(BaseTask):
     def _gather_children_task(self):
         """ Build a flat list of all children task.
 
+        The children_task tasks are garanteed to always appear last in that
+        list.
+
         """
         children = []
         for name in tagged_members(self, 'child'):
+            if name == 'children_task':
+                continue
+
             child = getattr(self, name)
             if child:
                 if isinstance(child, list):
                     children.extend(child)
                 else:
                     children.append(child)
+
+        children.extend(self.children_task)
 
         return children
 

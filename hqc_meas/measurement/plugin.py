@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : measure_plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 import logging
 import os
 from collections import defaultdict
@@ -45,7 +45,7 @@ def _workspace():
 class MeasurePlugin(HasPrefPlugin):
     """
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
     # Have to be here otherwise lose tons of infos when closing workspace
 
     # List of (module_path, manifest_name) which should be regitered on
@@ -332,7 +332,7 @@ class MeasurePlugin(HasPrefPlugin):
 
         return measure
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     # Manifests ids of the plugin registered at start up.
     _manifest_ids = List(Unicode())
@@ -419,9 +419,10 @@ class MeasurePlugin(HasPrefPlugin):
             self.workbench.register(plugin)
             self._manifest_ids.append(plugin.id)
 
-        except Exception:
+        except Exception as e:
             logger = logging.getLogger(__name__)
-            logger.error('Failed to register manifest: {}'.format(path))
+            mess = 'Failed to register manifest: {}, error : {}'
+            logger.error(mess.format(path, e))
 
     def _refresh_engines(self):
         """ Refresh the list of known engines.
