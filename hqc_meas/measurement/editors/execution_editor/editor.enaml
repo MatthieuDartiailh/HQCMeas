@@ -4,163 +4,19 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import Atom, Value, Typed, List
 from enaml.widgets.api import (Container, GroupBox, CheckBox, ScrollArea,
-                               PopupView, RadioButton, Field, ToolButton,
+                               PopupView, Field, ToolButton, RadioButton,
                                ObjectCombo, PushButton)
 from enaml.core.api import Looper, Conditional
 from enaml.stdlib.mapped_view import MappedView
-from enaml.layout.api import hbox, spacer
+from enaml.layout.api import vbox, hbox, spacer
 from inspect import cleandoc
-from collections import Counter
 
 from hqc_meas.tasks.api import ComplexTask, SimpleTask
 from hqc_meas.tasks.tools.walks import flatten_walk
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from ..base_editor import BaseEditor
-
-
-
-class _Model(Atom):
-    """
-
-    """
-    root = Value()
-
-    pools = List()
-
-    def bind_observers(self):
-        """
-
-        """
-        counter = Counter()
-        self._bind_observers(self.root, counter)
-
-        self._counter = counter
-        self.pools = list(set(counter.elements()))
-
-    def unbind_observers(self):
-        """
-
-        """
-        self._unbind_observers(self.root, Counter())
-
-    # --- Private API ---------------------------------------------------------
-
-    _counter = Typed(Counter, ())
-
-    def _bind_observers(self, task, counter):
-        """
-
-        """
-        if isinstance(task, ComplexTask):
-            task.observe('children_task', self._children_observer)
-            for child in task._gather_children_task():
-                self._bind_observers(child, counter)
-
-        else:
-            pools = []
-            parallel = task.parallel
-            if parallel.get('activated'):
-                pool = parallel['pool']
-                if pool:
-                    pools.append(pool)
-
-            wait = task.wait
-            if wait.get('activated'):
-                pools.extend(wait.get('wait', []))
-                pools.extend(wait.get('no_wait', []))
-
-            counter.update(pools)
-
-            task.observe('parallel', self._task_observer)
-            task.observe('wait', self._task_observer)
-
-    def _unbind_observers(self, task, counter):
-        """
-
-        """
-        if isinstance(task, ComplexTask):
-            task.unobserve('children_task', self._children_observer)
-            for child in task._gather_children_task():
-                self._unbind_observers(child, counter)
-
-        else:
-            pools = []
-            parallel = task.parallel
-            if parallel.get('activated'):
-                pool = parallel['pool']
-                if pool:
-                    pools.append(pool)
-
-            wait = task.wait
-            if wait.get('activated'):
-                pools.extend(wait.get('wait', []))
-                pools.extend(wait.get('no_wait', []))
-
-            counter.subtract(pools)
-
-            task.unobserve('parallel', self._task_observer)
-            task.unobserve('wait', self._task_observer)
-
-    def _observe_root(self, change):
-        """
-
-        """
-        if 'oldvalue' in change and change['oldvalue']:
-            self.unbind_observers(change['oldvalue'])
-
-        root = change['value']
-        if root:
-            self.bind_observers()
-
-    def _task_observer(self, change):
-        """
-
-        """
-        if change['name'] == 'parallel':
-            activated = change['value'].get('activated')
-            pool = change['value'].get('pool')
-            if not activated and pool:
-                self._counter[pool] -= 1
-                self.pools = list(set(self._counter.elements()))
-
-            elif activated and pool:
-                self._counter[pool] += 1
-                self.pools = list(set(self._counter.elements()))
-
-        else:
-            activated = change['value'].get('activated')
-            wait = change['value'].get('wait', [])
-            no_wait = change['value'].get('no_wait', [])
-            counter = Counter(wait + no_wait)
-
-            if not activated and counter:
-                self._counter.substract(counter)
-                self.pools = list(set(self._counter.elements()))
-
-            elif activated and counter:
-                self._counter.update(counter)
-                self.pools = list(set(self._counter.elements()))
-
-    def _children_observer(self, change):
-        """
-
-        """
-        added = set(change['value']) - set(change.get('oldvalue', []))
-        removed = set(change.get('oldvalue', [])) - set(change['value'])
-
-        counter = Counter()
-
-        for child in removed:
-            self._unbind_observers(child, counter)
-
-        for child in added:
-            self._bind_observers(child, counter)
-
-        self._counter.update(counter)
-        self.pools = list(set(counter.elements()))
-
+from .editor_model import _Model
 
 enamldef _PopupField(PopupView): popup:
     """
@@ -215,15 +71,13 @@ enamldef _PopupList(PopupView): popup:
                 popup.close()
 
 
-enamldef _SimpleExEditor(GroupBox):
+enamldef _ExEditor(Container):
 
     attr task
     attr _model
-    attr _map
     attr _lock : bool = False
 
-    title = task.task_name
-
+    padding = 0
     constraints << [hbox(stop, parallel, wait,
                          *tuple(par_cond.items + wai_cond.items))]
 
@@ -312,22 +166,27 @@ enamldef _SimpleExEditor(GroupBox):
         attr selected = set(task.wait.get('wait', []) +
                                 task.wait.get('no_wait', []))
 
-        RadioButton:
+        RadioButton: r_wait:
             text = 'Wait on'
-            tool_tip = 'Wait on the list of selected pools.'
+            tool_tip = cleandoc('''Wait on the list of selected pools or all
+                                if no pool is selected''')
             checked << 'no_wait' not in task.wait
             checked ::
-                task.wait = dict(activated=True, wait=list(selected))
+                task.wait = dict(activated=True,
+                                 wait=list(wai_cond.selected))
 
         RadioButton:
             text = 'No wait on'
-            tool_tip = "Don't wait on the selected pools."
+            tool_tip = cleandoc("""Don't wait on the selected pools or wait on
+                                all if no pool is selected""")
             checked << 'no_wait' in task.wait
             checked ::
-                task.wait = dict(activated=True, no_wait=list(selected))
+                task.wait = dict(activated=True,
+                                 no_wait=list(wai_cond.selected))
 
         Field:
             read_only = True
+            placeholder << 'All' if r_wait.checked else 'None'
             text << ', '.join(wai_cond.selected)
             hug_width = 'ignore'
 
@@ -350,14 +209,28 @@ enamldef _SimpleExEditor(GroupBox):
                 else:
                     task.wait = dict(activated=True, wait=list(new_sel))
 
+enamldef _SimpleExEditor(GroupBox):
+    alias task : ed.task
+    alias _model : ed._model
 
-enamldef _ComplexExEditor(GroupBox):
+    title = task.task_name
+
+    _ExEditor: ed:
+        pass
+
+enamldef _ComplexExEditor(GroupBox): main:
 
     attr task
     attr _model
     attr _map
 
     title = task.task_name if task else ''
+
+    Conditional:
+        condition << task.task_depth != 0
+        _ExEditor:
+            task = main.task
+            _model = main._model
 
     Looper:
         iterable << task._gather_children_task() if task else []
