@@ -12,15 +12,14 @@ from atom.api\
             Tuple, Coerced)
 
 from configobj import Section, ConfigObj
-from threading import Thread
-from itertools import chain
 from inspect import cleandoc
 from copy import deepcopy
 import os
 
 from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
-from .tools.task_decorator import make_stoppable, smooth_crash
+from .tools.task_decorator import (make_parallel, make_wait, make_stoppable,
+                                   smooth_crash)
 from .tools.string_evaluation import safe_eval
 
 
@@ -73,6 +72,27 @@ class BaseTask(Atom):
     #: basically the perform method but wrapped with useful stuff such as
     #: interruption check or parallel, wait features.
     perform_ = Callable()
+
+     #: Flag indicating if this task can be stopped.
+    stoppable = Bool(True).tag(pref=True)
+
+    #: Dictionary indicating whether the task is executed in parallel
+    #: ('activated' key) and which is pool it belongs to ('pool' key).
+    parallel = Dict(Str()).tag(pref=True)
+
+    #: Dictionary indicating whether the task should wait on any pool before
+    #: performing its job. Three valid keys can be used :
+    #: - 'activated' : a bool indicating whether or not to wait.
+    #: - 'wait' : the list should then specify which pool should be waited.
+    #: - 'no_wait' : the list should specify which pool not to wait on.
+    wait = Dict(Str()).tag(pref=True)
+
+    def __init__(self, **kwargs):
+        """ Overridden init to make sure perform is wrapped correctly.
+
+        """
+        super(BaseTask, self).__init__(**kwargs)
+        self._redefine_perform_()
 
     def perform(self):
         """ The main method of any task as it is this one which is called when
@@ -337,12 +357,6 @@ class BaseTask(Atom):
         """
         return self.__class__.__name__
 
-    def _default_perform_(self):
-        """ Default value for the process_ member.
-
-        """
-        return make_stoppable(smooth_crash(self.perform.__func__))
-
     def _observe_task_name(self, change):
         """ Update the label any time the task name changes.
 
@@ -365,6 +379,33 @@ class BaseTask(Atom):
                     new_value = deepcopy(self.task_database_entries[entry])
                     self.write_in_database(entry, new_value)
 
+    @observe('wait', 'parallel', 'stopable')
+    def _parallell_wait_update(self, change):
+        """
+
+        """
+        self._redefine_perform_()
+
+    def _redefine_perform_(self):
+        """ Make perform_ refects the parallel/wait settings.
+
+        """
+        perform_func = smooth_crash(self.perform.__func__)
+        parallel = self.parallel
+        if parallel.get('activated') and parallel.get('pool'):
+            perform_func = make_parallel(perform_func, parallel['pool'])
+
+        wait = self.wait
+        if wait.get('activated'):
+            perform_func = make_wait(perform_func,
+                                     wait.get('wait'),
+                                     wait.get('no_wait'))
+
+        if self.stoppable:
+            self.perform_ = make_stoppable(perform_func)
+        else:
+            self.perform_ = perform_func
+
 
 class SimpleTask(BaseTask):
     """ Task with no child task, written in pure Python.
@@ -374,27 +415,6 @@ class SimpleTask(BaseTask):
 
     #: Class attribute specifying if that task can be used in a loop
     loopable = False
-
-    #: Flag indicating if this task can be stopped.
-    stoppable = Bool(True).tag(pref=True)
-
-    #: Dictionary indicating whether the task is executed in parallel
-    #: ('activated' key) and which is pool it belongs to ('pool' key).
-    parallel = Dict(Str()).tag(pref=True)
-
-    #: Dictionary indicating whether the task should wait on any pool before
-    #: performing its job. Three valid keys can be used :
-    #: - 'activated' : a bool indicating whether or not to wait.
-    #: - 'wait' : the list should then specify which pool should be waited.
-    #: - 'no_wait' : the list should specify which pool not to wait on.
-    wait = Dict(Str()).tag(pref=True)
-
-    def __init__(self, **kwargs):
-        """ Overridden init to make sure perform is wrapped correctly.
-
-        """
-        super(SimpleTask, self).__init__(**kwargs)
-        self._redefine_perform_()
 
     def write_in_database(self, name, value):
         """ Write a value to the right database entry.
@@ -505,143 +525,6 @@ class SimpleTask(BaseTask):
             setattr(task, name, converted)
 
         return task
-
-    # --- Private API ---------------------------------------------------------
-
-    @observe('wait', 'parallel', 'stopable')
-    def _parallell_wait_update(self, change):
-        """
-
-        """
-        self._redefine_perform_()
-
-    def _redefine_perform_(self):
-        """ Make process_ refects the parallel/wait settings.
-
-        """
-        perform_func = smooth_crash(self.perform.__func__)
-        parallel = self.parallel
-        if parallel.get('activated') and parallel.get('pool'):
-            perform_func = self._make_parallel_perform_(perform_func,
-                                                        parallel['pool'])
-
-        wait = self.wait
-        if wait.get('activated') and ('wait' in wait or 'no_wait' in wait):
-            perform_func = self._make_wait_perform_(perform_func,
-                                                    wait.get('wait'),
-                                                    wait.get('no_wait'))
-
-        if self.stoppable:
-            self.perform_ = make_stoppable(perform_func)
-        else:
-            self.perform_ = perform_func
-
-    @staticmethod
-    def _make_parallel_perform_(perform, pool):
-        """ Machinery to execute process_ in parallel.
-
-        Create a wrapper around a method to execute it in a thread and
-        register the thread.
-
-        Parameters
-        ----------
-        process : method
-            Method which should be wrapped to run in parallel.
-
-        pool : str
-            Name of the execution pool to which the created thread belongs.
-
-        """
-        def wrapper(*args, **kwargs):
-
-            obj = args[0]
-            thread = Thread(group=None,
-                            target=perform,
-                            args=args,
-                            kwargs=kwargs)
-            all_threads = obj.task_database.get_value('root', 'threads')
-            threads = all_threads.get(pool, None)
-            if threads:
-                threads.append(thread)
-            else:
-                all_threads[pool] = [thread]
-
-            return thread.start()
-
-        wrapper.__name__ = perform.__name__
-        wrapper.__doc__ = perform.__doc__
-        return wrapper
-
-    @staticmethod
-    def _make_wait_perform_(perform, wait, no_wait):
-        """ Machinery to make perform_ wait on other tasks execution.
-
-        Create a wrapper around a method to wait for some threads to terminate
-        before calling the method. Threads are grouped in execution pools.
-
-        Parameters
-        ----------
-        process : method
-            Method which should be wrapped to wait on threads.
-
-        wait : list(str)
-            Names of the execution pool which should be waited for.
-
-        no_wait : list(str)
-            Names of the execution pools which should not be waited for.
-
-        Both parameters are mutually exlusive. If both lists are empty the
-        execution will be differed till all the execution pools have completed
-        their works.
-
-        """
-        if wait:
-            def wrapper(*args, **kwargs):
-
-                obj = args[0]
-                all_threads = obj.task_database.get_value('root', 'threads')
-
-                threads = chain.from_iterable([all_threads.get(w, [])
-                                               for w in wait])
-                for thread in threads:
-                    thread.join()
-                all_threads.update({w: [] for w in wait if w in all_threads})
-
-                obj.task_database.set_value('root', 'threads', all_threads)
-                return perform(*args, **kwargs)
-
-        elif no_wait:
-            def wrapper(*args, **kwargs):
-
-                obj = args[0]
-                all_threads = obj.task_database.get_value('root', 'threads')
-
-                pools = [k for k in all_threads if k not in no_wait]
-                threads = chain.from_iterable([all_threads[p] for p in pools])
-                for thread in threads:
-                    thread.join()
-                all_threads.update({p: [] for p in pools})
-
-                obj.task_database.set_value('root', 'threads', all_threads)
-                return perform(*args, **kwargs)
-        else:
-            def wrapper(*args, **kwargs):
-
-                obj = args[0]
-                all_threads = obj.task_database.get_value('root', 'threads')
-
-                threads = chain.from_iterable(all_threads.values())
-                for thread in threads:
-                    thread.join()
-                all_threads.update({w: [] for w in all_threads})
-
-                obj.task_database.set_value('root', 'threads', all_threads)
-                return perform(*args, **kwargs)
-
-        wrapper.__name__ = perform.__name__
-        wrapper.__doc__ = perform.__doc__
-
-        return wrapper
 
 
 class ComplexTask(BaseTask):
