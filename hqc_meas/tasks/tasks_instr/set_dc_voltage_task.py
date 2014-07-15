@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : set_dc_voltage_task.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import (Float, Value, Str, Int, set_default)
@@ -186,7 +186,7 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
 
             try:
                 instr = driver_class(config)
-                if not self.channel in instr.defined_channels:
+                if self.channel not in instr.defined_channels:
                     key = task.task_path + '/' + task.task_name + '_interface'
                     traceback[key] = 'Missing channel {}'.format(self.channel)
                 instr.close_connection()
