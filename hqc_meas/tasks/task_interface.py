@@ -11,7 +11,6 @@ from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from hqc_meas.tasks.base_tasks import SimpleTask
-from ..utils.atom_util import member_from_str, tagged_members
 
 
 class InterfaceableTaskMixin(Atom):
@@ -114,19 +113,27 @@ class InterfaceableTaskMixin(Atom):
         """ Register the task preferences into the preferences system.
 
         """
-        self.task_preferences.clear()
-        for name in tagged_members(self, 'pref'):
-            val = getattr(self, name)
-            if isinstance(val, basestring):
-                self.task_preferences[name] = val
-            else:
-                self.task_preferences[name] = repr(val)
+        ancestors = type(self).mro()
+        # XXXX here no check that the mixin apperas only once.
+        i = ancestors.index(InterfaceableTaskMixin)
+        ancestors[i + 1].register_preferences(self)
 
         if self.interface:
             prefs = self.interface.preferences_from_members()
             self.task_preferences['interface'] = prefs
 
-    update_preferences_from_members = register_preferences
+    def update_preferences_from_members(self):
+        """ Update the values stored in the preference system.
+
+        """
+        ancestors = type(self).mro()
+        # XXXX here no check that the mixin apperas only once.
+        i = ancestors.index(InterfaceableTaskMixin)
+        ancestors[i + 1].update_preferences_from_members(self)
+
+        if self.interface:
+            prefs = self.interface.preferences_from_members()
+            self.task_preferences['interface'] = prefs
 
     @classmethod
     def build_from_config(cls, config, dependencies):
@@ -148,15 +155,10 @@ class InterfaceableTaskMixin(Atom):
             Newly built task.
 
         """
-        task = cls()
-        for name, member in tagged_members(task, 'pref').iteritems():
-
-            if name not in config:
-                continue
-
-            value = config[name]
-            converted = member_from_str(member, value)
-            setattr(task, name, converted)
+        ancestors = cls.mro()
+        # XXXX here no check that the mixin apperas only once.
+        i = ancestors.index(InterfaceableTaskMixin)
+        task = ancestors[i + 1].build_from_config(cls)
 
         if 'interface' in config:
             inter_class_name = config['interface'].pop('interface_class')

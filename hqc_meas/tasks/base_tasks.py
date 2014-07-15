@@ -73,7 +73,7 @@ class BaseTask(Atom):
     #: interruption check or parallel, wait features.
     perform_ = Callable()
 
-     #: Flag indicating if this task can be stopped.
+    #: Flag indicating if this task can be stopped.
     stoppable = Bool(True).tag(pref=True)
 
     #: Dictionary indicating whether the task is executed in parallel
@@ -601,10 +601,10 @@ class ComplexTask(BaseTask):
 
         """
         answer = [self.answer(members, callables)]
-        for task in self.children_task:
+        for task in self._gather_children_task():
             if isinstance(task, SimpleTask):
                 answer.append(task.answer(members, callables))
-            else:
+            elif task:
                 answer.append(task.walk(members, callables))
 
         return answer
@@ -665,7 +665,7 @@ class ComplexTask(BaseTask):
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 # Perform a deepcopy of the entry value as I don't want to
-                # alter that default value when delaing with the database later
+                # alter that default value when dealing with the database later
                 # on (apply for list and dict).
                 value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
