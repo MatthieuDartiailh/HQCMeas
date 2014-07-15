@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : manager_plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 import os
@@ -268,8 +268,8 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         else:
             configs = self._configs
-            #Look up the hierarchy of the selected task to get the appropriate
-            #TaskConfig
+            # Look up the hierarchy of the selected task to get the appropriate
+            # TaskConfig
             task_class = self._py_tasks[task]
             for t_class in type.mro(task_class):
                 if t_class in configs:
@@ -405,7 +405,7 @@ class TaskManagerPlugin(HasPrefPlugin):
         """
         return self._failed
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
     #: Tasks implemented in Python
     _py_tasks = Dict(Str(), Subclass(BaseTask))
 

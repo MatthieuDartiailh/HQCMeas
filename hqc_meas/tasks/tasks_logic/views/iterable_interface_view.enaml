@@ -1,0 +1,32 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : iterable_interface_view.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.widgets.api import (Container, Label, Splitter, SplitItem)
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+
+
+enamldef IterableInterfaceLabel(Label):
+
+    attr interface
+    attr inline = True
+
+    text = 'Iterable'
+
+enamldef IterableInterfaceView(QtLineCompleter):
+
+    attr interface
+
+    text := interface.iterable
+    entries_updater << interface.task.accessible_database_entries
+    tool_tip = EVALUATER_TOOLTIP
+
+
+INTERFACE_VIEW_MAPPING = {'IterableLoopInterface': [IterableInterfaceLabel,
+                                                    IterableInterfaceView]}

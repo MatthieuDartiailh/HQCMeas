@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
+# =============================================================================
+# module : layouts.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
 from enaml.layout.layout_helpers import grid
-#from enaml.widgets.api import GroupBox
 
 
 def auto_grid_layout(self):

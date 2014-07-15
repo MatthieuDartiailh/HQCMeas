@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_intr_view.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import (Typed, Value, Instance, List, Str, set_default, Dict,
@@ -82,7 +82,7 @@ class BaseInstrumentView(GroupBox):
         self._unbind_observers()
         super(BaseInstrumentView, self).destroy()
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     #: Map between driver and interface.
     _interfaces = Dict(Str())
@@ -101,7 +101,7 @@ class BaseInstrumentView(GroupBox):
             for i_v in self.i_views:
                 i_v.destroy()
 
-            # If no interface is used simple assign None
+            # If no interface is used simply assign None
             if type(None) == interface:
                 self.task.interface = None
                 return
