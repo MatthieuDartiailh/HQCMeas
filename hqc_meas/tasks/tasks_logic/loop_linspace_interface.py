@@ -34,22 +34,25 @@ class LinspaceLoopInterface(TaskInterface):
         task = self.task
         try:
             start = task.format_and_eval_string(self.start)
-        except Exception:
+        except Exception as e:
             test = False
+            mess = 'Loop task did not succeed to compute  the start value: {}'
             traceback[task.task_path + '/' + task.task_name + '-start'] = \
-                'Loop task did not success to compute  the start value'
+                mess.format(e)
         try:
             stop = task.format_and_eval_string(self.stop)
-        except Exception:
+        except Exception as e:
             test = False
+            mess = 'Loop task did not succeed to compute  the stop value: {}'
             traceback[task.task_path + '/' + task.task_name + '-stop'] = \
-                'Loop task did not success to compute  the stop value'
+                mess.format(e)
         try:
-            step = self.format_and_eval_string(self.step)
-        except Exception:
+            step = task.format_and_eval_string(self.step)
+        except Exception as e:
             test = False
+            mess = 'Loop task did not succeed to compute the step value: {}'
             traceback[task.task_path + '/' + task.task_name + '-step'] = \
-                'Loop task did not success to compute the step value'
+                mess.format(e)
 
         if not test:
             return test, traceback
@@ -57,16 +60,19 @@ class LinspaceLoopInterface(TaskInterface):
         try:
             num = int(abs((stop - start)/step)) + 1
             task.write_in_database('point_number', num)
-        except Exception:
+        except Exception as e:
             test = False
+            mess = 'Loop task did not succeed to compute the point number: {}'
             traceback[task.task_path + '/' + task.task_name + '-points'] = \
-                'Loop task did not success to compute the point number'
+                mess.format(e)
+
         try:
             linspace(start, stop, num)
         except Exception:
             test = False
+            mess = 'Loop task did not succeed to create a linspace: {}'
             traceback[task.task_path + '/' + task.task_name + '-linspace'] = \
-                'Loop task did not success to create a linspace.'
+                mess.format(e)
 
         return test, traceback
 

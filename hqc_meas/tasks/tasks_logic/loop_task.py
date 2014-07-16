@@ -146,16 +146,20 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
 
         """
         if self.has_root:
+            c_type = change['type']
             if 'oldvalue' in change and change['oldvalue']:
                 self._child_removed(change['oldvalue'])
 
-            if change['value']:
+            if change['value'] and c_type != 'delete':
                 self._child_added(change['value'])
                 aux = self.task_database_entries.copy()
                 if 'value' in aux:
                     del aux['value']
                 self.task_database_entries = aux
+
             else:
+                if c_type == 'delete':
+                    self._child_removed(change['value'])
                 aux = self.task_database_entries.copy()
                 aux['value'] = 1.0
                 self.task_database_entries = aux

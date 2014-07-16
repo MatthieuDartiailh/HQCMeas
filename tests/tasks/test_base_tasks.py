@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_database.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from hqc_meas.tasks.api import RootTask, SimpleTask, ComplexTask
 from nose.tools import assert_equal, assert_is, assert_raises
 
@@ -46,7 +46,7 @@ def test_child_addition_handling1():
 
 def test_child_addition_handling2():
     # Test that adding a task to a complex task below the root task is
-    #correctly handled.
+    # correctly handled.
     root = RootTask()
     task1 = ComplexTask(task_name='task1',
                         task_database_entries={'val1': 2.0})

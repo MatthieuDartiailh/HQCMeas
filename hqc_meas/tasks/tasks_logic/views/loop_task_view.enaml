@@ -9,7 +9,7 @@
 from enaml.core.api import Include
 from enaml.layout.api import hbox, align, spacer, vbox, grid, factory
 from enaml.widgets.api import (PushButton, Container, Label, Field,
-                                GroupBox, CheckBox)
+                                GroupBox, CheckBox, ObjectCombo)
 
 from hqc_meas.tasks.tools.task_editor import (TaskEditor, TaskViewManager)
 
@@ -51,12 +51,12 @@ enamldef LoopView(GroupBox): view:
     attr _model = TaskViewManager([task.task], core=core)
 
     title << task.task_name
-    constraints << [factory(_constraints_helpers)
+    constraints << [factory(_constraints_helpers)]
 
     Label:
         text = 'Interface'
     ObjectCombo:
-        items << core.invoke_command('hqc_meas.task_manager.interfaces_request'
+        items << core.invoke_command('hqc_meas.task_manager.interfaces_request',
                                      {'tasks': task.task_name})
         to_string = _name_formatter
         selected << type(task.interface) if task.interface else items[0]
@@ -83,8 +83,8 @@ enamldef LoopView(GroupBox): view:
                                                         'in_loop': True})]\
                    if task.task else []
 
-    TaskEditor:
+    TaskEditor: editor:
         task := view.task
 
-TASK_VIEW_MAPPING = {'SimpleLoopTask': SimpleLoopView,
-                     'LoopTask': LoopView}
+
+TASK_VIEW_MAPPING = {'LoopTask': LoopView}

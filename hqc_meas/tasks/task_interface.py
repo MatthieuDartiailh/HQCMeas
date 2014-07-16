@@ -6,11 +6,11 @@
 # =============================================================================
 """
 """
-from atom.api import Atom, ForwardInstance, Instance, Str
+from atom.api import Atom, ForwardInstance, Instance, Str, Dict
 from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import HasPrefAtom
-from hqc_meas.tasks.base_tasks import SimpleTask
+from hqc_meas.tasks.base_tasks import BaseTask
 
 
 class InterfaceableTaskMixin(Atom):
@@ -167,13 +167,25 @@ class InterfaceableTaskMixin(Atom):
                                                            dependencies)
 
     def _observe_interface(self, change):
-        """ Observer.
+        """ Observer ensuring the interface always has a valid ref to the task
+        and that the interface database entries are added to the task one.
 
         """
+        # XXXX Workaround Atom _DictProxy issue.
+        new_entries = dict(self.task_database_entries)
         if 'oldvalue' in change and change['oldvalue']:
-            change['oldvalue'].task = None
+            inter = change['oldvalue']
+            inter.task = None
+            for entry in inter.interface_database_entries:
+                new_entries.pop(entry, None)
+
         if change['value']:
-            change['value'].task = self
+            inter = change['value']
+            inter.task = self
+            for entry, value in inter.interface_database_entries.iteritems():
+                new_entries[entry] = value
+
+        self.task_database_entries = new_entries
 
 
 class TaskInterface(HasPrefAtom):
@@ -184,10 +196,13 @@ class TaskInterface(HasPrefAtom):
     has_view = False
 
     #: A reference to which this interface is linked.
-    task = Instance(SimpleTask)
+    task = Instance(BaseTask)
 
     #: Name of the class of the interface. Used for persistence purposes.
     interface_class = Str().tag(pref=True)
+
+    #: Dict of database entries added by the interface.
+    interface_database_entries = Dict(Str())
 
     def check(self, *args, **kwargs):
         """
