@@ -95,3 +95,5 @@ class ContinueTask(SimpleTask):
         """
         if self.format_and_eval_string(self.condition):
             raise ContinueException()
+
+KNOWN_PY_TASKS = [BreakTask, ContinueTask]

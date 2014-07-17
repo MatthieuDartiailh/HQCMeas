@@ -25,16 +25,16 @@ def _constraints_helpers(view):
         if hasattr(i_views[0], 'inline') and i_views[0].inline:
             labels = children[:i_len+1:2]
             vals = labels = children[1:i_len+1:2]
-            return [vbox(grid([children, labels]), children[3+i_len+1:])]
+            return [vbox(grid(labels, vals), *children[3+i_len+1:])]
 
         else:
             c_1 = hbox(children[0], children[1], children[2], children[3],
                        spacer)
-            return [vbox(c_1, children[4:])]
+            return [vbox(c_1, *children[4:])]
 
     else:
         c_1 = hbox(children[0], children[1], children[2], children[3], spacer)
-        return [vbox(c_1, children[4:])]
+        return [vbox(c_1, *children[4:])]
 
 
 def _name_formatter(i_class):
@@ -56,18 +56,26 @@ enamldef LoopView(GroupBox): view:
     Label:
         text = 'Interface'
     ObjectCombo:
-        items << core.invoke_command('hqc_meas.task_manager.interfaces_request',
-                                     {'tasks': task.task_name})
+        items << list(core.invoke_command(
+                          'hqc_meas.task_manager.interfaces_request',
+                          {'tasks': task.task_class})[0][task.task_class])
         to_string = _name_formatter
         selected << type(task.interface) if task.interface else items[0]
         selected ::
-            interf = change['value']()
-            task.interface = interf
+            i_include = view.find('interface_include')
+            i_include.objects = []
+
+            i_class = change['value']
+            interface = i_class()
+            i_name = interface.interface_class
+            task.interface = interface
+
             cmd = 'hqc_meas.task_manager.interface_views_request'
             i_views, _ = core.invoke_command(cmd, {'interface_classes':
-                                                   [interf.interface_class]})
-            view.interface.objects = [i_view(interface=interf)
-                                      for i_view in i_views]
+                                                   [i_name]})
+
+            i_include.objects = [i_view(interface=interface)
+                                      for i_view in i_views[i_name]]
 
     Label:
         text = 'Timing'

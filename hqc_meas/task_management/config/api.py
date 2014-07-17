@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : api.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 
 # Importing all known tasks
 from ...tasks.api import SimpleTask, ComplexTask
-from ...tasks.tasks_logic.loop_tasks import LoopTask
+from ...tasks.tasks_logic.loop_task import LoopTask
 
 # Importing the base task config
 from .base_task_config import (AbstractConfigTask, IniConfigTask, PyConfigTask)

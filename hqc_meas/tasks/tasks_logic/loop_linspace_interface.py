@@ -79,12 +79,13 @@ class LinspaceLoopInterface(TaskInterface):
     def perform(self):
         """
         """
-        start = self.format_and_eval_string(self.task_start)
-        stop = self.format_and_eval_string(self.task_stop)
-        step = self.format_and_eval_string(self.task_step)
+        task = self.task
+        start = task.format_and_eval_string(self.start)
+        stop = task.format_and_eval_string(self.stop)
+        step = task.format_and_eval_string(self.step)
         num = int(round(abs(((stop - start)/step)))) + 1
 
         iterable = linspace(start, stop, num)
-        self.task.loop_perform(iterable)
+        task.perform_loop(iterable)
 
 INTERFACES = {'LoopTask': [LinspaceLoopInterface]}

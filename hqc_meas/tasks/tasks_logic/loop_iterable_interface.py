@@ -34,7 +34,9 @@ class IterableLoopInterface(TaskInterface):
                 'Loop task did not success to compute  the iterable'
             return test, traceback
 
-        if not isinstance(iterable, Iterable):
+        if isinstance(iterable, Iterable):
+            task.write_in_database('point_number', len(iterable))
+        else:
             test = False
             traceback[task.task_path + '/' + task.task_name] = \
                 'The computed iterable is not iterable.'
@@ -44,8 +46,9 @@ class IterableLoopInterface(TaskInterface):
     def perform(self):
         """
         """
-        iterable = self.format_and_eval_string(self.iterable)
+        task = self.task
+        iterable = task.format_and_eval_string(self.iterable)
 
-        self.task.loop_perform(iterable)
+        task.perform_loop(iterable)
 
 INTERFACES = {'LoopTask': [IterableLoopInterface]}

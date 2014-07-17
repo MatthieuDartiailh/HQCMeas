@@ -63,8 +63,7 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
 
         stop_flag = self.root_task.should_stop
         pause_flag = self.root_task.should_pause
-        children = self._gather_children_task()
-        for i, value in iterable:
+        for i, value in enumerate(iterable):
             if stop_flag.is_set():
                 break
             while pause_flag.is_set():
@@ -74,7 +73,7 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
             self.write_in_database('index', i+1)
             self.write_in_database('value', value)
             try:
-                for child in children:
+                for child in self.children_task:
                     child.perform_(child)
             except BreakException:
                 break
@@ -89,8 +88,7 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
 
         stop_flag = self.root_task.should_stop
         pause_flag = self.root_task.should_pause
-        children = self._gather_children_task()
-        for i, value in iterable:
+        for i, value in enumerate(iterable):
             if stop_flag.is_set():
                 break
             while pause_flag.is_set():
@@ -100,7 +98,7 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
             self.write_in_database('index', i+1)
             self.task.perform_(self.task, value)
             try:
-                for child in children:
+                for child in self.children_task:
                     child.perform_(child)
             except BreakException:
                 break
@@ -115,8 +113,7 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
 
         stop_flag = self.root_task.should_stop
         pause_flag = self.root_task.should_pause
-        children = self._gather_children_task()
-        for i, value in iterable:
+        for i, value in enumerate(iterable):
             if stop_flag.is_set():
                 break
             while pause_flag.is_set():
@@ -127,11 +124,13 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
             self.write_in_database('value', value)
             tic = default_timer()
             try:
-                for child in children:
+                for child in self.children_task:
                     child.perform_(child)
             except BreakException:
+                self.write_in_database('elapsed_time', default_timer()-tic)
                 break
             except ContinueException:
+                self.write_in_database('elapsed_time', default_timer()-tic)
                 continue
             self.write_in_database('elapsed_time', default_timer()-tic)
 
@@ -143,8 +142,7 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
 
         stop_flag = self.root_task.should_stop
         pause_flag = self.root_task.should_pause
-        children = self._gather_children_task()
-        for i, value in iterable:
+        for i, value in enumerate(iterable):
             if stop_flag.is_set():
                 break
             while pause_flag.is_set():
@@ -153,12 +151,15 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
                     return
             self.write_in_database('index', i+1)
             tic = default_timer()
+            self.task.perform_(self.task, value)
             try:
-                for child in children:
+                for child in self.children_task:
                     child.perform_(child)
             except BreakException:
+                self.write_in_database('elapsed_time', default_timer()-tic)
                 break
             except ContinueException:
+                self.write_in_database('elapsed_time', default_timer()-tic)
                 continue
             self.write_in_database('elapsed_time', default_timer()-tic)
 

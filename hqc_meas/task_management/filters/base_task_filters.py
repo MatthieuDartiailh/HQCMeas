@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_task_filters.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """ Modules defining the basic filters.
 
 :Contains:
@@ -23,7 +23,7 @@
         Dict mapping useful filters to their names.
 
 """
-from ...tasks.api import (SimpleTask, ComplexTask, BaseLoopTask,
+from ...tasks.api import (SimpleTask, ComplexTask,
                           InstrumentTask)
 
 
@@ -125,11 +125,11 @@ class ComplexTaskFilter(SubclassFilter):
     task_class = ComplexTask
 
 
-class LoopTaskFilter(SubclassFilter):
-    """ Filter keeping only the subclasses of BaseLoopTask.
-
-    """
-    task_class = BaseLoopTask
+#class LoopTaskFilter(SubclassFilter):
+#    """ Filter keeping only the subclasses of BaseLoopTask.
+#
+#    """
+#    task_class = BaseLoopTask
 
 
 class InstrumentTaskFilter(SubclassFilter):
@@ -174,5 +174,5 @@ TASK_FILTERS = {'All': AllTaskFilter,
                 'Simple': SimpleTaskFilter,
                 'Complex': ComplexTaskFilter,
                 'Loopable': LoopableTaskFilter,
-                'Instrs': InstrumentTaskFilter,
-                'Loop': LoopTaskFilter}
+                'Instrs': InstrumentTaskFilter}
+#                'Loop': LoopTaskFilter}
