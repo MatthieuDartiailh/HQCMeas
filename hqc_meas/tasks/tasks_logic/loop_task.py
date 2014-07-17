@@ -13,6 +13,7 @@ from time import sleep
 
 from ..base_tasks import (SimpleTask, ComplexTask)
 from ..task_interface import InterfaceableTaskMixin
+from .loop_exceptions import BreakException, ContinueException
 
 
 class LoopTask(InterfaceableTaskMixin, ComplexTask):
@@ -72,8 +73,13 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
                     return
             self.write_in_database('index', i+1)
             self.write_in_database('value', value)
-            for child in children:
-                child.perform_(child)
+            try:
+                for child in children:
+                    child.perform_(child)
+            except BreakException:
+                break
+            except ContinueException:
+                continue
 
     def _perform_loop_task(self, iterable):
         """
@@ -93,8 +99,13 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
                     return
             self.write_in_database('index', i+1)
             self.task.perform_(self.task, value)
-            for child in children:
-                child.perform_(child)
+            try:
+                for child in children:
+                    child.perform_(child)
+            except BreakException:
+                break
+            except ContinueException:
+                continue
 
     def _perform_loop_timing(self, iterable):
         """
@@ -115,8 +126,13 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
             self.write_in_database('index', i+1)
             self.write_in_database('value', value)
             tic = default_timer()
-            for child in children:
-                child.perform_(child)
+            try:
+                for child in children:
+                    child.perform_(child)
+            except BreakException:
+                break
+            except ContinueException:
+                continue
             self.write_in_database('elapsed_time', default_timer()-tic)
 
     def _perform_loop_timing_task(self, iterable):
@@ -137,8 +153,13 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
                     return
             self.write_in_database('index', i+1)
             tic = default_timer()
-            for child in children:
-                child.perform_(child)
+            try:
+                for child in children:
+                    child.perform_(child)
+            except BreakException:
+                break
+            except ContinueException:
+                continue
             self.write_in_database('elapsed_time', default_timer()-tic)
 
     def _observe_task(self, change):
