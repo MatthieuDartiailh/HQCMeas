@@ -14,12 +14,11 @@ from atom.api\
 from configobj import Section, ConfigObj
 from inspect import cleandoc
 from copy import deepcopy
-import os
+import os, logging
 
 from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
-from .tools.task_decorator import (make_parallel, make_wait, make_stoppable,
-                                   smooth_crash)
+from .tools.task_decorator import (make_parallel, make_wait, make_stoppable)
 from .tools.string_evaluation import safe_eval
 
 
@@ -390,7 +389,7 @@ class BaseTask(Atom):
         """ Make perform_ refects the parallel/wait settings.
 
         """
-        perform_func = smooth_crash(self.perform.__func__)
+        perform_func = self.perform.__func__
         parallel = self.parallel
         if parallel.get('activated') and parallel.get('pool'):
             perform_func = make_parallel(perform_func, parallel['pool'])
@@ -1308,15 +1307,22 @@ class RootTask(ComplexTask):
         """ Run sequentially all child tasks, and close ressources.
 
         """
-        for child in self.children_task:
-            child.perform_(child)
-        pools = self.task_database.get_value('root', 'threads')
-        for pool in pools.values():
-            for thread in pool:
-                thread.join()
-        instrs = self.task_database.get_value('root', 'instrs')
-        for instr_profile in instrs:
-            instrs[instr_profile].close_connection()
+        try:
+            for child in self.children_task:
+                child.perform_(child)
+        except Exception:
+            log = logging.getLogger(__name__)
+            mes = 'The following unhandled exception occured:'
+            log.exception(mes)
+            self.should_stop.set()
+        finally:
+            pools = self.task_database.get_value('root', 'threads')
+            for pool in pools.values():
+                for thread in pool:
+                    thread.join()
+            instrs = self.task_database.get_value('root', 'instrs')
+            for instr_profile in instrs:
+                instrs[instr_profile].close_connection()
 
     def register_in_database(self):
         """ Create a node in the database and register all entries.
