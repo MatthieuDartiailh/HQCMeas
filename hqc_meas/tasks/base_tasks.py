@@ -20,6 +20,7 @@ from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
 from .tools.task_decorator import (make_parallel, make_wait, make_stoppable)
 from .tools.string_evaluation import safe_eval
+from .tools.safe_dict import SafeDict
 
 
 PREFIX = '_a'
@@ -1273,19 +1274,31 @@ class RootTask(ComplexTask):
     #: Inter-process event signaling the task it should pause execution.
     should_pause = Instance(Event)
 
-    # Inter-Thread event signaling the main thread is done, handling the
-    # measure resuming.
+    #: Inter-Thread event signaling the main thread is done, handling the
+    #: measure resuming.
     resume = Value()
 
-    # Seeting default values for the root task.
+    #: Dict like object used to store references to all running threads.
+    #: Keys are pools ids, values list of threads. Keys are never deleted.
+    threads = Typed(SafeDict, (list))
+
+    #: Dict like object used to store references to used instruments.
+    #: Keys are instrument profile names, values instr instance. Keys are never
+    #: deleted.
+    instrs = Typed(SafeDict, ())
+
+    #: Dict like object used to store file handle.
+    #: Keys are file handle id as defined by the first user of the file.
+    #: Keys can be deleted.
+    files = Typed(SafeDict, ())
+
+    # Setting default values for the root task.
     has_root = set_default(True)
     task_name = set_default('Root')
     task_label = set_default('Root')
     task_depth = set_default(0)
     task_path = set_default('root')
-    task_database_entries = set_default({'threads': {},
-                                         'instrs': {},
-                                         'default_path': ''})
+    task_database_entries = set_default({'default_path': ''})
 
     def __init__(self, *args, **kwargs):
         self.task_preferences = ConfigObj(indent_type='    ')
@@ -1321,13 +1334,21 @@ class RootTask(ComplexTask):
             log.exception(mes)
             self.should_stop.set()
         finally:
-            pools = self.task_database.get_value('root', 'threads')
-            for pool in pools.values():
-                for thread in pool:
-                    thread.join()
-            instrs = self.task_database.get_value('root', 'instrs')
+            # Wait for all threads to terminate.
+            for pool_name in self.threads:
+                with self.threads.safe_access(pool_name) as pool:
+                    for thread in pool:
+                        thread.join()
+
+            # Close connection to all instruments.
+            instrs = self.instrs
             for instr_profile in instrs:
                 instrs[instr_profile].close_connection()
+
+            # Close all opened files.
+            files = self.files
+            for file_id in files:
+                files[file_id].close()
 
     def register_in_database(self):
         """ Create a node in the database and register all entries.
@@ -1341,8 +1362,6 @@ class RootTask(ComplexTask):
                 # Perform a deepcopy of the entry value as I don't want to
                 # alter that default value when dealing with the database later
                 # on (apply for list and dict).
-                # The 'instrs' and 'threads' entries were the principal .
-                # motivations for using that mechanism.
                 value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
                                              entry,

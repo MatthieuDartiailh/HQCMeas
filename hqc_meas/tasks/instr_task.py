@@ -72,19 +72,14 @@ class InstrumentTask(SimpleTask):
 
         """
         run_time = self.root_task.run_time
-        instrs = self.task_database.get_value('root', 'instrs')
+        instrs = self.root_task.instrs
         if self.selected_profile in instrs:
             self.driver = instrs[self.selected_profile]
         else:
             config = run_time['profiles'][self.selected_profile]
             driver_class = run_time['drivers'][self.selected_driver]
             self.driver = driver_class(config)
-            # Create a shallow copy to avoid mutating a dict shared by multiple
-            # threads. (Only database get/set are thread safe not the object it
-            # contains)
-            instrs = instrs.copy()
             instrs[self.selected_profile] = self.driver
-            self.task_database.set_value('root', 'instrs', instrs)
 
     def stop_driver(self):
         """ Stop the instrument driver.

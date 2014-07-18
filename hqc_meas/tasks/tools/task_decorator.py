@@ -44,10 +44,10 @@ def handle_stop_pause(root):
             if not pause_flag.is_set():
                 if current_thread().name == 'MainThread':
                     # Prevent some issues if a stupid user changes a
-                    # value on instr set by a task.
-                    instrs = root.task_database.get_value('root', 'instrs')
-                    for instr in instrs.values():
-                        instr.owner = ''
+                    # value on an instr previously set by a task.
+                    instrs = root.instrs
+                    for instr_id in instrs:
+                        instrs[instr_id].owner = ''
                     root.resume.set()
                     break
                 else:
@@ -123,14 +123,9 @@ def make_parallel(perform, pool):
                         kwargs=kwargs)
         # Create a shallow copy to avoid mutating a dict shared by multiple
         # threads.
-        all_threads = obj.task_database.get_value('root', 'threads').copy()
-        threads = all_threads.get(pool, None)
-        if threads:
+        pools = obj.root_task.threads
+        with pools.safe_access(pool) as threads:
             threads.append(thread)
-        else:
-            all_threads[pool] = [thread]
-
-        obj.task_database.set_value('root', 'threads', all_threads)
 
         return thread.start()
 
@@ -139,11 +134,14 @@ def make_parallel(perform, pool):
     return wrapper
 
 
+
+# XXXX should now support nested wait in parallel
 def make_wait(perform, wait, no_wait):
     """ Machinery to make perform_ wait on other tasks execution.
 
     Create a wrapper around a method to wait for some threads to terminate
     before calling the method. Threads are grouped in execution pools.
+    This method supports new threads being started while it is waiting.
 
     Parameters
     ----------
@@ -165,17 +163,29 @@ def make_wait(perform, wait, no_wait):
         def wrapper(*args, **kwargs):
 
             obj = args[0]
-            # Create a shallow copy to avoid mutating a dict shared by multiple
-            # threads.
-            all_threads = obj.task_database.get_value('root', 'threads').copy()
+            all_threads = obj.root_task.threads
+            while True:
+                # Get all the threads we should be waiting upon.
+                threads = chain.from_iterable([all_threads[w]
+                                               for w in wait])
 
-            threads = chain.from_iterable([all_threads.get(w, [])
-                                           for w in wait])
-            for thread in threads:
-                thread.join()
-            all_threads.update({w: [] for w in wait if w in all_threads})
+                # If there is None break.
+                if not threads:
+                    break
 
-            obj.task_database.set_value('root', 'threads', all_threads)
+                # Else join them.
+                for thread in threads:
+                    thread.join()
+
+                # Make sure nobody modify the pools and update them by removing
+                # the references to the dead threads.
+                with all_threads.locked():
+                    for w in wait:
+                        all_threads[w] = [t for t in all_threads[w]
+                                          if t.is_alive()]
+
+                # Start over till no thread remain in the pool in wait.
+
             return perform(*args, **kwargs)
 
     elif no_wait:
@@ -184,30 +194,55 @@ def make_wait(perform, wait, no_wait):
             obj = args[0]
             # Create a shallow copy to avoid mutating a dict shared by multiple
             # threads.
-            all_threads = obj.task_database.get_value('root', 'threads').copy()
-
+            all_threads = obj.root_task.threads
             pools = [k for k in all_threads if k not in no_wait]
-            threads = chain.from_iterable([all_threads[p] for p in pools])
-            for thread in threads:
-                thread.join()
-            all_threads.update({p: [] for p in pools})
+            while True:
+                # Get all the threads we should be waiting upon.
+                threads = chain.from_iterable([all_threads[p]
+                                               for p in pools])
 
-            obj.task_database.set_value('root', 'threads', all_threads)
+                # If there is None break.
+                if not threads:
+                    break
+
+                # Else join them.
+                for thread in threads:
+                    thread.join()
+
+                # Make sure nobody modify the pools and update them by removing
+                # the references to the dead threads.
+                with all_threads.locked():
+                    for p in pools:
+                        all_threads[p] = [t for t in all_threads[p]
+                                          if t.is_alive()]
+
+                # Start over till no thread remain in the pool in wait.
+
             return perform(*args, **kwargs)
     else:
         def wrapper(*args, **kwargs):
 
             obj = args[0]
-            # Create a shallow copy to avoid mutating a dict shared by multiple
-            # threads.
-            all_threads = obj.task_database.get_value('root', 'threads').copy()
+            all_threads = obj.root_task.threads
+            while True:
+                # Get all the threads we should be waiting upon.
+                threads = chain.from_iterable([all_threads[p]
+                                               for p in all_threads])
 
-            threads = chain.from_iterable(all_threads.values())
-            for thread in threads:
-                thread.join()
-            all_threads.update({w: [] for w in all_threads})
+                # If there is None break.
+                if not threads:
+                    break
 
-            obj.task_database.set_value('root', 'threads', all_threads)
+                # Else join them.
+                for thread in threads:
+                    thread.join()
+
+                # Make sure nobody modify the pools and update them by removing
+                # the references to the dead threads.
+                with all_threads.locked():
+                    for p in all_threads:
+                        all_threads[p] = [t for t in all_threads[p]
+                                          if t.is_alive()]
             return perform(*args, **kwargs)
 
     wrapper.__name__ = perform.__name__
