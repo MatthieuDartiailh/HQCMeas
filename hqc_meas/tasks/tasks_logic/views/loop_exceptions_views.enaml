@@ -7,6 +7,7 @@
 """
 """
 from enaml.widgets.api import (GroupBox, Label)
+from enaml.layout.api import hbox
 from inspect import cleandoc
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
@@ -19,6 +20,8 @@ enamldef BreakView(GroupBox): view:
 
     title << task.task_name
     padding = 2
+    constraints = [hbox(cond_lab, cond_val)]
+
     Label: cond_lab:
         text = 'Condition'
         tool_tip = 'Will break out of the loop when evaluates to True.'
@@ -34,6 +37,8 @@ enamldef ContinueView(GroupBox): view:
 
     title << task.task_name
     padding = 2
+    constraints = [hbox(cond_lab, cond_val)]
+
     Label: cond_lab:
         text = 'Condition'
         tool_tip = cleandoc('''Will skip the following task in the loop when

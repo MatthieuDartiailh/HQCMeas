@@ -10,6 +10,7 @@ from atom.api import (Str, set_default)
 
 from ..base_tasks import SimpleTask
 from .loop_task import LoopTask
+from .while_task import WhileTask
 from .loop_exceptions import BreakException, ContinueException
 
 
@@ -19,6 +20,8 @@ class BreakTask(SimpleTask):
     See Python break statement documenttaion.
 
     """
+
+    logic_task = True
 
     condition = Str().tag(pref=True)
 
@@ -31,9 +34,9 @@ class BreakTask(SimpleTask):
         test = True
         traceback = {}
         # XXXX to extend later for support of other looping tasks.
-        if not isinstance(self.parent_task, LoopTask):
+        if not isinstance(self.parent_task, (LoopTask, WhileTask)):
             test = False
-            mess = 'Incorrect parent type: {}, expected LoopTask'
+            mess = 'Incorrect parent type: {}, expected LoopTask or WhileTask.'
             traceback[self.task_path + '/' + self.task_name + '-parent'] = \
                 mess.format(self.parent_task.task_class)
 
@@ -62,6 +65,8 @@ class ContinueTask(SimpleTask):
 
     """
 
+    logic_task = True
+
     condition = Str().tag(pref=True)
 
     parallel = set_default({'forbidden': True})
@@ -73,9 +78,9 @@ class ContinueTask(SimpleTask):
         test = True
         traceback = {}
         # XXXX to extend later for support of other looping tasks.
-        if not isinstance(self.parent_task, LoopTask):
+        if not isinstance(self.parent_task, (LoopTask, WhileTask)):
             test = False
-            mess = 'Incorrect parent type: {}, expected LoopTask'
+            mess = 'Incorrect parent type: {}, expected LoopTask or WhileTask.'
             traceback[self.task_path + '/' + self.task_name + '-parent'] = \
                 mess.format(self.parent_task.task_class)
 
@@ -83,7 +88,7 @@ class ContinueTask(SimpleTask):
             self.format_and_eval_string(self.condition)
         except Exception as e:
             test = False
-            mess = 'Task did not succeed to compute the break condition: {}'
+            mess = 'Task did not succeed to compute the continue condition: {}'
             traceback[self.task_path + '/' + self.task_name + '-cond'] = \
                 mess.format(e)
 

@@ -9,10 +9,10 @@
 from atom.api import (Instance, Bool, set_default)
 
 from timeit import default_timer
-from time import sleep
 
 from ..base_tasks import (SimpleTask, ComplexTask)
 from ..task_interface import InterfaceableTaskMixin
+from ..tools.task_decorator import handle_stop_pause
 from .loop_exceptions import BreakException, ContinueException
 
 
@@ -21,6 +21,8 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
 
     """
     # --- Public API ----------------------------------------------------------
+
+    logic_task = True
 
     #: Flag indicating whether or not to time the loop.
     timing = Bool().tag(pref=True)
@@ -61,15 +63,12 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
         """
         self.write_in_database('point_number', len(iterable))
 
-        stop_flag = self.root_task.should_stop
-        pause_flag = self.root_task.should_pause
+        root = self.root_task
         for i, value in enumerate(iterable):
-            if stop_flag.is_set():
-                break
-            while pause_flag.is_set():
-                sleep(0.05)
-                if stop_flag.is_set():
-                    return
+
+            if handle_stop_pause(root):
+                return
+
             self.write_in_database('index', i+1)
             self.write_in_database('value', value)
             try:
@@ -86,15 +85,12 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
         """
         self.write_in_database('point_number', len(iterable))
 
-        stop_flag = self.root_task.should_stop
-        pause_flag = self.root_task.should_pause
+        root = self.root_task
         for i, value in enumerate(iterable):
-            if stop_flag.is_set():
-                break
-            while pause_flag.is_set():
-                sleep(0.05)
-                if stop_flag.is_set():
-                    return
+
+            if handle_stop_pause(root):
+                return
+
             self.write_in_database('index', i+1)
             self.task.perform_(self.task, value)
             try:
@@ -111,15 +107,12 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
         """
         self.write_in_database('point_number', len(iterable))
 
-        stop_flag = self.root_task.should_stop
-        pause_flag = self.root_task.should_pause
+        root = self.root_task
         for i, value in enumerate(iterable):
-            if stop_flag.is_set():
-                break
-            while pause_flag.is_set():
-                sleep(0.05)
-                if stop_flag.is_set():
-                    return
+
+            if handle_stop_pause(root):
+                return
+
             self.write_in_database('index', i+1)
             self.write_in_database('value', value)
             tic = default_timer()
@@ -140,15 +133,12 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
         """
         self.write_in_database('point_number', len(iterable))
 
-        stop_flag = self.root_task.should_stop
-        pause_flag = self.root_task.should_pause
+        root = self.root_task
         for i, value in enumerate(iterable):
-            if stop_flag.is_set():
-                break
-            while pause_flag.is_set():
-                sleep(0.05)
-                if stop_flag.is_set():
-                    return
+
+            if handle_stop_pause(root):
+                return
+
             self.write_in_database('index', i+1)
             tic = default_timer()
             self.task.perform_(self.task, value)

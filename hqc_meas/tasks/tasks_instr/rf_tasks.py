@@ -48,7 +48,9 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
                     cleandoc('''Failed to eval the frequency
                         formula {}'''.format(self.frequency))
-            self.write_in_database('unit', self.unit)
+
+        self.write_in_database('unit', self.unit)
+
         return test, traceback
 
     def i_perform(self, frequency=None):
@@ -151,6 +153,7 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
         if self.switch:
             try:
                 switch = self.format_and_eval_string(self.switch)
+                self.write_in_database('output', switch)
             except Exception:
                 traceback[self.task_path + '/' + self.task_name + '-switch'] =\
                     'Failed to eval the output state {}'.format(self.switch)
@@ -160,8 +163,6 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-switch'] =\
                     '{} is not an acceptable value.'.format(self.switch)
-
-            self.write_in_database('output', switch)
 
         return test, traceback
 

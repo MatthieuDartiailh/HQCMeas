@@ -42,16 +42,15 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
         """
         """
         test, traceback = super(SetDCVoltageTask, self).check(*args, **kwargs)
-        val = None
         if self.target_value:
             try:
                 val = self.format_and_eval_string(self.target_value)
-            except Exception:
+                self.write_in_database('voltage', val)
+            except Exception as e:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-volt'] = \
                     cleandoc('''Failed to eval the target value formula
-                        {}'''.format(self.target_value))
-        self.write_in_database('voltage', val)
+                        {} : '''.format(self.target_value, e))
 
         return test, traceback
 
@@ -172,13 +171,11 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
                     # use of the profile. In that case config won't be used.
                     config = run_time['profiles'].get(task.selected_profile)
             else:
-                print 1
                 return False, traceback
 
             if run_time and task.selected_driver in run_time['drivers']:
                 driver_class = run_time['drivers'][task.selected_driver]
             else:
-                print 2
                 return False, traceback
 
             if not config:
@@ -190,12 +187,10 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
                     key = task.task_path + '/' + task.task_name + '_interface'
                     traceback[key] = 'Missing channel {}'.format(self.channel)
                 instr.close_connection()
-            except Exception as e:
-                print e
+            except Exception:
                 return False, traceback
 
             if traceback:
-                print 4
                 return False, traceback
             else:
                 return True, traceback

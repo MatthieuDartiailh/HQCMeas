@@ -6,7 +6,7 @@
 # =============================================================================
 """
 """
-from atom.api import Bool, Value
+from atom.api import Bool, Value, Int
 from hqc_meas.tasks.api import SimpleTask
 
 
@@ -16,7 +16,7 @@ class CheckTask(SimpleTask):
 
     check_called = Bool()
 
-    perform_called = Bool()
+    perform_called = Int()
 
     perform_value = Value()
 
@@ -27,5 +27,5 @@ class CheckTask(SimpleTask):
 
     def perform(self, value=None):
 
-        self.perform_called = True
+        self.perform_called += 1
         self.perform_value = value
