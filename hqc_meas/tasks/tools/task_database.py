@@ -27,6 +27,8 @@ class TaskDatabase(Atom):
         can change. In this mode the database is represented by a nested dict.
         - a running mode in which the entries are fixed (only their values can
         change). In this mode the database is represented as a flat list.
+        In running mode the database is thread safe but the object it contains
+        may not be so (dict, list, etc)
 
     """
     # --- Public API ----------------------------------------------------------
@@ -468,7 +470,7 @@ class TaskDatabase(Atom):
     #: Dict mapping full paths to flat database indexes.
     _entry_index_map = Dict()
 
-    #: Lock to make the database thread safe in running mode
+    #: Lock to make the database thread safe in running mode.
     _lock = Value()
 
     def _go_to_path(self, path):

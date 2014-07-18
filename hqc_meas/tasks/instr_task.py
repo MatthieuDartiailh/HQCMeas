@@ -79,6 +79,10 @@ class InstrumentTask(SimpleTask):
             config = run_time['profiles'][self.selected_profile]
             driver_class = run_time['drivers'][self.selected_driver]
             self.driver = driver_class(config)
+            # Create a shallow copy to avoid mutating a dict shared by multiple
+            # threads. (Only database get/set are thread safe not the object it
+            # contains)
+            instrs = instrs.copy()
             instrs[self.selected_profile] = self.driver
             self.task_database.set_value('root', 'instrs', instrs)
 

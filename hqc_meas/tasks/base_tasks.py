@@ -1249,6 +1249,7 @@ class ComplexTask(BaseTask):
 
 
 from multiprocessing.synchronize import Event
+from threading import Event as tEvent
 
 
 class RootTask(ComplexTask):
@@ -1271,6 +1272,10 @@ class RootTask(ComplexTask):
 
     #: Inter-process event signaling the task it should pause execution.
     should_pause = Instance(Event)
+
+    # Inter-Thread event signaling the main thread is done, handling the
+    # measure resuming.
+    resume = Value()
 
     # Seeting default values for the root task.
     has_root = set_default(True)
@@ -1334,7 +1339,7 @@ class RootTask(ComplexTask):
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 # Perform a deepcopy of the entry value as I don't want to
-                # alter that default value when delaing with the database later
+                # alter that default value when dealing with the database later
                 # on (apply for list and dict).
                 # The 'instrs' and 'threads' entries were the principal .
                 # motivations for using that mechanism.
@@ -1392,6 +1397,9 @@ class RootTask(ComplexTask):
 
         """
         pass
+
+    def _default_resume(self):
+        return tEvent()
 
 KNOWN_PY_TASKS = [ComplexTask]
 
