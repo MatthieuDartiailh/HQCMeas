@@ -42,7 +42,8 @@ class ProcFilter(Atom):
         return not res if self.reject_if_equal else res
 
 enamldef SubprocessLogPanel(DockItem):
-    """
+    """ Log panel used to display the message coming from the subprocess.
+
     """
     attr model
     stretch = 1

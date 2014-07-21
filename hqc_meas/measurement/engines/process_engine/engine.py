@@ -26,9 +26,9 @@ class ProcessEngine(BaseEngine):
 
     """
 
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
-    # Reference to the workbench got at __init__
+    #: Reference to the workbench got at __init__
     workbench = Typed(Workbench)
 
     def prepare_to_run(self, name, root, monitored_entries, build_deps):
@@ -44,6 +44,8 @@ class ProcessEngine(BaseEngine):
                       monitored_entries)
 
         # Clear all the flags.
+        self._meas_pause.clear()
+        self._meas_paused._clear()
         self._meas_stop.clear()
         self._stop.clear()
         self._force_stop.clear()
@@ -67,6 +69,10 @@ class ProcessEngine(BaseEngine):
                                                         self._monitor_queue)
             self._monitor_thread.daemon = True
 
+            self._pause_thread = None
+
+        self.measure_status = ('PREPARED', 'Engine ready to process.')
+
     def run(self):
         if not self._process.is_alive():
             # Starting monitoring threads.
@@ -84,11 +90,18 @@ class ProcessEngine(BaseEngine):
 
         self._starting_allowed.set()
 
+        self.measure_status = ('RUNNING', 'Measure running.')
+
     def pause(self):
+        self.measure_status = ('PAUSING', 'Waiting for measure to pause.')
         self._meas_pause.set()
+
+        self._pause_thread = Thread(target=self._wait_for_pause)
+        self._pause_thread.start()
 
     def resume(self):
         self._meas_pause.clear()
+        self.measure_status = ('RUNNING', 'Measure have been resumed.')
 
     def stop(self):
         self._stop_requested = True
@@ -131,60 +144,67 @@ class ProcessEngine(BaseEngine):
 
     #--- Private API ----------------------------------------------------------
 
-    # Flag indicating that the user requested the measure to stop.
+    #: Flag indicating that the user requested the measure to stop.
     _stop_requested = Bool()
 
-    # Interprocess event used to pause the subprocess current measure.
+    #: Interprocess event used to pause the subprocess current measure.
     _meas_pause = Typed(Event, ())
 
-    # Interprocess event used to stop the subprocess current measure.
+    #: Interprocess event signaling the subprocess current measure is paused.
+    _meas_paused = Typed(Event, ())
+
+    #: Interprocess event used to stop the subprocess current measure.
     _meas_stop = Typed(Event, ())
 
-    # Interprocess event used to stop the subprocess.
+    #: Interprocess event used to stop the subprocess.
     _stop = Typed(Event, ())
 
-    # Flag signaling that a forced exit has been requested
+    #: Flag signaling that a forced exit has been requested
     _force_stop = Value(tEvent())
 
-    # Flag indicating the process is waiting for a measure.
+    #: Flag indicating the process is waiting for a measure.
     _processing = Value(tEvent())
 
-    # Flag indicating the communication thread it can send the next measure.
+    #: Flag indicating the communication thread it can send the next measure.
     _starting_allowed = Value(tEvent())
 
-    # Temporary tuple to store the data to be sent to the process when a
-    # new measure is ready.
+    #: Temporary tuple to store the data to be sent to the process when a
+    #: new measure is ready.
     _temp = Tuple()
 
-    # Current subprocess.
+    #: Current subprocess.
     _process = Typed(TaskProcess)
 
-    # Connection used to send and receive messages about execution (type
-    # ambiguous when the OS is not known)
+    #: Connection used to send and receive messages about execution (type
+    #: ambiguous when the OS is not known)
     _pipe = Value()
 
-    # Thread in charge of transferring measure to the process.
+    #: Thread in charge of transferring measure to the process.
     _com_thread = Typed(Thread)
 
-    # Inter-process queue used by the subprocess to transmit its log records.
+    #: Inter-process queue used by the subprocess to transmit its log records.
     _log_queue = Typed(Queue, ())
 
-    # Thread in charge of collecting the log message coming from the
-    # subprocess.
+    #: Thread in charge of collecting the log message coming from the
+    #: subprocess.
     _log_thread = Typed(Thread)
 
-    # Inter-process queue used by the subprocess to send the values of the
-    # observed database entries.
+    #: Inter-process queue used by the subprocess to send the values of the
+    #: observed database entries.
     _monitor_queue = Typed(Queue, ())
 
-    # Thread in charge of collecting the values of the observed database
-    # entries.
+    #: Thread in charge of collecting the values of the observed database
+    #: entries.
     _monitor_thread = Typed(Thread)
+
+    #: Thread in charge to notify the engine that the measure did pause after
+    #: being asked to do so.
+    _pause_thread = Typed(Thread)
 
     def _process_listener(self):
         """ Handle the communications with the worker process.
 
-        Executed in a different thread.
+        Executed by the _com_thread.
 
         """
         logger = logging.getLogger(__name__)
@@ -272,4 +292,20 @@ class ProcessEngine(BaseEngine):
         logger.debug('Log thread joined')
         self._monitor_thread.join()
         logger.debug('Monitor thread joined')
+        if self._pause_thread:
+            self._pause_thread.join()
+            logger.debug('Pause thread joined')
         self.active = False
+
+    def _wait_for_pause(self):
+        """ Wait for the task paused event to be set.
+
+        """
+        stop_sig = self._stop
+        paused_sig = self._meas_paused
+
+        while not stop_sig.is_set():
+            if paused_sig.wait(0.1):
+                status = ('PAUSED', 'Measure execution is paused')
+                deferred_call(setattr, self, 'measure_status', status)
+                break

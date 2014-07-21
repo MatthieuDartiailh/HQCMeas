@@ -20,7 +20,7 @@ from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
 from .tools.task_decorator import (make_parallel, make_wait, make_stoppable)
 from .tools.string_evaluation import safe_eval
-from .tools.safe_dict import SafeDict
+from .tools.safe_dict import SafeDict, Counter
 
 
 PREFIX = '_a'
@@ -1259,7 +1259,7 @@ class RootTask(ComplexTask):
     """
     # --- Public API ----------------------------------------------------------
 
-    #: Path to which log infos, prefernces, etc should be written by default.
+    #: Path to which log infos, preferences, etc should be written by default.
     default_path = Unicode('').tag(pref=True)
 
     #: Header assembled just before the measure is run.
@@ -1273,6 +1273,9 @@ class RootTask(ComplexTask):
 
     #: Inter-process event signaling the task it should pause execution.
     should_pause = Instance(Event)
+
+    #: Inter-process event signaling the task is paused.
+    paused = Instance(Event)
 
     #: Inter-Thread event signaling the main thread is done, handling the
     #: measure resuming.
@@ -1291,6 +1294,12 @@ class RootTask(ComplexTask):
     #: Keys are file handle id as defined by the first user of the file.
     #: Keys can be deleted.
     files = Typed(SafeDict, ())
+
+    #: Counter keeping track of the active threads.
+    active_threads_counter = Typed(Counter, kwargs={'count': 1})
+
+    #: Counter keeping track of the paused threads.
+    paused_threads_counter = Typed(Counter)
 
     # Setting default values for the root task.
     has_root = set_default(True)
@@ -1401,8 +1410,7 @@ class RootTask(ComplexTask):
     def _default_task_class(self):
         return ComplexTask.__name__
 
-    @observe('default_path')
-    def _update_default_path_in_database(self, change):
+    def _observe_default_path(self, change):
         """
         """
         new = change['value']
@@ -1416,6 +1424,20 @@ class RootTask(ComplexTask):
 
         """
         pass
+
+    @observe('active_threads.count', 'paused_threads.count')
+    def _state(self, change):
+        """
+
+        """
+        p_count = self.paused_threads_counter.count
+        a_count = self.active_threads_counter.count
+
+        if a_count == p_count:
+            self.paused.set()
+
+        if p_count == 0:
+            self.paused.clear()
 
     def _default_resume(self):
         return tEvent()

@@ -43,6 +43,10 @@ class TaskProcess(Process):
     monitor_queue : multiprocessing queue
         Queue in which all the informations the user asked to monitor during
         the measurement are sent to be processed in the main process.
+    task_pause : multiprocessing event
+        Event set when the user asked the running measurement to pause.
+    task_paused : multiprocessing event
+        Event set when the current measure is paused.
     task_stop : multiprocessing event
         Event set when the user asked the running measurement to stop.
     process_stop : multiprocessing event
@@ -61,11 +65,12 @@ class TaskProcess(Process):
 
     """
 
-    def __init__(self, pipe, log_queue, monitor_queue, task_pause,
+    def __init__(self, pipe, log_queue, monitor_queue, task_pause, task_paused,
                  task_stop, process_stop):
         super(TaskProcess, self).__init__(name='MeasureProcess')
         self.daemon = True
         self.task_pause = task_pause
+        self.task_paused = task_paused
         self.task_stop = task_stop
         self.process_stop = process_stop
         self.pipe = pipe
@@ -148,6 +153,7 @@ class TaskProcess(Process):
                 # Pass the events signaling the task it should stop or pause
                 # to the task and make the database ready.
                 root.should_pause = self.task_pause
+                root.paused = self.task_paused
                 root.should_stop = self.task_stop
                 root.task_database.prepare_for_running()
 

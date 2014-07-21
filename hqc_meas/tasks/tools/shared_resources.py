@@ -6,10 +6,34 @@
 # =============================================================================
 """
 """
-from atom.api import Atom, Dict, Value
+from atom.api import Atom, Dict, Value, Int
 from contextlib import contextmanager
 from collections import defaultdict
 from threading import RLock
+
+class Counter(Atom):
+    """ Thread-safe counter object.
+
+    """
+
+    #: Current count of the counter. User should not manipulate this directly.
+    count = Int()
+
+    def increment(self):
+        """
+
+        """
+        self._lock.acquire()
+        self.count += 1
+        self._lock.release()
+
+    def decrement(self):
+        """
+
+        """
+        self._lock.acquire()
+        self.counter += -1
+        self._lock.release()
 
 class SafeDict(Atom):
     """ Dict wrapper using a lock to protect access to its values.

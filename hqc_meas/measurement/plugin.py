@@ -205,7 +205,7 @@ class MeasurePlugin(HasPrefPlugin):
             # Simulate a message coming from the engine.
             done = {'value': ('SKIPPED', 'Failed to get requested profiles')}
 
-            # Break a potential high statck as this function will not exit
+            # Break a potential high statck as this function would not exit
             # if a new measure is started.
             enaml.application.deferred_call(self._listen_to_engine, done)
             return
@@ -226,7 +226,7 @@ class MeasurePlugin(HasPrefPlugin):
             # Simulate a message coming from the engine.
             done = {'value': ('FAILED', 'Failed to pass the built in tests')}
 
-            # Break a potential high statck as this function will not exit
+            # Break a potential high statck as this function would not exit
             # if a new measure is started.
             enaml.application.deferred_call(self._listen_to_engine, done)
             return
@@ -237,10 +237,14 @@ class MeasurePlugin(HasPrefPlugin):
         # Start the engine if it has not already been done.
         if not self.engine_instance:
             decl = self.engines[self.selected_engine]
-            self.engine_instance = decl.factory(decl, self.workbench)
+            engine = decl.factory(decl, self.workbench)
+            self.engine_instance = engine
 
             # Connect signal handler to engine.
-            self.engine_instance.observe('done', self._listen_to_engine)
+            engine.observe('done', self._listen_to_engine)
+
+            # Connect engine measure status to observer
+            engine.observe('measure_status', self._update_measure_status)
 
         engine = self.engine_instance
 
@@ -248,9 +252,6 @@ class MeasurePlugin(HasPrefPlugin):
         entries = measure.collect_entries_to_observe()
         engine.prepare_to_run(measure.name, measure.root_task, entries,
                               measure.store['build_deps'])
-
-        measure.status = 'RUNNING'
-        measure.infos = 'The measure is running'
 
         # Get a ref to the main window.
         ui_plugin = self.workbench.get_plugin('enaml.workbench.ui')
@@ -267,18 +268,25 @@ class MeasurePlugin(HasPrefPlugin):
         """ Pause the currently active measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Pausing measure {}.'.format(self.running_measure.name))
+        self.flags.append('pausing')
         self.engine_instance.pause()
 
     def resume_measure(self):
-        """ Remuse the currently paused measure.
+        """ Resume the currently paused measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Resuming measure {}.'.format(self.running_measure.name))
         self.engine_instance.resume()
 
     def stop_measure(self):
         """ Stop the currently active measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Stopping measure {}.'.format(self.running_measure.name))
         self.flags.append('stop_attempt')
         self.engine_instance.stop()
 
@@ -286,6 +294,8 @@ class MeasurePlugin(HasPrefPlugin):
         """ Stop processing the enqueued measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Stopping measure {}.'.format(self.running_measure.name))
         self.flags.append('stop_attempt')
         self.flags.append('stop_processing')
         if 'processing' in self.flags:
@@ -296,12 +306,16 @@ class MeasurePlugin(HasPrefPlugin):
         """ Force the engine to stop performing the current measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Exiting measure {}.'.format(self.running_measure.name))
         self.engine_instance.force_stop()
 
     def force_stop_processing(self):
         """ Force the engine to exit and stop processing measures.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Exiting measure {}.'.format(self.running_measure.name))
         self.flags.append('stop_processing')
         if 'processing' in self.flags:
             self.flags.remove('processing')
@@ -405,6 +419,16 @@ class MeasurePlugin(HasPrefPlugin):
                             self.force_stop_processing()
                 self.flags = []
 
+    def _update_measure_status(self, change):
+        """ Update the running_measure status to reflect the engine status.
+
+        """
+        new_vals = change['value']
+
+        running = self.running_measure
+        running.status = new_vals[0]
+        running.infos = new_vals[1]
+
     def _register_manifest(self, path, manifest_name):
         """ Register a manifest given its module name and its name.
 
@@ -506,6 +530,9 @@ class MeasurePlugin(HasPrefPlugin):
         selected and deselected.
 
         """
+        # Destroy old instance if any.
+        self.engine_instance = None
+
         if 'oldvalue' in change:
             old = change['oldvalue']
             if old in self.engines:

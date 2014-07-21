@@ -12,6 +12,7 @@ from time import sleep
 from threading import Thread, current_thread
 from itertools import chain
 
+
 def handle_stop_pause(root):
     """ Check the state of the stop and pause event and handle the pause.
 
@@ -37,9 +38,11 @@ def handle_stop_pause(root):
     pause_flag = root.should_pause
     if pause_flag.is_set():
         root.resume.clear()
+        root.paused_threads_counter.increment()
         while True:
             sleep(0.05)
             if stop_flag.is_set():
+                root.paused_threads_counter.decrement()
                 return True
             if not pause_flag.is_set():
                 if current_thread().name == 'MainThread':
@@ -49,11 +52,13 @@ def handle_stop_pause(root):
                     for instr_id in instrs:
                         instrs[instr_id].owner = ''
                     root.resume.set()
+                    root.paused_threads_counter.decrement()
                     break
                 else:
                     # Safety here ensuring the main thread finished
                     # re-initializing the instr.
                     root.resume.wait()
+                    root.paused_threads_counter.decrement()
                     break
 
 
@@ -116,6 +121,7 @@ def make_parallel(perform, pool):
     def wrapper(*args, **kwargs):
 
         obj = args[0]
+        root = obj.root_task
         safe_perform = smooth_crash(perform)
         thread = Thread(group=None,
                         target=safe_perform,
@@ -127,7 +133,9 @@ def make_parallel(perform, pool):
         with pools.safe_access(pool) as threads:
             threads.append(thread)
 
-        return thread.start()
+        root.active_thread_counter.increment()
+        thread.start()
+        root.active_thread_counter.decrement()
 
     wrapper.__name__ = perform.__name__
     wrapper.__doc__ = perform.__doc__
