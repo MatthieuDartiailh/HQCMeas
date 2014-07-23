@@ -8,7 +8,7 @@ Created on Sun Nov 03 18:18:39 2013
 from atom.api import Enum, set_default
 from enaml.widgets.api import (Dialog, Container, PushButton, Form,
                                ObjectCombo, Label, Field)
-from enaml.stdlib.message_box import critical
+from enaml.stdlib.message_box import critical, information
 from enaml.layout.api import vertical, horizontal, hbox, spacer, align, vbox
 from enaml.core.api import Conditional, Include
 from inspect import cleandoc

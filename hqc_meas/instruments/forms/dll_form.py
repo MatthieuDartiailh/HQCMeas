@@ -11,9 +11,8 @@ from ctypes.util import find_library
 from atom.api import Unicode, Str
 from .base_forms import AbstractConnectionForm
 
-
-DRIVER_FOLDER = os.path.normpath(os.path.join(os.path.dirname(__file__),
-                                              '//', 'drivers'))
+dirname = os.path.dirname
+DRIVER_FOLDER = os.path.join(dirname(dirname(__file__)), 'drivers')
 
 
 class DllForm(AbstractConnectionForm):
@@ -52,7 +51,7 @@ class DllForm(AbstractConnectionForm):
 
         """
         path_valid = os.path.isfile(self.lib_path)
-        return (path_valid and self.address != '')
+        return (path_valid and self.instr_id != '')
 
     def required_fields(self):
         """ Return the mandatory fields for a Dll instrument.
