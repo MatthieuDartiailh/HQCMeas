@@ -24,7 +24,7 @@ class LockInMeasureTask(InstrumentTask):
     driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830']
     task_database_entries = set_default({'x': 1.0})
 
-    wait = set_default({'wait': ['instr']})  # Wait on instr pool by default.
+    wait = set_default({'activated': True, 'wait': ['instr']})
 
     def perform(self):
         """

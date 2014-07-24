@@ -279,8 +279,12 @@ class TestPNASinglePointMeasureTask(object):
         pass
 
     def test_check1(self):
-        # Simply test that everything is ok if voltage can be evaluated.
-        self.task.switch = '1.0'
+        # Simply test that everything is ok.
+        self.task.measures = [('S21', ''), ('S33', 'MLIN')]
+
+        profile = {'Test1': ({'defined_channels': [[1]]},
+                             {})}
+        self.root.run_time['profiles'] = profile
 
         test, traceback = self.task.check(test_instr=True)
         assert_true(test)
@@ -288,7 +292,11 @@ class TestPNASinglePointMeasureTask(object):
 
     def test_check2(self):
         # Check handling a wrong channel.
-        self.task.switch = '*1.0*'
+        self.task.measures = [('S21', ''), ('S33', 'MLIN')]
+
+        profile = {'Test1': ({'defined_channels': [[3]]},
+                             {})}
+        self.root.run_time['profiles'] = profile
 
         test, traceback = self.task.check(test_instr=True)
         assert_false(test)
@@ -296,22 +304,27 @@ class TestPNASinglePointMeasureTask(object):
 
     def test_check3(self):
         # Check handling a wrong S parameter.
-        self.task.switch = '*1.0*'
+        self.task.measures = [('S21', ''), ('SF3', 'MLIN')]
+
+        profile = {'Test1': ({'defined_channels': [[1]]},
+                             {})}
+        self.root.run_time['profiles'] = profile
 
         test, traceback = self.task.check(test_instr=True)
         assert_false(test)
         assert_equal(len(traceback), 1)
 
-    def test_perform(self):
-        self.task.switch = '1.0'
-
-        self.root.run_time['profiles'] = {'Test1': ({'output': [0.0],
-                                                     'owner': [None]}, {})}
-
-        self.root.task_database.prepare_for_running()
-
-        self.task.perform()
-        assert_equal(self.root.get_from_database('Test_output'), 1.0)
+#    def test_perform(self):
+#        self.task.measures = [('S21', ''), ('S33', 'MLIN')]
+#
+#        profile = {'Test1': ({'defined_channels': [[1]]},
+#                             {})}
+#        self.root.run_time['profiles'] = profile
+#
+#        self.root.task_database.prepare_for_running()
+#
+#        self.task.perform()
+#        assert_equal(self.root.get_from_database('Test_output'), 1.0)
 
 
 #@attr('ui')

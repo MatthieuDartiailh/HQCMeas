@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : pna_tasks.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 
 """
@@ -61,12 +61,13 @@ class ApplyMagFieldTask(InstrumentTask):
         if self.target_field:
             try:
                 val = self.format_and_eval_string(self.target_field)
+                self.write_in_database('Bfield', val)
             except Exception:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-field'] = \
                     cleandoc('''Failed to eval the target field formula
                         {}'''.format(self.target_field))
-            self.write_in_database('Bfield', val)
+
         return test, traceback
 
 KNOWN_PY_TASKS = [ApplyMagFieldTask]

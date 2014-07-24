@@ -161,7 +161,7 @@ class SingleChannelPNATask(InstrumentTask):
         """
         test, traceback = super(SingleChannelPNATask, self).check(*args,
                                                                   **kwargs)
-        c_test, c_trace = check_channels_presence(self.task, [self.channel],
+        c_test, c_trace = check_channels_presence(self, [self.channel],
                                                   *args, **kwargs)
 
         traceback.update(c_trace)
@@ -182,7 +182,7 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
 
     driver_list = ['AgilentPNA']
 
-    wait = set_default({'wait': ['instr']})  # Wait on instr pool by default.
+    wait = set_default({'activated': True, 'wait': ['instr']})
 
     def perform(self):
         """
@@ -213,7 +213,7 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
             power = self.channel_driver.power
             self.channel_driver.sweep_type = 'LIN'
             self.channel_driver.sweep_points = 1
-            self.channel_driver.clear_instrument_cache(['frequency', 'power'])
+            self.channel_driver.clear_cache(['frequency', 'power'])
             self.channel_driver.frequency = freq
             self.channel_driver.power = power
 
@@ -257,8 +257,8 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
                                 self).check(*args, **kwargs)
 
         pattern = re.compile('S[1-4][1-4]')
-        for i, s_par, f in enumerate(self.measures):
-            match = pattern.match(s_par[0])
+        for i, (s_par, f) in enumerate(self.measures):
+            match = pattern.match(s_par)
             if not match:
                 path = self.task_path + '/' + self.task_name
                 path += '_Meas_{}'.format(i)
@@ -304,7 +304,7 @@ class PNASweepTask(SingleChannelPNATask):
 
     window = Int(1).tag(pref=True)
 
-    wait = set_default({'wait': ['instr']})  # Wait on instr pool by default.
+    wait = set_default({'activated': True, 'wait': ['instr']})
     driver_list = ['AgilentPNA']
     task_database_entries = set_default({'sweep_data': np.array([0])})
 
@@ -373,7 +373,7 @@ class PNASweepTask(SingleChannelPNATask):
         test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
 
         pattern = re.compile('S[1-4][1-4]')
-        for i, s_par, f in enumerate(self.measures):
+        for i, (s_par, f) in enumerate(self.measures):
             match = pattern.match(s_par)
             if not match:
                 path = self.task_path + '/' + self.task_name

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : instr_helper.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from types import MethodType
 from hqc_meas.instruments.drivers.driver_tools import BaseInstrument
 

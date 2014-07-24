@@ -20,7 +20,7 @@ class MeasDCVoltageTask(InstrumentTask):
     driver_list = ['Agilent34410A', 'Keithley2000']
     task_database_entries = set_default({'voltage': 1.0})
 
-    wait = set_default({'wait': ['instr']})  # Wait on instr pool by default.
+    wait = set_default({'activated': True, 'wait': ['instr']})
 
     def perform(self):
         """
