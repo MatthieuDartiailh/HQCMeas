@@ -1,8 +1,9 @@
-#==============================================================================
+# -*- coding: utf-8 -*-
+# =============================================================================
 # module : driver_tools.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 This module defines base tools for writing instrument drivers.
 
@@ -246,7 +247,7 @@ class BaseInstrument(object):
             80)
         raise NotImplementedError(message)
 
-    def clear_instrument_cache(self, properties=None):
+    def clear_cache(self, properties=None):
         """ Clear the cache of all the properties or only the one of specified
         ones.
 
@@ -266,7 +267,7 @@ class BaseInstrument(object):
         else:
             self._cache = {}
 
-    def check_instrument_cache(self, properties=None):
+    def check_cache(self, properties=None):
         """Return the value of the cache of the instruments
 
         Parameters
@@ -289,6 +290,6 @@ class BaseInstrument(object):
                 if name in properties:
                     cache[name] = self._cache.get(name)
         else:
-            cache = self._cache
+            cache = self._cache.copy()
 
         return cache
