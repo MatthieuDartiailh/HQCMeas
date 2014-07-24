@@ -76,10 +76,10 @@ enamldef ChecksDisplay(Dialog): dial:
 
     Container:
         constraints = [vbox(hbox(lis_lab, che_lab), hbox(nb, che),
-                            close),
+                            ex),
                        align('left', lis_lab, nb),
                        align('left', che_lab, che),
-                       contents_right == close.right]
+                       contents_right == ex.right]
         Label: lis_lab:
             text = 'Failed tests'
         Notebook: nb:
@@ -100,6 +100,6 @@ enamldef ChecksDisplay(Dialog): dial:
         MultilineField: che:
             text << model.message
             read_only = True
-        PushButton: close:
+        PushButton: ex:
             text = 'Close'
             clicked :: dial.accept()

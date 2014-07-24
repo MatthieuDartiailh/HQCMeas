@@ -7,11 +7,14 @@
 from atom.api import (Str, List, Dict, Int, Bool)
 from enaml.workbench.api import PluginManifest, Extension, Plugin
 from time import sleep
+from nose.tools import assert_is_instance
+from collections import Iterable
 
 from hqc_meas.measurement.monitors.base_monitor import Monitor, BaseMonitor
 from hqc_meas.measurement.headers.base_header import Header
 from hqc_meas.measurement.checks.base_check import Check
 from hqc_meas.measurement.engines.base_engine import Engine, BaseEngine
+from hqc_meas.tasks.api import RootTask
 
 
 class TestMonitor(BaseMonitor):
@@ -92,8 +95,13 @@ class TestEngine(BaseEngine):
     allow_stop = Bool(True)
     running = Bool()
     ready = Bool()
+    paused = Bool()
 
-    def prepare_to_run(self, name, root, build_deps, monitored_entries):
+    def prepare_to_run(self, name, root, monitored_entries, build_deps):
+        assert_is_instance(name, str)
+        assert_is_instance(root, RootTask)
+        assert_is_instance(build_deps, dict)
+        assert_is_instance(monitored_entries, Iterable)
         if not self.ready:
             self.ready = True
 
@@ -102,6 +110,17 @@ class TestEngine(BaseEngine):
         self.active = True
         sleep(0.1)
         self.news(('root/default_path', 'test'))
+        self.measure_status = ('RUNNING', 'The measure is running')
+
+    def pause(self):
+        self.measure_status = ('PAUSING', '')
+        sleep(0.1)
+        self.paused = True
+        self.measure_status = ('PAUSED', '')
+
+    def resume(self):
+        self.paused = False
+        self.measure_status = ('RUNNING', '')
 
     def stop(self):
         state = self.running

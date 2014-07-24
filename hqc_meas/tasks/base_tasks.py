@@ -14,13 +14,15 @@ from atom.api\
 from configobj import Section, ConfigObj
 from inspect import cleandoc
 from copy import deepcopy
-import os, logging
+import os
+import logging
 
 from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
-from .tools.task_decorator import (make_parallel, make_wait, make_stoppable)
+from .tools.task_decorator import (make_parallel, make_wait, make_stoppable,
+                                   smooth_crash)
 from .tools.string_evaluation import safe_eval
-from .tools.safe_dict import SafeDict, Counter
+from .tools.shared_resources import SharedDict, SharedCounter
 
 
 PREFIX = '_a'
@@ -1256,6 +1258,9 @@ from threading import Event as tEvent
 class RootTask(ComplexTask):
     """Special task which is always the root of a measurement.
 
+    On this class and this class only perform can and should be called
+    directly.
+
     """
     # --- Public API ----------------------------------------------------------
 
@@ -1283,23 +1288,23 @@ class RootTask(ComplexTask):
 
     #: Dict like object used to store references to all running threads.
     #: Keys are pools ids, values list of threads. Keys are never deleted.
-    threads = Typed(SafeDict, (list))
+    threads = Typed(SharedDict, (list,))
 
     #: Dict like object used to store references to used instruments.
     #: Keys are instrument profile names, values instr instance. Keys are never
     #: deleted.
-    instrs = Typed(SafeDict, ())
+    instrs = Typed(SharedDict, ())
 
     #: Dict like object used to store file handle.
     #: Keys are file handle id as defined by the first user of the file.
     #: Keys can be deleted.
-    files = Typed(SafeDict, ())
+    files = Typed(SharedDict, ())
 
     #: Counter keeping track of the active threads.
-    active_threads_counter = Typed(Counter, kwargs={'count': 1})
+    active_threads_counter = Typed(SharedCounter, kwargs={'count': 1})
 
     #: Counter keeping track of the paused threads.
-    paused_threads_counter = Typed(Counter)
+    paused_threads_counter = Typed(SharedCounter, ())
 
     # Setting default values for the root task.
     has_root = set_default(True)
@@ -1330,6 +1335,7 @@ class RootTask(ComplexTask):
         traceback.update(check[1])
         return test, traceback
 
+    @smooth_crash
     def perform(self):
         """ Run sequentially all child tasks, and close ressources.
 
@@ -1347,17 +1353,32 @@ class RootTask(ComplexTask):
             for pool_name in self.threads:
                 with self.threads.safe_access(pool_name) as pool:
                     for thread in pool:
-                        thread.join()
+                        try:
+                            thread.join()
+                        except Exception:
+                            log = logging.getLogger(__name__)
+                            mes = 'Failed to close join thread:'
+                            log.exception(mes)
 
             # Close connection to all instruments.
             instrs = self.instrs
             for instr_profile in instrs:
-                instrs[instr_profile].close_connection()
+                try:
+                    instrs[instr_profile].close_connection()
+                except Exception:
+                    log = logging.getLogger(__name__)
+                    mes = 'Failed to close connection to instr:'
+                    log.exception(mes)
 
             # Close all opened files.
             files = self.files
             for file_id in files:
-                files[file_id].close()
+                try:
+                    files[file_id].close()
+                except Exception:
+                    log = logging.getLogger(__name__)
+                    mes = 'Failed to close file handler:'
+                    log.exception(mes)
 
     def register_in_database(self):
         """ Create a node in the database and register all entries.
@@ -1425,14 +1446,13 @@ class RootTask(ComplexTask):
         """
         pass
 
-    @observe('active_threads.count', 'paused_threads.count')
+    @observe('active_threads_counter.count', 'paused_threads_counter.count')
     def _state(self, change):
         """
 
         """
         p_count = self.paused_threads_counter.count
         a_count = self.active_threads_counter.count
-
         if a_count == p_count:
             self.paused.set()
 

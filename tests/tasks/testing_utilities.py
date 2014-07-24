@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : loop_task.py
+# module : testing_utilities.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
 """
 """
-from atom.api import Bool, Value, Int
+from atom.api import Bool, Value, Int, Float
 from hqc_meas.tasks.api import SimpleTask
+from time import sleep
 
 
 class CheckTask(SimpleTask):
@@ -20,6 +21,8 @@ class CheckTask(SimpleTask):
 
     perform_value = Value()
 
+    time = Float(0.01)
+
     def check(self, *args, **kwargs):
 
         self.check_called = True
@@ -29,3 +32,11 @@ class CheckTask(SimpleTask):
 
         self.perform_called += 1
         self.perform_value = value
+        # Simply allow thread switching
+        sleep(self.time)
+
+
+class ExceptionTask(SimpleTask):
+
+    def perform(self):
+        raise Exception()

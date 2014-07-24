@@ -183,7 +183,7 @@ class MeasurePlugin(HasPrefPlugin):
             core = self.workbench.get_plugin('enaml.workbench.core')
             cmd = u'hqc_meas.task_manager.collect_dependencies'
             res = core.invoke_command(cmd, {'task': measure.root_task}, self)
-            if not res:
+            if not res[0]:
                 for id in res[1]:
                     logger.warn(res[1][id])
                 return False
@@ -270,7 +270,6 @@ class MeasurePlugin(HasPrefPlugin):
         """
         logger = logging.getLogger(__name__)
         logger.info('Pausing measure {}.'.format(self.running_measure.name))
-        self.flags.append('pausing')
         self.engine_instance.pause()
 
     def resume_measure(self):

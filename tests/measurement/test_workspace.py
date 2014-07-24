@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_workspace.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from enaml.workbench.api import Workbench
 import enaml
 import os
@@ -75,7 +75,7 @@ class TestMeasureSpace(object):
         print complete_line(__name__ +
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
-         # Removing pref files creating during tests.
+        # Removing pref files creating during tests.
         try:
             shutil.rmtree(cls.test_dir)
 
@@ -423,7 +423,7 @@ class TestMeasureSpace(object):
         # Check the right flag is set in the plugin.
         assert_in('processing', plugin.flags)
 
-         # Check an engine instance was created and is processing the measure.
+        # Check an engine instance was created and is processing the measure.
         assert_true(plugin.engine_instance)
         engine = plugin.engine_instance
 
@@ -440,7 +440,7 @@ class TestMeasureSpace(object):
         assert_equal(measure1.status, 'COMPLETED')
         assert_equal(measure1.infos, 'Measure successfully completed')
 
-         # Check the measure has been registered as running and its status been
+        # Check the measure has been registered as running and its status been
         # updated.
         assert_true(plugin.running_measure)
         measure = plugin.running_measure
@@ -573,6 +573,42 @@ class TestMeasureSpace(object):
         # Check plugin state.
         assert_false(plugin.flags)
 
+        assert_false(plugin.engine_instance.running)
+
+    def test_pause_measure1(self):
+        """ Test pausing a  measure.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        # Pause the measure before it completes.
+        workspace.pause_current_measure()
+
+        assert_equal(measure1.status, 'PAUSED')
+
+        workspace.resume_current_measure()
+
+        assert_equal(measure1.status, 'RUNNING')
+
+        # Complete the second measure.
+        plugin.engine_instance.complete_measure()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'COMPLETED')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
         assert_false(plugin.engine_instance.running)
 
     def test_stop_measure(self):

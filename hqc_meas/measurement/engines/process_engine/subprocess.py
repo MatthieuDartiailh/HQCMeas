@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : subprocess.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 import os
 import logging
 import logging.config
@@ -91,10 +91,10 @@ class TaskProcess(Process):
 
         # Redirecting stdout and stderr to the logging system.
         logger = logging.getLogger()
-        redir_stdout = StreamToLogRedirector(logger)
-        sys.stdout = redir_stdout
-        redir_stderr = StreamToLogRedirector(logger, 'stderr')
-        sys.stderr = redir_stderr
+#        redir_stdout = StreamToLogRedirector(logger)
+#        sys.stdout = redir_stdout
+#        redir_stderr = StreamToLogRedirector(logger, 'stderr')
+#        sys.stderr = redir_stderr
         logger.info('Logger parametrised')
 
         logger.info('Process running')

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : process_engine.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import Typed, Value, Tuple, Bool
 from enaml.workbench.api import Workbench
 from enaml.application import deferred_call
@@ -45,7 +45,7 @@ class ProcessEngine(BaseEngine):
 
         # Clear all the flags.
         self._meas_pause.clear()
-        self._meas_paused._clear()
+        self._meas_paused.clear()
         self._meas_stop.clear()
         self._stop.clear()
         self._force_stop.clear()
@@ -58,6 +58,7 @@ class ProcessEngine(BaseEngine):
                                         self._log_queue,
                                         self._monitor_queue,
                                         self._meas_pause,
+                                        self._meas_paused,
                                         self._meas_stop,
                                         self._stop)
             self._process.daemon = True
@@ -142,7 +143,7 @@ class ProcessEngine(BaseEngine):
     def force_exit(self):
         self.force_stop()
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     #: Flag indicating that the user requested the measure to stop.
     _stop_requested = Bool()
@@ -255,6 +256,7 @@ class ProcessEngine(BaseEngine):
 
             # Here get message from process and react
             meas_status, int_status, mess = self._pipe.recv()
+            logger.debug('Subprocess done performing measure')
 
             if int_status == 'STOPPING':
                 self._cleanup()

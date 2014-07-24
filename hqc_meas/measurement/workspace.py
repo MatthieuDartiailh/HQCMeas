@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : workspace.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 import logging
 import os
 import enaml
@@ -32,7 +32,7 @@ LOG_ID = u'hqc_meas.measure.workspace'
 class MeasureSpace(Workspace):
     """
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     # Reference to the plugin to which the workspace is linked.
     plugin = Typed(MeasurePlugin)
@@ -187,7 +187,7 @@ class MeasureSpace(Workspace):
             self.plugin.paths['measure'] = os.path.dirname(full_path)
 
         elif mode == 'template':
-             # TODO create brand new measure using defaults from plugin and
+            # TODO create brand new measure using defaults from plugin and
             # load template
             pass
 
@@ -217,7 +217,7 @@ class MeasureSpace(Workspace):
         cmd = u'hqc_meas.task_manager.collect_dependencies'
         res = core.invoke_command(cmd, {'task': measure.root_task},
                                   self.plugin)
-        if not res:
+        if not res[0]:
             for id in res[1]:
                 logger.warn(res[1][id])
             return False
@@ -341,13 +341,13 @@ class MeasureSpace(Workspace):
         """ Pause the currently active measure.
 
         """
-        self.plugin.pause()
+        self.plugin.pause_measure()
 
     def resume_current_measure(self):
         """ Remuse the currently paused measure.
 
         """
-        self.plugin.resume()
+        self.plugin.resume_measure()
 
     def stop_current_measure(self):
         """
@@ -377,7 +377,7 @@ class MeasureSpace(Workspace):
         if self.content and self.content.children:
             return self.content.children[0]
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     def _new_measure(self):
         """ Create a new measure using the default tools.

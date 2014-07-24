@@ -77,7 +77,7 @@ class TestProcessEngine(object):
         print complete_line(__name__ +
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
-         # Removing pref files creating during tests.
+        # Removing pref files creating during tests.
         try:
             shutil.rmtree(cls.test_dir)
 
@@ -291,7 +291,7 @@ class TestProcessEngine(object):
             sleep(0.1)
             i += 1
             if i > 300:
-                raise Exception('Task took too long to complete.')
+                raise Exception('Engine took too long to exit.')
 
         # Check the monitor and log received the notifications.
         assert_in('root/print_message', monitor.engine_news)
@@ -310,12 +310,12 @@ class TestProcessEngine(object):
 
         core = self.workbench.get_plugin('enaml.workbench.core')
         cmd = 'hqc_meas.task_manager.collect_dependencies'
-        b_deps = core.invoke_command(cmd, {'task': measure.root_task,
-                                           'dependencies': ['build']})
+        _, b_deps = core.invoke_command(cmd, {'task': measure.root_task,
+                                              'dependencies': ['build']})
 
         engine = ProcessEngine(workbench=self.workbench)
-        engine.prepare_to_run('test', measure.root_task, b_deps,
-                              measure.collect_entries_to_observe())
+        engine.prepare_to_run('test', measure.root_task,
+                              measure.collect_entries_to_observe(), b_deps)
 
         # Check engine state.
         assert_true(engine._temp)
@@ -332,6 +332,112 @@ class TestProcessEngine(object):
         sleep(2)
 
         engine.exit()
+
+    def test_pausing_measure1(self):
+        """ Test pausing and resuming a measure.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'hqc_meas.measure.engines.process_engine'
+        workspace.start_processing_measures()
+        i = 0
+        while not plugin.engine_instance._processing.is_set():
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to start.')
+
+        # Pause the measure before it completes.
+        workspace.pause_current_measure()
+        process_app_events()
+
+        assert_equal(measure1.status, 'PAUSING')
+
+        i = 0
+        while measure1.status != 'PAUSED':
+            process_app_events()
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to paused.')
+        process_app_events()
+
+        workspace.resume_current_measure()
+        process_app_events()
+
+        assert_equal(measure1.status, 'RUNNING')
+
+        while plugin.engine_instance._processing.is_set():
+            process_app_events()
+            sleep(0.1)
+            i += 1
+            if i > 200:
+                raise Exception('Task took too long to complete.')
+
+        sleep(0.1)
+        process_app_events()
+        assert_equal(measure1.status, 'COMPLETED')
+
+    def test_pausing_measure2(self):
+        """ Test pausing and stopping a measure.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'hqc_meas.measure.engines.process_engine'
+        workspace.start_processing_measures()
+        i = 0
+        while not plugin.engine_instance._processing.is_set():
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to start.')
+
+        # Pause the measure before it completes.
+        workspace.pause_current_measure()
+        process_app_events()
+
+        assert_equal(measure1.status, 'PAUSING')
+
+        i = 0
+        while measure1.status != 'PAUSED':
+            process_app_events()
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to pause.')
+        process_app_events()
+
+        # Stop the measure before it completes.
+        workspace.stop_current_measure()
+
+        i = 0
+        while plugin.engine_instance._processing.is_set():
+            sleep(0.1)
+            i += 1
+            if i > 100:
+                raise Exception('Task took too long to complete.')
+        process_app_events()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'INTERRUPTED')
 
     def test_stop_measure(self):
         """ Test stopping a measure but allowing to process next one.
@@ -354,7 +460,7 @@ class TestProcessEngine(object):
             sleep(0.1)
             i += 1
             if i > 100:
-                raise Exception('Task took too long to complete.')
+                raise Exception('Task took too long to start.')
 
         # Stop the measure before it completes.
         workspace.stop_current_measure()
@@ -394,7 +500,7 @@ class TestProcessEngine(object):
             sleep(0.1)
             i += 1
             if i > 100:
-                raise Exception('Task took too long to complete.')
+                raise Exception('Task took too long to start.')
 
         # Stop the measure before it completes.
         workspace.stop_processing_measures()

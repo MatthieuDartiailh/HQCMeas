@@ -6,15 +6,18 @@
 # =============================================================================
 """
 """
-from atom.api import Atom, Dict, Value, Int
+from atom.api import Atom, Instance, Value, Int
 from contextlib import contextmanager
 from collections import defaultdict
-from threading import RLock
+from threading import RLock, Lock
 
-class Counter(Atom):
+
+class SharedCounter(Atom):
     """ Thread-safe counter object.
 
     """
+
+    # --- Public API ----------------------------------------------------------
 
     #: Current count of the counter. User should not manipulate this directly.
     count = Int()
@@ -32,10 +35,18 @@ class Counter(Atom):
 
         """
         self._lock.acquire()
-        self.counter += -1
+        self.count += -1
         self._lock.release()
 
-class SafeDict(Atom):
+    # --- Private API ---------------------------------------------------------
+
+    _lock = Value()
+
+    def _default__lock(self):
+        return Lock()
+
+
+class SharedDict(Atom):
     """ Dict wrapper using a lock to protect access to its values.
 
     Parameters
@@ -48,20 +59,22 @@ class SafeDict(Atom):
 
     # --- Public API ----------------------------------------------------------
 
-    def __init__(self, default = None):
+    def __init__(self, default=None):
+        super(SharedDict, self).__init__()
         if default is not None:
             self._dict = defaultdict(default)
+        else:
+            self._dict = {}
 
     @contextmanager
     def safe_access(self, key):
         """ Context manager to safely manipulate a value of the dict.
 
         """
-
-        lock = self.lock
+        lock = self._lock
         lock.acquire()
 
-        yield self._dict.get(key)
+        yield self._dict[key]
 
         lock.release()
 
@@ -76,18 +89,27 @@ class SafeDict(Atom):
 
         self._lock.release()
 
+    def get(self, key, default=None):
+        self._lock.acquire()
+
+        aux = self._dict.get(key, default)
+
+        self._lock.release()
+
+        return aux
+
     # --- Private API ---------------------------------------------------------
 
-    _dict = Dict()
+    _dict = Instance((dict, defaultdict))
 
     _lock = Value()
 
     def __getitem__(self, key):
 
-        lock = self.lock
+        lock = self._lock
         lock.acquire()
 
-        aux = self._dict.get(key)
+        aux = self._dict[key]
 
         lock.release()
 
@@ -95,7 +117,7 @@ class SafeDict(Atom):
 
     def __setitem__(self, key, value):
 
-        lock = self.lock
+        lock = self._lock
         lock.acquire()
 
         self._dict[key] = value
@@ -104,7 +126,7 @@ class SafeDict(Atom):
 
     def __delitem__(self, key):
 
-        lock = self.lock
+        lock = self._lock
         lock.acquire()
 
         del self._dict[key]
@@ -113,6 +135,9 @@ class SafeDict(Atom):
 
     def __contains__(self, key):
         return key in self._dict
+
+    def __iter__(self):
+        return iter(self._dict)
 
     def __len__(self):
         return len(self._dict)

@@ -10,6 +10,7 @@ from atom.api import (Str, Float, ContainerList, Tuple, set_default)
 
 from time import sleep
 from inspect import cleandoc
+import logging
 
 from ..base_tasks import SimpleTask
 from ..tools.string_evaluation import safe_eval
@@ -34,7 +35,7 @@ class PrintTask(SimpleTask):
         """
         mess = self.format_string(self.message)
         self.write_in_database('message', mess)
-        print mess
+        logging.info(mess)
         return True
 
     def check(self, *args, **kwargs):
@@ -62,7 +63,6 @@ class SleepTask(SimpleTask):
 
         """
         sleep(self.time)
-        return True
 
     def check(self, *args, **kwargs):
         return True, {}

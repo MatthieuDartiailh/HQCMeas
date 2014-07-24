@@ -133,14 +133,13 @@ def make_parallel(perform, pool):
         with pools.safe_access(pool) as threads:
             threads.append(thread)
 
-        root.active_thread_counter.increment()
+        root.active_threads_counter.increment()
         thread.start()
-        root.active_thread_counter.decrement()
+        root.active_threads_counter.decrement()
 
     wrapper.__name__ = perform.__name__
     wrapper.__doc__ = perform.__doc__
     return wrapper
-
 
 
 # XXXX should now support nested wait in parallel
@@ -177,8 +176,8 @@ def make_wait(perform, wait, no_wait):
                 threads = chain.from_iterable([all_threads[w]
                                                for w in wait])
 
-                # If there is None break.
-                if not threads:
+                # If there is none break. Use any as threads is an iterator.
+                if not any(threads):
                     break
 
                 # Else join them.
@@ -209,8 +208,8 @@ def make_wait(perform, wait, no_wait):
                 threads = chain.from_iterable([all_threads[p]
                                                for p in pools])
 
-                # If there is None break.
-                if not threads:
+                # If there is None break. Use any as threads is an iterator.
+                if not any(threads):
                     break
 
                 # Else join them.
@@ -237,8 +236,8 @@ def make_wait(perform, wait, no_wait):
                 threads = chain.from_iterable([all_threads[p]
                                                for p in all_threads])
 
-                # If there is None break.
-                if not threads:
+                # If there is None break. Use any as threads is an iterator.
+                if not any(threads):
                     break
 
                 # Else join them.
