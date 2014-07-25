@@ -10,7 +10,8 @@ from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
 
 from hqc_meas.measurement.measure import Measure
 from hqc_meas.tasks.base_tasks import RootTask
-from hqc_meas.tasks.tasks_util.test_tasks import SleepTask, PrintTask
+from hqc_meas.tasks.tasks_util.log_task import LogTask
+from hqc_meas.tasks.tasks_util.sleep_task import SleepTask
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
@@ -599,7 +600,7 @@ class TestProcessEngine(object):
         measure = Measure(plugin=plugin, name='Test1')
         measure.root_task = RootTask(default_path=self.test_dir)
         children = [SleepTask(task_name='sleep1', time=1),
-                    PrintTask(task_name='print', message='test'),
+                    LogTask(task_name='print', message='test'),
                     SleepTask(task_name='sleep2', time=0.1)]
         measure.root_task.children_task.extend(children)
         measure.status = 'READY'

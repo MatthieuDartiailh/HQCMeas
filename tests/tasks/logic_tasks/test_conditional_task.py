@@ -59,12 +59,16 @@ class TestConditionTask(object):
         # Test performing when condition is True.
         self.task.condition = 'True'
 
+        self.root.task_database.prepare_for_running()
+
         self.task.perform()
         assert_true(self.check.perform_called)
 
     def test_perform2(self):
         # Test performing when condition is False.
         self.task.condition = '1 < 0'
+
+        self.root.task_database.prepare_for_running()
 
         self.task.perform()
         assert_false(self.check.perform_called)

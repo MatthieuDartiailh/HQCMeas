@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : sleep_task_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox, align
+from enaml.widgets.api import (GroupBox, Label)
+from enaml.stdlib.fields import FloatField
+
+
+enamldef SleepView(GroupBox):
+
+    attr task
+    title << task.task_name
+    padding = (0,0,5,5)
+    constraints = [hbox(lab, time, unit),
+                    align('v_center', lab, time),
+                    align('v_center', time, unit)]
+
+    Label: lab:
+        text = 'Time to sleep'
+    FloatField: time:
+        value := task.time
+        minimum = 0.0
+    Label: unit:
+        text = 's'
+
+TASK_VIEW_MAPPING = {'SleepTask': SleepView}

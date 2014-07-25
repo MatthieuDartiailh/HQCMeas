@@ -91,7 +91,7 @@ class Test(object):
         print complete_line(__name__ +
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
-         # Removing pref files creating during tests.
+        # Removing pref files creating during tests.
         try:
             shutil.rmtree(cls.test_dir)
 
@@ -298,7 +298,7 @@ class Test(object):
         assert_equal(len(task.children_task), 1)
         task2 = task.children_task[0]
         assert_equal(task2.task_name, 'a')
-        assert_equal(task2.task_class, 'PrintTask')
+        assert_equal(task2.task_class, 'LogTask')
 
     def test_config_request_build3(self):
         self.workbench.register(TaskManagerManifest())
@@ -323,24 +323,24 @@ class Test(object):
         # Test collecting build dependencies.
         self.workbench.register(TaskManagerManifest())
         from hqc_meas.tasks.api import RootTask, ComplexTask
-        from hqc_meas.tasks.tasks_util.test_tasks import PrintTask
-        aux = [PrintTask(task_name='r')]
+        from hqc_meas.tasks.tasks_util.log_task import LogTask
+        aux = [LogTask(task_name='r')]
         root = RootTask(task_name='root')
         root.children_task = [ComplexTask(task_name='complex',
                                           children_task=aux),
-                              PrintTask(task_name='t')]
+                              LogTask(task_name='t')]
 
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.collect_dependencies'
         res, build, run = core.invoke_command(com, {'task': root})
         assert_true(res)
         assert_in('tasks', build)
-        assert_equal(sorted(['PrintTask', 'ComplexTask']),
+        assert_equal(sorted(['LogTask', 'ComplexTask']),
                      sorted(build['tasks'].keys()))
         assert_not_in('interfaces', build)
         assert_false(run)
 
-    #--- Test BuildDependencies -----------------------------------------------
+    # --- Test BuildDependencies ----------------------------------------------
 
     def test_build_dep_registation1(self):
         # Test that build deps are properly found at start-up.
@@ -420,7 +420,7 @@ class Test(object):
         self.workbench.register(DummyBuildDep5())
         self.workbench.get_plugin(u'hqc_meas.task_manager')
 
-    #--- Test RuntimeDependencies ---------------------------------------------
+    # --- Test RuntimeDependencies --------------------------------------------
 
     def test_runtime_dep_registation1(self):
         # Test that runtime deps are properly found at start-up.
