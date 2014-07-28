@@ -18,7 +18,7 @@ class FormulaTask(SimpleTask):
     #: List of formulas.
     formulas = ContainerList(Tuple()).tag(pref=True)
 
-    wait = set_default({'no_wait': []})  # Wait on all pools by default.
+    wait = set_default({'activated': True})  # Wait on all pools by default.
 
     def perform(self):
         """
@@ -26,8 +26,6 @@ class FormulaTask(SimpleTask):
         for i, formula in enumerate(self.formulas):
             value = self.format_and_eval_string(formula[1])
             self.write_in_database(formula[0], value)
-
-        return True
 
     def check(self, *args, **kwargs):
         """
@@ -49,6 +47,6 @@ class FormulaTask(SimpleTask):
         """ Observer keeping the list of database entries up to date.
 
         """
-        self.task_database_entries = {f[0]: 0.0 for f in change['value']}
+        self.task_database_entries = {f[0]: 1.0 for f in change['value']}
 
 KNOWN_PY_TASKS = [FormulaTask]

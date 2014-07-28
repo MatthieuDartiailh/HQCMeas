@@ -25,7 +25,7 @@ class DefinitionTask(SimpleTask):
         """ Do nothing.
 
         """
-        return True
+        pass
 
     def check(self, *args, **kwargs):
         """ Write all values in database.
@@ -43,14 +43,14 @@ class DefinitionTask(SimpleTask):
                 path = self.task_path + '/' + self.task_name + \
                     '-' + entry[0]
                 traceback[path] = cleandoc('''Failed to eval definition {}
-                            '''.format(entry.definition))
+                            '''.format(entry[1]))
         return test, traceback
 
     def _observe_definitions(self, change):
         """ Observer adding the new definitions to the database.
 
         """
-        self.task_database_entries = {obj[0]: 0.0
+        self.task_database_entries = {obj[0]: 1.0
                                       for obj in change['value']}
 
 KNOWN_PY_TASKS = [DefinitionTask]
