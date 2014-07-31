@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# =============================================================================
+# module : meas_dc_tasks.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
 """
 """
 from atom.api import Float, set_default
@@ -32,7 +37,5 @@ class MeasDCVoltageTask(InstrumentTask):
 
         value = self.driver.read_voltage_dc()
         self.write_in_database('voltage', value)
-
-        return True
 
 KNOWN_PY_TASKS = [MeasDCVoltageTask]

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : pna_tasks.py
+# module : apply_mag_field_task.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -51,8 +51,6 @@ class ApplyMagFieldTask(InstrumentTask):
         self.driver.go_to_field(target_value, self.rate, self.auto_stop_heater,
                                 self.post_switch_wait)
         self.write_in_database('Bfield', target_value)
-
-        return True
 
     def check(self, *args, **kwargs):
         """

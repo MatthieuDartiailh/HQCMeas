@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# =============================================================================
+# module : lock_in_measure_task.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
 """
 """
 from atom.api import (Enum, Float, set_default)
@@ -54,8 +59,6 @@ class LockInMeasureTask(InstrumentTask):
             amplitude, phase = self.driver.read_amp_and_phase()
             self.write_in_database('amplitude', amplitude)
             self.write_in_database('phase', phase)
-
-        return True
 
     def _observe_mode(self, change):
         """ Update the database entries acording to the mode.
