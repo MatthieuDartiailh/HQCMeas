@@ -24,6 +24,7 @@ with enaml.imports():
     from .checks.checks_display import ChecksDisplay
     from .engines.selection import EngineSelector
     from .content import MeasureContent, MeasureSpaceMenu
+    from .measure_edition import WarningsDisplay
 
 
 LOG_ID = u'hqc_meas.measure.workspace'
@@ -247,6 +248,14 @@ class MeasureSpace(Workspace):
                                 {'profiles': profs}, self.plugin)
 
         if check:
+            # If check is ok but there are some errors, those are warnings
+            # which the user can either ignore and enqueue the measure, or he
+            # can cancel the enqueuing and try again.
+            if errors:
+                dial = WarningsDisplay(errors=errors)
+                dial.exec_()
+                if not dial.result:
+                    return
             default_filename = measure.name + '_last_run.ini'
             path = os.path.join(measure.root_task.default_path,
                                 default_filename)

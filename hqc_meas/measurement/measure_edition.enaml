@@ -15,6 +15,7 @@ from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
 from inspect import cleandoc
 from textwrap import fill
 
+from hqc_meas.utils.widgets.erros_display import ErrorsDisplayContainer
 from hqc_meas.utils.widgets.qt_tree_widget import QtTreeWidget
 from hqc_meas.utils.widgets.tree_nodes import TreeNode
 from hqc_meas.utils.widgets.qt_tree_menu import \
@@ -224,6 +225,26 @@ class _MeasEditionModel(Atom):
             self.tree_visible = editor.tree_visible
 
             editor.selected = True
+
+
+enamldef WarningsDisplay(Dialog): dial:
+    """
+
+    """
+    alias errors : cont.errors
+
+    title = 'Warnings'
+
+    ErrorsDisplayContainer: cont:
+        pass
+    PushButton: cancel:
+        text = 'Cancel'
+        clicked ::
+            dial.reject()
+    PushButton: enq:
+        text = 'Enqueue'
+        clicked ::
+            dial.accept()
 
 
 enamldef MeasEditionView(Container): ed:

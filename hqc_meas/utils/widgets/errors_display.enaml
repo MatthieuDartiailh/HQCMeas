@@ -33,32 +33,44 @@ class _ErrorsDisplayModel(Atom):
         new = change['value']
         self.message = self.errors[new]
 
+enamldef ErrorsDisplayContainer(Container):
+    """
+
+    """
+    attr errors
+    attr model = _ErrorsDisplayModel(errors)
+
+    constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che),
+                        close),
+                   align('left', lis_lab, lis),
+                   align('left', che_lab, che)]
+
+    Label: lis_lab:
+        text = 'Import failures'
+    QtListStrWidget: lis:
+        hug_height = 'ignore'
+        items << model.errors.keys()
+        selected_item >> model.selected_error
+
+    Label: che_lab:
+        text << model.selected_error
+    MultilineField: che:
+        text << model.message
+        read_only = True
+
 
 enamldef ErrorsDisplay(Dialog): dial:
     """
     """
     attr errors
-    attr model = _ErrorsDisplayModel(errors)
 
     Conditional:
         condition = bool(errors)
         Container:
-            constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che),
-                                close),
-                           align('left', lis_lab, lis),
-                           align('left', che_lab, che),
+            constraints = [vbox(cont, close),
                            contents_right == close.right]
-            Label: lis_lab:
-                text = 'Import failures'
-            QtListStrWidget: lis:
-                hug_height = 'ignore'
-                items << model.errors.keys()
-                selected_item >> model.selected_error
-            Label: che_lab:
-                text << model.selected_error
-            MultilineField: che:
-                text << model.message
-                read_only = True
+            ErrorsDisplayContainer: cont:
+                errors << dial.errors
             PushButton: close:
                 text = 'Close'
                 clicked :: dial.accept()
