@@ -27,6 +27,9 @@ class SaveTask(SimpleTask):
     Currently only support saving floats.
 
     """
+    #: Kind of object in which to save the data.
+    saving_target = Enum('File', 'Array', 'File and array').tag(pref=True)
+
     #: Folder in which to save the data.
     folder = Unicode().tag(pref=True)
 
@@ -36,14 +39,14 @@ class SaveTask(SimpleTask):
     #: Currently opened file object. (File mode)
     file_object = Value()
 
+    #: Opening mode to use when saving to a file.
+    file_mode = Enum('New', 'Add')
+
     #: Header to write at the top of the file.
     header = Str().tag(pref=True)
 
     #: Numpy array in which data are stored (Array mode)
     array = Value()  # Array
-
-    #: Kind of object in which to save the data.
-    saving_target = Enum('File', 'Array', 'File and array').tag(pref=True)
 
     #: Size of the data to be saved. (Evaluated at runtime)
     array_size = Str().tag(pref=True)
@@ -73,16 +76,22 @@ class SaveTask(SimpleTask):
         """
         #Initialisation.
         if not self.initialized:
+
             self.line_index = 0
-            self.array_length = self.format_and_eval_string(self.array_size)
+            size_str = self.array_size
+            if size_str:
+                self.array_length = self.format_and_eval_string(size_str)
+            else:
+                self.array_length = -1
+
             if self.saving_target != 'Array':
                 full_folder_path = self.format_string(self.folder)
-
                 filename = self.format_string(self.filename)
-
                 full_path = os.path.join(full_folder_path, filename)
+                mode = 'wb' if self.file_mode == 'New' else 'ab'
+
                 try:
-                    self.file_object = open(full_path, 'w')
+                    self.file_object = open(full_path, mode)
                 except IOError:
                     log = logging.getLogger()
                     mes = cleandoc('''In {}, failed to open the specified
@@ -133,38 +142,47 @@ class SaveTask(SimpleTask):
     def check(self, *args, **kwargs):
         """
         """
+        err_path = self.task_path + '/' + self.task_name
         traceback = {}
         if self.saving_target != 'Array':
             try:
                 full_folder_path = self.format_string(self.folder)
             except Exception:
-                traceback[self.task_path + '/' + self.task_name] = \
-                    'Failed to format the folder path'
+                traceback[err_path] = 'Failed to format the folder path'
                 return False, traceback
 
             try:
                 filename = self.format_string(self.filename)
             except Exception:
-                traceback[self.task_path + '/' + self.task_name] = \
-                    'Failed to format the filename'
+                traceback[err_path] = 'Failed to format the filename'
                 return False, traceback
 
             full_path = os.path.join(full_folder_path, filename)
 
+            overwrite = False
+            if self.file_mode == 'New' and os.path.isfile(full_path):
+                overwrite = True
+                traceback[err_path + '-file'] = \
+                    cleandoc('''File already exists, running the measure will
+                    override it.''')
+
             try:
-                f = open(full_path, 'wb')
+                f = open(full_path, 'ab')
                 f.close()
+                if self.file_mode == 'New' and not overwrite:
+                    os.remove(full_path)
             except Exception:
-                traceback[self.task_path + '/' + self.task_name] = \
+                traceback[err_path] = \
                     'Failed to open the specified file'
                 return False, traceback
 
-        try:
-            self.format_and_eval_string(self.array_size)
-        except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Failed to compute the array size'
-            return False, traceback
+        if self.saving_target == 'File' and self.array_size:
+            try:
+                self.format_and_eval_string(self.array_size)
+            except Exception:
+                traceback[self.task_path + '/' + self.task_name] = \
+                    'Failed to compute the array size'
+                return False, traceback
 
         test = True
         for i, s in enumerate(self.saved_values):
