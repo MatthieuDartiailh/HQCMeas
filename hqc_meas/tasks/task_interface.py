@@ -7,7 +7,6 @@
 """
 """
 from atom.api import Atom, ForwardInstance, Instance, Str, Dict
-from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 from hqc_meas.tasks.base_tasks import BaseTask
@@ -22,6 +21,9 @@ class InterfaceableTaskMixin(Atom):
     methods defined in tasks.
     ex : Toto(InterfaceableTaskMixin, MyTask):
 
+    InterfaceableTaskMixin must appear a single time inthe mro. This is checked
+    by the manager at loading time.
+
 
     """
     #: A reference to the current interface for the task.
@@ -35,12 +37,7 @@ class InterfaceableTaskMixin(Atom):
 
         """
         # Trick to call parent check by tweaking the mro.
-        # XXXX won't work if InterfaceableTaskMixin appears several times in
-        # the mro
         ancestors = type(self).mro()
-        if ancestors.count(InterfaceableTaskMixin) > 1:
-            return False, {self.task_name: cleandoc('''Task cannot inherit
-                multiple times from InterfaceableTaskMixin''')}
         i = ancestors.index(InterfaceableTaskMixin)
         test, traceback = ancestors[i + 1].check(self, *args, **kwargs)
 
@@ -99,9 +96,7 @@ class InterfaceableTaskMixin(Atom):
         """
         # I assume the interface does not override any task member.
         # For the callables only the not None answer will be updated.
-
         ancestors = type(self).mro()
-        # XXXX here no check that the mixin apperas only once.
         i = ancestors.index(InterfaceableTaskMixin)
         answers = ancestors[i + 1].answer(self, members, callables)
 
@@ -114,7 +109,6 @@ class InterfaceableTaskMixin(Atom):
 
         """
         ancestors = type(self).mro()
-        # XXXX here no check that the mixin apperas only once.
         i = ancestors.index(InterfaceableTaskMixin)
         ancestors[i + 1].register_preferences(self)
 
@@ -127,7 +121,6 @@ class InterfaceableTaskMixin(Atom):
 
         """
         ancestors = type(self).mro()
-        # XXXX here no check that the mixin apperas only once.
         i = ancestors.index(InterfaceableTaskMixin)
         ancestors[i + 1].update_preferences_from_members(self)
 
@@ -156,7 +149,6 @@ class InterfaceableTaskMixin(Atom):
 
         """
         ancestors = cls.mro()
-        # XXXX here no check that the mixin apperas only once.
         i = ancestors.index(InterfaceableTaskMixin)
         task = ancestors[i + 1].build_from_config(cls)
 

@@ -19,7 +19,7 @@ from inspect import cleandoc
 from collections import defaultdict
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
-from hqc_meas.tasks.api import BaseTask, TaskInterface
+from hqc_meas.tasks.api import BaseTask, TaskInterface, InterfaceableTaskMixin
 from hqc_meas.tasks.tools.walks import flatten_walk
 from hqc_meas.utils.configobj_ops import flatten_config
 from .filters.api import AbstractTaskFilter, TASK_FILTERS
@@ -503,7 +503,12 @@ class TaskManagerPlugin(HasPrefPlugin):
                 if pack in self.tasks_loading:
                     tasks_packages.remove(pack)
 
+        tasks = self._validate_interfaceable_tasks(tasks, failed)
+
+        # Map between task class name and formatted name.
         aux_task_map = {v.__name__: k for k, v in tasks.iteritems()}
+
+        # Keeping only the tasks with valid views.
         valid_tasks = {k: tasks[k] for name, k in aux_task_map.iteritems()
                        if name in views}
         valid_views = {k: v for k, v in views.iteritems()
@@ -526,6 +531,20 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         self._failed = failed
         # TODO do something with failed
+
+    def _validate_interfaceable_tasks(self, tasks, failed):
+        """ Check that the mixin InterfaceableTaskMixin never appear twice.
+
+        """
+        for name, task in tasks.iteritems():
+            if issubclass(task, InterfaceableTaskMixin):
+                ancestors = type(self).mro()
+                if ancestors.count(InterfaceableTaskMixin) > 1:
+                    failed[name] = cleandoc('''Task cannot inherit
+                        multiple times from InterfaceableTaskMixin''')
+                    del tasks[name]
+
+        return tasks
 
     def _refresh_filters(self):
         """ Place holder for a future filter discovery function
