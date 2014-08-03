@@ -8,8 +8,8 @@
 """
 from atom.api import (Tuple, ContainerList, Str, Enum, Value,
                       Bool, Int, observe, set_default, Unicode)
-
 import os
+import errno
 import numpy
 import logging
 from inspect import cleandoc
@@ -34,7 +34,7 @@ class SaveTask(SimpleTask):
     folder = Unicode().tag(pref=True)
 
     #: Name of the file in which to write the data.
-    filename = Str().tag(pref=True)
+    filename = Unicode().tag(pref=True)
 
     #: Currently opened file object. (File mode)
     file_object = Value()
@@ -70,7 +70,7 @@ class SaveTask(SimpleTask):
     def perform(self):
         """ Collect all data and write them to array or file according to mode.
 
-        On first call initialise the systemby creating file and/or array. Close
+        On first call initialise the system by opening file and/or array. Close
         file when the expected number of lines has been written.
 
         """
@@ -100,7 +100,7 @@ class SaveTask(SimpleTask):
                     self.root_task.should_stop.set()
                     return False
 
-                self.write_in_database('file', self.file_object)
+                self.root_task.files[full_path] = self.file_object
                 if self.header:
                     for line in self.header.split('\n'):
                         self.file_object.write('# ' + line + '\n')
@@ -132,12 +132,9 @@ class SaveTask(SimpleTask):
 
         #Closing
         if self.line_index == self.array_length:
-            if self.saving_target != 'File':
-                self.write_in_database('array', self.array)
-            self.file_object.close()
+            if self.file_object:
+                self.file_object.close()
             self.initialized = False
-
-        return True
 
     def check(self, *args, **kwargs):
         """
@@ -147,14 +144,16 @@ class SaveTask(SimpleTask):
         if self.saving_target != 'Array':
             try:
                 full_folder_path = self.format_string(self.folder)
-            except Exception:
-                traceback[err_path] = 'Failed to format the folder path'
+            except Exception as e:
+                mess = 'Failed to format the folder path: {}'
+                traceback[err_path] = mess.format(e)
                 return False, traceback
 
             try:
                 filename = self.format_string(self.filename)
-            except Exception:
-                traceback[err_path] = 'Failed to format the filename'
+            except Exception as e:
+                mess = 'Failed to format the filename: {}'
+                traceback[err_path] = mess.format(e)
                 return False, traceback
 
             full_path = os.path.join(full_folder_path, filename)
@@ -171,25 +170,29 @@ class SaveTask(SimpleTask):
                 f.close()
                 if self.file_mode == 'New' and not overwrite:
                     os.remove(full_path)
-            except Exception:
-                traceback[err_path] = \
-                    'Failed to open the specified file'
+            except Exception as e:
+                mess = 'Failed to open the specified file'
+                traceback[err_path] = mess.format(e)
                 return False, traceback
 
-        if self.saving_target == 'File' and self.array_size:
+        if self.array_size:
             try:
                 self.format_and_eval_string(self.array_size)
-            except Exception:
-                traceback[self.task_path + '/' + self.task_name] = \
-                    'Failed to compute the array size'
+            except Exception as e:
+                mess = 'Failed to compute the array size: {}'
+                traceback[err_path] = mess.format(e)
                 return False, traceback
+
+        elif self.saving_target != 'File':
+            traceback[err_path] = 'A size for the array must be provided.'
+            return False, traceback
 
         test = True
         for i, s in enumerate(self.saved_values):
             try:
                 self.format_and_eval_string(s[1])
             except Exception as e:
-                traceback[self.task_path + '/' + self.task_name + str(i)] = \
+                traceback[err_path + '-entry' + str(i)] = \
                     'Failed to evaluate entry {}: {}'.format(s[0], e)
                 test = False
 
@@ -207,13 +210,10 @@ class SaveTask(SimpleTask):
         """
         """
         new = change['value']
-        if new == 'File':
-            self.task_database_entries = {'file': None}
-        elif new == 'Array':
+        if new != 'File':
             self.task_database_entries = {'array': numpy.array([1.0])}
         else:
-            self.task_database_entries = {'file': None,
-                                          'array': numpy.array([1.0])}
+            self.task_database_entries = {}
 
 
 class SaveArrayTask(SimpleTask):
@@ -255,6 +255,13 @@ class SaveArrayTask(SimpleTask):
 
         full_path = os.path.join(full_folder_path, filename)
 
+        # Create folder if it does not exists.
+        try:
+            os.makedirs(full_folder_path)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+
         if self.mode == 'Text file':
             try:
                 self.file_object = open(full_path, 'wb')
@@ -263,9 +270,7 @@ class SaveArrayTask(SimpleTask):
                                 file'''.format(self.task_name))
                 log = logging.getLogger()
                 log.error(mes)
-
-                self.root_task.should_stop.set()
-                return
+                raise
 
             if self.header:
                 for line in self.header.split('\n'):
@@ -291,29 +296,32 @@ class SaveArrayTask(SimpleTask):
 
             numpy.save(full_path, array_to_save)
 
-        return True
-
     def check(self, *args, **kwargs):
         """ Check folder path and filename.
 
         """
         traceback = {}
+        err_path = self.task_path + '/' + self.task_name
         try:
             full_folder_path = self.format_string(self.folder)
         except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
+            traceback[err_path] = \
                 'Failed to format the folder path'
             return False, traceback
 
         if self.mode == 'Binary file':
-            if len(self.filename) > 3:
-                if self.filename[-4] == '.' and self.filename[-3:] != 'npy':
-                    self.filename = self.filename[:-4] + '.npy'
-                    log = logging.getLogger()
-                    mes = cleandoc("""The extension of the file will be
-                                    replaced by '.npy' in task
-                                    {}""".format(self.task_name))
-                    log.info(mes)
+            if len(self.filename) > 3 and self.filename[-4] == '.'\
+                    and self.filename[-3:] != 'npy':
+                self.filename = self.filename[:-4] + '.npy'
+                log = logging.getLogger()
+                mes = cleandoc("""The extension of the file will be
+                                replaced by '.npy' in task
+                                {}""".format(self.task_name))
+                log.info(mes)
+
+            if self.header:
+                traceback[err_path + '-header'] =\
+                    'Cannot write a header when saving in binary mode.'
 
         try:
             filename = self.format_string(self.filename)
