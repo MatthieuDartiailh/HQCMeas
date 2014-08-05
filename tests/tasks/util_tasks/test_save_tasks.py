@@ -11,7 +11,8 @@ from nose.tools import (assert_equal, assert_true, assert_false, assert_in,
 from nose.plugins.attrib import attr
 from multiprocessing import Event
 from enaml.workbench.api import Workbench
-import os, shutil
+import os
+import shutil
 import numpy as np
 
 from hqc_meas.tasks.api import RootTask
@@ -68,6 +69,13 @@ class TestSaveTask(object):
         self.root.write_in_database('int', 1)
         self.root.write_in_database('float', 2.0)
         self.root.write_in_database('str', 'a')
+
+    def teardown(self):
+        folder = self.test_dir
+        for the_file in os.listdir(folder):
+            file_path = os.path.join(folder, the_file)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
     def test_saving_target_observer(self):
         self.task.saving_target = 'Array'
@@ -317,92 +325,215 @@ class TestSaveTask(object):
         np.testing.assert_array_equal(task.array, array)
 
 
-#class TestSaveArrayTask(object):
-#
-#    def setup(self):
-#        self.root = RootTask(should_stop=Event(), should_pause=Event())
-#        self.task = SaveArrayTask(task_name='Test')
-#        self.root.children_task.append(self.task)
-#
-#    def test_check1(self):
-#        # Check everything ok in Text mode.
-#
-#    def test_check2(self):
-#        # Check everything ok in Binary mode (wrong file extension)
-#
-#    def test_check3(self):
-#        # Check handling a wrong folder.
-#
-#    def test_check4(self):
-#        # Check handling a wrong filename.
-#
-#    def test_check5(self):
-#        # Check handling a wrong database address.
-#
-#    def test_perform1(self):
-#        # Test performing in text mode.
-#
-#    def test_perform2(self):
-#        # Test performing in binary mode.
-#
-#
-#@attr('ui')
-#class TestSaveView(object):
-#
-#    def setup(self):
-#        self.workbench = Workbench()
-#        self.workbench.register(CoreManifest())
-#        self.workbench.register(StateManifest())
-#        self.workbench.register(PreferencesManifest())
-#        self.workbench.register(TaskManagerManifest())
-#
-#        self.root = RootTask(should_stop=Event(), should_pause=Event())
-#        self.task = SaveTask(task_name='Test')
-#        self.root.children_task.append(self.task)
-#
-#    def teardown(self):
-#        close_all_windows()
-#
-#        self.workbench.unregister(u'hqc_meas.task_manager')
-#        self.workbench.unregister(u'hqc_meas.preferences')
-#        self.workbench.unregister(u'hqc_meas.state')
-#        self.workbench.unregister(u'enaml.workbench.core')
-#
-#    def test_view(self):
-#        # Intantiate a view with no selected interface and select one after
-#        window = enaml.widgets.api.Window()
-#        view = SaveView(window, task=self.task)
-#        window.show()
-#
-#        process_app_events()
-#
-#
-#@attr('ui')
-#class TestSaveArrayView(object):
-#
-#    def setup(self):
-#        self.workbench = Workbench()
-#        self.workbench.register(CoreManifest())
-#        self.workbench.register(StateManifest())
-#        self.workbench.register(PreferencesManifest())
-#        self.workbench.register(TaskManagerManifest())
-#
-#        self.root = RootTask(should_stop=Event(), should_pause=Event())
-#        self.task = SaveArrayTask(task_name='Test')
-#        self.root.children_task.append(self.task)
-#
-#    def teardown(self):
-#        close_all_windows()
-#
-#        self.workbench.unregister(u'hqc_meas.task_manager')
-#        self.workbench.unregister(u'hqc_meas.preferences')
-#        self.workbench.unregister(u'hqc_meas.state')
-#        self.workbench.unregister(u'enaml.workbench.core')
-#
-#    def test_view(self):
-#        # Intantiate a view with no selected interface and select one after
-#        window = enaml.widgets.api.Window()
-#        view = SaveArrayView(window, task=self.task)
-#        window.show()
-#
-#        process_app_events()
+class TestSaveArrayTask(object):
+
+    test_dir = TEST_PATH
+
+    @classmethod
+    def setup_class(cls):
+        print complete_line(__name__ +
+                            ':{}.setup_class()'.format(cls.__name__), '-', 77)
+        os.mkdir(cls.test_dir)
+
+    @classmethod
+    def teardown_class(cls):
+        print complete_line(__name__ +
+                            ':{}.teardown_class()'.format(cls.__name__), '-',
+                            77)
+        # Removing pref files creating during tests.
+        try:
+            shutil.rmtree(cls.test_dir)
+
+        # Hack for win32.
+        except OSError:
+            print 'OSError'
+            dirs = os.listdir(cls.test_dir)
+            for directory in dirs:
+                shutil.rmtree(os.path.join(cls.test_dir), directory)
+            shutil.rmtree(cls.test_dir)
+
+    def setup(self):
+        self.root = RootTask(should_stop=Event(), should_pause=Event())
+        self.task = SaveArrayTask(task_name='Test')
+        self.root.children_task.append(self.task)
+
+        array = np.empty(2, dtype=np.dtype([('a', 'f8'), ('b', 'f8')]))
+        array[0] = (0, 1)
+        array[1] = (2, 3)
+        self.root.write_in_database('array', array)
+        self.root.write_in_database('float', 2.0)
+        self.root.write_in_database('str', 'a')
+
+    def teardown(self):
+        folder = self.test_dir
+        for the_file in os.listdir(folder):
+            file_path = os.path.join(folder, the_file)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+
+    def test_check1(self):
+        # Check everything ok in Text mode.
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test_perform{Root_str}.txt'
+        task.mode = 'Text file'
+        task.header = 'teststs'
+        task.target_array = '{Root_array}'
+
+        test, traceback = task.check()
+
+        assert_true(test)
+        assert_false(traceback)
+        assert_false(os.path.isfile(os.path.join(self.test_dir,
+                                                 'test_performa.txt')))
+
+    def test_check2(self):
+        # Check everything ok in Binary mode (wrong file extension, and header)
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test_perform{Root_str}.txt'
+        task.mode = 'Binary file'
+        task.header = 'teststs'
+        task.target_array = '{Root_array}'
+
+        test, traceback = task.check()
+
+        assert_true(test)
+        assert_equal(len(traceback), 2)
+        assert_in('root/Test-header', traceback)
+        assert_in('root/Test-file_ext', traceback)
+        assert_false(os.path.isfile(os.path.join(self.test_dir,
+                                                 'test_performa.npy')))
+
+    def test_check3(self):
+        # Check handling a wrong folder.
+        task = self.task
+        task.folder = self.test_dir + '{eee}'
+
+        test, traceback = task.check()
+
+        assert_false(test)
+        assert_equal(len(traceback), 1)
+
+    def test_check4(self):
+        # Check handling a wrong filename.
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = '{rr}'
+
+        test, traceback = task.check()
+
+        assert_false(test)
+        assert_equal(len(traceback), 1)
+
+    def test_check5(self):
+        # Check handling a wrong database address.
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test_perform{Root_str}.txt'
+        task.mode = 'Text file'
+        task.header = 'teststs'
+        task.target_array = '**{Root_array}'
+
+        test, traceback = task.check()
+
+        assert_false(test)
+        assert_equal(len(traceback), 1)
+
+    def test_perform1(self):
+        # Test performing in text mode.
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test_perform{Root_str}.txt'
+        task.mode = 'Text file'
+        task.header = 'tests'
+        task.target_array = '{Root_array}'
+
+        task.perform()
+
+        path = os.path.join(self.test_dir, 'test_performa.txt')
+        assert_true(os.path.isfile(path))
+        with open(path) as f:
+            lines = f.readlines()
+            assert_equal(lines[0:2], ['# tests\n', 'a\tb\n'])
+            assert_equal([float(x) for x in lines[2][:-1].split('\t')],
+                         [0.0, 1.0])
+            assert_equal([float(x) for x in lines[3][:-1].split('\t')],
+                         [2.0, 3.0])
+
+    def test_perform2(self):
+        # Test performing in binary mode.
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test_perform{Root_str}.npy'
+        task.mode = 'Binary file'
+        task.target_array = '{Root_array}'
+
+        task.perform()
+
+        path = os.path.join(self.test_dir, 'test_performa.npy')
+        assert_true(os.path.isfile(path))
+        a = np.load(path)
+        np.testing.assert_array_equal(a, task.get_from_database('Root_array'))
+
+
+@attr('ui')
+class TestSaveView(object):
+
+    def setup(self):
+        self.workbench = Workbench()
+        self.workbench.register(CoreManifest())
+        self.workbench.register(StateManifest())
+        self.workbench.register(PreferencesManifest())
+        self.workbench.register(TaskManagerManifest())
+
+        self.root = RootTask(should_stop=Event(), should_pause=Event())
+        self.task = SaveTask(task_name='Test')
+        self.root.children_task.append(self.task)
+
+    def teardown(self):
+        close_all_windows()
+
+        self.workbench.unregister(u'hqc_meas.task_manager')
+        self.workbench.unregister(u'hqc_meas.preferences')
+        self.workbench.unregister(u'hqc_meas.state')
+        self.workbench.unregister(u'enaml.workbench.core')
+
+    def test_view(self):
+        # Intantiate a view with no selected interface and select one after
+        window = enaml.widgets.api.Window()
+        view = SaveView(window, task=self.task)
+        window.show()
+
+        process_app_events()
+
+
+@attr('ui')
+class TestSaveArrayView(object):
+
+    def setup(self):
+        self.workbench = Workbench()
+        self.workbench.register(CoreManifest())
+        self.workbench.register(StateManifest())
+        self.workbench.register(PreferencesManifest())
+        self.workbench.register(TaskManagerManifest())
+
+        self.root = RootTask(should_stop=Event(), should_pause=Event())
+        self.task = SaveArrayTask(task_name='Test')
+        self.root.children_task.append(self.task)
+
+    def teardown(self):
+        close_all_windows()
+
+        self.workbench.unregister(u'hqc_meas.task_manager')
+        self.workbench.unregister(u'hqc_meas.preferences')
+        self.workbench.unregister(u'hqc_meas.state')
+        self.workbench.unregister(u'enaml.workbench.core')
+
+    def test_view(self):
+        # Intantiate a view with no selected interface and select one after
+        window = enaml.widgets.api.Window()
+        view = SaveArrayView(window, task=self.task)
+        window.show()
+
+        process_app_events()

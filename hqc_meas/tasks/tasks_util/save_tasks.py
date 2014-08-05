@@ -229,9 +229,6 @@ class SaveArrayTask(SimpleTask):
     #: Name of the file in which to write the data.
     filename = Str().tag(pref=True)
 
-    #: Currently opened file object.
-    file_object = Value()
-
     #: Header to write at the top of the file.
     header = Str().tag(pref=True)
 
@@ -264,7 +261,7 @@ class SaveArrayTask(SimpleTask):
 
         if self.mode == 'Text file':
             try:
-                self.file_object = open(full_path, 'wb')
+                file_object = open(full_path, 'wb')
             except IOError:
                 mes = cleandoc('''In {}, failed to open the specified
                                 file'''.format(self.task_name))
@@ -274,17 +271,18 @@ class SaveArrayTask(SimpleTask):
 
             if self.header:
                 for line in self.header.split('\n'):
-                    self.file_object.write('# ' + line + '\n')
+                    file_object.write('# ' + line + '\n')
+
             if array_to_save.dtype.names:
-                self.file_object.write('\t'.join(array_to_save.dtype.names) +
-                                       '\n')
-            numpy.savetxt(self.file_object, array_to_save, delimiter='\t')
-            self.file_object.close()
+                file_object.write('\t'.join(array_to_save.dtype.names) + '\n')
+
+            numpy.savetxt(file_object, array_to_save, delimiter='\t')
+            file_object.close()
 
         else:
             try:
-                self.file_object = open(full_path, 'wb')
-                self.file_object.close()
+                file_object = open(full_path, 'wb')
+                file_object.close()
             except IOError:
                 mes = cleandoc(''''In {}, failed to open the specified
                                 file'''.format(self.task_name))
@@ -304,20 +302,19 @@ class SaveArrayTask(SimpleTask):
         err_path = self.task_path + '/' + self.task_name
         try:
             full_folder_path = self.format_string(self.folder)
-        except Exception:
+        except Exception as e:
             traceback[err_path] = \
-                'Failed to format the folder path'
+                'Failed to format the folder path: {}'.format(e)
             return False, traceback
 
         if self.mode == 'Binary file':
             if len(self.filename) > 3 and self.filename[-4] == '.'\
                     and self.filename[-3:] != 'npy':
                 self.filename = self.filename[:-4] + '.npy'
-                log = logging.getLogger()
                 mes = cleandoc("""The extension of the file will be
                                 replaced by '.npy' in task
                                 {}""".format(self.task_name))
-                log.info(mes)
+                traceback[err_path + '-file_ext'] = mes
 
             if self.header:
                 traceback[err_path + '-header'] =\
@@ -325,19 +322,28 @@ class SaveArrayTask(SimpleTask):
 
         try:
             filename = self.format_string(self.filename)
-        except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Failed to format the filename'
+        except Exception as e:
+            traceback[err_path] = \
+                'Failed to format the filename: {}'.format(e)
             return False, traceback
 
         full_path = os.path.join(full_folder_path, filename)
 
+        overwrite = False
+        if os.path.isfile(full_path):
+            overwrite = True
+            traceback[err_path + '-file'] = \
+                cleandoc('''File already exists, running the measure will
+                override it.''')
+
         try:
-            f = open(full_path, 'wb')
+            f = open(full_path, 'ab')
             f.close()
-        except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Failed to open the specified file'
+            if not overwrite:
+                os.remove(full_path)
+        except Exception as e:
+            mess = 'Failed to open the specified file: {}'
+            traceback[err_path] = mess.format(e)
             return False, traceback
 
         try:
