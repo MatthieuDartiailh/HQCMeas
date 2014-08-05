@@ -130,8 +130,10 @@ enamldef ExecutionDockItem(DockItem):
 
         PushButton: start:
             attr running << 'processing' in workspace.plugin.flags
-            attr pausing << workspace.plugin.running_measure.status == 'PAUSING'
-            attr paused << workspace.plugin.running_measure.status == 'PAUSED'
+            attr pausing << running and\
+                workspace.plugin.running_measure.status == 'PAUSING'
+            attr paused << running and\
+                workspace.plugin.running_measure.status == 'PAUSED'
             text << label_maker(running, paused)
             enabled << bool(workspace.plugin.enqueued_measures) and not pausing
             clicked ::

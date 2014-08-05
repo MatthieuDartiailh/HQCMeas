@@ -15,7 +15,7 @@ from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
 from inspect import cleandoc
 from textwrap import fill
 
-from hqc_meas.utils.widgets.erros_display import ErrorsDisplayContainer
+from hqc_meas.utils.widgets.errors_display import ErrorsDisplayContainer
 from hqc_meas.utils.widgets.qt_tree_widget import QtTreeWidget
 from hqc_meas.utils.widgets.tree_nodes import TreeNode
 from hqc_meas.utils.widgets.qt_tree_menu import \
