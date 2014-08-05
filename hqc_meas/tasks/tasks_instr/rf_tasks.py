@@ -141,7 +141,7 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
     # Desired state of the output, runtime value can be 0 or 1.
     switch = Str('Off').tag(pref=True)
 
-    task_database_entries = {'output': 0}
+    task_database_entries = set_default({'output': 0})
     loopable = True
     driver_list = ['AgilentE8257D']
 

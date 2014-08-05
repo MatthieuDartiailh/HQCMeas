@@ -22,8 +22,6 @@ def test_register_in_database1():
     # Check that the root task does write its default entries in the database
     # when instantiated.
     root = RootTask()
-    assert_equal(root.get_from_database('threads'), {})
-    assert_equal(root.get_from_database('instrs'), {})
     assert_equal(root.get_from_database('default_path'), '')
 
 

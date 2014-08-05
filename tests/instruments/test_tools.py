@@ -167,7 +167,7 @@ def test_clear_instrument_cache1():
     a = Instr({})
     a.value1 = 5
     assert_equal(a._cache, {'value1': 5})
-    a.clear_instrument_cache()
+    a.clear_cache()
     assert_equal(a._cache, {})
 
 
@@ -179,7 +179,7 @@ def test_clear_instrument_cache2():
     a.value1 = 5
     a.value2 = 6
     assert_equal(a._cache, {'value1': 5, 'value2': 6})
-    a.clear_instrument_cache(['value2'])
+    a.clear_cache(['value2'])
     assert_equal(a._cache, {'value1': 5})
 
 
@@ -191,7 +191,7 @@ def test_check_instrument_cache1():
     a.value1 = 5
     a.value2 = 6
     assert_equal(a._cache, {'value1': 5, 'value2': 6})
-    assert_equal(a.check_instrument_cache(), {'value1': 5, 'value2': 6})
+    assert_equal(a.check_cache(), {'value1': 5, 'value2': 6})
 
 
 def test_check_instrument_cache2():
@@ -202,4 +202,4 @@ def test_check_instrument_cache2():
     a.value1 = 5
     a.value2 = 6
     assert_equal(a._cache, {'value1': 5, 'value2': 6})
-    assert_equal(a.check_instrument_cache(['value1']), {'value1': 5})
+    assert_equal(a.check_cache(['value1']), {'value1': 5})

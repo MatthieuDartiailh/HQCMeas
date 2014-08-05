@@ -37,4 +37,4 @@ class SleepTask(SimpleTask):
 
         return True, {}
 
-KNOW_PY_TASKS = [SleepTask]
+KNOWN_PY_TASKS = [SleepTask]
