@@ -112,6 +112,7 @@ class TestMeasureSpace(object):
         self.workbench.register(TestSuiteManifest())
 
     def teardown(self):
+        close_all_windows()
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
         self.workbench.unregister(u'tests.suite')
@@ -245,6 +246,30 @@ class TestMeasureSpace(object):
         """ Test enqueueing a measure failing the tests.
 
         """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        measure = Measure(plugin=plugin, name='Test')
+        measure.root_task = RootTask()
+        plugin.edited_measure = measure
+
+        res = plugin.workspace.enqueue_measure(plugin.edited_measure)
+
+        assert_false(res)
+        assert_false(measure.root_task.run_time)
+        assert_false(plugin.enqueued_measures)
+
+        close_all_windows()
+
+    def test_enqueue_measure3(self):
+        """ Test enqueueing a measure passing the test but emitting warnings.
+
+        """
+        # As there is no event loop running the exec_ is not blocking.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
