@@ -2,7 +2,6 @@
 from enaml.workbench.api import Workbench
 import enaml
 import os
-import shutil
 from configobj import ConfigObj
 
 with enaml.imports():
@@ -10,7 +9,7 @@ with enaml.imports():
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
 
-from ..util import complete_line
+from ..util import complete_line, remove_tree, create_test_dir
 
 
 class BaseClass(object):
@@ -25,13 +24,11 @@ class BaseClass(object):
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
-        os.mkdir(cls.test_dir)
+        create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
         util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
         def_path = os.path.join(util_path, 'default.ini')
-        if os.path.isfile(def_path):
-            os.rename(def_path, os.path.join(util_path, '__default.ini'))
 
         # Making the preference manager look for info in test dir.
         default = ConfigObj(def_path)
@@ -49,7 +46,7 @@ class BaseClass(object):
 
         # Creating false profile.
         profile_path = os.path.join(cls.test_dir, 'temp_profiles')
-        os.mkdir(profile_path)
+        create_test_dir(profile_path)
         prof = ConfigObj(os.path.join(profile_path, 'dummy.ini'))
         prof['driver_type'] = 'Dummy'
         prof['driver'] = 'PanelTestDummy'
@@ -70,18 +67,7 @@ class BaseClass(object):
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
         # Removing .ini files created during tests.
-        try:
-            shutil.rmtree(cls.test_dir)
-
-        # Hack for win32.
-        except OSError:
-            try:
-                dirs = os.listdir(cls.test_dir)
-                for directory in dirs:
-                    shutil.rmtree(os.path.join(cls.test_dir), directory)
-                shutil.rmtree(cls.test_dir)
-            except OSError:
-                pass
+        remove_tree(cls.test_dir)
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)

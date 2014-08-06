@@ -149,7 +149,7 @@ class TestSetDCVoltageTask(object):
 
         self.root.run_time['profiles'] = {'Test1': ({},
                                           {'read_amp_and_phase': [(2.0, 3.0)]})
-                                         }
+                                          }
 
         self.root.task_database.prepare_for_running()
 
@@ -159,7 +159,7 @@ class TestSetDCVoltageTask(object):
 
 
 @attr('ui')
-class TestSetDCVoltageView(object):
+class TestLockInView(object):
 
     def setup(self):
         self.workbench = Workbench()

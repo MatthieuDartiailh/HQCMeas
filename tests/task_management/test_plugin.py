@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : test_plugin.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from enaml.workbench.api import Workbench
 import enaml
 import os
@@ -20,7 +27,7 @@ with enaml.imports():
                           DummyRuntimeDep2, DummyRuntimeDep3,
                           DummyRuntimeDep4, DummyRuntimeDep5)
 
-from ..util import complete_line
+from ..util import complete_line, remove_tree, create_test_dir
 
 
 def setup_module():
@@ -42,13 +49,11 @@ class Test(object):
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
-        os.mkdir(cls.test_dir)
+        create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
         util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
         def_path = os.path.join(util_path, 'default.ini')
-        if os.path.isfile(def_path):
-            os.rename(def_path, os.path.join(util_path, '__default.ini'))
 
         # Making the preference manager look for info in test dir.
         default = ConfigObj(def_path)
@@ -92,26 +97,13 @@ class Test(object):
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
         # Removing pref files creating during tests.
-        try:
-            shutil.rmtree(cls.test_dir)
-
-        # Hack for win32.
-        except OSError:
-            print 'OSError'
-            dirs = os.listdir(cls.test_dir)
-            for directory in dirs:
-                shutil.rmtree(os.path.join(cls.test_dir), directory)
-            shutil.rmtree(cls.test_dir)
+        remove_tree(cls.test_dir)
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
         util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
-
-        aux = os.path.join(util_path, '__default.ini')
-        if os.path.isfile(aux):
-            os.rename(aux, def_path)
 
     def setup(self):
 
@@ -133,7 +125,7 @@ class Test(object):
         # Testing task explorations.
         assert_in('Complex', plugin.tasks)
         assert_not_in('Instr', plugin.tasks)
-        assert_in('Print', plugin.tasks)
+        assert_in('Log', plugin.tasks)
         assert_in('Definition', plugin.tasks)
         assert_in('Sleep', plugin.tasks)
 
@@ -217,9 +209,9 @@ class Test(object):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.interfaces_request'
-        kwargs = {'interfaces': ['SimpleVoltageSourceInterface']}
+        kwargs = {'interfaces': ['MultiChannelVoltageSourceInterface']}
         inter, miss = core.invoke_command(com, kwargs, self)
-        assert_equal(inter.keys(), ['SimpleVoltageSourceInterface'])
+        assert_equal(inter.keys(), ['MultiChannelVoltageSourceInterface'])
 
     def test_views_request(self):
         self.workbench.register(TaskManagerManifest())
@@ -261,23 +253,23 @@ class Test(object):
         # These two tests are sufficient to ensure that subclass tests works
         tasks = core.invoke_command(com, {'filter': 'Simple'}, self)
         assert_not_in('Complex', tasks)
-        assert_in('Print', tasks)
+        assert_in('Log', tasks)
 
         tasks = core.invoke_command(com, {'filter': 'Complex'}, self)
-        assert_not_in('Print', tasks)
+        assert_not_in('Log', tasks)
         assert_in('Complex', tasks)
 
         # Test the class attr filter
         tasks = core.invoke_command(com, {'filter': 'Loopable'}, self)
         assert_not_in('Definition', tasks)
-        assert_in('Print', tasks)
+        assert_in('Log', tasks)
 
     def test_config_request_build1(self):
         self.workbench.register(TaskManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.config_request'
 
-        conf, view = core.invoke_command(com, {'task': 'Print'}, self)
+        conf, view = core.invoke_command(com, {'task': 'Log'}, self)
         assert_equal(type(conf).__name__, 'PyConfigTask')
         conf.task_name = 'Test'
         assert_equal(conf.config_ready, True)
@@ -314,7 +306,7 @@ class Test(object):
         conf, view = core.invoke_command(com, {'task': 'Loop'}, self)
         assert_equal(type(conf).__name__, 'LoopConfigTask')
         conf.task_name = 'Test'
-        conf.subtask = 'Print'
+        conf.subtask = 'Log'
         assert_equal(conf.config_ready, True)
         task = conf.build_task()
         assert_equal(task.task_name, 'Test')
@@ -332,7 +324,7 @@ class Test(object):
 
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.task_manager.collect_dependencies'
-        res, build, run = core.invoke_command(com, {'task': root})
+        res, build, run = core.invoke_command(com, {'task': root}, core)
         assert_true(res)
         assert_in('tasks', build)
         assert_equal(sorted(['LogTask', 'ComplexTask']),

@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : test_atom_util.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from atom.api import Str, Float, Enum, List, Dict, Typed, Int
 from hqc_meas.utils.atom_util import (tagged_members, simple_member_from_str,
                                       member_from_str, HasPrefAtom)

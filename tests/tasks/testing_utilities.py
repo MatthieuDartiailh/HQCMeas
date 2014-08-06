@@ -40,3 +40,13 @@ class ExceptionTask(SimpleTask):
 
     def perform(self):
         raise Exception()
+
+
+def join_threads(root):
+    for pool_name in root.threads:
+        with root.threads.safe_access(pool_name) as pool:
+            for thread in pool:
+                try:
+                    thread.join()
+                except Exception:
+                    pass

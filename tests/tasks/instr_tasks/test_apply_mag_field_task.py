@@ -27,6 +27,7 @@ with enaml.imports():
 
 from ...util import process_app_events, close_all_windows
 from .instr_helper import InstrHelper
+from ..testing_utilities import join_threads
 
 
 class TestApplyMagFieldTask(object):
@@ -74,6 +75,7 @@ class TestApplyMagFieldTask(object):
         self.root.task_database.prepare_for_running()
 
         self.task.perform()
+        join_threads(self.root)
         assert_equal(self.root.get_from_database('Test_Bfield'), 2.0)
 
     def test_perform2(self):
@@ -90,7 +92,9 @@ class TestApplyMagFieldTask(object):
         self.root.task_database.prepare_for_running()
 
         self.task.perform()
+        join_threads(self.root)
         self.task.perform()
+        join_threads(self.root)
         # In case of fail make_ready would be called twice.
         assert_equal(self.root.get_from_database('Test_Bfield'), 2.0)
 

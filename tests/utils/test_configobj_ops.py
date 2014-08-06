@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : test_configobj_ops.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 import os
 from configobj import ConfigObj
 from nose.tools import assert_equal, assert_in
