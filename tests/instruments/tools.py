@@ -9,13 +9,15 @@ with enaml.imports():
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
 
-from ..util import complete_line, remove_tree, create_test_dir
+from ..util import complete_line, clean_directory, create_test_dir
+from . import TEMP_FOLDER
 
 
 class BaseClass(object):
 
     test_dir = ''
     mod = __name__
+    dir_id = 0
 
     @classmethod
     def setup_class(cls):
@@ -23,8 +25,8 @@ class BaseClass(object):
                             ':{}.setup_class()'.format(cls.__name__), '-', 77)
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
-        cls.test_dir = os.path.join(directory, '_temps')
-        create_test_dir(cls.test_dir)
+        cls.test_dir = os.path.join(directory, TEMP_FOLDER)
+        clean_directory(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
         util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
@@ -45,7 +47,8 @@ class BaseClass(object):
                         if mod.endswith('.py') and mod not in driv_api]
 
         # Creating false profile.
-        profile_path = os.path.join(cls.test_dir, 'temp_profiles')
+        aux = 'temp_profiles{}'.format(cls.dir_id)
+        profile_path = os.path.join(cls.test_dir, aux)
         create_test_dir(profile_path)
         prof = ConfigObj(os.path.join(profile_path, 'dummy.ini'))
         prof['driver_type'] = 'Dummy'
@@ -66,18 +69,12 @@ class BaseClass(object):
         print complete_line(__name__ +
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
-        # Removing .ini files created during tests.
-        remove_tree(cls.test_dir)
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
         util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
-
-        aux = os.path.join(util_path, '__default.ini')
-        if os.path.isfile(aux):
-            os.rename(aux, def_path)
 
     def setup(self):
 

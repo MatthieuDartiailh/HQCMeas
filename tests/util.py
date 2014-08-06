@@ -37,7 +37,7 @@ def close_all_windows():
     qapp.flush()
     qapp.processEvents()
 
-
+# All the following functions are used to avoid permissions issues on windows.
 @nottest
 def create_test_dir(dir_path):
     if os.path.isdir(dir_path):

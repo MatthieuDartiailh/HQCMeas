@@ -31,6 +31,7 @@ def teardown_module():
 class TestForms(BaseClass):
 
     mod = __name__
+    dir_id = 1
 
     def test_form1(self):
         self.workbench.register(InstrManagerManifest())

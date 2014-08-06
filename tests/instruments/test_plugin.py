@@ -34,6 +34,7 @@ def teardown_module():
 class Test_DriverManagement(BaseClass):
 
     mod = __name__
+    dir_id = 3
 
     def test_init(self):
         self.workbench.register(InstrManagerManifest())
@@ -67,7 +68,8 @@ class Test_DriverManagement(BaseClass):
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
         assert_in('Dummy', plugin.all_profiles)
         assert_in('Dummy', plugin.available_profiles)
-        profile_path = os.path.join(self.test_dir, 'temp_profiles')
+        profile_path = os.path.join(self.test_dir,
+                                    'temp_profiles{}'.format(self.dir_id))
         prof = ConfigObj(os.path.join(profile_path, 'test.ini'))
         prof['driver_type'] = 'Dummy'
         prof['driver'] = 'PanelTestDummy'
@@ -177,7 +179,7 @@ class Test_DriverManagement(BaseClass):
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
         path = plugin.profile_path('Dummy')
         assert_equal(path, os.path.join(self.test_dir,
-                                        'temp_profiles',
+                                        'temp_profiles{}'.format(self.dir_id),
                                         'dummy.ini'))
 
     def test_profile_path2(self):
