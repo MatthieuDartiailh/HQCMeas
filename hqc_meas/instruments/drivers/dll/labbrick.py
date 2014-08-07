@@ -19,14 +19,12 @@ To read well the Dll of the LabBrick, Visual C++ Studio 2013 is needed.
 from ..driver_tools import (InstrIOError, secure_communication,
                             instrument_property)
 from ..dll_tools import DllLibrary, DllInstrument
-from contextlib import contextmanager
-import time
 from inspect import cleandoc
 import ctypes
 
 
 class LabBrickDll(DllLibrary):
-    """
+    """ Wrapper for the Labbrick dll library (vnx_fmsynth.dll).
 
     """
     def __init__(self, path, **kwargs):
@@ -39,22 +37,6 @@ class LabBrickDll(DllLibrary):
 
         #See what we have connected
         self.connected_instruments()
-
-    @contextmanager
-    def secure(self):
-        """ Lock acquire and release method
-
-        """
-        i = 0
-        while not self.lock.acquire():
-            time.sleep(0.1)
-            i += 1
-            if i > 50:
-                raise InstrIOError
-        try:
-            yield
-        finally:
-            self.lock.release()
 
     def connected_instruments(self):
         """ Return the serial number of each connected instruments.
@@ -304,10 +286,11 @@ class LabBrickLMS103(DllInstrument):
     @frequency.setter
     @secure_communication()
     def frequency(self, value):
-        ''' frequency setter method.
-        Input : number, No string
+        """ Frequency setter method.
 
-        '''
+        Input : float, No string
+
+        """
         with self._dll.secure():
             if self.devID is not None:
                 if (value <= self.maxFreq) and (value >= self.minFreq):

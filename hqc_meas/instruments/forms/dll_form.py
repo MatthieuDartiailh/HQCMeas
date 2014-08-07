@@ -23,6 +23,7 @@ class DllForm(AbstractConnectionForm):
     ----------
     lib_path : unicode
         Path to the library.
+
     instr_id : str
         Id used to access to the instrument using the library.
 
@@ -32,10 +33,12 @@ class DllForm(AbstractConnectionForm):
         Check whether or not enough information have been given by the user.
         Called when the user attempt to press the ok button of the form he is
         editing.
+
     required_fields()
         Return a string listing the field that the user must fill. Called when
         the check method fail.
     connection_dict()
+
         Return a dictionnary holding all the necessary informations to open a
         connection with an instrument using the protocol for which the form was
         written. The keys msut match the ones expected by the `BaseInstrument`
