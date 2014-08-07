@@ -143,16 +143,20 @@ class AgilentPSA(VisaInstrument):
             data = self.ask_for_values("FETCH:SPEC{}?".format(trace))
             if data:
                 if trace in (4, 7, 11, 12):
-                    stop = self.spec_header.Firstfreq + self.spec_header.Freqstep*(self.spec_header.FFTnbrSteps-1)
-                    freq = np.linspace(self.spec_header.Firstfreq, stop,
-                                       self.spec_header.FFTnbrSteps)
+                    header = self.spec_header
+                    stop = header.Firstfreq +\
+                        header.Freqstep*(header.FFTnbrSteps-1)
+                    freq = np.linspace(header.Firstfreq, stop,
+                                       header.FFTnbrSteps)
                     return np.rec.fromarrays([freq, np.array(data)],
                                              names=['Freq',
                                                     DATA_FORMAT[trace]])
                 elif trace in (0, 3):
-                    stop = self.spec_header.firsttime + self.spec_header.TimeStep*(self.spec_header.TimenbrSteps-1)
-                    freq = np.linspace(self.spec_header.firsttime, stop,
-                                       self.spec_header.TimenbrSteps)
+                    header = self.spec_header
+                    stop = header.firsttime +\
+                        header.TimeStep*(header.TimenbrSteps-1)
+                    freq = np.linspace(header.firsttime, stop,
+                                       header.TimenbrSteps)
                     return np.rec.fromarrays([freq, np.array(data)],
                                              names=['Time',
                                                     DATA_FORMAT[trace]])
