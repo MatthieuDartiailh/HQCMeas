@@ -4,7 +4,7 @@
 # author : Pierre Heidmann
 # license : MIT license
 #==============================================================================
-""" This module defines drivers for TinyBilt using VISA library.
+""" This module defines drivers for AWG using VISA library.
 
 :Contains:
     AWGChannel

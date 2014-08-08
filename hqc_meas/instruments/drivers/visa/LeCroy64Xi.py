@@ -14,21 +14,6 @@ This module defines drivers for LeCroy64Xi using VISA library.
  LeCroy_354Xi.py class,
  to perform the communication between the Wrapper and the device
 
-
- This program is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
-
 """
 from threading import Lock
 from contextlib import contextmanager
@@ -69,9 +54,6 @@ class LeCroyChannel(BaseInstrument):
     @secure_communication()
     def verticalbase(self):
         ''' Get vertical sensitivity in Volts/div of the channel
-
-        Input:
-        None
 
         Output:
         value (str) : Vertical base in V.
@@ -200,11 +182,16 @@ class LeCroyChannel(BaseInstrument):
         Output:
         value (str)
         '''
+        instr = self._LeCroy64Xi
         with self.secure():
             # check if the channel studied is not a trace channel
             if len(self._channel) == 1:
-                result = self._LeCroy64Xi.ask_for_values('VBS? "return=app.Acquisition.C{}.Out.Result.Sweeps"'.format(self._channel))[0]
-                return result
+                cmd = 'VBS? "return=app.Acquisition.C{}.Out.Result.Sweeps"'
+                result = instr.ask_for_values(cmd.format(self._channel))
+                if result:
+                    return result[0]
+                else:
+                    raise InstrIOError('LeCraoy failed to return sweep')
             else:
                 mes = '{} is a trace and not a channel'.format(self._channel)
                 raise InstrIOError(mes)
@@ -782,23 +769,6 @@ class LeCroy64Xi(VisaInstrument):
                                          caching_allowed,
                                          caching_permissions,
                                          auto_open)
-
-        ''' Initializes the LeCroy 44Xi.
-
-        Input:
-        None
-
-        Output:
-        None
-        '''
-#        self._values = {}
-#        self.unitoftime = 'S'
-#
-#        # Make Load/Delete Waveform functions for each channel
-#        for ch in range(1, 5):
-#            self._add_save_data_func(ch)
-#
-#        self.get_all()
 
         self.channels = {}
         self.lock = Lock()
