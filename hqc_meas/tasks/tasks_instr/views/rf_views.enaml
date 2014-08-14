@@ -1,0 +1,135 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : rf_source_views.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.core.api import Conditional
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
+from enaml.stdlib.fields import FloatField
+from enaml.layout.api import factory
+
+from inspect import cleandoc
+from textwrap import fill
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.layouts import auto_grid_layout
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+
+
+enamldef RFFrequencyView(BaseInstrumentView): view:
+
+    attr in_loop : bool = False
+    title << task.task_name
+    constraints = [factory(auto_grid_layout)] if not in_loop\
+                   else [factory(auto_grid_layout),
+                         driv.width == prof.width]
+
+    Label:
+        text = 'Driver'
+    ObjectCombo: driv:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:
+        text = 'Instr'
+    ObjectCombo: prof:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Frequency'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.frequency
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+    Label:
+        text = 'Unit'
+    ObjectCombo:
+        items << list(task.get_member('unit').items)
+        selected := task.unit
+
+    Label: auto_lab:
+        text = 'Autostart'
+    CheckBox: auto_val:
+        checked := task.auto_start
+        tool_tip = fill(cleandoc('''Should the source be turned on
+                         automatically before the measurement starts ?'''),60)
+
+
+enamldef RFPowerView(BaseInstrumentView): view:
+
+    attr in_loop : bool = False
+    title << task.task_name
+    constraints = [factory(auto_grid_layout)] if not in_loop\
+                   else [factory(auto_grid_layout),
+                         driv.width == prof.width]
+
+    Label:
+        text = 'Driver'
+    ObjectCombo: driv:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:
+        text = 'Instr'
+    ObjectCombo: prof:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Power (dBm)'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.power
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+    Label: auto_lab:
+        text = 'Autostart'
+    CheckBox: auto_val:
+        checked := task.auto_start
+        tool_tip = fill(cleandoc('''Should the source be turned on
+                         automatically before the measurement starts ?'''),60)
+
+
+enamldef RFSetOnOffView(BaseInstrumentView): view:
+
+    attr in_loop : bool = False
+
+    title << task.task_name
+    constraints = [factory(auto_grid_layout),
+                   driv.width == prof.width]
+
+    Label:
+        text = 'Driver'
+    ObjectCombo: driv:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:
+        text = 'Instr'
+    ObjectCombo: prof:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Output'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.switch
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+TASK_VIEW_MAPPING = {'SetRFFrequencyTask': RFFrequencyView,
+                     'SetRFPowerTask': RFPowerView,
+                     'SetRFOnOffTask': RFSetOnOffView}

@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : driver_debugger_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.workbench.api import PluginManifest, ExtensionPoint, Extension
+from enaml.workbench.ui.api import ActionItem
+from ..debugger import Debugger
+from .driver_debugger import DriverDebugger
+from .driver_debugger_view import DriverDebuggerView
+
+def debugger_factory(declaration, plugin):
+    """ Create a new driver debugger instance.
+
+    """
+    return DriverDebugger(declaration=declaration, plugin=plugin)
+
+def contribute_menus(workspace):
+    """ Contribute to the main window when the debug workspace is activated.
+
+    """
+    workspace.workbench.register(DriverDebuggerMenuManifest())
+
+def remove_menus(workspace):
+    """ Remove contribution when the workspace is deactivated.
+
+    """
+    workspace.workbench.unregister(u'hqc_meas.debug.driver.menus')
+
+enamldef DriverDebuggerManifest(PluginManifest):
+    """
+    """
+    id = u'hqc_meas.debug.driver'
+
+    Extension:
+        id = u'debuggers'
+        point = u'hqc_meas.debug.debuggers'
+        Debugger:
+            id = u'hqc_meas.debuggers.driver'
+            description = 'GUI debugger for drivers.'
+            factory = debugger_factory
+            view = DriverDebuggerView
+            contribute_workspace = contribute_menus
+            remove_contribution = remove_menus
+
+enamldef DriverDebuggerMenuManifest(PluginManifest):
+    """
+    """
+    id = u'hqc_meas.debug.driver.menus'
+
+    Extension:
+        id = 'actions'
+        point = 'enaml.workbench.ui.actions'
+        ActionItem:
+                path = '/debug/create/driver'
+                label = 'Driver debugger'
+                group = 'debuggers'
+                command = 'hqc_meas.debug.create_debugger'
+                parameters = {'debugger_id': u'hqc_meas.debuggers.driver'}

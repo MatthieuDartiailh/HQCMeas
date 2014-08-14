@@ -1,35 +1,52 @@
-from enaml.widgets.api import (Container, MultilineField, Field, GroupBox, Form,
-                            Label)
-from enaml.core.api import Conditional
-from enaml.stdlib.mapped_view import MappedView
-from enaml.layout.api import hbox
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : loop_view.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
+                               Form, Label, CheckBox)
+from enaml.core.api import Conditional, Include
+from enaml.layout.api import hbox, vbox
 
-from ..manager_view import TaskSelector
-from ..task_manager import TaskManager
-
-from .base_task_config import PyConfigTask
-from .base_views import (SimpleView, NoneView)
+from ..browsing import TaskSelector
 
 enamldef LoopView(Container): view:
+
     attr model
-    Form:
-        Label:
-            text = 'Task name'
-        Field:
-            text >> model.task_name
-    GroupBox:
-        title = 'Descritpion'
-        hug_height = 'strong'
-        Label:
-            text << model.task_doc
-    Container:
-        constraints = [hbox(selector, map)]
-        TaskSelector: selector:
-            hug_width = 'strong'
-            model = TaskManager(selected_task_filter_name = 'Loopable')
-            display_filters = False
-        Container: map:
-            MappedView:
-                model << view.model.task_config
-                typemap = {type(None) : NoneView, PyConfigTask : SimpleView}
-                kwargs = {'loop' : True}
+    constraints << [vbox(hbox(name_lab, name_val, sub),
+                         hbox(*tuple(simple.items + embed.items))),
+                    ]
+
+    Label: name_lab:
+        text = 'Task name'
+    Field: name_val:
+        text >> model.task_name
+        submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+    CheckBox: sub:
+        text = 'Use subtask'
+        checked := model.use_subtask
+
+    Conditional: simple:
+        condition << not model.use_subtask
+        MultilineField:
+            text = model.task_doc
+
+    Conditional: embed:
+        condition << model.use_subtask
+        Container:
+            padding = 0
+            constraints << [vbox(desc, hbox(selector, *conf.objects))]
+
+            Label: desc:
+                text = model.task_doc
+            TaskSelector: selector:
+                hug_width = 'strong'
+                manager = view.model.manager
+                display_filters = False
+                selected_filter = 'Loopable'
+                selected_task >> model.subtask
+            Include: conf:
+                objects  << [model.config_view] if model.config_view else []

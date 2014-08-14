@@ -1,0 +1,143 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : list_editor.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from atom.api import Str
+from enaml.core.api import Looper, Conditional
+from enaml.core.declarative import d_
+from enaml.layout.api import hbox, align, spacer, grid, vbox
+from enaml.widgets.api import (PushButton, Menu, Action, Container, ScrollArea,
+                               GroupBox, Form)
+
+enamldef PopupListMenu(Menu):
+    attr model
+    attr index
+    attr operations
+    attr factory
+    attr args = ()
+    attr kwargs = {}
+    Conditional:
+        condition = bool('add' in operations)
+        Action:
+            text = 'Add before'
+            triggered ::
+                obj = factory(*args, **kwargs)
+                if obj is not None:
+                    model.insert(index, obj)
+        Action:
+            text = 'Add after'
+            triggered ::
+                obj = factory(*args, **kwargs)
+                if obj is not None:
+                    model.insert(index + 1, obj)
+        Action:
+            separator = True
+    Conditional:
+        condition = bool('remove' in operations)
+        Action:
+            text = 'Delete'
+            triggered :: del model[index]
+        Action:
+            separator = True
+    Conditional:
+        condition = bool('move' in operations)
+        Conditional:
+            condition = bool(index not in (0,1))
+            Action:
+                text = 'Move to top'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(0, obj)
+        Conditional:
+            condition = bool(index != 0)
+            Action:
+                text = 'Move up'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(index - 1, obj)
+        Conditional:
+            condition = bool(index != len(model)-1)
+            Action:
+                text = 'Move down'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(index + 1, obj)
+        Conditional:
+            condition = bool(index != len(model)-1)
+            Action:
+                text = 'Move to bottom'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(len(model), obj)
+
+class ListContainer(Container):
+    """
+    """
+    alignment = d_(Str('top'))
+
+    def layout_constraints(self):
+        """
+        """
+        children = self.widgets()
+        lines = []; aligns = []
+
+        while children:
+            lines.append(hbox(*children[0:2]))
+            aligns.append(align(self.alignment, children[0], children[1]))
+            del children[0:2]
+
+        constraints = [vbox(*lines)]
+        constraints.extend(aligns)
+        return  constraints
+
+template ListEditor(Content):
+    GroupBox: cont:
+        attr model
+        attr iterable_name
+        attr factory
+        attr operations = ['add', 'remove', 'move']
+        attr kwargs : dict = {}
+        attr alignment : str = 'top'
+
+        padding = 0
+        Conditional:
+            condition << (not bool(getattr(model, iterable_name)) and
+                            'add' in operations)
+            PushButton:
+                text = 'Add first element'
+                clicked ::
+                    obj = factory(**kwargs)
+                    if obj is not None:
+                        getattr(model, iterable_name).append(obj)
+        Conditional:
+            condition << (not bool(getattr(model, iterable_name)) and
+                            'add' not in operations)
+            GroupBox:
+                pass
+        Conditional:
+            condition << bool(getattr(model, iterable_name))
+            ScrollArea:
+                border = None
+                ListContainer:
+                    alignment = cont.alignment
+                    padding = (2,0,2,0)
+                    Looper:
+                        iterable << getattr(model, iterable_name)[:]
+                        PushButton: button:
+                            constraints = [width == 15, height == 20]
+                            font = 'bold 12pt Consolas'
+                            text = '>'
+                            clicked ::
+                                edited_list = getattr(model, iterable_name)
+                                PopupListMenu(
+                                    model = edited_list,
+                                    index = edited_list.index(loop_item),
+                                    factory = factory,
+                                    kwargs = kwargs,
+                                    operations = operations).popup()
+                        Content: content:
+                            model << loop_item

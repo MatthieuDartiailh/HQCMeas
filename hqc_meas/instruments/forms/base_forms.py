@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
-# module : connection_forms.py
+# =============================================================================
+# module : base_forms.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 Definition of the forms used to enter the information necessary to open a
 connection to an instrument according to the type of connection used.
@@ -16,14 +16,18 @@ connection to an instrument according to the type of connection used.
 """
 from textwrap import fill
 from inspect import cleandoc
-from atom.api import Atom, Unicode
-import enaml
-with enaml.imports():
-    from .connection_forms_view import VisaFormView
-    
+from atom.api import Atom, Unicode, Subclass, Dict
+from ..drivers.driver_tools import BaseInstrument
+
+
 class AbstractConnectionForm(Atom):
     """
     Abstract class defining what is expected from a form
+
+    Attributes
+    ----------
+    driver : type
+        Class of the driver for which a profile is edited.
 
     Methods
     -------
@@ -41,6 +45,8 @@ class AbstractConnectionForm(Atom):
         subclass which will use it.
 
     """
+    driver = Subclass(BaseInstrument)
+
     def check(self):
         """Check whether or not enough information have been given by the user.
         """
@@ -61,9 +67,9 @@ class AbstractConnectionForm(Atom):
         raise NotImplementedError(msg)
 
     def connection_dict(self):
-        """Return a dictionnary holding all the necessary informations to open a
-        connection with an instrument using the protocol for which the form was
-        written.
+        """Return a dictionnary holding all the necessary informations to open
+        a connection with an instrument using the protocol for which the form
+        was written.
 
         """
         msg = fill(cleandoc("""This  method should be implemented by classes
@@ -72,6 +78,7 @@ class AbstractConnectionForm(Atom):
             an instrument using the protocol for which the form was written.
             """), 80)
         raise NotImplementedError(msg)
+
 
 class VisaForm(AbstractConnectionForm):
     """
@@ -108,6 +115,8 @@ class VisaForm(AbstractConnectionForm):
     address = Unicode('')
     additionnal_mode = Unicode('')
 
+    protocoles = Dict(default={'GPIB': '', 'TCPIP': '', 'USB': ''})
+
     def check(self):
         """Check whether or not the user provided a type and an address.
         """
@@ -122,13 +131,41 @@ class VisaForm(AbstractConnectionForm):
         """Return the connection dictionnary which will be used by the
         `VisaInstrument` class to open a connection.
         """
-        return {'connection_type' : self.connection_type,
-                'address' : self.address,
-                'additionnal_mode' : self.additionnal_mode}
+        return {'connection_type': self.connection_type,
+                'address': self.address,
+                'additionnal_mode': self.additionnal_mode}
 
-FORMS = {'Visa' : VisaForm}
-"""Dictionnary mapping protocol names to their associated form. Used to
-determine the correct form to display once the user selected a driver type
+    def _observe_driver(self, change):
+        """ Keep the protocoles in sync with the selected driver.
 
+        """
+        driver = change['value']
+        if hasattr(driver, 'protocoles'):
+            self.protocoles = driver.protocoles
+        else:
+            self.protocoles = {'GPIB': '', 'TCPIP': '', 'USB': ''}
+
+
+class DummyForm(AbstractConnectionForm):
+    """
+    """
+
+    def check(self):
+        """Check whether or not the user provided a type and an address.
+        """
+        return True
+
+    def required_fields(self):
+        """Return the mandatory fields for a Visa instrument
+        """
+        return ''
+
+    def connection_dict(self):
+        """Return the connection dictionnary which will be used by the
+        `VisaInstrument` class to open a connection.
+        """
+        return {}
+
+FORMS = {'DummyInstrument': DummyForm, 'VisaInstrument': VisaForm}
+"""Dictionnary mapping driver or driver type names to their associated form.
 """
-FORMS_MAP_VIEWS = {VisaForm : VisaFormView}

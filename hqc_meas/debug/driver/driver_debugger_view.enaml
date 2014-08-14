@@ -1,0 +1,475 @@
+# -*- coding: utf-8 -*-
+from enaml.application import deferred_call
+from enaml.widgets.api import (DockItem, Container, ObjectCombo, Label,
+                               GroupBox, Notebook, Page, PushButton, Dialog,
+                               MultilineField, Field, ScrollArea, PopupView)
+from enaml.core.api import (Looper, Conditional, Include)
+from enaml.layout.api import grid, vbox, hbox, spacer, align
+from enaml.stdlib.mapped_view import MappedView
+from inspect import cleandoc, getdoc, getargspec, formatargspec
+from textwrap import fill
+
+
+def f_c(str, length=80):
+    return fill(cleandoc(str), length)
+
+
+def _form_maker(form_tuple):
+    """ Helper function building the form for editing custom profiles.
+
+    """
+    if form_tuple and form_tuple != (None, None):
+        return [form_tuple[1](model=form_tuple[0], mode='new')]
+    else:
+        return []
+
+
+def _method_doc(method):
+    """ Helper function buiilding the doc of a method.
+
+    """
+    name = method.__name__
+    if hasattr(method, '__wrapped__'):
+        signature = formatargspec(*getargspec(method.__wrapped__))
+    else:
+        signature = formatargspec(*getargspec(method))
+    doc = getdoc(method) if getdoc(method) else ''
+
+    full_doc = name + signature + ':\n\n' + doc
+    full_doc.strip()
+    return full_doc
+
+
+enamldef MultilinePopup(PopupView):
+    """ Popup view to display infos on multiple lines.
+
+    """
+    alias text: field.text
+    Container:
+        MultilineField: field:
+            pass
+
+
+def _evaluate_args_kwargs(args, kwargs):
+    """ Helper function evaluating args and kwargs.
+
+    """
+    errors = ''
+    if args:
+        try:
+            args = eval('(' + args + ',)')
+        except Exception as e:
+            errors += 'Failed to evaluate args: {}\n'.format(e.message)
+    else:
+        args = ()
+
+    if kwargs:
+        try:
+            aux = [kv.split('=') for kv in kwargs.split(',')]
+            aux = ','.join(['"' + kv[0].strip() + '":' + kv[1].strip()
+                            for kv in aux])
+            kwargs = eval('{' + aux + '}')
+        except Exception:
+            errors += 'Failed to evaluate kwargs: {}\n'.format(e.message)
+    else:
+        kwargs = {}
+
+    if errors:
+        return errors, None
+    else:
+        return args, kwargs
+
+
+def _method_call(debugger, infos, meth, f_args, f_kwargs):
+    """ Helper function attempting to call a method.
+
+    """
+    args, kwargs = _evaluate_args_kwargs(f_args.text, f_kwargs.text)
+    if kwargs is None:
+        debugger.errors += args
+        return
+
+    call = infos.attempt_call(meth.selected, args, kwargs)
+    mess = ''
+
+    if isinstance(call, Exception):
+        mess = f_c('''Call to {} failed with error
+                    {}.'''.format(meth.selected.__name__,
+                                  call.message))
+        debugger.traceback = '{}'.format(call)
+    else:
+        mess = f_c('''Call to {} succeeded and
+            returned {}.'''.format(meth.selected.__name__,
+                                   call))
+    debugger.errors += mess + '\n'
+
+
+enamldef SetGetBox(GroupBox):
+    """ Widget generating getter/setter fields for a list a attributes
+
+    """
+    attr debugger
+    attr driver_infos
+    alias iterable : loop.iterable
+
+    constraints << [grid(*loop.items)] +\
+                   [line[1].width == line[3].width for line in loop.items] +\
+                   [line[2].width == 20 for line in loop.items] +\
+                   [line[4].width == 20 for line in loop.items] +\
+                   [align('v_center', line[0], line[1]) for line in loop.items]
+    padding = 2
+
+    Looper: loop:
+        Label:
+            text << loop_item
+        Field: getter:
+            read_only = True
+        PushButton:
+            text = '<'
+            clicked ::
+                aux = driver_infos.attempt_get(loop_item)
+                if isinstance(aux, Exception):
+                    getter.background = 'red'
+                    getter.tool_tip =f_c('''The last
+                        attempt to get the driver value failed
+                        with the exception :
+                        {}'''.format(aux.message))
+                    debugger.traceback = '{}'.format(aux)
+                else:
+                    getter.background = 'white'
+                    if isinstance(aux, basestring):
+                        getter.text = '"' + aux + '"'
+                    else:
+                        getter.text = str(aux)
+        Field: setter:
+            submit_triggers = ['lost_focus', 'return_pressed',
+                               'auto_sync']
+            tool_tip = f_c('''Enter the value to send to
+                the driver as in a python interpreter''')
+            text ::
+                setter.background = 'white'
+        PushButton:
+            text = '>'
+            clicked ::
+                setter.background = 'turquoise'
+                aux = driver_infos.attempt_set(loop_item, setter.text)
+                if isinstance(aux, Exception):
+                    setter.background = 'red'
+                    setter.tool_tip = f_c('''The last
+                        attempt to set the driver value failed
+                        with the exception :
+                        {}'''.format(aux.message))
+                    debugger.traceback = '{}'.format(aux)
+                else:
+                    setter.background = 'green'
+                    setter.tool_tip = f_c('''Enter the
+                        value to send to the driver as in a
+                        python interpreter''')
+
+
+enamldef DriverPage(Page): page:
+    """ Notebook page used to display the debugger associated with a driver.
+
+    """
+    attr debugger
+    attr driver_infos
+
+    closed::
+        if name != 'main':
+            debugger.drivers_infos.remove(driver_infos)
+
+    Container:
+        ScrollArea:
+            Container:
+                # Attributes and instrument properties
+                ScrollArea:
+                    Container:
+                        Conditional:
+                            condition << bool(driver_infos.driver_attributes)
+                            SetGetBox:
+                                title = 'Attributes'
+                                debugger = page.debugger
+                                driver_infos = page.driver_infos
+                                iterable << driver_infos.driver_attributes
+
+                        Conditional:
+                            condition << bool(driver_infos.driver_properties)
+                            SetGetBox:
+                                title = 'Instrument properties'
+                                debugger = page.debugger
+                                driver_infos = page.driver_infos
+                                iterable << driver_infos.driver_properties
+
+                # Method caller.
+                Container:
+                    padding = 2
+                    constraints << [hbox(
+                                        vbox(hbox(meth, doc),
+                                             g_args,
+                                             g_kwargs),
+                                         vbox(spacer, call_button)),
+                                        ]
+                    ObjectCombo: meth:
+                        items << driver_infos.driver_methods
+                        to_string = lambda x : x.__name__
+                        selected ::
+                            f_args.text = ''
+                            f_kwargs.text = ''
+                    PushButton: doc:
+                        text = 'Doc'
+                        clicked ::
+                            if meth.selected:
+                                f_doc = _method_doc(meth.selected)
+                                MultilinePopup(doc, text=f_doc).show()
+                    GroupBox: g_args:
+                        title = 'Args'
+                        Field: f_args:
+                            tool_tip = f_c('''Enter the positional
+                                arguments of the selected method.''')
+                    GroupBox: g_kwargs:
+                        title = 'Kwargs'
+                        Field: f_kwargs:
+                            tool_tip = f_c('''Enter the keyword arguments
+                                of the selected method.''')
+                    PushButton: call_button:
+                        text = 'Call'
+                        clicked ::
+                            _method_call(debugger, driver_infos, meth,
+                                         f_args, f_kwargs)
+
+
+def create_pages(debugger, drivers_infos):
+    """ Create the list of driver pages for current infos.
+
+    """
+    pages = []
+    for i, driver_infos in enumerate(drivers_infos):
+        page = DriverPage(debugger=debugger,
+                          driver_infos=driver_infos)
+        if i == 0:
+            page.closable = False
+            page.title = 'Main'
+            page.name = 'main'
+        else:
+            page.title = 'Channel {}'.format(driver_infos.id)
+            page.name = 'channel{}'.format(i)
+        pages.append(page)
+
+    return pages
+
+def _helper_selecter(meths, key):
+    """ Default selection for channel creation.
+
+    """
+    aux = [m for m in meths if key in m.__name__]
+    if aux:
+        return aux[0]
+    else:
+        return None
+
+
+enamldef ChannelCreationDialog(Dialog): dial:
+    attr debugger
+    attr driver_infos = debugger.drivers_infos[0]
+    title = 'Create a new channel for the current driver'
+
+    GroupBox:
+        title = 'Select channel creation method'
+        padding = 2
+        constraints << [hbox(
+                            vbox(hbox(meth, doc),
+                                 g_args,
+                                 g_kwargs),
+                             vbox(spacer, cancel, create)),
+                            ]
+        ObjectCombo: meth:
+            items << driver_infos.driver_methods
+            to_string = lambda x : x.__name__
+            selected = _helper_selecter(driver_infos.driver_methods,
+                                        'channel')
+            selected ::
+                f_args.text = ''
+                f_kwargs.text = ''
+        PushButton: doc:
+            text = 'Doc'
+            clicked ::
+                if meth.selected:
+                    f_doc = _method_doc(meth.selected)
+                    MultilinePopup(doc, text=f_doc).show()
+        GroupBox: g_args:
+            title = 'Args'
+            Field: f_args:
+                tool_tip = f_c('''Enter the positional
+                    arguments necessary to create a new channel.''')
+        GroupBox: g_kwargs:
+            title = 'Kwargs'
+            Field: f_kwargs:
+                tool_tip = f_c('''Enter the keyword arguments
+                    necessary to create a new channel.''')
+        PushButton: create:
+            text = 'Create'
+            clicked::
+                args, kwargs = _evaluate_args_kwargs(f_args.text,
+                                                     f_kwargs.text)
+                if kwargs is None:
+                    MultilinePopup(dial, text=args).show()
+                else:
+                    e, t = debugger.create_channel(meth.selected, args, kwargs)
+                    if e is not None:
+                        mess = '\n'.join((e, 'Full traceback :', t))
+                        MultilinePopup(dial, text=mess).show()
+                    else:
+                        dial.accept()
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked :: dial.reject()
+
+
+enamldef DriverDebuggerView(DockItem): main:
+
+    attr debugger
+
+    title = 'Driver debugger'
+
+    Container:
+        constraints << [vbox(
+                            hbox(dr_lab, dr, spacer),
+                            prof,
+                            hbox(dr_start, conn_o, conn_c, conn_r, dr_close,
+                                 dr_reload, dr_channel),
+                            *tuple(cond.items + [err, hbox(clear, traceback)])
+                            ),
+                        dr_start.width == conn_o.width,
+                        conn_o.width == conn_c.width,
+                        conn_c.width == conn_r.width,
+                        conn_r.width == dr_reload.width,
+                        dr_reload.width == dr_close.width,
+                        dr_channel.width == dr_reload.width,
+                        clear.width == traceback.width
+                        ]
+
+        # Driver selection.
+        Label: dr_lab:
+            text = 'Driver'
+        ObjectCombo: dr:
+            enabled << not debugger.driver_active
+            items << debugger.instr_manager_state.drivers
+            selected = None
+            selected ::
+                debugger.driver = selected
+                clear.clicked()
+
+        # Profile selection.
+        GroupBox: prof:
+            enabled << not debugger.driver_active
+            hug_height = 'strong'
+            title = 'Instrument profile'
+            Notebook:
+                tabs_closable = False
+                tabs_movable = False
+                size_hint_mode = 'current'
+                selected_tab ::
+                    if change['value'] == 'predef':
+                        debugger.profile = p_prof.selected
+                    else:
+                        debugger.profile = None
+                Page:
+                    name = 'predef'
+                    title = 'Predefined'
+                    Container:
+                        ObjectCombo: p_prof:
+                            items << debugger.profiles
+                            items ::
+                                selected = None
+                            selected = None
+                            selected >> debugger.profile
+
+                Page:
+                    name = 'custom'
+                    title = 'Custom'
+                    Container:
+                        Include: form:
+                            objects << _form_maker(debugger.custom_form)
+                        PushButton: form_val:
+                            text = 'Validate form'
+                            background << 'green' if\
+                                            isinstance(main.debugger.profile,
+                                                       dict) else 'red'
+                            enabled << bool(debugger.custom_form
+                                            != (None, None))
+                            clicked ::
+                                aux = main.debugger.custom_form[0]
+                                if aux.check():
+                                    main.debugger.profile =\
+                                        aux.connection_dict()
+
+        # Main buttons.
+        PushButton: dr_start:
+            text = 'Start driver'
+            enabled << bool(not debugger.driver_active
+                            and debugger.driver_ready)
+            clicked ::
+                debugger.start_driver()
+        PushButton: conn_o:
+            text = 'Open connection'
+            enabled << bool(not debugger.connected and debugger.driver_ready
+                            and debugger.driver_active)
+            clicked ::
+                debugger.open_connection()
+        PushButton: conn_c:
+            text = 'Close connection'
+            enabled << debugger.connected
+            clicked ::
+                debugger.close_connection()
+        PushButton: conn_r:
+            text = 'Reopen connection'
+            enabled << debugger.connected
+            clicked ::
+                debugger.reopen_connection()
+        PushButton: dr_close:
+            text = 'Close driver'
+            enabled << debugger.driver_active
+            clicked ::
+                debugger.close_driver()
+        PushButton: dr_reload:
+            text = 'Reload driver'
+            enabled << bool(debugger.driver
+                            and not debugger.driver_active)
+            clicked ::
+                debugger.reload_driver()
+        PushButton: dr_channel:
+            text = 'Open channel'
+            enabled << debugger.driver_active
+            clicked ::
+                nb = [child for child in self.parent.children
+                      if isinstance(child, Notebook)][0]
+                dial = ChannelCreationDialog(nb, debugger=debugger)
+                if dial.exec_():
+                    num = len(debugger.drivers_infos) - 1
+                    channel = 'channel{}'.format(num)
+                    deferred_call(setattr, nb, 'selected_tab',
+                                  channel)
+                else:
+                    deferred_call(setattr, nb, 'selected_tab',
+                                  change['oldvalue'])
+
+        # Driver interface.
+        Conditional: cond:
+            condition << debugger.driver_active
+            Notebook: nb:
+                Include:
+                    objects << create_pages(debugger, debugger.drivers_infos)
+
+        # Error display
+        MultilineField: err:
+            hug_height = 'medium'
+            text << debugger.errors
+            read_only = True
+        PushButton: clear:
+            text = 'Clear'
+            clicked ::
+                debugger.errors = ''
+        PushButton: traceback:
+            text = 'Traceback'
+            clicked::
+                MultilinePopup(traceback, text=debugger.traceback).show()

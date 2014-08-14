@@ -1,0 +1,49 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : text_monitor_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+import logging
+from atom.api import Str, List, Subclass, Dict
+
+from enaml.workbench.api import PluginManifest, Extension
+from hqc_meas.utils.preferences import Preferences
+from ..base_monitor import Monitor
+
+
+def monitor_factory(declaration, workbench, raw=False):
+    """ Factory function returning anew TextMonitor instance.
+
+    """
+    plugin = workbench.get_plugin(u'hqc_meas.measure.monitors.text_monitor')
+    return plugin.create_monitor(raw)
+
+def plugin_factory():
+    """ Plugin factory for the TextMonitoprPlugin.
+
+    """
+    from .text_monitor_plugin import TextMonitorPlugin
+    return TextMonitorPlugin()
+
+enamldef TextMonitorManifest(PluginManifest):
+    """
+    """
+    id = u'hqc_meas.measure.monitors.text_monitor'
+    factory = plugin_factory
+    Extension:
+        id = 'monitors'
+        point = u'hqc_meas.measure.monitors'
+        Monitor:
+            id = u'hqc_meas.measure.monitors.text_monitor'
+            name = 'Text monitor'
+            description = u'Monitor displaying infos as text.'
+            factory = monitor_factory
+
+    Extension:
+        id = 'prefs'
+        point = u'hqc_meas.preferences.pref_plugin'
+        Preferences:
+            pass
+
+    # TODO add contribution to the menus.

@@ -1,0 +1,69 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.widgets.api import (DockItem, Notebook, Page, Dialog, PushButton,
+                               Container)
+from enaml.layout.api import hbox, vbox, spacer
+
+from .monitors.edition import MonitorsEditor
+from .headers.edition import HeadersEditor
+from .checks.edition import ChecksEditor
+
+
+enamldef _MeasureToolsEditor(Container): tool_ed:
+    """ Base widget for editing the tools of a measure.
+
+    """
+    # Measure whose tools are being edited.
+    attr measure
+
+    Notebook:
+        tabs_closable = False
+        tabs_movable = False
+
+        Page:
+            title = 'Monitors'
+            Container:
+                constraints << [hbox(mon_ed, spacer)]
+                MonitorsEditor: mon_ed:
+                    measure << tool_ed.measure
+
+        Page:
+            title = 'Headers'
+            Container:
+                constraints << [hbox(hea_ed, spacer)]
+                HeadersEditor: hea_ed:
+                    measure << tool_ed.measure
+
+        Page:
+            title = 'Checks'
+            Container:
+                constraints << [hbox(che_ed, spacer)]
+                ChecksEditor: che_ed:
+                    measure << tool_ed.measure
+
+
+enamldef ToolsEditorDockItem(DockItem):
+    """ DockItem for editing the tools attached to the edited measure.
+
+    """
+    alias measure : ed.measure
+    title = 'Measure tools'
+
+    _MeasureToolsEditor: ed:
+        pass
+
+
+enamldef ToolsEditorDialog(Dialog):
+    """ Dialog for editing the tools attached to a measure.
+
+    """
+    alias measure : ed.measure
+
+    _MeasureToolsEditor: ed:
+        pass

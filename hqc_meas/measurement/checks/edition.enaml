@@ -1,0 +1,116 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : edition.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
+                               MultilineField, GroupBox)
+from enaml.layout.api import vbox, hbox, spacer
+from enaml.core.api import Include
+
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+
+
+enamldef CheckSelector(Dialog): dial:
+    """ Simple dialog to select a header.
+
+    """
+    # Measure for which a new monitor is being chosen.
+    attr measure
+
+    # Dict {id: declaration} of all the headers.
+    attr checks = measure.plugin.checks
+
+    # Id of the currently selected header.
+    attr selected_id
+
+    # Declaration for the currently selected header.
+    attr selected_decl
+
+    # Mapping between header name and id.
+    attr _mapping = {check.name: check_id
+                     for check_id, check in checks}
+
+    Container:
+        constraints << [vbox(hbox(list_ed, desc),
+                             hbox(spacer, cancel, ok))]
+
+        QtListStrWidget: list_ed:
+            items << sorted([name for name, check_id in _mapping
+                             if header_id not in measure.checks])
+            selected_item::
+                new_val = change['value']
+                if new_val:
+                    key = _mapping[new_val]
+                    dial.selected_decl = checks[key]
+                    dial.selected_id = key
+
+        MultilineField: desc:
+            text << selected_decl.description if selected_decl else ''
+
+        PushButton: ok:
+            text = 'Ok'
+            enabled << selected_decl
+            clicked ::
+                dial.accept()
+
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()
+
+
+enamldef ChecksEditor(Container): ed:
+    """ Widget used to choose the headers to associate to a measure.
+
+    """
+    # Measure whose editors are being edited.
+    attr measure
+
+    # Currently selected header.
+    attr selected_check
+
+    # Mapping between header name and id.
+    attr _mapping << {check.name: check_id
+                      for check_id, check in measure.checks.iteritems()}
+
+    constraints << [hbox(list_ed, desc,
+                         vbox(add, remove, spacer))
+                    ]
+
+    QtListStrWidget: list_ed:
+        items << sorted(_mapping.keys())
+        selected_item ::
+            new_val = change['value']
+            if new_val:
+                key = _mapping[new_val]
+                ed.selected_check = key
+
+    GroupBox: desc:
+        title = 'Description'
+        MultilineField:
+            hug_width = 'ignore'
+            text << ed.selected_check.description if ed.selected_check else ''
+
+    PushButton: add:
+        text = 'Add check'
+        enabled << not all([id in measure.checks
+                            for id in measure.plugin.checks])
+        clicked ::
+            selector = CheckSelector(measure=measure)
+            if selector.exec_():
+                # Workaround missing Container Dict
+                checks = measure.checks.copy()
+                checks[selector.selected_decl.id] = selector.selected_decl
+                measure.checks = checks
+                list_ed.set_items(sorted(_mapping.keys()))
+
+    PushButton: remove:
+        text = 'Remove check'
+        enabled << bool(ed.selected_check)
+        clicked ::
+            # Workaround missing Container Dict
+            checks = measure.checks.copy()
+            del checks[ed.selected_check]
+            measure.checks = checks

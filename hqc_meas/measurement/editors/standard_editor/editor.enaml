@@ -1,0 +1,96 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : editor.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from atom.api import Atom, Dict, Str, Value, Instance, Typed, Callable
+from enaml.workbench.api import Workbench
+from enaml.workbench.core.core_plugin import CorePlugin
+from enaml.widgets.api import Html, Container, GroupBox, ScrollArea
+from enaml.core.api import Include
+from inspect import cleandoc
+
+from hqc_meas.tasks.api import BaseTask
+from hqc_meas.tasks.tools.task_editor import TaskViewManager
+from ..base_editor import BaseEditor
+
+
+enamldef FailureView(GroupBox):
+    """ View displayed when a view, matching the selected task, was not found.
+
+    """
+    attr task
+
+    Html:
+        source = cleandoc('''No matching view was found for the selected
+                           task.''')
+
+
+class _StandardEditorModel(TaskViewManager):
+    """ Model for the standard editor.
+
+    The model is responsible for fetching the right view for the selected task,
+    and caching values for the views.
+
+    """
+    #--- Public API -----------------------------------------------------------
+
+    # Reference to the workbench.
+    workbench = Typed(Workbench)
+
+    # Cache in which task views can store infos. This useful for UI only infos
+    # which can be lost when the user browse through task.
+    cache = Dict(Str())
+
+    # Currently selected task for the editor.
+    selected_task = Instance(BaseTask)
+
+    # Currently displayed view.
+    current_view = Value()
+
+    def __init__(self, workbench, selected_task):
+        super(_StandardEditorModel, self).__init__([], workbench=workbench)
+        self.selected_task = selected_task
+
+    #--- Private API ----------------------------------------------------------
+
+    def _observe_selected_task(self, change):
+        """ Observer getting the correct view for the selected task.
+
+        """
+        task = change['value']
+        t_class = type(task).__name__
+        self.get_views([t_class])
+        if t_class not in self.views:
+            self.current_view = FailureView()
+        else:
+            self.current_view = self.instantiate_view(task,
+                                                      {'core': self.core,
+                                                       'cache': self.cache})
+
+    def _default_core(self):
+        """ Default value for the _invoker member.
+
+        """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        return core
+
+
+enamldef StandardEditor(BaseEditor):
+    """ Standard editor displaying the selected task using the task view.
+
+    """
+    attr workbench
+    attr _internal = _StandardEditorModel(workbench=workbench,
+                                          selected_task=selected_task)
+
+    title = 'Standard editor'
+    name = 'standard_editor'
+    selected_task >> _internal.selected_task
+
+    Container:
+        ScrollArea:
+            Container:
+                Include:
+                    objects << [_internal.current_view]

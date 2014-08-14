@@ -1,0 +1,76 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : base_task_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.layout.api import hbox, align, spacer, vbox
+from enaml.widgets.api import (PushButton, Container, Label, Field,
+                               FileDialogEx, GroupBox, ScrollArea)
+
+from ..tools.task_editor import (TaskEditor, NonFoldingTaskEditor)
+
+enamldef NoneView(Container):
+    """ Empty task view.
+
+    """
+    attr task
+    attr core
+
+enamldef ComplexView(GroupBox): view:
+    """ View for complex task.
+
+    """
+    attr task
+    alias core : editor.core
+    alias cache : editor.cache
+
+    title << task.task_name
+    padding = 0
+
+    TaskEditor: editor:
+        task := view.task
+
+enamldef RootView(GroupBox): view:
+    """ View for root task.
+
+    """
+    attr task
+    alias core : editor.core
+    alias cache : editor.cache
+
+    constraints = [vbox(path, editor)]
+
+    GroupBox: path:
+
+        title = 'Root path'
+        constraints = [hbox(path_field, explore),
+                       align('v_center', path_field, explore)]
+
+        Field: path_field:
+            text := task.default_path
+        PushButton: explore:
+            text = 'E'
+            hug_width = 'strong'
+            clicked ::
+                plugin = core.workbench.get_plugin('hqc_meas.measure')
+                curr_path = task.default_path
+                if not curr_path:
+                    curr_path = plugin.paths.get('task', '')
+
+                get_dir = FileDialogEx.get_existing_directory
+                path = get_dir(title='Select a default path',
+                               current_path=curr_path)
+
+                if path:
+                    task.default_path = path
+                    plugin.paths['task'] = path
+
+    NonFoldingTaskEditor: editor:
+        task := view.task
+
+TASK_VIEW_MAPPING = {'ComplexTask': ComplexView,
+                     'RootTask': RootView,
+                     'None': NoneView}

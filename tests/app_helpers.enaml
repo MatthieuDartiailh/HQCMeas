@@ -1,0 +1,104 @@
+# -*- coding: utf-8 -*-
+from atom.api import Atom, Str
+from enaml.workbench.api import PluginManifest, Extension
+
+from hqc_meas.app_closing import ClosingApp
+
+
+def validate1(window, event):
+    man = window.workbench.get_manifest('test.closing')
+    if man.accept:
+        event.accept()
+    else:
+        event.ignore()
+
+enamldef ClosingContributor1(PluginManifest):
+    """
+    """
+    attr accept = False
+    id = u'test.closing'
+    factory = _Pref
+
+    Extension:
+        id = 'closing'
+        point = u'hqc_meas.app.closing'
+        ClosingApp:
+            id = 'test1'
+            validate = validate1
+
+enamldef ClosingContributor1bis(PluginManifest):
+    """
+    """
+    attr accept = False
+    id = u'test.closingbis'
+    factory = _Pref
+
+    Extension:
+        id = 'closing'
+        point = u'hqc_meas.app.closing'
+        ClosingApp:
+            id = 'test1'
+            validate = validate1
+            
+enamldef ClosingContributor1ter(PluginManifest):
+    """
+    """
+    attr accept = False
+    id = u'test.closing_ter'
+    factory = _Pref
+
+    Extension:
+        id = 'closing'
+        point = u'hqc_meas.app.closing'
+        ClosingApp:
+            id = 'test1_ter'
+            validate = validate1
+
+def validate2(window, event):
+    man = window.workbench.get_manifest('test.closing2')
+    man.called = True
+    if man.accept:
+        event.accept()
+    else:
+        event.ignore()
+
+enamldef ClosingContributor2(PluginManifest):
+    """
+    """
+    attr accept = False
+    attr called = False
+    id = u'test.closing2'
+    factory = _Pref
+
+    Extension:
+        id = 'closing'
+        point = u'hqc_meas.app.closing'
+        factory = lambda workbench: [ClosingApp(id = 'test2',
+                                                validate = validate2)]
+
+enamldef ClosingContributor3(PluginManifest):
+    """
+    """
+    attr accept = False
+    id = u'test.closing'
+    factory = _Pref
+
+    Extension:
+        id = 'closing'
+        point = u'hqc_meas.app.closing'
+        ClosingApp:
+            id = 'test3'
+
+enamldef ClosingContributor4(PluginManifest):
+    """
+    """
+    attr accept = False
+    attr called = False
+    id = u'test.closing2'
+    factory = _Pref
+
+    Extension:
+        id = 'closing'
+        point = u'hqc_meas.app.closing'
+        factory = lambda workbench: [None]
+

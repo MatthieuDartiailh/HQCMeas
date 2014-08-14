@@ -1,0 +1,46 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : editor_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.workbench.api import PluginManifest, Extension
+from inspect import cleandoc
+
+from hqc_meas.tasks.api import ComplexTask
+
+from ..base_editor import Editor
+from .editor import DatabaseAccessEditor
+
+
+DATABASE_ACCESS_EDITOR_ID = u'hqc_meas.measure.editors.database_access_editor'
+
+
+def editor_factory(declaration, workbench):
+    """ Create a standard editor.
+
+    """
+    return DatabaseAccessEditor(declaration=declaration)
+
+def editor_test(workbench, selected_task):
+    """ Only allow DatabaseAccessEditor for ComplexTask.
+
+    """
+    return isinstance(selected_task, ComplexTask)
+
+
+enamldef DatabaseAccessEditorManifest(PluginManifest):
+    """ Manifest contributing the DatabaseAccessEditor to the MeasurePlugin.
+
+    """
+    id = DATABASE_ACCESS_EDITOR_ID
+    Extension:
+        id = 'editor'
+        point = u'hqc_meas.measure.editors'
+        Editor:
+            id = DATABASE_ACCESS_EDITOR_ID
+            name = 'Database access editor'
+            description = cleandoc(u'''Editor allowing to make some database
+                entries accessible beyond their normal scope.''')
+            factory = editor_factory
+            test = editor_test

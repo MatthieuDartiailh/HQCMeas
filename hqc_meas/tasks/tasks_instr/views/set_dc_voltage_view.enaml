@@ -1,0 +1,69 @@
+from enaml.core.api import Conditional, Include
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
+from enaml.stdlib.fields import FloatField, IntField
+from enaml.layout.api import factory
+
+from inspect import cleandoc
+from textwrap import fill
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.layouts import auto_grid_layout
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+
+
+enamldef SetDcVoltageView(BaseInstrumentView): view:
+
+    attr in_loop : bool = False
+    title << task.task_name
+    constraints = [factory(auto_grid_layout)]
+
+    Label:
+        text = 'Driver'
+    ObjectCombo:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Conditional:
+        condition = not in_loop
+        Label:
+            text = 'Voltage (V)'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.target_value
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+    Label:
+        text = 'Back step (V)'
+    FloatField:
+        value := task.back_step
+
+    Label:
+        text = 'Delay (s)'
+    FloatField:
+        value := task.delay
+
+TASK_VIEW_MAPPING = {'SetDCVoltageTask' : SetDcVoltageView}
+
+
+enamldef MultiChannelVoltageSourceILabel(Label):
+
+    attr interface
+    attr index = 4
+    text = 'Channel'
+
+enamldef MultiChannelVoltageSourceIChannel(IntField):
+
+    attr interface
+    value := interface.channel
+
+INTERFACE_VIEW_MAPPING = {'MultiChannelVoltageSourceInterface':
+                          [MultiChannelVoltageSourceILabel,
+                           MultiChannelVoltageSourceIChannel]}

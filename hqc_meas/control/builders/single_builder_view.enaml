@@ -1,0 +1,95 @@
+from enaml.widgets.api import (Dialog, Container, ObjectCombo, Label, CheckBox,
+                               PushButton, Form)
+from enaml.core.api import Conditional
+from enaml.layout.api import hbox, vbox, grid, spacer
+from enaml.stdlib.mapped_view import MappedView
+from inspect import cleandoc
+
+from .pref_view import PREF_VIEW_MAP
+from .single_instr_builder import SingleInstrBuilder
+
+enamldef SingleBuilderView(Dialog): dial:
+    """
+    """
+    attr model
+    Container:
+        constraints << [vbox(
+                            hbox(vbox(form, spacer), *pref.objects),
+                            hbox(spacer, cancel, ok),)
+                        ]
+        Form: form:
+            Label:
+                text = 'Select driver'
+            ObjectCombo: driver:
+                selected = None
+                items << model.driver_map.keys()
+                items ::
+                    driver.selected = None
+                selected := model.driver_key
+
+            Label:
+                text = 'Select profile'
+            ObjectCombo: prof:
+                items << model.profile_map.keys()
+                items ::
+                    prof.selected = items[0] if items else None
+                selected ::
+                    model.profile = model.profile_map[selected]
+
+            Label:
+                text = 'Select main ui'
+            ObjectCombo: m_ui:
+                items << model.available_uis['main']
+                items ::
+                    m_ui.selected = items[0] if items else None
+                to_string = lambda x : x.__name__
+                selected >> model.main_ui
+
+            Label:
+                text = 'Select auxiliary ui'
+            ObjectCombo: a_ui:
+                items << model.available_uis['aux']
+                items ::
+                    a_ui.selected = items[0] if items else None
+                to_string = lambda x : x.__name__
+                selected >> model.second_ui
+
+            Label:
+                text = 'Use custom property ui'
+            CheckBox: prop:
+                enabled << bool(len(model.available_uis['prop']) > 1)
+                tool_tip = cleandoc('''By default, the ui provided as auxiliary
+                                is used for the property ui too''')
+
+            Conditional:
+                condition << prop.checked
+                Label:
+                    text = 'Select a property ui'
+                ObjectCombo:
+                    items << model.available_uis['prop']
+                    items ::
+                        selected = None
+                    to_string = lambda x : x.__name__
+                    selected >> model.prop_ui
+
+        MappedView: pref:
+            typemap = PREF_VIEW_MAP
+            model << dial.model.pref_model
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()
+        PushButton: ok:
+            text = 'Ok'
+            enabled << model.ready_to_build
+            clicked ::
+                model.build_panel()
+                dial.accept()
+
+def open_single_builder_dialog(main_panel, area):
+    """
+    """
+    builder = SingleInstrBuilder(main_panel = main_panel,
+                                 area = area)
+    SingleBuilderView(parent = area,
+                      model = builder).exec_()

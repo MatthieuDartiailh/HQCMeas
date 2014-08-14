@@ -1,0 +1,43 @@
+# -*- coding: utf-8 -*-
+from atom.api import Atom, Str
+from enaml.workbench.api import PluginManifest, Plugin, Extension
+
+from hqc_meas.utils.state import State
+
+
+class _State(Plugin):
+    """
+    """
+    string = Str('init')
+
+    def property_getter(self, aux):
+        return 'ok'
+
+
+enamldef StateContributor(PluginManifest):
+    """
+    """
+    id = u'test.states'
+    factory = _State
+
+    Extension:
+        id = 'states'
+        point = u'hqc_meas.state.states'
+        State:
+            id = 'test.states.state'
+            sync_members = ['string']
+            prop_getters = {'prop': 'property_getter'}
+
+enamldef StateContributor2(PluginManifest):
+    """
+    """
+    id = u'test.states2'
+    factory = _State
+
+    Extension:
+        id = 'states'
+        point = u'hqc_meas.state.states'
+        State:
+            id = 'test.states.state2'
+            sync_members = ['string']
+            prop_getters = {'prop': 'property_getter'}

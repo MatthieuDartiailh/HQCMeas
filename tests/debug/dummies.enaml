@@ -1,0 +1,105 @@
+# -*- coding: utf-8 -*-
+from enaml.workbench.api import PluginManifest, Extension
+
+from hqc_meas.debug.debugger import Debugger
+
+#--- Checks dummies -----------------------------------------------------------
+enamldef DummyDebugger1(PluginManifest):
+    """ Basic debugger contribution.
+
+    """
+    id = u'dummy.debugger1'
+
+    Extension:
+        id = 'debugger'
+        point = u'hqc_meas.debug.debuggers'
+        Debugger:
+            id = 'dummy.debugger1'
+            name = 'Debugger1'
+            factory = lambda declaration, plugin: None
+            view = lambda model: None
+
+enamldef DummyDebugger1bis(PluginManifest):
+    """ Check we can't have two identic debugger id.
+
+    """
+    id = u'dummy.debugger1bis'
+
+    Extension:
+        id = 'debugger'
+        point = u'hqc_meas.debug.debuggers'
+        Debugger:
+            id = 'dummy.debugger1'
+            name = 'Debugger1'
+            factory = lambda declaration, plugin: None
+            view = lambda model: None
+            
+enamldef DummyDebugger1ter(PluginManifest):
+    """ Check we use old extensions.
+
+    """
+    id = u'dummy.debugger1ter'
+
+    Extension:
+        id = 'debugger'
+        point = u'hqc_meas.debug.debuggers'
+        Debugger:
+            id = 'dummy.debugger1ter'
+            name = 'Debugger1'
+            factory = lambda declaration, plugin: None
+            view = lambda model: None
+
+
+enamldef DummyDebugger2(PluginManifest):
+    """ Check factory check.
+
+    """
+    id = u'dummy.debugger2'
+
+    Extension:
+        id = 'debugger'
+        point = u'hqc_meas.debug.debuggers'
+        Debugger:
+            id = 'dummy.debugger2'
+            name = 'Debugger2'
+
+
+enamldef DummyDebugger2bis(PluginManifest):
+    """ Check view check.
+
+    """
+    id = u'dummy.debugger2'
+
+    Extension:
+        id = 'debugger'
+        point = u'hqc_meas.debug.debuggers'
+        Debugger:
+            id = 'dummy.debugger2'
+            name = 'Debugger2'
+            factory = lambda declaration, plugin: None
+
+
+enamldef DummyDebugger3(PluginManifest):
+    """ Check use of an Extension factory.
+
+    """
+    id = u'dummy.debugger3'
+
+    Extension:
+        id = 'debugger'
+        point = u'hqc_meas.debug.debuggers'
+        factory = lambda workbench: [Debugger(id= 'dummy.debugger3',
+                                              name='Debugger3',
+                                              factory=lambda declaration, plugin: None,
+                                              view=lambda model: None)]
+
+enamldef DummyDebugger4(PluginManifest):
+    """ Check type check when using Extension factory.
+
+    """
+    id = u'dummy.debugger3'
+
+    Extension:
+        id = 'debugger'
+        point = u'hqc_meas.debug.debuggers'
+        factory = lambda workbench: [None]

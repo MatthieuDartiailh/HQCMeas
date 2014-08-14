@@ -1,0 +1,69 @@
+from enaml.widgets.api import (MainWindow, DockArea, DockItem, Container,
+                            MenuBar, Menu, Action)
+
+from .builders.single_builder_view import open_single_builder_dialog
+
+enamldef MainPanelView(MainWindow): main:
+    """
+    """
+    attr model
+    title = 'Control panel'
+    closed ::
+        model.save_panel_state(dock_area)
+
+    MenuBar:
+        Menu:
+            title = 'Panels'
+            Menu:
+                title = 'Add'
+                Action:
+                    text = 'Single instr'
+                    triggered ::
+                        open_single_builder_dialog(model, dock_area)
+                Action:
+                    text = 'Macro'
+                    enabled = False
+                    triggered ::
+                        pass
+                Action:
+                    text = 'From template'
+                    enabled = False
+                    triggered ::
+                        pass
+
+        Menu:
+            title = 'Preferences'
+            Menu:
+                title = 'Save'
+                Action:
+                    text = 'Default'
+                    triggered ::
+                        pass
+                Action:
+                    text = 'New'
+                    triggered ::
+                        pass
+            Menu:
+                title = 'Load'
+                Action:
+                    text = 'Default'
+                    triggered ::
+                        pass
+                Action:
+                    text = 'Custom'
+                    triggered ::
+                        pass
+    Container:
+        padding = 0
+        DockArea: dock_area:
+            dock_events_enabled = model.enable_dock_events
+            dock_event ::
+                d_event = change['value']
+                if d_event.type == d_event.Closed:
+                    panel_model = [panel for panel in dock_area.children
+                                    if panel.name == d_event.name]
+                    try:
+                        model.control_panel_closed(panel_model[0])
+                    except IndexError:
+                        pass
+                        # TODO do something meaningful here

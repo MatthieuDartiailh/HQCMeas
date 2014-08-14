@@ -1,0 +1,41 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : meas_dc_views.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo)
+from enaml.stdlib.fields import FloatField
+from enaml.layout.api import factory
+
+from inspect import cleandoc
+from textwrap import fill
+
+from hqc_meas.utils.layouts import auto_grid_layout
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+
+enamldef DCVoltMeasView(BaseInstrumentView): view:
+
+    title << task.task_name
+    constraints = [factory(auto_grid_layout)]
+
+    Label:
+        text = 'Driver'
+    ObjectCombo:
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+
+    Label:
+        text = 'Instr'
+    ObjectCombo:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Label:
+        text = 'Wait (s)'
+    FloatField:
+        value := task.wait_time
+        tool_tip = fill(cleandoc('''Time to wait before querying values from the
+                     voltmeter'''), 60)
+
+TASK_VIEW_MAPPING = {'MeasDCVoltageTask' : DCVoltMeasView}

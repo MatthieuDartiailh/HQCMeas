@@ -1,0 +1,59 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : edition.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.widgets.api import (Notebook, Container, Dialog, PushButton,
+                               MultilineField)
+from enaml.layout.api import vbox, hbox, spacer
+from enaml.core.api import Include
+
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+
+
+enamldef EngineSelector(Dialog): dial:
+    """ Simple dialog to select an engine.
+
+    """
+    # Measure for which a new monitor is being chosen.
+    attr measure_plugin
+
+    # Dict {id: declaration} of all the headers.
+    attr engines = measure_plugin.engines
+
+    # Id of the currently selected engine.
+    attr selected_id
+
+    # Declaration for the currently selected engine.
+    attr selected_decl
+
+    # Mapping between header name and id.
+    attr _mapping = {engine.name: engine_id
+                     for engine_id, engine in engine}
+
+    Container:
+        constraints << [vbox(list_ed, desc, hbox(cancel, ok))]
+
+        QtListStrWidget: list_ed:
+            items << sorted(_mapping.keys())
+            selected_item::
+                new_val = change['value']
+                if new_val:
+                    key = _mapping[new_val]
+                    dial.selected_decl = engines[key]
+                    dial.selected_id = key
+
+        MultilineField: desc:
+            text << selected_decl.description if selected_decl else ''
+
+        PushButton: ok:
+            text = 'Ok'
+            enabled << selected_decl
+            clicked ::
+                dial.accept()
+
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()

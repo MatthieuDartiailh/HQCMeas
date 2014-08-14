@@ -1,0 +1,105 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : checks_display.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+
+from atom.api import (Atom, Str, Dict, Unicode)
+from enaml.widgets.api import (Dialog, Container, Label, MultilineField,
+                               PushButton, Notebook, Page)
+from enaml.layout.api import vbox, grid, hbox, align
+from enaml.core.api import Looper
+
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+
+class _TaskCheckModel(Atom):
+
+    """Simple dialog displaying the errors messages resulting from a failed
+    check.
+
+    Attributes
+    ----------
+    check_dict_result : dict(str, str)
+        Dictionnary storing the path of the task in which a check failed and
+        the associated message.
+    name_to_path_dict : dict(str, str)
+        Dictionnary mapping the name of the tasks in which a check failed to
+        its path.
+    selected_check : str
+        Name of the task the user selected from `failed_check_list`.
+    full_path : str
+        Path of the selected task.
+    message : str
+        Message associated to the selected task.
+
+    """
+    check_dict_result = Dict(Str(), Dict())
+    name_to_path_dict = Dict(Str(), Dict())
+
+    selected_category = Unicode()
+    selected_check = Str()
+    full_path = Str()
+    message = Str()
+
+    def __init__(self, check_dict_result):
+        super(_TaskCheckModel, self).__init__()
+        self.check_dict_result = check_dict_result
+        self.name_to_path_dict = {cat: {key.rpartition('/')[-1]: key
+                                        for key in val.keys()}
+                                  for cat, val in check_dict_result.iteritems()
+                                  }
+
+        self.selected_category = self.check_dict_result.keys()[0]
+
+    def _observe_selected_check(self, change):
+        """ Set the `full_path` and `message` attrs when a check is selected.
+
+        """
+        new = change['value']
+        cat = self.selected_category
+        self.full_path = self.name_to_path_dict[cat][new]
+        self.message = self.check_dict_result[cat][self.full_path]
+
+    def _observe_selected_category(self, change):
+        """ Select the first check of the category when it changes.
+
+        """
+        self.selected_check = self.name_to_path_dict[change['value']].keys()[0]
+
+
+enamldef ChecksDisplay(Dialog): dial:
+    """
+    """
+    attr errors
+    attr model = _TaskCheckModel(errors)
+
+    Container:
+        constraints = [vbox(hbox(lis_lab, che_lab), hbox(nb, che),
+                            ex),
+                       align('left', lis_lab, nb),
+                       align('left', che_lab, che),
+                       contents_right == ex.right]
+        Label: lis_lab:
+            text = 'Failed tests'
+        Notebook: nb:
+            hug_height = 'ignore'
+            selected_tab >> model.selected_category
+            Looper:
+                iterable = errors.keys()
+                Page:
+                    title = loop_item.capitalize()
+                    name = loop_item
+                    Container:
+                        QtListStrWidget: lis:
+                            hug_height = 'ignore'
+                            items << model.name_to_path_dict[loop_item].keys()
+                            selected_item >> model.selected_check
+        Label: che_lab:
+            text << model.full_path
+        MultilineField: che:
+            text << model.message
+            read_only = True
+        PushButton: ex:
+            text = 'Close'
+            clicked :: dial.accept()
