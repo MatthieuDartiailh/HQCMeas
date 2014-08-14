@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : profile_form.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 
-from atom.api import (Atom, List, Str, Unicode, Instance, Typed)
+from atom.api import (Atom, List, Str, Unicode, Instance, Typed, Value)
 
-from .forms import AbstractConnectionForm, FORMS
+from .forms import AbstractConnectionForm
 from .manager_plugin import InstrManagerPlugin
 
 
@@ -47,6 +47,7 @@ class ProfileForm(Atom):
     drivers = List(Str(), [])
     driver = Str('')
     connection_form = Instance(AbstractConnectionForm)
+    connection_form_view = Value()
 
     def __init__(self, **kwargs):
         super(ProfileForm, self).__init__()
@@ -57,9 +58,17 @@ class ProfileForm(Atom):
             self.driver_type = kwargs.pop('driver_type')
         if 'driver' in kwargs:
             self.driver = kwargs.pop('driver')
-        form_class = FORMS.get(self.driver_type, None)
-        if form_class:
-            self.connection_form = form_class(**kwargs)
+
+        if self.driver or self.driver_type:
+            aux = self.driver if self.driver else self.driver_type
+            form_class, view = self.manager.matching_form(aux, view=True)
+            if form_class:
+                if self.driver:
+                    aux, _ = self.manager.drivers_request([self.driver])
+                    self.connection_form = form_class(driver=aux[self.driver],
+                                                      **kwargs)
+                else:
+                    self.connection_form = form_class(**kwargs)
 
     def dict(self):
         """ Return the informations of the form as a dict
@@ -72,16 +81,36 @@ class ProfileForm(Atom):
         return infos
 
     def _observe_driver_type(self, change):
-        """Build the list of driver matching the selected type and select the
-        right connection_form
+        """Build the list of driver matching the selected type.
 
         """
         new_type = change['value']
         if new_type:
             driver_list = self.manager.matching_drivers([new_type])
             self.drivers = sorted(driver_list)
-            form_class = FORMS.get(change['value'], None)
+
+            form_class, view = self.manager.matching_form(new_type, view=True)
             if form_class:
                 self.connection_form = form_class()
+                self.connection_form_view = view
             else:
                 self.connection_form = None
+                self.connection_form_view = None
+
+    def _observe_driver(self, change):
+        """ Select the right connection_form for the selected driver.
+
+        """
+        driver = change['value']
+        if driver:
+            form_class, view = self.manager.matching_form(driver, view=True)
+            aux, _ = self.manager.drivers_request([driver])
+            if form_class:
+                if isinstance(self.connection_form, form_class):
+                    self.connection_form.driver = aux[driver]
+                else:
+                    self.connection_form = form_class(driver=driver)
+                self.connection_form_view = view
+            else:
+                self.connection_form = None
+                self.connection_form_view = None
