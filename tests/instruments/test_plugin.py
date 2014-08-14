@@ -9,7 +9,7 @@
 import enaml
 import os
 from configobj import ConfigObj
-from nose.tools import assert_equal, assert_in, assert_not_in
+from nose.tools import assert_equal, assert_in, assert_not_in, assert_is_not
 from nose.plugins.skip import SkipTest
 
 from .tools import BaseClass
@@ -18,7 +18,7 @@ with enaml.imports():
     from hqc_meas.instruments.manager_manifest import InstrManagerManifest
     from hqc_meas.instruments.forms import FORMS, FORMS_MAP_VIEWS
 
-    from .users import InstrUser1, InstrUser2, InstrUser3
+    from .users import InstrUser1, InstrUser2, InstrUser3, InstrUser4
 
 from ..util import complete_line, process_app_events
 
@@ -43,6 +43,15 @@ class Test_DriverManagement(BaseClass):
         assert_in('PanelTestDummy', plugin.drivers)
         assert_in('Dummy', plugin.all_profiles)
         assert_in('Dummy', plugin.available_profiles)
+        
+    def test_preventing_loading_package(self):
+        self.workbench.register(InstrManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+        plugin.drivers_loading.append('drivers.dummies')
+        plugin._refresh_drivers()
+
+        assert_not_in('PanelTestDummy', plugin.drivers)
+        assert_in('Dummy', plugin.driver_types)
 
     def test_load_all(self):
         self.workbench.register(InstrManagerManifest())
@@ -189,6 +198,7 @@ class Test_DriverManagement(BaseClass):
         assert path is None
 
     def test_profile_request1(self):
+        # Test basic profile request by registered user.
         self.workbench.register(InstrManagerManifest())
         self.workbench.register(InstrUser1())
         user = self.workbench.get_plugin(u'test.user1')
@@ -212,6 +222,8 @@ class Test_DriverManagement(BaseClass):
         self.workbench.unregister(u'test.user1')
 
     def test_profiles_request2(self):
+        # Test requesting profiles used by other users. Can't get profile not 
+        # released by user release method.
         self.workbench.register(InstrManagerManifest())
         self.workbench.register(InstrUser1())
         self.workbench.register(InstrUser2())
@@ -241,6 +253,8 @@ class Test_DriverManagement(BaseClass):
         self.workbench.unregister(u'test.user2')
 
     def test_profiles_request3(self):
+        # Test requesting profiles used by other users. Can't get profile not 
+        # released by user because of its policy.
         self.workbench.register(InstrManagerManifest())
         self.workbench.register(InstrUser1())
         self.workbench.register(InstrUser3())
@@ -270,6 +284,7 @@ class Test_DriverManagement(BaseClass):
         self.workbench.unregister(u'test.user3')
 
     def test_profile_request4(self):
+        # Test requesting non-existing profiles.
         self.workbench.register(InstrManagerManifest())
         self.workbench.register(InstrUser1())
         user = self.workbench.get_plugin(u'test.user1')
@@ -287,3 +302,51 @@ class Test_DriverManagement(BaseClass):
         assert_equal(miss, [u'N'])
 
         self.workbench.unregister(u'test.user1')
+        
+    def test_profile_request5(self):
+        # Test requesting profile by a non-registered user.
+        self.workbench.register(InstrManagerManifest())
+        self.workbench.register(InstrUser4())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        user = self.workbench.get_plugin(u'test.user4')
+
+        # Can't get profile without a valid user.
+        cmd = u'hqc_meas.instr_manager.profiles_request'
+        prof, miss = core.invoke_command(cmd,
+                                      {'profiles': [u'N']},
+                                      user)
+        manager = self.workbench.get_plugin(u'hqc_meas.instr_manager')
+
+        assert_equal(manager.available_profiles, ['Dummy'])
+        assert_equal(manager._used_profiles, {})
+        assert_equal(miss, [])
+        assert_equal(prof, {})
+
+    def test_driver_reload(self):
+        # Test reloading a driver.
+        self.workbench.register(InstrManagerManifest())
+        self.workbench.register(InstrUser1())
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        
+        com = u'hqc_meas.instr_manager.driver_types_request'
+        d_types, _ = core.invoke_command(com, {'driver_types': ['Dummy']},
+                                         self)        
+        
+        com = u'hqc_meas.instr_manager.drivers_request'
+        drivers, _ = core.invoke_command(com, {'drivers': ['PanelTestDummy']},
+                                         self)
+                                         
+        com = u'hqc_meas.instr_manager.reload_driver'
+        re_driver = core.invoke_command(com, {'driver': 'PanelTestDummy'},
+                                        self)
+                                        
+        assert_is_not(re_driver, drivers['PanelTestDummy'])
+        assert_equal(re_driver.__name__, 'PanelTestDummy')
+        
+        com = u'hqc_meas.instr_manager.driver_types_request'
+        re_d_types, _ = core.invoke_command(com, {'driver_types': ['Dummy']},
+                                            self)  
+                                            
+        assert_is_not(re_d_types['Dummy'], d_types['Dummy'])
+        assert_equal(re_d_types['Dummy'].__name__, 'DummyInstrument')
+        

@@ -117,13 +117,13 @@ def secure_communication(max_iter=10):
 
             i = 0
             # Try at most `max_iter` times to excute method
-            while i < max_iter:
+            while i < max_iter + 1:
                 try:
                     return method(self, *args, **kwargs)
-                    break
+                    
                 # Catch all the exception specified by the driver
                 except self.secure_com_except as e:
-                    if i == max_iter-1:
+                    if i == max_iter:
                         raise
                     else:
                         print e
@@ -181,7 +181,7 @@ class BaseInstrument(object):
 
     """
     caching_permissions = {}
-    secure_com_except = ()
+    secure_com_except = (InstrIOError)
     owner = ''
 
     def __init__(self, connection_info, caching_allowed=True,

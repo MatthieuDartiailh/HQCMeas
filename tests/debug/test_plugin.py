@@ -3,17 +3,20 @@ from enaml.workbench.api import Workbench
 import enaml
 import os
 from configobj import ConfigObj
-from nose.tools import assert_in, assert_not_in, raises, assert_false
+from nose.tools import (assert_in, assert_not_in, raises, assert_false,
+                        assert_true)
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from hqc_meas.utils.state_manifest import StateManifest
     from hqc_meas.utils.pref_manifest import PreferencesManifest
     from hqc_meas.debug.debugger_manifest import DebuggerManifest
+    from hqc_meas.debug.debugger import BaseDebugger
 
     from .dummies import (DummyDebugger1, DummyDebugger1bis,
                           DummyDebugger2, DummyDebugger2bis,
-                          DummyDebugger3, DummyDebugger4)
+                          DummyDebugger3, DummyDebugger4,
+                          DummyDebugger1ter)
 
 
 from ..util import complete_line, remove_tree, create_test_dir
@@ -25,6 +28,19 @@ def setup_module():
 
 def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
+
+
+def test_base_debugger1():
+    debugger = BaseDebugger()
+    debugger.release_ressources()
+    
+    
+@raises(TypeError)
+def test_base_debugger2():
+    debugger = BaseDebugger()
+    debugger.release_ressources()
+    debugger.plugin = 1
+    
 
 
 class TestPluginCoreFunctionalities(object):
@@ -87,8 +103,8 @@ class TestPluginCoreFunctionalities(object):
         """
         # Tamper with prefs to alter startup.
         pref_plugin = self.workbench.get_plugin(u'hqc_meas.preferences')
-        prefs = {'manifests': repr([('tests.debug.dummies',
-                                    'DummyDebugger1')])}
+        prefs = {'manifests': repr([('tests.debug.dummies', 'DummyDebugger1'),
+                                    ('tests.debug.dummies', 'NonExistent')])}
         pref_plugin._prefs[u'hqc_meas.debug'].update(prefs)
 
         self.workbench.register(DebuggerManifest())
@@ -111,6 +127,7 @@ class TestPluginCoreFunctionalities(object):
         plugin = self.workbench.get_plugin(u'hqc_meas.debug')
 
         assert_in(u'dummy.debugger1', plugin.debuggers)
+        assert_true(plugin._debugger_extensions)
 
         self.workbench.unregister(u'dummy.debugger1')
 
@@ -126,10 +143,19 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(DummyDebugger1())
 
         assert_in(u'dummy.debugger1', plugin.debuggers)
+        
+        # Increase coverage by checking we reuse known extensions.
+        self.workbench.register(DummyDebugger1ter())
+        
+        assert_in(u'dummy.debugger1ter', plugin.debuggers)
 
         self.workbench.unregister(u'dummy.debugger1')
 
         assert_not_in(u'dummy.debugger1', plugin.debuggers)
+        
+        self.workbench.unregister(u'dummy.debugger1ter')
+
+        assert_not_in(u'dummy.debugger1ter', plugin.debuggers)
 
     def test_check_factory(self):
         """ Test getting the Debugger decl from a factory.
@@ -151,9 +177,9 @@ class TestPluginCoreFunctionalities(object):
 
         """
         self.workbench.register(DebuggerManifest())
+        self.workbench.get_plugin(u'hqc_meas.debug')
         self.workbench.register(DummyDebugger1())
         self.workbench.register(DummyDebugger1bis())
-        self.workbench.get_plugin(u'hqc_meas.debug')
 
     @raises(ValueError)
     def test_check_errors2(self):

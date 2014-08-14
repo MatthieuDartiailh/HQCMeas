@@ -102,6 +102,7 @@ class DebuggerSpace(Workspace):
         if not declaration:
             logging.getLogger(__name__)
             logging.warn('{} is not known debugger id'.format(debugger_id))
+            return
 
         # Find first unused name.
         dock_numbers = sorted([int(pane.name[5])

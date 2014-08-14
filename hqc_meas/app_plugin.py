@@ -70,11 +70,11 @@ class HqcAppPlugin(Plugin):
             self._closing_extensions.clear()
             return
 
-         # Get the engines declarations for all extensions.
+        # Get the engines declarations for all extensions.
         new_extensions = defaultdict(list)
         old_extensions = self._closing_extensions
         for extension in extensions:
-            if extensions in old_extensions:
+            if extension in old_extensions:
                 closing_checks = old_extensions[extension]
             else:
                 closing_checks = self._load_closing_checks(extension)
@@ -86,9 +86,9 @@ class HqcAppPlugin(Plugin):
             for closing_check in new_extensions[extension]:
                 if closing_check.id in closing_checks:
                     msg = "closing check '%s' is already registered"
-                    raise ValueError(msg % closing_checks.id)
+                    raise ValueError(msg % closing_check.id)
                 if closing_check.validate is None:
-                    msg = "closingcheck '%s' does not declare a validate"
+                    msg = "closing check '%s' does not declare a validate"
                     raise ValueError(msg % closing_check.id)
                 closing_checks[closing_check.id] = closing_check
 

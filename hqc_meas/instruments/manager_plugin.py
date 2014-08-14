@@ -576,10 +576,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 types.update(m.DRIVER_TYPES)
 
             if hasattr(m, 'DRIVER_PACKAGES'):
-                if prefix is not None:
-                    packs = [prefix + '.' + pack for pack in m.DRIVER_PACKAGES]
-                else:
-                    packs = m.DRIVER_PACKAGES
+                packs = [prefix + '.' + pack for pack in m.DRIVER_PACKAGES]
                 packages.extend(packs)
 
             if hasattr(m, 'DRIVERS'):
@@ -740,6 +737,6 @@ class _FileListUpdater(FileSystemEventHandler):
             self.handler(True)
 
     def on_moved(self, event):
-        super(_FileListUpdater, self).on_deleted(event)
+        super(_FileListUpdater, self).on_moved(event)
         if isinstance(event, FileMovedEvent):
             self.handler(True)

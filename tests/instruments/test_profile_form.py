@@ -7,8 +7,7 @@
 """
 """
 import enaml
-
-from .tools import BaseClass
+from nose.tools import assert_equal
 
 with enaml.imports():
     from hqc_meas.instruments.manager_manifest import InstrManagerManifest
@@ -18,6 +17,7 @@ with enaml.imports():
     from hqc_meas.instruments.forms.base_forms import DummyForm
 
 from ..util import complete_line
+from .tools import BaseClass
 
 
 def setup_module():
@@ -28,7 +28,7 @@ def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
-class TestForms(BaseClass):
+class TestProfileForm(BaseClass):
 
     mod = __name__
     dir_id = 1
@@ -38,10 +38,10 @@ class TestForms(BaseClass):
         manager = self.workbench.get_plugin(u'hqc_meas.instr_manager')
         form = ProfileForm(manager=manager)
         form.driver_type = 'Dummy'
-        assert form.drivers == manager.matching_drivers(['Dummy'])
+        assert_equal(form.drivers, manager.matching_drivers(['Dummy']))
         assert isinstance(form.connection_form, DummyForm)
-        assert form.dict() == {'name': '', 'driver_type': 'Dummy',
-                               'driver': ''}
+        assert_equal(form.dict(), {'name': '', 'driver_type': 'Dummy',
+                                   'driver': ''})
 
     def test_view1(self):
         self.workbench.register(InstrManagerManifest())

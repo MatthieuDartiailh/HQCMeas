@@ -10,7 +10,7 @@ import os
 import logging
 from configobj import ConfigObj
 from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
-                        assert_is_instance)
+                        assert_is_instance, assert_false)
 
 from hqc_meas.debug.debugger_workspace import LOG_ID
 with enaml.imports():
@@ -24,7 +24,8 @@ with enaml.imports():
     from hqc_meas.debug.debugger_manifest import DebuggerManifest
     from hqc_meas.app_manifest import HqcAppManifest
 
-    from .helpers import TestSuiteManifest, TestDebugger, TestDebuggerView
+    from .helpers import (TestSuiteManifest, TestDebugger, TestDebuggerView,
+                          tester)
 
 from ..util import (complete_line, process_app_events, close_all_windows,
                     remove_tree, create_test_dir)
@@ -124,6 +125,9 @@ class TestDebugSpace(object):
         assert_true(plugin.workspace)
         workspace = plugin.workspace
 
+        # Check the contribution of the debugger was added to the workspace.
+        assert_true(tester.contributing)
+
         ui = self.workbench.get_plugin('enaml.workbench.ui')
         ui.show_window()
         process_app_events()
@@ -145,6 +149,9 @@ class TestDebugSpace(object):
 
         # Check the reference to the workspace was destroyed.
         assert_equal(plugin.workspace, None)
+
+        # Check the contribution of the debugger to the workspace was removed.
+        assert_false(tester.contributing)
 
     def test_life_cycle2(self):
         """ Test that workspace reselection do restore debug panels.
@@ -201,7 +208,7 @@ class TestDebugSpace(object):
         d_view2 = dock_area.find('item_2')
         assert_is_instance(d_view2, TestDebuggerView)
 
-    def test_create_debugger(self):
+    def test_create_debugger1(self):
         """ Creating a debugger.
 
         """
@@ -228,6 +235,29 @@ class TestDebugSpace(object):
         dock_area = workspace.dock_area
         d_view = dock_area.find('item_1')
         assert_is_instance(d_view, TestDebuggerView)
+
+    def test_create_debugger2(self):
+        """ Creating a debugger with wrong id.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.debug')
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.debug.workspace'},
+                            self)
+
+        # Check the plugin got the workspace
+        assert_true(plugin.workspace)
+        workspace = plugin.workspace
+        ui = self.workbench.get_plugin('enaml.workbench.ui')
+        ui.show_window()
+        process_app_events()
+
+        workspace.create_debugger('debugger_false')
+        process_app_events()
+
+        assert_false(plugin.debugger_instances)
 
     def test_closing_debugger_panel(self):
         """ Test closing a debugger panel and reopening one.
