@@ -11,9 +11,6 @@ This module defines drivers for LeCroy64Xi using VISA library.
     LeCroy64Xi
 
 
- LeCroy_354Xi.py class,
- to perform the communication between the Wrapper and the device
-
 """
 from threading import Lock
 from contextlib import contextmanager
@@ -27,6 +24,8 @@ import numpy as np
 
 
 class LeCroyChannel(BaseInstrument):
+    """
+    """
 
     def __init__(self, LeCroy64Xi, channel_num, caching_allowed=True,
                  caching_permissions={}):
@@ -753,14 +752,11 @@ class LeCroyChannel(BaseInstrument):
 
 
 class LeCroy64Xi(VisaInstrument):
-    ''' This is the python driver for the LeCroy Waverunner 44Xi
+    """ This is the python driver for the LeCroy Waverunner 64Xi
     Digital Oscilloscope
 
-    Usage:
-    Initialize with
-    <name>= instruments.create('name', 'LeCroy_44Xi', address='<VICP address>')
-    <VICP address> = VICP::<ip-address>
-    '''
+
+    """
     caching_permissions = {'defined_channels': True}
 
     def __init__(self, connection_info, caching_allowed=True,
