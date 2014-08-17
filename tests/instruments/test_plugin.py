@@ -16,7 +16,6 @@ from .tools import BaseClass
 
 with enaml.imports():
     from hqc_meas.instruments.manager_manifest import InstrManagerManifest
-    from hqc_meas.instruments.forms import FORMS, FORMS_MAP_VIEWS
 
     from .users import InstrUser1, InstrUser2, InstrUser3, InstrUser4
 
@@ -156,14 +155,14 @@ class Test_DriverManagement(BaseClass):
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.matching_form'
         form = core.invoke_command(com, {'driver': 'Dummy'}, self)
-        assert_equal(form, FORMS['Dummy'])
+        assert_equal(form.__name__, 'DummyForm')
 
     def test_matching_form2(self):
         self.workbench.register(InstrManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.matching_form'
         form = core.invoke_command(com, {'driver': 'PanelTestDummy'}, self)
-        assert_equal(form, FORMS['Dummy'])
+        assert_equal(form.__name__, 'DummyForm')
 
     def test_matching_form3(self):
         self.workbench.register(InstrManagerManifest())
@@ -172,7 +171,7 @@ class Test_DriverManagement(BaseClass):
         form, view = core.invoke_command(com, {'driver': '__xxxx__',
                                                'view': True}, self)
         assert_equal(form, None)
-        assert_equal(view, FORMS_MAP_VIEWS[type(None)])
+        assert_equal(view.__name__, 'EmptyView')
 
     def test_matching_profiles(self):
         self.workbench.register(InstrManagerManifest())

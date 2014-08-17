@@ -9,7 +9,7 @@
 
 from atom.api import (Atom, List, Str, Unicode, Instance, Typed, Value)
 
-from .forms import AbstractConnectionForm
+from .forms.base_forms import AbstractConnectionForm
 from .manager_plugin import InstrManagerPlugin
 
 
