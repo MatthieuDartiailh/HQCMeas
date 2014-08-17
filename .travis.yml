@@ -27,6 +27,11 @@ install:
 
     # No install required for hqc_meas
 
+before_script:
+# I need a (fake) display on Travis so I need to start a X server.
+- export DISPLAY=:99.0
+- /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
+
 script:
     - cd ${SRC_DIR}
     - nosetests
