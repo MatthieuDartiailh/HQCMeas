@@ -13,6 +13,7 @@ import shutil
 from configobj import ConfigObj
 from nose.tools import (assert_in, assert_not_in, assert_equal, raises,
                         assert_not_equal, assert_true, assert_false)
+from nose.plugins.attrib import attr
 from nose.plugins.skip import SkipTest
 
 with enaml.imports():
@@ -148,6 +149,7 @@ class Test(object):
         if plugin.report():
             raise SkipTest(plugin.report())
 
+    @attr('no_travis')
     def test_template_observation(self):
         self.workbench.register(TaskManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')

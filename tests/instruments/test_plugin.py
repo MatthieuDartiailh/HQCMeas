@@ -10,6 +10,7 @@ import enaml
 import os
 from configobj import ConfigObj
 from nose.tools import assert_equal, assert_in, assert_not_in, assert_is_not
+from nose.plugins.attrib import attr
 from nose.plugins.skip import SkipTest
 
 from .tools import BaseClass
@@ -71,6 +72,7 @@ class Test_DriverManagement(BaseClass):
         self.workbench.unregister(u'test.user2')
         assert_equal(plugin._users.keys(), [u'test.user1'])
 
+    @attr('no_travis')
     def test_profile_observation(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
