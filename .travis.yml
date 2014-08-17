@@ -22,8 +22,8 @@ install:
     - pip install -q kiwisolver
     - pip install -q enaml
 
-    # Install configobj and watchdogs.
-    - pip install -q watchdogs
+    # Install configobj and watchdog.
+    - pip install -q watchdog
     - pip install -q configobj
 
     # install pyqt
