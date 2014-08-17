@@ -29,12 +29,8 @@ install:
 
 script:
     - cd ${SRC_DIR}
-    - if [ "${TEST}" != "extra" ]; then
-        nosetests;
-      fi;
+    - nosetests
 
 after_success:
     # Need to run from source dir to execute appropriate "git" commands
-    - if [ "${TEST}" != "extra" ]; then
-        coveralls;
-      fi;
+    coveralls;
