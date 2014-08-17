@@ -82,13 +82,15 @@ class Test_DriverManagement(BaseClass):
         prof['driver_type'] = 'Dummy'
         prof['driver'] = 'PanelTestDummy'
         prof.write()
-        from time import sleep
-        sleep(0.1)
-        process_app_events()
-        assert_in(u'Test', plugin.all_profiles)
-        assert_in(u'Test', plugin.available_profiles)
-        os.remove(os.path.join(profile_path, 'test.ini'))
-        sleep(0.1)
+        try:
+            from time import sleep
+            sleep(0.5)
+            process_app_events()
+            assert_in(u'Test', plugin.all_profiles)
+            assert_in(u'Test', plugin.available_profiles)
+        finally:
+            os.remove(os.path.join(profile_path, 'test.ini'))
+        sleep(0.5)
         process_app_events()
         assert_not_in(u'Test', plugin.all_profiles)
         assert_not_in(u'Test', plugin.available_profiles)
