@@ -1,0 +1,40 @@
+language: python
+
+virtualenv:
+    system_site_packages: true
+
+env:
+    - PYTHON=2.7 DEPS=full TEST=extra
+
+before_install:
+    - REDIRECT_TO=/dev/stdout  # change to /dev/null to silence Travis
+    - travis_retry sudo apt-get -qq update;
+    - SRC_DIR=$(pwd)
+
+install:
+    # Install numpy, nose, flake
+    - travis_retry sudo apt-get -qq -y install python-numpy python-nose python-setuptools > ${REDIRECT_TO};
+    - pip install -q coveralls nose-timer
+
+    # Install atom enaml from pip
+    - pip install -q ply
+    - pip install -q atom
+    - pip install -q kiwisolver
+    - pip install -q enaml
+
+    # install pyqt
+    - travis_retry sudo apt-get -qq -y install python-qt4-gl python-imaging > ${REDIRECT_TO};
+
+    # No install required for hqc_meas
+
+script:
+    - cd ${SRC_DIR}
+    - if [ "${TEST}" != "extra" ]; then
+        nosetests;
+      fi;
+
+after_success:
+    # Need to run from source dir to execute appropriate "git" commands
+    - if [ "${TEST}" != "extra" ]; then
+        coveralls;
+      fi;
