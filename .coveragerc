@@ -1,7 +1,4 @@
-[run]
-branch = True
-source = hqc_meas
-#include = */hqc_meas/*
+[report]
 omit =
     */hqc_start.py
     */hqc_meas/instruments/drivers/visa/*

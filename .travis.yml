@@ -38,7 +38,7 @@ before_script:
 
 script:
     - cd ${SRC_DIR}
-    - nosetests -a '!no_travis'
+    - nosetests -a '!no_travis' --with-coverage --cover-package hqc_meas 
 
 after_success:
     # Need to run from source dir to execute appropriate "git" commands
