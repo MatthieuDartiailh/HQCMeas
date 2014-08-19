@@ -32,7 +32,7 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'frequency': 1.0, 'unit': 'GHz'})
     loopable = True
-    driver_list = ['AgilentE8257D']
+    driver_list = ['AgilentE8257D','AnritsuMG3694','LabBrickLMS103']
 
     def check(self, *args, **kwargs):
         """
@@ -100,7 +100,7 @@ class SetRFPowerTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'power': -10})
     loopable = True
-    driver_list = ['AgilentE8257D']
+    driver_list = ['AgilentE8257D','AnritsuMG3694','LabBrickLMS103']
 
     def check(self, *args, **kwargs):
         """
@@ -143,7 +143,7 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'output': 0})
     loopable = True
-    driver_list = ['AgilentE8257D']
+    driver_list = ['AgilentE8257D','AnritsuMG3694','LabBrickLMS103']
 
     def check(self, *args, **kwargs):
         """
