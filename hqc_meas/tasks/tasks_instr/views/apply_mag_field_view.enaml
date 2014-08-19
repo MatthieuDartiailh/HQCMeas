@@ -26,7 +26,7 @@ enamldef ApplyMagFieldView(BaseInstrumentView): view:
     constraints = [factory(auto_grid_layout),
                    driver_val.width == profile_val.width]
 
-    Label:  driver_lab:
+    Label: driver_lab:
         text = 'Driver'
     ObjectCombo: driver_val:
         items << sorted(task.driver_list)

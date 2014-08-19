@@ -32,6 +32,7 @@ class ApplyMagFieldTask(InstrumentTask):
 
     parallel = set_default({'activated': True, 'pool': 'instr'})
     task_database_entries = set_default({'Bfield': 0.01})
+
     driver_list = ['IPS12010']
     loopable = True
 
@@ -60,11 +61,11 @@ class ApplyMagFieldTask(InstrumentTask):
             try:
                 val = self.format_and_eval_string(self.target_field)
                 self.write_in_database('Bfield', val)
-            except Exception:
+            except Exception as e:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-field'] = \
                     cleandoc('''Failed to eval the target field formula
-                        {}'''.format(self.target_field))
+                        {}: {}'''.format(self.target_field, e))
 
         return test, traceback
 
