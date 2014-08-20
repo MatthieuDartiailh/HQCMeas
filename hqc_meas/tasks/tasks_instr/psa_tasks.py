@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : apply_mag_field_task.py
+# module : psa_tasks.py
 # author : Benjamin Huard
 # license : MIT license
 # =============================================================================
@@ -22,7 +22,7 @@ class PSAGetTrace(InstrumentTask):
 
     driver_list = ['AgilentPSA']
     task_database_entries = set_default({'trace_data': np.array([1.0]),
-                                         'PSA_config': ''})
+                                         'psa_config': ''})
 
     def perform(self):
         """
@@ -37,17 +37,16 @@ class PSAGetTrace(InstrumentTask):
                        'SPEC': 'Basic Spectrum Analyzer',
                        'WAV': 'Waveform'}
 
-        PSA_config = 'Start freq' + self.driver.start_freq + \
-                     'Stop freq' + self.driver.stop_freq + \
-                     'Span freq' + self.driver.span_frequency + \
-                     'Center freq' + self.driver.center_frequency + \
-                     'Average number' + self.driver.average_count_SA + \
-                     'Resolution bandwidth' + self.driver.RBW + \
-                     'Video bandwidth' + self.driver.VBW_SA + \
-                     'Number of points' + self.driver.sweep_points_SA + \
-                     'Mode' + sweep_modes[self.mode]
+        d = self.driver
+        psa_config = '''Start freq {}, Stop freq {}, Span freq {}, Center freq
+                     {}, Average number {}, Resolution Bandwidth {},
+                     Video Bandwidth {}, Number of points {}, Mode
+                     {}'''.format(d.start_frequencySA, d.stop_frequencySA,
+                                  d.span_frequencySA, d.center_frequencySA,
+                                  d.average_count_SA, d.RBW, d.VBW_SA,
+                                  d.sweep_points_SA, sweep_modes[self.mode])
 
-        self.write_in_database('PSA_config', PSA_config)
+        self.write_in_database('psa_config', psa_config)
         self.write_in_database('trace_data', self.driver.read_data(self.trace))
 
     def check(self, *args, **kwargs):
@@ -87,7 +86,7 @@ class PSASetParam(InstrumentTask):
     video_bandwidth = Str().tag(pref=True)
 
     driver_list = ['AgilentPSA']
-    task_database_entries = set_default({'PSA_config': ''})
+    task_database_entries = set_default({'psa_config': ''})
 
     def perform(self):
         """
@@ -139,17 +138,16 @@ class PSASetParam(InstrumentTask):
                        'SPEC': 'Basic Spectrum Analyzer',
                        'WAV': 'Waveform'}
 
-        PSA_config = 'Start freq' + self.driver.start_freq + \
-                     'Stop freq' + self.driver.stop_freq + \
-                     'Span freq' + self.driver.span_frequency + \
-                     'Center freq' + self.driver.center_frequency + \
-                     'Average number' + self.driver.average_count_SA + \
-                     'Resolution bandwidth' + self.driver.RBW + \
-                     'Video bandwidth' + self.driver.VBW_SA + \
-                     'Number of points' + self.driver.sweep_points_SA + \
-                     'Mode' + sweep_modes[self.mode]
+        d = self.driver
+        psa_config = '''Start freq {}, Stop freq {}, Span freq {}, Center freq
+                     {}, Average number {}, Resolution Bandwidth {},
+                     Video Bandwidth {}, Number of points {}, Mode
+                     {}'''.format(d.start_frequencySA, d.stop_frequencySA,
+                                  d.span_frequencySA, d.center_frequencySA,
+                                  d.average_count_SA, d.RBW, d.VBW_SA,
+                                  d.sweep_points_SA, sweep_modes[self.mode])
 
-        self.write_in_database('PSA_config', PSA_config)
+        self.write_in_database('psa_config', psa_config)
 
     def check(self, *args, **kwargs):
         """
@@ -160,9 +158,10 @@ class PSASetParam(InstrumentTask):
             try:
                 if self.start_freq:
                     toto = self.format_and_eval_string(self.start_freq)
-                    if self.driver == 'AgilentPSA':
-                        if (toto < 3) or (toto > 26500000000):
-                            raise Exception('out_of_range')
+# if type(self.driver).__name__ == 'AgilentPSA':
+# is a new PSA needs to be encoded, it would be best to use task_interfaces
+                    if (toto < 3) or (toto > 26500000000):
+                        raise Exception('out_of_range')
 
             except Exception as e:
                 test = False
@@ -178,9 +177,8 @@ class PSASetParam(InstrumentTask):
             try:
                 if self.stop_freq:
                     toto = self.format_and_eval_string(self.stop_freq)
-                    if self.driver == 'AgilentPSA':
-                        if (toto < 3) or (toto > 26500000000):
-                            raise Exception('out_of_range')
+                    if (toto < 3) or (toto > 26500000000):
+                        raise Exception('out_of_range')
 
             except Exception as e:
                 test = False
@@ -196,9 +194,8 @@ class PSASetParam(InstrumentTask):
             try:
                 if self.span_freq:
                     toto = self.format_and_eval_string(self.span_freq)
-                    if self.driver == 'AgilentPSA':
-                        if (toto < 0) or (toto > 26500000000):
-                            raise Exception('out_of_range')
+                    if (toto < 0) or (toto > 26500000000):
+                        raise Exception('out_of_range')
 
             except Exception as e:
                 test = False
@@ -214,9 +211,8 @@ class PSASetParam(InstrumentTask):
             try:
                 if self.center_freq:
                     toto = self.format_and_eval_string(self.center_freq)
-                    if self.driver == 'AgilentPSA':
-                        if (toto < 3) or (toto > 26500000000):
-                            raise Exception('out_of_range')
+                    if (toto < 3) or (toto > 26500000000):
+                        raise Exception('out_of_range')
 
             except Exception as e:
                 test = False
@@ -232,9 +228,8 @@ class PSASetParam(InstrumentTask):
         try:
             if self.average_nb:
                 toto = self.format_and_eval_string(self.average_nb)
-                if self.driver == 'AgilentPSA':
-                    if (toto < 1) or (toto > 8192):
-                        raise Exception('out_of_range')
+                if (toto < 1) or (toto > 8192):
+                    raise Exception('out_of_range')
 
         except Exception as e:
             test = False
@@ -250,9 +245,8 @@ class PSASetParam(InstrumentTask):
         try:
             if self.average_nb:
                 toto = self.format_and_eval_string(self.resolution_bandwidth)
-                if self.driver == 'AgilentPSA':
-                    if (toto < 1) or (toto > 8000000):
-                        raise Exception('out_of_range')
+                if (toto < 1) or (toto > 8000000):
+                    raise Exception('out_of_range')
 
         except Exception as e:
             test = False
@@ -269,9 +263,8 @@ class PSASetParam(InstrumentTask):
         try:
             if self.average_nb:
                 toto = self.format_and_eval_string(self.video_bandwidth)
-                if self.driver == 'AgilentPSA':
-                    if (toto < 1) or (toto > 50000000):
-                        raise Exception('out_of_range')
+                if (toto < 1) or (toto > 50000000):
+                    raise Exception('out_of_range')
 
         except Exception as e:
             test = False

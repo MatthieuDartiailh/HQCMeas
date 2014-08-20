@@ -32,7 +32,7 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'frequency': 1.0, 'unit': 'GHz'})
     loopable = True
-    driver_list = ['AgilentE8257D','AnritsuMG3694','LabBrickLMS103']
+    driver_list = ['AgilentE8257D', 'AnritsuMG3694', 'LabBrickLMS103']
 
     def check(self, *args, **kwargs):
         """

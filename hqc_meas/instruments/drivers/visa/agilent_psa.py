@@ -176,7 +176,7 @@ class AgilentPSA(VisaInstrument):
             data = self.ask_for_values("FETCH:WAV0?")  # this will get the
                                                 # (I,Q) as a function of freq
             if data:
-                return np.rec.fromarrays([data[0::2], data[1::2]],
+                return np.rec.fromarrays([data[::2], data[1::2]],
                                          'Q', 'I')
                 # one should get all the even indices (Q)
                 # and odd indices (I) separately
