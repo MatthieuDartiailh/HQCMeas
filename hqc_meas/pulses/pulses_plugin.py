@@ -102,7 +102,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
             Should the search be performed using class names rather than
             sequence names.
         views : bool
-            When flase views are not returned alongside the class.
+            When false views are not returned alongside the class.
 
         Returns
         -------

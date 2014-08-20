@@ -236,6 +236,7 @@ enamldef RootSequenceView(GroupBox): view:
     attr item
     alias core : editor.core
     alias cache : editor.cache
+    alias additional_pages : include.objects
 
     Notebook:
         tabs_closable = False
@@ -248,3 +249,6 @@ enamldef RootSequenceView(GroupBox): view:
             title = 'Context'
             Include:
                 objects << [instantiate_context_view(sequence.context)]
+
+        Include:
+            pass

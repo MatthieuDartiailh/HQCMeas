@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_base_pulses.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
                         assert_not_in, assert_in)
 from numpy.testing import assert_array_equal
@@ -602,7 +602,7 @@ class TestCompilation(object):
 
     def test_sequence_compilation1(self):
         # Test compiling a flat sequence.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{a}')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -624,7 +624,7 @@ class TestCompilation(object):
 
     def test_sequence_compilation2(self):
         # Test compiling a flat sequence of fixed duration.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
         self.root.fix_sequence_duration = True
         self.root.sequence_duration = '10.0'
 
@@ -648,7 +648,7 @@ class TestCompilation(object):
 
     def test_sequence_compilation3(self):
         # Test compiling a flat sequence in two passes.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{2_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -670,7 +670,7 @@ class TestCompilation(object):
 
     def test_sequence_compilation4(self):
         # Test compiling a flat sequence with circular references.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{2_start} - 1.0')
         pulse2 = Pulse(def_1='{1_stop} + 1.0', def_2='3.0')
@@ -704,7 +704,7 @@ class TestCompilation(object):
     def test_sequence_compilation6(self):
         # Test compiling a flat sequence with evaluation errors.
         # wrong string value
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
         self.root.fix_sequence_duration = True
         self.root.sequence_duration = '*10.0*'
 
@@ -722,7 +722,7 @@ class TestCompilation(object):
 
     def test_sequence_compilation7(self):
         # Test compiling a nested sequence.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{a}')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -762,7 +762,7 @@ class TestCompilation(object):
     def test_sequence_compilation8(self):
         # Test compiling a nested sequence in two passes on the external
         # sequence.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -801,7 +801,7 @@ class TestCompilation(object):
 
     def test_sequence_compilation9(self):
         # Test compiling a nested sequence in multi passes.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='{6_start} + 1.0')
@@ -841,7 +841,7 @@ class TestCompilation(object):
     def test_sequence_compilation10(self):
         # Test compiling a nested sequence with circular reference in the deep
         # one.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='{6_start} + 1.0')
@@ -865,7 +865,7 @@ class TestCompilation(object):
     def test_sequence_compilation11(self):
         # Test compiling a nested sequence with circular reference in the deep
         # one.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='{6_start} + 1.0')
@@ -886,7 +886,7 @@ class TestCompilation(object):
     def test_conditional_sequence_compilation1(self):
         # Test compiling a conditional sequence whose condition evaluates to
         # False.
-        self.root.external_variables = {'a': 1.5, 'include': True}
+        self.root.external_vars = {'a': 1.5, 'include': True}
 
         pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -927,7 +927,7 @@ class TestCompilation(object):
     def test_conditional_sequence_compilation2(self):
         # Test compiling a conditional sequence whose condition evaluates to
         # True.
-        self.root.external_variables = {'a': 1.5, 'include': False}
+        self.root.external_vars = {'a': 1.5, 'include': False}
 
         pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -956,7 +956,7 @@ class TestCompilation(object):
     def test_conditional_sequence_compilation3(self):
         # Test compiling a conditional sequence whose condition evaluates to
         # True.
-        self.root.external_variables = {'a': 1.5, 'include': False}
+        self.root.external_vars = {'a': 1.5, 'include': False}
 
         pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')

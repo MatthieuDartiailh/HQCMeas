@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : tast_base_pulses.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from functools import partial
 from timeit import repeat
 from nose.tools import assert_true
@@ -30,7 +30,7 @@ class BenchmarkCompilation(object):
 
     def benchmark_sequence_compilation1(self):
         # Test compiling a flat sequence.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{a}')
         pulse2 = Pulse(channel='Ch1_M1', def_1='{a} + 1.0', def_2='3.0')
@@ -43,7 +43,7 @@ class BenchmarkCompilation(object):
 
     def benchmark_sequence_compilation2(self):
         # Test compiling a flat sequence of fixed duration.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
         self.root.fix_sequence_duration = True
         self.root.sequence_duration = '10.0'
 
@@ -59,7 +59,7 @@ class BenchmarkCompilation(object):
 
     def benchmark_sequence_compilation3(self):
         # Test compiling a flat sequence in two passes.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{2_start} - 1.0')
         pulse2 = Pulse(channel='Ch1_M1', def_1='{a} + 1.0', def_2='3.0')
@@ -72,7 +72,7 @@ class BenchmarkCompilation(object):
 
     def benchmark_sequence_compilation7(self):
         # Test compiling a nested sequence.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{a}')
         pulse2 = Pulse(channel='Ch1_M1', def_1='{a} + 1.0', def_2='3.0')
@@ -94,7 +94,7 @@ class BenchmarkCompilation(object):
     def benchmark_sequence_compilation8(self):
         # Test compiling a nested sequence in two passes on the external
         # sequence.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(channel='Ch1_M1', def_1='{a} + 1.0', def_2='3.0')
@@ -115,7 +115,7 @@ class BenchmarkCompilation(object):
 
     def benchmark_sequence_compilation9(self):
         # Test compiling a nested sequence in multi passes.
-        self.root.external_variables = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(channel='Ch1_M1',
@@ -139,7 +139,7 @@ class BenchmarkCompilation(object):
     def benchmark_conditional_sequence_compilation1(self):
         # Test compiling a conditional sequence whose condition evaluates to
         # False.
-        self.root.external_variables = {'a': 1.5, 'include': True}
+        self.root.external_vars = {'a': 1.5, 'include': True}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(channel='Ch1_M1', def_1='{a} + 1.0', def_2='3.0')
@@ -162,7 +162,7 @@ class BenchmarkCompilation(object):
     def benchmark_conditional_sequence_compilation2(self):
         # Test compiling a conditional sequence whose condition evaluates to
         # True.
-        self.root.external_variables = {'a': 1.5, 'include': False}
+        self.root.external_vars = {'a': 1.5, 'include': False}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(channel='Ch1_M1', def_1='{a} + 1.0', def_2='3.0')

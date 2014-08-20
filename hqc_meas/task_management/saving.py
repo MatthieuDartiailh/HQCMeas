@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : saving.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 import os.path
@@ -30,6 +30,7 @@ def save_task(manager, task, mode, parent_ui=None):
     mode : {'config', 'template', 'file'}
         Should the task be returned as a dict (config), saved as a,
         template, saved in a custom file.
+
     parent_ui : optional
         Optional widget to use as a parent for the dialogs.
 

@@ -667,7 +667,7 @@ class RootSequence(Sequence):
     # --- Public API ----------------------------------------------------------
 
     #: Dict of external variables.
-    external_variables = Dict().tag(pref=True)
+    external_vars = Dict().tag(pref=True)
 
     #: Flag to set the length of sequence to a fix duration.
     fix_sequence_duration = Bool().tag(pref=True)
@@ -695,7 +695,7 @@ class RootSequence(Sequence):
         Parameters
         ---------------
         use_context : bool, optional
-            Should the context comile the pulse sequence.
+            Should the context compile the pulse sequence.
 
         Returns
         -----------
@@ -714,7 +714,7 @@ class RootSequence(Sequence):
         """
         missings = set()
         errors = {}
-        sequence_locals = self.external_variables.copy()
+        sequence_locals = self.external_vars.copy()
 
         if self.fix_sequence_duration:
             try:
@@ -739,6 +739,12 @@ class RootSequence(Sequence):
             if self.fix_sequence_duration:
                 kwargs['sequence_duration'] = duration
             return self.context.compile_sequence(pulses, **kwargs)
+
+    def get_bindable_vars(self):
+        """ Access the list of bindable vars for the sequence.
+
+        """
+        return self.linkable_vars + self.external_vars.keys()
 
     def preferences_from_members(self):
         """ Get the members values as string to store them in .ini files.

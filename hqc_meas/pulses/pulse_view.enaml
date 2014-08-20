@@ -26,6 +26,19 @@ def default_add_displays(core, item):
         add_displays.append(shape[1](item==item, shape=item.shape))
 
 
+EVALUATER_TOOLTIP = '\n'.join([
+    fill(cleandoc("""In this field you can enter a text and
+                  include fields which will be replaced by database
+                  entries by using the delimiters '{' and '}' and
+                  which will then be evaluated."""), 80),
+    "Available math functions:",
+    "- cos, sin, tan, acos, asin, atan, atan2",
+    "- exp, log, log10, cosh, sinh, tanh, sqrt",
+    "- complex math function are available under cm",
+    "- numpy function are avilable under np",
+    "- pi is available as Pi"])
+
+
 enamldef ModulationView(FlowItem):
     """ View for the modulation of an analogical pulse.
 
@@ -51,7 +64,10 @@ enamldef ModulationView(FlowItem):
                     Label: freq_lab:
                         text = 'Frequency'
                     QtLineCompleter: freq_val:
+                        hug_width = 'ignore'
                         text := modulation.frequency
+                        entries_updater << item.root.get_bindable_vars
+                        tool_tip = EVALUATER_TOOLTIP
                     ObjectCombo: freq_un:
                         items = list(modulation.get_member('frequency_unit').items)
                         selected := modulation.frequency_unit
@@ -61,7 +77,10 @@ enamldef ModulationView(FlowItem):
                     Label: phase_lab:
                         text = 'Phase'
                     QtLineCompleter: phase_val:
+                        hug_width = 'ignore'
                         text := modulation.phase
+                        entries_updater << item.root.get_bindable_vars
+                        tool_tip = EVALUATER_TOOLTIP
                     ObjectCombo: phase_un:
                         items = list(modulation.get_member('phase_unit').items)
                         selected := modulation.phase_unit
@@ -113,14 +132,20 @@ enamldef PulseView(GroupBox): view:
                 Label:
                     text << item.def_mode.split('/')[0]
                 QtLineCompleter:
+                    hug_width = 'ignore'
                     text := item.def_1
+                    entries_updater << item.root.get_bindable_vars
+                    tool_tip = EVALUATER_TOOLTIP
         SplitItem:
             Container:
                 padding = 0
                 Label:
                     text << item.def_mode.split('/')[1]
                 QtLineCompleter:
+                    hug_width = 'ignore'
                     text := item.def_2
+                    entries_updater << item.root.get_bindable_vars
+                    tool_tip = EVALUATER_TOOLTIP
 
     Conditional: analog:
         condition << item.kind == 'analogical'

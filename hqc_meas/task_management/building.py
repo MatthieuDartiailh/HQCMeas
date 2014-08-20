@@ -7,8 +7,8 @@
 """ This module gather routines linked to building tasks.
 
 Save for build_task_from_config, all this function are rather method of the
-TaskManager and should be called on their own. There are implemented here only
-to simplify the manager.
+TaskManager and should not be called on their own. There are implemented here
+only to simplify the manager.
 
 """
 from enaml.widgets.api import FileDialogEx

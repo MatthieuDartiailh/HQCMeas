@@ -4,8 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
-                        assert_not_in, assert_in, assert_is_instance)
+from nose.tools import (assert_equal, assert_in, assert_is_instance)
 from hqc_meas.pulses.pulses import (RootSequence, Sequence, Pulse)
 from hqc_meas.pulses.contexts.base_context import BaseContext
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
@@ -17,7 +16,7 @@ def test_flat_sequence_persistence1():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_variables = {'a': 1.5}
+    root.external_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -27,7 +26,7 @@ def test_flat_sequence_persistence1():
 
     pref = root.preferences_from_members()
     assert_equal(pref.keys(),
-                 ['external_variables', 'item_class',
+                 ['external_vars', 'item_class',
                   'sequence_duration', 'enabled', 'fix_sequence_duration',
                   'item_0', 'item_1', 'item_2',
                   'context'])
@@ -42,7 +41,7 @@ def test_nested_sequence_persistence1():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_variables = {'a': 1.5}
+    root.external_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -54,7 +53,7 @@ def test_nested_sequence_persistence1():
 
     pref = root.preferences_from_members()
     assert_equal(pref.keys(),
-                 ['external_variables', 'item_class',
+                 ['external_vars', 'item_class',
                   'sequence_duration', 'enabled', 'fix_sequence_duration',
                   'item_0', 'item_1', 'item_2', 'item_3',
                   'context'])
@@ -67,7 +66,7 @@ def test_walk_sequence():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_variables = {'a': 1.5}
+    root.external_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -92,7 +91,7 @@ def test_build_from_config():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_variables = {'a': 1.5}
+    root.external_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -108,7 +107,7 @@ def test_build_from_config():
                               'BaseContext': BaseContext}}
 
     aux = RootSequence.build_from_config(pref, dependecies)
-    assert_equal(aux.external_variables, {'a': 1.5})
+    assert_equal(aux.external_vars, {'a': 1.5})
     assert_equal(len(aux.items), 4)
 
     pulse1 = aux.items[0]
