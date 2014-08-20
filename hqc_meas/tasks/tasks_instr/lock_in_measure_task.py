@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# =============================================================================
+# module : lock_in_measure_task.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
 """
 """
 from atom.api import (Enum, Float, set_default)
@@ -6,7 +11,6 @@ from atom.api import (Enum, Float, set_default)
 from time import sleep
 
 from hqc_meas.tasks.api import InstrumentTask
-from hqc_meas.tasks.tools.task_decorator import smooth_instr_crash
 
 
 class LockInMeasureTask(InstrumentTask):
@@ -25,12 +29,9 @@ class LockInMeasureTask(InstrumentTask):
     driver_list = ['SR7265-LI', 'SR7270-LI', 'SR830']
     task_database_entries = set_default({'x': 1.0})
 
-    def __init__(self, **kwargs):
-        super(LockInMeasureTask, self).__init__(**kwargs)
-        self.make_wait(wait=['instr'])
+    wait = set_default({'activated': True, 'wait': ['instr']})
 
-    @smooth_instr_crash
-    def process(self):
+    def perform(self):
         """
         """
         if not self.driver:
@@ -58,8 +59,6 @@ class LockInMeasureTask(InstrumentTask):
             amplitude, phase = self.driver.read_amp_and_phase()
             self.write_in_database('amplitude', amplitude)
             self.write_in_database('phase', phase)
-
-        return True
 
     def _observe_mode(self, change):
         """ Update the database entries acording to the mode.

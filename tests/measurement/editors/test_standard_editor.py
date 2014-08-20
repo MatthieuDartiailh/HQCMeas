@@ -2,7 +2,6 @@
 import enaml
 from enaml.workbench.api import Workbench
 import os
-import shutil
 from configobj import ConfigObj
 from nose.tools import assert_is_instance
 
@@ -25,7 +24,7 @@ with enaml.imports():
 
     from ..helpers import TestSuiteManifest
 
-from ...util import complete_line
+from ...util import complete_line, remove_tree, create_test_dir
 
 
 def setup_module():
@@ -47,14 +46,12 @@ class TestProcessEngine(object):
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
-        os.mkdir(cls.test_dir)
+        create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
         util_path = os.path.join(directory, '..', '..', '..', 'hqc_meas',
                                  'utils')
         def_path = os.path.join(util_path, 'default.ini')
-        if os.path.isfile(def_path):
-            os.rename(def_path, os.path.join(util_path, '__default.ini'))
 
         # Making the preference manager look for info in test dir.
         default = ConfigObj(def_path)
@@ -71,17 +68,8 @@ class TestProcessEngine(object):
         print complete_line(__name__ +
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
-         # Removing pref files creating during tests.
-        try:
-            shutil.rmtree(cls.test_dir)
-
-        # Hack for win32.
-        except OSError:
-            print 'OSError'
-            dirs = os.listdir(cls.test_dir)
-            for directory in dirs:
-                shutil.rmtree(os.path.join(cls.test_dir), directory)
-            shutil.rmtree(cls.test_dir)
+        # Removing pref files creating during tests.
+        remove_tree(cls.test_dir)
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)

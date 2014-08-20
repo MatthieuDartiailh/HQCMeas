@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : subprocess.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 import os
 import logging
 import logging.config
@@ -14,7 +14,7 @@ from logging.handlers import RotatingFileHandler
 from multiprocessing import Process
 
 from hqc_meas.log_system.tools import (StreamToLogRedirector)
-from hqc_meas.task_management.config.api import IniConfigTask
+from hqc_meas.task_management.building import build_task_from_config
 from ..tools import MeasureSpy
 
 
@@ -43,6 +43,10 @@ class TaskProcess(Process):
     monitor_queue : multiprocessing queue
         Queue in which all the informations the user asked to monitor during
         the measurement are sent to be processed in the main process.
+    task_pause : multiprocessing event
+        Event set when the user asked the running measurement to pause.
+    task_paused : multiprocessing event
+        Event set when the current measure is paused.
     task_stop : multiprocessing event
         Event set when the user asked the running measurement to stop.
     process_stop : multiprocessing event
@@ -61,10 +65,12 @@ class TaskProcess(Process):
 
     """
 
-    def __init__(self, pipe, log_queue, monitor_queue,
+    def __init__(self, pipe, log_queue, monitor_queue, task_pause, task_paused,
                  task_stop, process_stop):
         super(TaskProcess, self).__init__(name='MeasureProcess')
         self.daemon = True
+        self.task_pause = task_pause
+        self.task_paused = task_paused
         self.task_stop = task_stop
         self.process_stop = process_stop
         self.pipe = pipe
@@ -87,6 +93,8 @@ class TaskProcess(Process):
         logger = logging.getLogger()
         redir_stdout = StreamToLogRedirector(logger)
         sys.stdout = redir_stdout
+        redir_stderr = StreamToLogRedirector(logger, 'stderr')
+        sys.stderr = redir_stderr
         logger.info('Logger parametrised')
 
         logger.info('Process running')
@@ -105,23 +113,21 @@ class TaskProcess(Process):
                     break
 
                 # Get the measure.
-                name, config, runtimes, monitored_entries = self.pipe.recv()
+                name, config, build, runtime, mon_entries = self.pipe.recv()
 
-                # Build it by first extracting task classes from runtimes.
-                tasks = runtimes.pop('task_classes')
-                builder = IniConfigTask(task_classes=tasks)
-                root = builder.build_task_from_config(config)
+                # Build it by using the given build dependencies.
+                root = build_task_from_config(config, build, True)
 
                 # Give all runtime dependencies to the root task.
-                root.run_time = runtimes
+                root.run_time = runtime
 
                 logger.info('Task built')
 
                 # There are entries in the database we are supposed to
                 # monitor start a spy to do it.
-                if monitored_entries:
+                if mon_entries:
                     spy = MeasureSpy(
-                        self.monitor_queue, monitored_entries,
+                        self.monitor_queue, mon_entries,
                         root.task_database)
 
                 # Set up the logger for this specific measurement.
@@ -144,8 +150,10 @@ class TaskProcess(Process):
                 self.meas_log_handler.setFormatter(formatter)
                 logger.addHandler(self.meas_log_handler)
 
-                # Pass the event signaling the task it should stop
+                # Pass the events signaling the task it should stop or pause
                 # to the task and make the database ready.
+                root.should_pause = self.task_pause
+                root.paused = self.task_paused
                 root.should_stop = self.task_stop
                 root.task_database.prepare_for_running()
 
@@ -155,18 +163,14 @@ class TaskProcess(Process):
                 # They pass perform the measure.
                 if check:
                     logger.info('Check successful')
-                    meas_result = root.process()
+                    root.perform_(root)
                     result = ['', '', '']
                     if self.task_stop.is_set():
                         result[0] = 'INTERRUPTED'
                         result[2] = 'Measure {} was stopped'.format(name)
                     else:
-                        if meas_result:
-                            result[0] = 'COMPLETED'
-                            result[2] = 'Measure {} succeeded'.format(name)
-                        else:
-                            result[0] = 'FAILED'
-                            result[2] = 'Measure {} failed'.format(name)
+                        result[0] = 'COMPLETED'
+                        result[2] = 'Measure {} succeeded'.format(name)
 
                     if self.process_stop.is_set():
                         result[1] = 'STOPPING'
@@ -177,7 +181,7 @@ class TaskProcess(Process):
 
                 # They fail, mark the measure as failed and go on.
                 else:
-                    mes = 'Tests failed see log for full records.'
+                    mes = 'Tests failed, see log for full records.'
                     self.pipe.send(('FAILED', 'READY', mes))
 
                     # Log the tests that failed.
@@ -187,7 +191,7 @@ class TaskProcess(Process):
                     logger.critical(message)
 
                 # If a spy was started kill it
-                if monitored_entries:
+                if mon_entries:
                     spy.close()
                     del spy
 

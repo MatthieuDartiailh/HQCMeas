@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : test_tools.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from hqc_meas.instruments.drivers.driver_tools import (BaseInstrument,
-                                                       instrument_property)
-from nose.tools import assert_is_instance, assert_equal
+                                                       instrument_property,
+                                                       InstrIOError,
+                                                       secure_communication)
+from nose.tools import assert_is_instance, assert_equal, raises
 
 from ..util import complete_line
 
@@ -12,6 +21,29 @@ def setup_module():
 
 def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
+
+
+def test_instr_property_initialisation1():
+    # Test initialising a read only property.
+    def dummy_getter(self, val):
+        pass
+
+    p = instrument_property(dummy_getter)
+    assert_equal(p.name, 'dummy_getter')
+
+
+def test_instr_property_initialisation2():
+    # Test initialising a write only property.
+    def dummy_setter(self, val):
+        pass
+
+    p = instrument_property(fset=dummy_setter)
+    assert_equal(p.name, 'dummy_setter')
+
+
+@raises(ValueError)
+def test_instr_property_initialisation3():
+    instrument_property()
 
 
 class Instr(BaseInstrument):
@@ -26,6 +58,7 @@ class Instr(BaseInstrument):
 
         self._value1 = 1
         self._value2 = 2
+        self.counter = 0
 
     @instrument_property
     def value1(self):
@@ -43,6 +76,11 @@ class Instr(BaseInstrument):
     def value2(self, value):
         self._value2 = value
 
+    @secure_communication(2)
+    def error_generating_method(self):
+        raise InstrIOError
+        
+
     def open_connection(self):
         pass
 
@@ -50,7 +88,7 @@ class Instr(BaseInstrument):
         pass
 
     def reopen_connection(self):
-        pass
+        self.counter += 1
 
     def check_connection(self):
         return True
@@ -140,13 +178,16 @@ def test_instr_prop_set1():
 
 
 def test_instr_prop_set2():
-    """ Test setting a not cached property.
+    """ Test setting a cached property.
 
     """
     a = Instr({})
     a.value1 = 5
     assert_equal(a._value1, 5)
     assert_equal(a._cache, {'value1': 5})
+    # Check that the setting is skipped whe the value does not change
+    #(check in coverage).
+    a.value1 = 5
 
 
 def test_no_cache_interferences():
@@ -167,7 +208,7 @@ def test_clear_instrument_cache1():
     a = Instr({})
     a.value1 = 5
     assert_equal(a._cache, {'value1': 5})
-    a.clear_instrument_cache()
+    a.clear_cache()
     assert_equal(a._cache, {})
 
 
@@ -179,7 +220,7 @@ def test_clear_instrument_cache2():
     a.value1 = 5
     a.value2 = 6
     assert_equal(a._cache, {'value1': 5, 'value2': 6})
-    a.clear_instrument_cache(['value2'])
+    a.clear_cache(['value2'])
     assert_equal(a._cache, {'value1': 5})
 
 
@@ -191,7 +232,7 @@ def test_check_instrument_cache1():
     a.value1 = 5
     a.value2 = 6
     assert_equal(a._cache, {'value1': 5, 'value2': 6})
-    assert_equal(a.check_instrument_cache(), {'value1': 5, 'value2': 6})
+    assert_equal(a.check_cache(), {'value1': 5, 'value2': 6})
 
 
 def test_check_instrument_cache2():
@@ -202,4 +243,45 @@ def test_check_instrument_cache2():
     a.value1 = 5
     a.value2 = 6
     assert_equal(a._cache, {'value1': 5, 'value2': 6})
-    assert_equal(a.check_instrument_cache(['value1']), {'value1': 5})
+    assert_equal(a.check_cache(['value1']), {'value1': 5})
+
+
+def test_secure_communication1():
+    # Test securing a communication
+    i = Instr({})
+    try:
+        i.error_generating_method()
+    except InstrIOError:
+        assert_equal(i.counter, 2)
+        return
+    raise Exception('error_generating_method did not raise the InstrIOError')
+
+
+@raises(NotImplementedError)
+def test_base_instrument_errors1():
+    i = BaseInstrument({})
+    i.open_connection()
+
+
+@raises(NotImplementedError)
+def test_base_instrument_errors2():
+    i = BaseInstrument({})
+    i.close_connection()
+
+
+@raises(NotImplementedError)
+def test_base_instrument_errors3():
+    i = BaseInstrument({})
+    i.reopen_connection()
+
+
+@raises(NotImplementedError)
+def test_base_instrument_errors4():
+    i = BaseInstrument({})
+    i.check_connection()
+
+
+@raises(NotImplementedError)
+def test_base_instrument_errors5():
+    i = BaseInstrument({})
+    i.connected()

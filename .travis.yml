@@ -1,0 +1,45 @@
+language: python
+
+virtualenv:
+    system_site_packages: true
+
+env:
+    - PYTHON=2.7 DEPS=full TEST=extra
+
+before_install:
+    - REDIRECT_TO=/dev/stdout  # change to /dev/null to silence Travis
+    - travis_retry sudo apt-get -qq update;
+    - SRC_DIR=$(pwd)
+
+install:
+    # Install numpy, nose, flake
+    - travis_retry sudo apt-get -qq -y install python-numpy python-nose python-setuptools > ${REDIRECT_TO};
+    - pip install -q coveralls nose-timer
+
+    # Install atom enaml from pip
+    - pip install -q ply
+    - pip install -q atom
+    - pip install -q kiwisolver
+    - pip install -q enaml
+
+    # Install configobj and watchdog.
+    - pip install -q watchdog
+    - pip install -q configobj
+
+    # install pyqt
+    - travis_retry sudo apt-get -qq -y install python-qt4-gl python-imaging > ${REDIRECT_TO};
+
+    # No install required for hqc_meas
+
+before_script:
+# I need a (fake) display on Travis so I need to start a X server.
+- export DISPLAY=:99.0
+- /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
+
+script:
+    - cd ${SRC_DIR}
+    - nosetests -a '!no_travis' --with-coverage --cover-package hqc_meas 
+
+after_success:
+    # Need to run from source dir to execute appropriate "git" commands
+    coveralls;

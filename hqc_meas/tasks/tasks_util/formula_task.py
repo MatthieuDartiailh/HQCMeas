@@ -6,33 +6,26 @@
 #==============================================================================
 """
 """
-from atom.api import (Tuple, ContainerList)
+from atom.api import (Tuple, ContainerList, set_default)
 
 from ..base_tasks import SimpleTask
-from ..tools.database_string_formatter import (format_and_eval_string)
 
 
 class FormulaTask(SimpleTask):
     """Compute values according to formulas. Any valid python expression can be
     evaluated and replacement to access to the database data can be used.
     """
-    # List of formulas.
+    #: List of formulas.
     formulas = ContainerList(Tuple()).tag(pref=True)
 
-    def __init__(self, **kwargs):
-        super(FormulaTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'activated': True})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """
         """
         for i, formula in enumerate(self.formulas):
-            value = format_and_eval_string(formula[1],
-                                           self.task_path,
-                                           self.task_database)
+            value = self.format_and_eval_string(formula[1])
             self.write_in_database(formula[0], value)
-
-        return True
 
     def check(self, *args, **kwargs):
         """
@@ -41,8 +34,7 @@ class FormulaTask(SimpleTask):
         test = True
         for i, formula in enumerate(self.formulas):
             try:
-                val = format_and_eval_string(formula[1], self.task_path,
-                                             self.task_database)
+                val = self.format_and_eval_string(formula[1])
                 self.write_in_database(formula[0], val)
             except Exception:
                 test = False
@@ -55,6 +47,6 @@ class FormulaTask(SimpleTask):
         """ Observer keeping the list of database entries up to date.
 
         """
-        self.task_database_entries = {f[0]: 0.0 for f in change['value']}
+        self.task_database_entries = {f[0]: 1.0 for f in change['value']}
 
 KNOWN_PY_TASKS = [FormulaTask]

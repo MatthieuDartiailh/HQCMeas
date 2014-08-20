@@ -28,6 +28,7 @@ def teardown_module():
 class TestManagerView(BaseClass):
 
     mod = __name__
+    dir_id = 2
 
     def test_form1(self):
         self.workbench.register(InstrManagerManifest())

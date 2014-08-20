@@ -11,9 +11,10 @@ from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
 from enaml.workbench.core.api import Command
 from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 
-from ..utils.pref_plugin import Preferences
-from ..utils.state_plugin import State
+from hqc_meas.utils.pref_plugin import Preferences
+from hqc_meas.utils.state_plugin import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
+from hqc_meas.task_management.dependencies import RuntimeDependency
 
 
 def manager_plugin_factory():
@@ -151,14 +152,64 @@ profiles ('all_profiles') defined for the current session, and to the
 currently available profiles ('available_profiles'). """
 
 
+def collect_drivers_and_profiles(workbench, flat_walk, caller):
+    """ Collect the drivers and profiles listed in walk.
+
+    The profiles are requested and the returned dictionnary will be empty if
+    the manager refused to grant the use of some profile.
+
+    Parameters
+    ----------
+    workbench :
+        Reference to the application workbench.
+
+    flat_walk : dict(str, set)
+        Dictionary holding the list of runtime dependencies as set.
+
+    Returns
+    -------
+    runtime_deps :
+        Dict with at most two keys: 'drivers' and 'profiles'. In both case the
+        value is a dictionary mapping the runtime dependency name to the needed
+        python object. If some profiles are unavailable the profiles dict is
+        empty.
+
+    """
+    # Directly call plugin method (internal)
+    manager = workbench.get_plugin('hqc_meas.instr_manager')
+    d_res = manager.drivers_request(flat_walk['selected_driver'])
+    p_res = manager.profiles_request(caller, flat_walk['selected_profile'])
+
+    if d_res[1] or p_res[1]:
+        mess = 'Missing drivers: {}, missing profiles: {}'.format(d_res[1],
+                                                                  p_res[1])
+        raise ValueError(mess)
+
+    dependencies = {}
+    if flat_walk['selected_driver']:
+        dependencies['drivers'] = d_res[0]
+    if flat_walk['selected_profile']:
+        dependencies['profiles'] = p_res[0]
+
+    return dependencies
+
+
 enamldef InstrManagerManifest(PluginManifest):
     """
     """
     id = 'hqc_meas.instr_manager'
     factory = manager_plugin_factory
+
     ExtensionPoint:
         id = 'users'
         description = INSTR_USERS_DESCRIPTION
+
+    Extension:
+        id = 'runtime_dep'
+        point = 'hqc_meas.task_manager.runtime_dependencies'
+        RuntimeDependency:
+            walk_members = ['selected_driver', 'selected_profile']
+            collect = collect_drivers_and_profiles
     Extension:
         id = 'prefs'
         point = 'hqc_meas.preferences.pref_plugin'

@@ -132,13 +132,13 @@ enamldef EditRuleDialog(Dialog): dial:
     Container:
         constraints = [vbox(
                         hbox(*map.objects),
-                        hbox(spacer, close))
+                        hbox(spacer, ex))
                         ]
         MappedView: map:
             model << rule
             typemap = RULES_VIEWS
             modelkey = 'rule'
-        PushButton: close:
+        PushButton: ex:
             text = 'Close'
             clicked ::
                 dial.accept()
@@ -152,7 +152,7 @@ enamldef EditRulesView(Dialog): dial:
         constraints << [vbox(
                             hbox(qlist, vbox(*map.objects),
                                 vbox(add, edit, delete, spacer)),
-                            hbox(spacer, close))]
+                            hbox(spacer, ex))]
         QtListStrWidget: qlist:
             items << [rule.name for rule in monitor.rules]
         MappedView: map:
@@ -178,7 +178,7 @@ enamldef EditRulesView(Dialog): dial:
             clicked ::
                 del monitor.rules[qlist.selected_index]
                 edition_performed = True
-        PushButton: close:
+        PushButton: ex:
             text = 'Close'
             clicked ::
                 dial.accept()

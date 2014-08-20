@@ -82,6 +82,7 @@ class DebuggerPlugin(HasPrefPlugin):
 
         NB : the path should be a dot separated string referring to a package
         in sys.path. It should be an absolute path.
+
         """
         try:
             with enaml.imports():
@@ -111,11 +112,11 @@ class DebuggerPlugin(HasPrefPlugin):
         new_extensions = defaultdict(list)
         old_extensions = self._debugger_extensions
         for extension in extensions:
-            if extensions in old_extensions:
-                engines = old_extensions[extension]
+            if extension in old_extensions:
+                debuggers = old_extensions[extension]
             else:
-                engines = self._load_debuggers(extension)
-            new_extensions[extension].extend(engines)
+                debuggers = self._load_debuggers(extension)
+            new_extensions[extension].extend(debuggers)
 
         # Create mapping between engine id and declaration.
         debuggers = {}
@@ -133,6 +134,7 @@ class DebuggerPlugin(HasPrefPlugin):
                 debuggers[debugger.id] = debugger
 
         self.debuggers = debuggers
+        self._debugger_extensions = new_extensions
 
     def _load_debuggers(self, extension):
         """ Load the Debugger objects for the given extension.

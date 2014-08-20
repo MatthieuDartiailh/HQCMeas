@@ -1,0 +1,49 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : linspace_interface_view.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.widgets.api import (Container, Label, Splitter, SplitItem)
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+
+
+enamldef LinspaceInterfaceView(Splitter): view:
+
+    attr interface
+
+    SplitItem:
+        Container:
+            padding = 0
+            Label: lab_start:
+                text = 'Start'
+            QtLineCompleter: val_start:
+                text := interface.start
+                entries_updater << interface.task.accessible_database_entries
+                tool_tip = EVALUATER_TOOLTIP
+
+    SplitItem:
+        Container:
+            padding = 0
+            Label: lab_stop:
+                text = 'Stop'
+            QtLineCompleter: val_stop:
+                text := interface.stop
+                entries_updater << interface.task.accessible_database_entries
+                tool_tip = EVALUATER_TOOLTIP
+    SplitItem:
+        Container:
+            padding = 0
+            Label: lab_step:
+                text = 'Step'
+            QtLineCompleter: val_step:
+                text := interface.step
+                entries_updater << interface.task.accessible_database_entries
+                tool_tip = EVALUATER_TOOLTIP
+
+
+INTERFACE_VIEW_MAPPING = {'LinspaceLoopInterface': [LinspaceInterfaceView]}

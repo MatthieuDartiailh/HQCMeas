@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import Typed, Value, Tuple
+from atom.api import Typed, Value, Tuple, Bool
 from enaml.workbench.api import Workbench
 from enaml.application import deferred_call
 from multiprocessing import Pipe
@@ -15,7 +15,6 @@ from threading import Event as tEvent
 import logging
 
 from hqc_meas.log_system.tools import QueueLoggerThread
-from hqc_meas.utils.walks import flatten_walk
 
 from ..base_engine import BaseEngine
 from ..tools import ThreadMeasureMonitor
@@ -29,37 +28,28 @@ class ProcessEngine(BaseEngine):
 
     # --- Public API ----------------------------------------------------------
 
-    # Reference to the workbench got at __init__
+    #: Reference to the workbench got at __init__
     workbench = Typed(Workbench)
 
-    def prepare_to_run(self, name, root, monitored_entries):
-        # Get all the tasks classes we need to rebuild the measure in the
-        # process.
-        walk = root.walk(['task_class'])
-        task_names = flatten_walk(walk, ['task_class'])['task_class']
+    def prepare_to_run(self, name, root, monitored_entries, build_deps):
 
-        # Get core plugin to request tasks.
-        core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.task_manager.tasks_request'
-        task_classes, _ = core.invoke_command(com, {'tasks': task_names,
-                                                    'use_class_names': True},
-                                              self)
-
-        # Gather all runtime dependencies in a single dict.
-        runtimes = root.run_time
-        runtimes['task_classes'] = task_classes
+        runtime_deps = root.run_time
 
         # Get ConfigObj describing measure.
         root.update_preferences_from_members()
         config = root.task_preferences
 
         # Make infos tuple to send to the subprocess.
-        self._temp = (name, config, runtimes, monitored_entries)
+        self._temp = (name, config, build_deps, runtime_deps,
+                      monitored_entries)
 
         # Clear all the flags.
+        self._meas_pause.clear()
+        self._meas_paused.clear()
         self._meas_stop.clear()
         self._stop.clear()
         self._force_stop.clear()
+        self._stop_requested = False
 
         # If the process does not exist or is dead create a new one.
         if not self._process or not self._process.is_alive():
@@ -67,6 +57,8 @@ class ProcessEngine(BaseEngine):
             self._process = TaskProcess(process_pipe,
                                         self._log_queue,
                                         self._monitor_queue,
+                                        self._meas_pause,
+                                        self._meas_paused,
                                         self._meas_stop,
                                         self._stop)
             self._process.daemon = True
@@ -77,6 +69,10 @@ class ProcessEngine(BaseEngine):
             self._monitor_thread = ThreadMeasureMonitor(self,
                                                         self._monitor_queue)
             self._monitor_thread.daemon = True
+
+            self._pause_thread = None
+
+        self.measure_status = ('PREPARED', 'Engine ready to process.')
 
     def run(self):
         if not self._process.is_alive():
@@ -95,15 +91,31 @@ class ProcessEngine(BaseEngine):
 
         self._starting_allowed.set()
 
+        self.measure_status = ('RUNNING', 'Measure running.')
+
+    def pause(self):
+        self.measure_status = ('PAUSING', 'Waiting for measure to pause.')
+        self._meas_pause.set()
+
+        self._pause_thread = Thread(target=self._wait_for_pause)
+        self._pause_thread.start()
+
+    def resume(self):
+        self._meas_pause.clear()
+        self.measure_status = ('RUNNING', 'Measure have been resumed.')
+
     def stop(self):
+        self._stop_requested = True
         self._meas_stop.set()
 
     def exit(self):
+        self._stop_requested = True
         self._meas_stop.set()
         self._stop.set()
         # Everything else handled by the _com_thread and the process.
 
     def force_stop(self):
+        self._stop_requested = True
         # Just in case the user calls this directly. Will signal all threads to
         # stop (save _com_thread).
         self._stop.set()
@@ -133,54 +145,67 @@ class ProcessEngine(BaseEngine):
 
     # --- Private API ---------------------------------------------------------
 
-    # Interprocess event used to stop the subprocess current measure.
+    #: Flag indicating that the user requested the measure to stop.
+    _stop_requested = Bool()
+
+    #: Interprocess event used to pause the subprocess current measure.
+    _meas_pause = Typed(Event, ())
+
+    #: Interprocess event signaling the subprocess current measure is paused.
+    _meas_paused = Typed(Event, ())
+
+    #: Interprocess event used to stop the subprocess current measure.
     _meas_stop = Typed(Event, ())
 
-    # Interprocess event used to stop the subprocess.
+    #: Interprocess event used to stop the subprocess.
     _stop = Typed(Event, ())
 
-    # Flag signaling that a forced exit has been requested
+    #: Flag signaling that a forced exit has been requested
     _force_stop = Value(tEvent())
 
-    # Flag indicating the process is processing for a measure.
+    #: Flag indicating the process is waiting for a measure.
     _processing = Value(tEvent())
 
-    # Flag indicating the communication thread it can send the next measure.
+    #: Flag indicating the communication thread it can send the next measure.
     _starting_allowed = Value(tEvent())
 
-    # Temporary tuple to store the data to be sent to the process when a
-    # new measure is ready.
+    #: Temporary tuple to store the data to be sent to the process when a
+    #: new measure is ready.
     _temp = Tuple()
 
-    # Current subprocess.
+    #: Current subprocess.
     _process = Typed(TaskProcess)
 
-    # Connection used to send and receive messages about execution (type
-    # ambiguous when the OS is not known)
+    #: Connection used to send and receive messages about execution (type
+    #: ambiguous when the OS is not known)
     _pipe = Value()
 
-    # Thread in charge of transferring measure to the process.
+    #: Thread in charge of transferring measure to the process.
     _com_thread = Typed(Thread)
 
-    # Inter-process queue used by the subprocess to transmit its log records.
+    #: Inter-process queue used by the subprocess to transmit its log records.
     _log_queue = Typed(Queue, ())
 
-    # Thread in charge of collecting the log message coming from the
-    # subprocess.
+    #: Thread in charge of collecting the log message coming from the
+    #: subprocess.
     _log_thread = Typed(Thread)
 
-    # Inter-process queue used by the subprocess to send the values of the
-    # observed database entries.
+    #: Inter-process queue used by the subprocess to send the values of the
+    #: observed database entries.
     _monitor_queue = Typed(Queue, ())
 
-    # Thread in charge of collecting the values of the observed database
-    # entries.
+    #: Thread in charge of collecting the values of the observed database
+    #: entries.
     _monitor_thread = Typed(Thread)
+
+    #: Thread in charge to notify the engine that the measure did pause after
+    #: being asked to do so.
+    _pause_thread = Typed(Thread)
 
     def _process_listener(self):
         """ Handle the communications with the worker process.
 
-        Executed in a different thread.
+        Executed by the _com_thread.
 
         """
         logger = logging.getLogger(__name__)
@@ -231,11 +256,16 @@ class ProcessEngine(BaseEngine):
 
             # Here get message from process and react
             meas_status, int_status, mess = self._pipe.recv()
+            logger.debug('Subprocess done performing measure')
 
             if int_status == 'STOPPING':
                 self._cleanup()
 
-            # This event should be handled in the main thread so thta this one
+            if meas_status == 'INTERRUPTED' and not self._stop_requested:
+                meas_status = 'FAILED'
+                mess = mess.replace('was stopped', 'failed')
+
+            # This event should be handled in the main thread so that this one
             # can stay responsive otherwise the engine will be unable to
             # shutdown.
             deferred_call(setattr, self, 'done', (meas_status, mess))
@@ -264,4 +294,20 @@ class ProcessEngine(BaseEngine):
         logger.debug('Log thread joined')
         self._monitor_thread.join()
         logger.debug('Monitor thread joined')
+        if self._pause_thread:
+            self._pause_thread.join()
+            logger.debug('Pause thread joined')
         self.active = False
+
+    def _wait_for_pause(self):
+        """ Wait for the task paused event to be set.
+
+        """
+        stop_sig = self._stop
+        paused_sig = self._meas_paused
+
+        while not stop_sig.is_set():
+            if paused_sig.wait(0.1):
+                status = ('PAUSED', 'Measure execution is paused')
+                deferred_call(setattr, self, 'measure_status', status)
+                break

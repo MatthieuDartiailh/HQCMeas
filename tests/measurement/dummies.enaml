@@ -264,7 +264,6 @@ enamldef DummyMonitor4(PluginManifest):
 
 def _post_selection(engine, workbench):
     engine.post_selected = True
-    print engine.post_selected
 
 
 def _post_deselection(engine, workbench):

@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : instrument_manager.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 import os
 import logging
 from importlib import import_module
-from atom.api import (Str, Dict, List, Unicode, Typed, Subclass)
+from atom.api import (Str, Dict, List, Unicode, Typed, Subclass, Tuple)
 from enaml.application import deferred_call
+import enaml
 
 
 from watchdog.observers import Observer
@@ -23,7 +24,9 @@ from ..utils.has_pref_plugin import HasPrefPlugin
 from .drivers.driver_tools import BaseInstrument
 from .instr_user import InstrUser
 from .profile_utils import open_profile
-from .forms import FORMS, FORMS_MAP_VIEWS
+
+with enaml.imports():
+    from .forms.views.base_form_views import EmptyView
 
 
 USERS_POINT = u'hqc_meas.instr_manager.users'
@@ -36,7 +39,7 @@ MODULE_ANCHOR = 'hqc_meas.instruments'
 class InstrManagerPlugin(HasPrefPlugin):
     """
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     # Directories in which the profiles are looked for.
     profiles_folders = List(Unicode(),
@@ -70,6 +73,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         if not os.path.isdir(path):
             os.mkdir(path)
         self._refresh_drivers()
+        self._refresh_forms()
         self._refresh_profiles_map()
         self._refresh_users()
         self._bind_observers()
@@ -86,6 +90,7 @@ class InstrManagerPlugin(HasPrefPlugin):
         self._users.clear()
         self._driver_types.clear()
         self._drivers.clear()
+        self._forms.clear()
         self._profiles_map.clear()
         self._used_profiles.clear()
 
@@ -170,8 +175,8 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         Parameters
         ----------
-        new_owner : Plugin
-            The object requesting the right to use some profiles
+        new_owner : unicode
+            Id of the plugin requesting the right to use some profiles
 
         profiles : list(str)
             The names of the profiles the user want the privilege to use.
@@ -186,6 +191,13 @@ class InstrManagerPlugin(HasPrefPlugin):
             The list of profiles that was not found.
 
         """
+        if new_owner not in self._users:
+            logger = logging.getLogger(__name__)
+            mess = cleandoc('''Plugin {} tried to request profiles, but it is
+                not a registered user.'''.format(new_owner))
+            logger.error(mess)
+            return {}, []
+
         missing = [prof for prof in profiles
                    if prof not in self.all_profiles]
 
@@ -241,7 +253,10 @@ class InstrManagerPlugin(HasPrefPlugin):
         """
         mapping = self._used_profiles
         for prof in profiles:
-            del mapping[prof]
+            try:
+                del mapping[prof]
+            except KeyError:
+                pass
 
         avail = list(self.available_profiles)
         self.available_profiles = avail + profiles
@@ -312,18 +327,19 @@ class InstrManagerPlugin(HasPrefPlugin):
             View matching the form.
 
         """
-        form = None
+        form, f_view = None, EmptyView
         if driver in self._driver_types:
-            form = FORMS.get(driver, None)
+            aux = self._driver_types[driver].__name__
+            form, f_view = self._forms.get(aux, (None, EmptyView))
 
         elif driver in self._drivers:
-            driver_class = self._drivers[driver]
-            d_types = set(self._driver_types.values())
-            for d_type in type.mro(driver_class):
-                if d_type in d_types:
-                    d_type_name = [n for n in self._driver_types
-                                   if d_type == self._driver_types[n]][0]
-                    form = FORMS.get(d_type_name, None)
+            d_mro = self._drivers[driver].mro()
+            i = 1
+            while driver not in self._forms and i < len(d_mro):
+                driver = d_mro[i].__name__
+                i += 1
+
+            form, f_view = self._forms.get(driver, (None, EmptyView))
 
         if form is None:
             logger = logging.getLogger(__name__)
@@ -331,8 +347,7 @@ class InstrManagerPlugin(HasPrefPlugin):
             logger.warn(mes)
 
         if view:
-            view = FORMS_MAP_VIEWS.get(form, FORMS_MAP_VIEWS[type(None)])
-            return form, view
+            return form, f_view
         else:
             return form
 
@@ -379,12 +394,15 @@ class InstrManagerPlugin(HasPrefPlugin):
 
         return self._drivers[driver]
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
     # Drivers types
     _driver_types = Dict(Str(), Subclass(BaseInstrument))
 
     # Drivers
     _drivers = Dict(Str(), Subclass(BaseInstrument))
+
+    # Connections forms and views {driver_name: (form, view)}.
+    _forms = Dict(Str(), Tuple())
 
     # Mapping between profile names and path to .ini file holding the data.
     _profiles_map = Dict(Str(), Unicode())
@@ -445,13 +463,15 @@ class InstrManagerPlugin(HasPrefPlugin):
         path = os.path.join(MODULE_PATH, 'drivers')
         failed = {}
 
-        modules = self._explore_package('drivers', path, failed)
+        modules = self._explore_package('drivers', path, failed,
+                                        self.drivers_loading)
 
         driver_types = {}
         driver_packages = []
         drivers = {}
-        self._explore_modules(modules, driver_types, driver_packages, drivers,
-                              failed, 'drivers')
+        self._explore_modules_for_drivers(modules, driver_types,
+                                          driver_packages, drivers,
+                                          failed, 'drivers')
 
         # Remove packages which should not be explored
         for pack in driver_packages[:]:
@@ -463,10 +483,12 @@ class InstrManagerPlugin(HasPrefPlugin):
             pack = driver_packages.pop(0)
             pack_path = os.path.join(MODULE_PATH, *pack.split('.'))
 
-            modules = self._explore_package(pack, pack_path, failed)
+            modules = self._explore_package(pack, pack_path, failed,
+                                            self.drivers_loading)
 
-            self._explore_modules(modules, driver_types, driver_packages,
-                                  drivers, failed, prefix=pack)
+            self._explore_modules_for_drivers(modules, driver_types,
+                                              driver_packages,
+                                              drivers, failed, prefix=pack)
 
             # Remove packages which should not be explored
             for pack in driver_packages[:]:
@@ -481,57 +503,9 @@ class InstrManagerPlugin(HasPrefPlugin):
         self._failed = failed
         # TODO do something with failed
 
-    def _explore_package(self, pack, pack_path, failed):
-        """ Explore a package
-
-        Parameters
-        ----------
-        pack : str
-            The package name relative to "drivers". (ex : drivers.visa)
-
-        pack_path : unicode
-            Path of the package to explore
-
-        failed : dict
-            A dict in which failed imports will be stored.
-
-        Returns
-        -------
-        modules : list
-            List of string indicating modules which can be imported
-
-        """
-        if not os.path.isdir(pack_path):
-            log = logging.getLogger(__name__)
-            mess = '{} is not a valid directory.({})'.format(pack,
-                                                             pack_path)
-            log.error(mess)
-            failed[pack] = mess
-            return []
-
-        modules = sorted(pack + '.' + m[:-3] for m in os.listdir(pack_path)
-                         if (os.path.isfile(os.path.join(pack_path, m))
-                             and m.endswith('.py')))
-        try:
-            modules.remove(pack + '.__init__')
-        except ValueError:
-            log = logging.getLogger(__name__)
-            mess = cleandoc('''{} is not a valid Python package (miss
-                __init__.py).'''.format(pack))
-            log.error(mess)
-            failed[pack] = mess
-            return []
-
-        # Remove modules which should not be imported
-        for mod in modules[:]:
-            if mod in self.drivers_loading:
-                modules.remove(mod)
-
-        return modules
-
     @staticmethod
-    def _explore_modules(modules, types, packages, drivers, failed,
-                         prefix):
+    def _explore_modules_for_drivers(modules, types, packages, drivers, failed,
+                                     prefix):
         """ Explore a list of modules.
 
         Parameters
@@ -557,7 +531,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 m = import_module('.' + mod, MODULE_ANCHOR)
             except Exception as e:
                 log = logging.getLogger(__name__)
-                mess = 'Failed to import {} : {}'.format(mod, e.message)
+                mess = 'Failed to import {} : {}'.format(mod, e)
                 log.error(mess)
                 failed[mod] = mess
                 continue
@@ -566,14 +540,120 @@ class InstrManagerPlugin(HasPrefPlugin):
                 types.update(m.DRIVER_TYPES)
 
             if hasattr(m, 'DRIVER_PACKAGES'):
-                if prefix is not None:
-                    packs = [prefix + '.' + pack for pack in m.DRIVER_PACKAGES]
-                else:
-                    packs = m.DRIVER_PACKAGES
+                packs = [prefix + '.' + pack for pack in m.DRIVER_PACKAGES]
                 packages.extend(packs)
 
             if hasattr(m, 'DRIVERS'):
                 drivers.update(m.DRIVERS)
+
+    def _refresh_forms(self):
+        """ Refresh the list of known forms.
+
+        """
+        path = os.path.join(MODULE_PATH, 'forms')
+        failed = {}
+
+        modules = self._explore_package('forms', path, failed, [])
+
+        forms = {}
+        for mod in modules:
+            try:
+                m = import_module('.' + mod, MODULE_ANCHOR)
+            except Exception as e:
+                log = logging.getLogger(__name__)
+                mess = 'Failed to import {} : {}'.format(mod, e.message)
+                log.error(mess)
+                failed[mod] = mess
+                continue
+
+            if hasattr(m, 'FORMS'):
+                forms.update(m.FORMS)
+
+        path = os.path.join(path, 'views')
+        view_modules = self._explore_package('forms.views', path, failed, [],
+                                             '.enaml')
+
+        views = {}
+        for mod in view_modules:
+            try:
+                with enaml.imports():
+                    m = import_module('.' + mod, MODULE_ANCHOR)
+            except Exception as e:
+                log = logging.getLogger(__name__)
+                mess = 'Failed to import {} : {}'.format(mod, e.message)
+                log.error(mess)
+                failed[mod] = mess
+                continue
+
+            if hasattr(m, 'FORMS_MAP_VIEWS'):
+                views.update(m.FORMS_MAP_VIEWS)
+
+        self._forms = {driver: (form, views[form.__name__])
+                       for driver, form in forms.iteritems()
+                       if form.__name__ in views}
+
+    @staticmethod
+    def _explore_package(pack, pack_path, failed, exceptions, suffix='.py'):
+        """ Explore a package
+
+        Parameters
+        ----------
+        pack : str
+            The package name relative to "drivers". (ex : drivers.visa)
+
+        pack_path : unicode
+            Path of the package to explore
+
+        failed : dict
+            A dict in which failed imports will be stored.
+
+        exceptions : list
+            List of module which should be ignored
+
+        Returns
+        -------
+        modules : list
+            List of string indicating modules which can be imported
+
+        """
+        if not os.path.isdir(pack_path):
+            log = logging.getLogger(__name__)
+            mess = '{} is not a valid directory.({})'.format(pack,
+                                                             pack_path)
+            log.error(mess)
+            failed[pack] = mess
+            return []
+
+        i = len(suffix)
+        modules = sorted(pack + '.' + m[:-i] for m in os.listdir(pack_path)
+                         if (os.path.isfile(os.path.join(pack_path, m))
+                             and m.endswith(suffix)))
+
+        if suffix == '.py':
+            try:
+                modules.remove(pack + '.__init__')
+            except ValueError:
+                log = logging.getLogger(__name__)
+                mess = cleandoc('''{} is not a valid Python package (miss
+                    __init__.py).'''.format(pack))
+                log.error(mess)
+                failed[pack] = mess
+                return []
+        else:
+            if '__init__.py' not in os.listdir(pack_path):
+                log = logging.getLogger(__name__)
+                mess = cleandoc('''{} is not a valid Python package (miss
+                    __init__.py).'''.format(pack))
+                log.error(mess)
+                failed[pack] = mess
+                return []
+
+        # Remove modules which should not be imported
+        for mod in modules[:]:
+            if mod in exceptions:
+                modules.remove(mod)
+
+        return modules
 
     def _refresh_users(self):
         """ Refresh the list of potential users.
@@ -730,6 +810,6 @@ class _FileListUpdater(FileSystemEventHandler):
             self.handler(True)
 
     def on_moved(self, event):
-        super(_FileListUpdater, self).on_deleted(event)
+        super(_FileListUpdater, self).on_moved(event)
         if isinstance(event, FileMovedEvent):
             self.handler(True)

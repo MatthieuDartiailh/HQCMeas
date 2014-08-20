@@ -1,8 +1,8 @@
-#==============================================================================
+# =============================================================================
 # module : keithley_multimeter.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 This module defines drivers for keithley multimeters using VISA library.
 
@@ -54,6 +54,8 @@ class Keithley2000(VisaInstrument):
 
     """
     caching_permissions = {'function': True}
+
+    protocoles = {'GPIB': 'INSTR'}
 
     @instrument_property
     @secure_communication()

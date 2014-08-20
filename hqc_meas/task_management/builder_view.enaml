@@ -6,7 +6,8 @@
 #==============================================================================
 """
 """
-from atom.api import (Atom, Instance, Str, observe, ForwardTyped, Bool)
+from atom.api import (Atom, Instance, Str, observe, ForwardTyped, Bool,
+                      ForwardInstance)
 from enaml.core.api import Include
 from enaml.core.object import Object
 from enaml.layout.api import hbox, spacer, vbox
@@ -14,13 +15,18 @@ from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
                                Label, MultilineField)
 
 from .browsing import TaskSelector
-from .config.api import AbstractConfigTask
 
 
 # Circular import protection
 def task_manager():
     from .manager_plugin import TaskManagerPlugin
     return TaskManagerPlugin
+
+
+def abstract_config_task():
+    from .config.base_task_config import AbstractConfigTask
+    return AbstractConfigTask
+
 
 class _TaskBuilderModel(Atom):
     """ Simple model for the TaskBuilder dialog.
@@ -33,7 +39,7 @@ class _TaskBuilderModel(Atom):
     task_name = Str()
 
     # Currently in use task config.
-    task_config = Instance(AbstractConfigTask)
+    task_config = ForwardInstance(abstract_config_task)
     config_view = Instance(Object)
 
     # Bool indicating whether or not the task can be built.

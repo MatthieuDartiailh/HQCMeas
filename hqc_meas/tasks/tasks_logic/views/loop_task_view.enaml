@@ -1,0 +1,98 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : loop_task_view.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.core.api import Include
+from enaml.layout.api import hbox, align, spacer, vbox, grid, factory
+from enaml.widgets.api import (PushButton, Container, Label, Field,
+                                GroupBox, CheckBox, ObjectCombo)
+
+from hqc_meas.tasks.tools.task_editor import (TaskEditor, TaskViewManager)
+
+
+def _constraints_helpers(view):
+    """ Helper function generating the constraints for the LoopView.
+
+    """
+    children = view.widgets()
+    if view.find('interface_include').objects:
+        i_views = view.find('interface_include').objects
+        i_len = len(i_views)
+        if hasattr(i_views[0], 'inline') and i_views[0].inline:
+            labels = children[:i_len+1:2]
+            vals = labels = children[1:i_len+1:2]
+            return [vbox(grid(labels, vals), *children[3+i_len+1:])]
+
+        else:
+            c_1 = hbox(children[0], children[1], children[2], children[3],
+                       spacer)
+            return [vbox(c_1, *children[4:])]
+
+    else:
+        c_1 = hbox(children[0], children[1], children[2], children[3], spacer)
+        return [vbox(c_1, *children[4:])]
+
+
+def _name_formatter(i_class):
+    aux = i_class.__name__
+    if aux.endswith('LoopInterface'):
+        aux = aux[:-13]
+    return aux
+
+enamldef LoopView(GroupBox): view:
+
+    attr task
+    alias cache : editor.cache
+    alias core : editor.core
+    attr _model = TaskViewManager([task.task], core=core)
+
+    title << task.task_name
+    constraints << [factory(_constraints_helpers)]
+
+    Label:
+        text = 'Interface'
+    ObjectCombo:
+        items << list(core.invoke_command(
+                          'hqc_meas.task_manager.interfaces_request',
+                          {'tasks': task.task_class})[0][task.task_class])
+        to_string = _name_formatter
+        selected << type(task.interface) if task.interface else items[0]
+        selected ::
+            i_include = view.find('interface_include')
+            i_include.objects = []
+
+            i_class = change['value']
+            interface = i_class()
+            i_name = interface.interface_class
+            task.interface = interface
+
+            cmd = 'hqc_meas.task_manager.interface_views_request'
+            i_views, _ = core.invoke_command(cmd, {'interface_classes':
+                                                   [i_name]})
+
+            i_include.objects = [i_view(interface=interface)
+                                      for i_view in i_views[i_name]]
+
+    Label:
+        text = 'Timing'
+    CheckBox:
+        checked := task.timing
+
+    Include: interface:
+        name = 'interface_include'
+        pass
+
+    Include:
+        objects << [_model.instantiate_view(task.task, {'core': core,
+                                                        'in_loop': True})]\
+                   if task.task else []
+
+    TaskEditor: editor:
+        task := view.task
+
+
+TASK_VIEW_MAPPING = {'LoopTask': LoopView}

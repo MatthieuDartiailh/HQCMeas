@@ -1,8 +1,9 @@
-#==============================================================================
+# -*- coding: utf-8 -*-
+# =============================================================================
 # module : driver_tools.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 This module defines base tools for writing instrument drivers.
 
@@ -61,6 +62,9 @@ class instrument_property(property):
             err = 'Need either a setter or getter for an instrument_property.'
             raise ValueError(err)
 
+        self.type = None
+        self.valid_values = []
+
     def __get__(self, obj, objtype=None):
         """
         """
@@ -113,13 +117,13 @@ def secure_communication(max_iter=10):
 
             i = 0
             # Try at most `max_iter` times to excute method
-            while i < max_iter:
+            while i < max_iter + 1:
                 try:
                     return method(self, *args, **kwargs)
-                    break
+                    
                 # Catch all the exception specified by the driver
                 except self.secure_com_except as e:
-                    if i == max_iter-1:
+                    if i == max_iter:
                         raise
                     else:
                         print e
@@ -177,7 +181,7 @@ class BaseInstrument(object):
 
     """
     caching_permissions = {}
-    secure_com_except = ()
+    secure_com_except = (InstrIOError)
     owner = ''
 
     def __init__(self, connection_info, caching_allowed=True,
@@ -243,7 +247,7 @@ class BaseInstrument(object):
             80)
         raise NotImplementedError(message)
 
-    def clear_instrument_cache(self, properties=None):
+    def clear_cache(self, properties=None):
         """ Clear the cache of all the properties or only the one of specified
         ones.
 
@@ -255,14 +259,15 @@ class BaseInstrument(object):
 
         """
         test = lambda obj: isinstance(obj, instrument_property)
+        cache = self._cache
         if properties:
             for name, instr_prop in inspect.getmembers(self.__class__, test):
-                if name in properties:
-                    del self._cache[name]
+                if name in properties and name in cache:
+                    del cache[name]
         else:
             self._cache = {}
 
-    def check_instrument_cache(self, properties=None):
+    def check_cache(self, properties=None):
         """Return the value of the cache of the instruments
 
         Parameters
@@ -285,6 +290,6 @@ class BaseInstrument(object):
                 if name in properties:
                     cache[name] = self._cache.get(name)
         else:
-            cache = self._cache
+            cache = self._cache.copy()
 
         return cache

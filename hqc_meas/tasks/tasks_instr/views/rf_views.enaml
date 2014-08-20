@@ -14,10 +14,11 @@ from textwrap import fill
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.layouts import auto_grid_layout
-from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 
-enamldef RFSourceFrequencyView(BaseInstrumentView): view:
+enamldef RFFrequencyView(BaseInstrumentView): view:
 
     attr in_loop : bool = False
     title << task.task_name
@@ -28,7 +29,7 @@ enamldef RFSourceFrequencyView(BaseInstrumentView): view:
     Label:
         text = 'Driver'
     ObjectCombo: driv:
-        items << sorted(task.driver_list)
+        items << sorted(drivers)
         selected := task.selected_driver
 
     Label:
@@ -44,7 +45,8 @@ enamldef RFSourceFrequencyView(BaseInstrumentView): view:
         QtLineCompleter:
             hug_width = 'ignore'
             text := task.frequency
-            entries_updater << task._list_database_entries
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
 
     Label:
         text = 'Unit'
@@ -60,7 +62,7 @@ enamldef RFSourceFrequencyView(BaseInstrumentView): view:
                          automatically before the measurement starts ?'''),60)
 
 
-enamldef RFSourcePowerView(BaseInstrumentView): view:
+enamldef RFPowerView(BaseInstrumentView): view:
 
     attr in_loop : bool = False
     title << task.task_name
@@ -71,7 +73,7 @@ enamldef RFSourcePowerView(BaseInstrumentView): view:
     Label:
         text = 'Driver'
     ObjectCombo: driv:
-        items << sorted(task.driver_list)
+        items << sorted(drivers)
         selected := task.selected_driver
 
     Label:
@@ -87,7 +89,8 @@ enamldef RFSourcePowerView(BaseInstrumentView): view:
         QtLineCompleter:
             hug_width = 'ignore'
             text := task.power
-            entries_updater << task._list_database_entries
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
 
     Label: auto_lab:
         text = 'Autostart'
@@ -97,11 +100,10 @@ enamldef RFSourcePowerView(BaseInstrumentView): view:
                          automatically before the measurement starts ?'''),60)
 
 
-enamldef RFSourceSetOnOffView(BaseInstrumentView): view:
+enamldef RFSetOnOffView(BaseInstrumentView): view:
 
     attr in_loop : bool = False
 
-    hug_width = 'strong' if in_loop else 'ignore'
     title << task.task_name
     constraints = [factory(auto_grid_layout),
                    driv.width == prof.width]
@@ -109,7 +111,7 @@ enamldef RFSourceSetOnOffView(BaseInstrumentView): view:
     Label:
         text = 'Driver'
     ObjectCombo: driv:
-        items << sorted(task.driver_list)
+        items << sorted(drivers)
         selected := task.selected_driver
 
     Label:
@@ -122,10 +124,12 @@ enamldef RFSourceSetOnOffView(BaseInstrumentView): view:
         condition = not in_loop
         Label:
             text = 'Output'
-        ObjectCombo:
-            items = ['On', 'Off']
-            selected := task.selected_profile
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.switch
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
 
-TASK_VIEW_MAPPING = {'RFSourceSetFrequencyTask': RFSourceFrequencyView,
-                     'RFSourceSetPowerTask': RFSourcePowerView,
-                     'RFSourceSetOnOffTask': RFSourceSetOnOffView}
+TASK_VIEW_MAPPING = {'SetRFFrequencyTask': RFFrequencyView,
+                     'SetRFPowerTask': RFPowerView,
+                     'SetRFOnOffTask': RFSetOnOffView}

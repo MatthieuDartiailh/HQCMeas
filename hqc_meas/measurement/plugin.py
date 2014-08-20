@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : measure_plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 import logging
 import os
 from collections import defaultdict
@@ -45,7 +45,7 @@ def _workspace():
 class MeasurePlugin(HasPrefPlugin):
     """
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
     # Have to be here otherwise lose tons of infos when closing workspace
 
     # List of (module_path, manifest_name) which should be regitered on
@@ -136,10 +136,15 @@ class MeasurePlugin(HasPrefPlugin):
 
         # Clear ressources.
         self.engines.clear()
+        self._engine_extensions.clear()
         self.monitors.clear()
+        self._monitor_extensions.clear()
         self.headers.clear()
+        self._header_extensions.clear()
         self.checks.clear()
+        self._check_extensions.clear()
         self.editors.clear()
+        self._editor_extensions.clear()
 
     def start_measure(self, measure):
         """ Start a new measure.
@@ -157,15 +162,41 @@ class MeasurePlugin(HasPrefPlugin):
         measure.enter_running_state()
         self.running_measure = measure
 
-        # Requesting profiles.
-        profs = measure.store.get('profiles', set())
-        core = self.workbench.get_plugin('enaml.workbench.core')
+        instr_use_granted = False
+        # Checking build dependencies, if present simply request instr profiles
+        if 'build_deps' in measure.store:
+            # Requesting profiles as this is the only missing runtime.
+            profs = measure.store.get('profiles', set())
+            core = self.workbench.get_plugin('enaml.workbench.core')
 
-        com = u'hqc_meas.instr_manager.profiles_request'
-        profiles, missing = core.invoke_command(com,
-                                                {'profiles': list(profs)},
-                                                self)
-        if profs and not profiles:
+            com = u'hqc_meas.instr_manager.profiles_request'
+            profiles, _ = core.invoke_command(com, {'profiles': list(profs)},
+                                              self)
+
+            instr_use_granted = not bool(profs) or profiles
+            if instr_use_granted:
+                measure.root_task.run_time.update({'profiles': profiles})
+
+        else:
+            # Rebuild build and runtime dependencies (profiles automatically)
+            # re-requested.
+            core = self.workbench.get_plugin('enaml.workbench.core')
+            cmd = u'hqc_meas.task_manager.collect_dependencies'
+            res = core.invoke_command(cmd, {'task': measure.root_task}, self)
+            if not res[0]:
+                for id in res[1]:
+                    logger.warn(res[1][id])
+                return False
+
+            build_deps = res[1]
+            runtime_deps = res[2]
+
+            instr_use_granted = 'profiles' not in runtime_deps or\
+                runtime_deps['profiles']
+
+            measure.store['build_deps'] = build_deps
+
+        if not instr_use_granted:
             mes = cleandoc('''The instrument profiles requested for the
                            measurement {} are not available, the measurement
                            cannot be performed.'''.format(measure.name))
@@ -174,16 +205,14 @@ class MeasurePlugin(HasPrefPlugin):
             # Simulate a message coming from the engine.
             done = {'value': ('SKIPPED', 'Failed to get requested profiles')}
 
-            # Break a potential high statck as this function will not exit
+            # Break a potential high statck as this function would not exit
             # if a new measure is started.
             enaml.application.deferred_call(self._listen_to_engine, done)
             return
 
-        if profs:
+        else:
             logger.info(cleandoc('''The use of the instrument profiles has been
                                 granted by the manager.'''))
-
-        measure.root_task.run_time.update({'profiles': profiles})
 
         # Run internal test to check communication.
         res, errors = measure.run_checks(self.workbench, True, True)
@@ -197,7 +226,7 @@ class MeasurePlugin(HasPrefPlugin):
             # Simulate a message coming from the engine.
             done = {'value': ('FAILED', 'Failed to pass the built in tests')}
 
-            # Break a potential high statck as this function will not exit
+            # Break a potential high statck as this function would not exit
             # if a new measure is started.
             enaml.application.deferred_call(self._listen_to_engine, done)
             return
@@ -208,19 +237,21 @@ class MeasurePlugin(HasPrefPlugin):
         # Start the engine if it has not already been done.
         if not self.engine_instance:
             decl = self.engines[self.selected_engine]
-            self.engine_instance = decl.factory(decl, self.workbench)
+            engine = decl.factory(decl, self.workbench)
+            self.engine_instance = engine
 
             # Connect signal handler to engine.
-            self.engine_instance.observe('done', self._listen_to_engine)
+            engine.observe('done', self._listen_to_engine)
+
+            # Connect engine measure status to observer
+            engine.observe('measure_status', self._update_measure_status)
 
         engine = self.engine_instance
 
         # Call engine prepare to run method.
         entries = measure.collect_entries_to_observe()
-        engine.prepare_to_run(measure.name, measure.root_task, entries)
-
-        measure.status = 'RUNNING'
-        measure.infos = 'The measure is running'
+        engine.prepare_to_run(measure.name, measure.root_task, entries,
+                              measure.store['build_deps'])
 
         # Get a ref to the main window.
         ui_plugin = self.workbench.get_plugin('enaml.workbench.ui')
@@ -233,10 +264,28 @@ class MeasurePlugin(HasPrefPlugin):
         # Ask the engine to start the measure.
         engine.run()
 
+    def pause_measure(self):
+        """ Pause the currently active measure.
+
+        """
+        logger = logging.getLogger(__name__)
+        logger.info('Pausing measure {}.'.format(self.running_measure.name))
+        self.engine_instance.pause()
+
+    def resume_measure(self):
+        """ Resume the currently paused measure.
+
+        """
+        logger = logging.getLogger(__name__)
+        logger.info('Resuming measure {}.'.format(self.running_measure.name))
+        self.engine_instance.resume()
+
     def stop_measure(self):
         """ Stop the currently active measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Stopping measure {}.'.format(self.running_measure.name))
         self.flags.append('stop_attempt')
         self.engine_instance.stop()
 
@@ -244,6 +293,8 @@ class MeasurePlugin(HasPrefPlugin):
         """ Stop processing the enqueued measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Stopping measure {}.'.format(self.running_measure.name))
         self.flags.append('stop_attempt')
         self.flags.append('stop_processing')
         if 'processing' in self.flags:
@@ -254,12 +305,16 @@ class MeasurePlugin(HasPrefPlugin):
         """ Force the engine to stop performing the current measure.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Exiting measure {}.'.format(self.running_measure.name))
         self.engine_instance.force_stop()
 
     def force_stop_processing(self):
         """ Force the engine to exit and stop processing measures.
 
         """
+        logger = logging.getLogger(__name__)
+        logger.info('Exiting measure {}.'.format(self.running_measure.name))
         self.flags.append('stop_processing')
         if 'processing' in self.flags:
             self.flags.remove('processing')
@@ -290,7 +345,7 @@ class MeasurePlugin(HasPrefPlugin):
 
         return measure
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     # Manifests ids of the plugin registered at start up.
     _manifest_ids = List(Unicode())
@@ -322,6 +377,13 @@ class MeasurePlugin(HasPrefPlugin):
         mess = 'Measure {} processed, status : {}'.format(
             self.running_measure.name, status)
         logger.info(mess)
+
+        # Releasing instrument profiles.
+        profs = self.running_measure.store.get('profiles', set())
+        core = self.workbench.get_plugin('enaml.workbench.core')
+
+        com = u'hqc_meas.instr_manager.profiles_released'
+        core.invoke_command(com, {'profiles': list(profs)}, self)
 
         # Disconnect monitors.
         engine = self.engine_instance
@@ -356,6 +418,16 @@ class MeasurePlugin(HasPrefPlugin):
                             self.force_stop_processing()
                 self.flags = []
 
+    def _update_measure_status(self, change):
+        """ Update the running_measure status to reflect the engine status.
+
+        """
+        new_vals = change['value']
+
+        running = self.running_measure
+        running.status = new_vals[0]
+        running.infos = new_vals[1]
+
     def _register_manifest(self, path, manifest_name):
         """ Register a manifest given its module name and its name.
 
@@ -370,9 +442,10 @@ class MeasurePlugin(HasPrefPlugin):
             self.workbench.register(plugin)
             self._manifest_ids.append(plugin.id)
 
-        except Exception:
+        except Exception as e:
             logger = logging.getLogger(__name__)
-            logger.error('Failed to register manifest: {}'.format(path))
+            mess = 'Failed to register manifest: {}, error : {}'
+            logger.error(mess.format(path, e))
 
     def _refresh_engines(self):
         """ Refresh the list of known engines.
@@ -423,6 +496,7 @@ class MeasurePlugin(HasPrefPlugin):
             self.selected_engine = ''
 
         self.engines = engines
+        self._engine_extensions = new_extensions
 
     def _load_engines(self, extension):
         """ Load the Engine object for the given extension.
@@ -455,6 +529,9 @@ class MeasurePlugin(HasPrefPlugin):
         selected and deselected.
 
         """
+        # Destroy old instance if any.
+        self.engine_instance = None
+
         if 'oldvalue' in change:
             old = change['oldvalue']
             if old in self.engines:
@@ -501,6 +578,7 @@ class MeasurePlugin(HasPrefPlugin):
                 monitors[monitor.id] = monitor
 
         self.monitors = monitors
+        self._monitor_extensions = new_extensions
 
     def _load_monitors(self, extension):
         """ Load the Monitor object for the given extension.
@@ -563,6 +641,7 @@ class MeasurePlugin(HasPrefPlugin):
                 headers[header.id] = header
 
         self.headers = headers
+        self._header_extensions = new_extensions
 
     def _load_headers(self, extension):
         """ Load the Header object for the given extension.
@@ -625,6 +704,7 @@ class MeasurePlugin(HasPrefPlugin):
                 checks[check.id] = check
 
         self.checks = checks
+        self._check_extensions = new_extensions
 
     def _load_checks(self, extension):
         """ Load the Check object for the given extension.
@@ -687,6 +767,7 @@ class MeasurePlugin(HasPrefPlugin):
                 editors[editor.id] = editor
 
         self.editors = editors
+        self._editor_extensions = new_extensions
 
     def _load_editors(self, extension):
         """ Load the Check object for the given extension.

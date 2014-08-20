@@ -45,3 +45,9 @@ enamldef InstrUser3(PluginManifest):
         InstrUser:
             release_method = release_instr
             default_policy = 'unreleasable'
+            
+enamldef InstrUser4(PluginManifest):
+    """
+    """
+    id = u'test.user4'
+

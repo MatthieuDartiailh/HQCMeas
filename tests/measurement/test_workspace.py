@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_workspace.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
+"""
+"""
 from enaml.workbench.api import Workbench
 import enaml
 import os
-import shutil
 import logging
 from configobj import ConfigObj
 from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
@@ -30,7 +31,8 @@ with enaml.imports():
 
     from .helpers import TestSuiteManifest
 
-from ..util import complete_line, process_app_events, close_all_windows
+from ..util import (complete_line, process_app_events, close_all_windows,
+                    remove_tree, create_test_dir)
 
 
 def setup_module():
@@ -52,13 +54,11 @@ class TestMeasureSpace(object):
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
         cls.test_dir = os.path.join(directory, '_temps')
-        os.mkdir(cls.test_dir)
+        create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
         util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
         def_path = os.path.join(util_path, 'default.ini')
-        if os.path.isfile(def_path):
-            os.rename(def_path, os.path.join(util_path, '__default.ini'))
 
         # Making the preference manager look for info in test dir.
         default = ConfigObj(def_path)
@@ -75,27 +75,14 @@ class TestMeasureSpace(object):
         print complete_line(__name__ +
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
-         # Removing pref files creating during tests.
-        try:
-            shutil.rmtree(cls.test_dir)
-
-        # Hack for win32.
-        except OSError:
-            print 'OSError'
-            dirs = os.listdir(cls.test_dir)
-            for directory in dirs:
-                shutil.rmtree(os.path.join(cls.test_dir), directory)
-            shutil.rmtree(cls.test_dir)
+        # Removing pref files creating during tests.
+        remove_tree(cls.test_dir)
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
         util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
-
-        aux = os.path.join(util_path, '__default.ini')
-        if os.path.isfile(aux):
-            os.rename(aux, def_path)
 
     def setup(self):
 
@@ -112,6 +99,7 @@ class TestMeasureSpace(object):
         self.workbench.register(TestSuiteManifest())
 
     def teardown(self):
+        close_all_windows()
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
         self.workbench.unregister(u'tests.suite')
@@ -238,13 +226,37 @@ class TestMeasureSpace(object):
         assert_equal(en_meas.status, 'READY')
         assert_equal(en_meas.infos,
                      'The measure is ready to be performed by an engine.')
-        assert_in('drivers', en_meas.root_task.run_time)
+        assert_in('build_deps', en_meas.store)
         assert_in('profiles', en_meas.store)
 
     def test_enqueue_measure2(self):
         """ Test enqueueing a measure failing the tests.
 
         """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        measure = Measure(plugin=plugin, name='Test')
+        measure.root_task = RootTask()
+        plugin.edited_measure = measure
+
+        res = plugin.workspace.enqueue_measure(plugin.edited_measure)
+
+        assert_false(res)
+        assert_false(measure.root_task.run_time)
+        assert_false(plugin.enqueued_measures)
+
+        close_all_windows()
+
+    def test_enqueue_measure3(self):
+        """ Test enqueueing a measure passing the test but emitting warnings.
+
+        """
+        # As there is no event loop running the exec_ is not blocking.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
@@ -423,7 +435,7 @@ class TestMeasureSpace(object):
         # Check the right flag is set in the plugin.
         assert_in('processing', plugin.flags)
 
-         # Check an engine instance was created and is processing the measure.
+        # Check an engine instance was created and is processing the measure.
         assert_true(plugin.engine_instance)
         engine = plugin.engine_instance
 
@@ -440,7 +452,7 @@ class TestMeasureSpace(object):
         assert_equal(measure1.status, 'COMPLETED')
         assert_equal(measure1.infos, 'Measure successfully completed')
 
-         # Check the measure has been registered as running and its status been
+        # Check the measure has been registered as running and its status been
         # updated.
         assert_true(plugin.running_measure)
         measure = plugin.running_measure
@@ -499,6 +511,9 @@ class TestMeasureSpace(object):
         plugin.enqueued_measures.append(measure1)
 
         measure1.store['profiles'] = ['Test']
+        # Here to avoid looking for build deps and concluing the measure does
+        # not actually need any profile.
+        measure1.store['build_deps'] = {}
 
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
@@ -570,6 +585,42 @@ class TestMeasureSpace(object):
         # Check plugin state.
         assert_false(plugin.flags)
 
+        assert_false(plugin.engine_instance.running)
+
+    def test_pause_measure1(self):
+        """ Test pausing a  measure.
+
+        """
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        measure1 = self._create_measure(plugin)
+        plugin.enqueued_measures.append(measure1)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        workspace.start_processing_measures()
+
+        # Pause the measure before it completes.
+        workspace.pause_current_measure()
+
+        assert_equal(measure1.status, 'PAUSED')
+
+        workspace.resume_current_measure()
+
+        assert_equal(measure1.status, 'RUNNING')
+
+        # Complete the second measure.
+        plugin.engine_instance.complete_measure()
+
+        # Check measures state.
+        assert_equal(measure1.status, 'COMPLETED')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
         assert_false(plugin.engine_instance.running)
 
     def test_stop_measure(self):

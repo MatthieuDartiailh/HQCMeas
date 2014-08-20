@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (Callable, Unicode, Instance, Bool, ForwardTyped)
+from atom.api import (Callable, Unicode, Instance, Bool, ForwardTyped, Event)
 from enaml.core.declarative import Declarative, d_
 from enaml.widgets.api import Page
 
@@ -15,16 +15,22 @@ class BaseEditor(Page):
     """ Base class for all editors.
 
     """
-    # Declaration defining this editor.
+    #: Declaration defining this editor.
     declaration = ForwardTyped(lambda: Editor)
 
-    # Currently selected task in the tree.
+    #: Currently selected task in the tree.
     selected_task = d_(Instance(BaseTask))
 
-    # Should the tree be visible when this editor is selected.
+    #: The framework fires this event any time the editor becomes selected.
+    selected = d_(Event())
+
+    #: The framework fires this event any time the editor is unselected.
+    unselected = d_(Event())
+
+    #: Should the tree be visible when this editor is selected.
     tree_visible = d_(Bool(True))
 
-    # Should the tree be enabled when this editor is selected.
+    #: Should the tree be enabled when this editor is selected.
     tree_enabled = d_(Bool(True))
 
 

@@ -1,6 +1,6 @@
-from enaml.core.api import Conditional
+from enaml.core.api import Conditional, Include
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
-from enaml.stdlib.fields import FloatField
+from enaml.stdlib.fields import FloatField, IntField
 from enaml.layout.api import factory
 
 from inspect import cleandoc
@@ -8,7 +8,8 @@ from textwrap import fill
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.layouts import auto_grid_layout
-from hqc_meas.tasks.tools.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 
 enamldef SetDcVoltageView(BaseInstrumentView): view:
@@ -20,7 +21,7 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
     Label:
         text = 'Driver'
     ObjectCombo:
-        items << sorted(task.driver_list)
+        items << sorted(drivers)
         selected := task.selected_driver
 
     Label:
@@ -36,7 +37,8 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
         QtLineCompleter:
             hug_width = 'ignore'
             text := task.target_value
-            entries_updater << task._list_database_entries
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
 
     Label:
         text = 'Back step (V)'
@@ -48,13 +50,20 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
     FloatField:
         value := task.delay
 
-    Label:
-        text = 'Check Value'
-    CheckBox:
-        checked := task.check_value
-        tool_tip = fill(cleandoc(
-                            '''Should the program ask the instrument the value
-                            of the applied voltage each time it is about to set
-                            it'''), 60)
-
 TASK_VIEW_MAPPING = {'SetDCVoltageTask' : SetDcVoltageView}
+
+
+enamldef MultiChannelVoltageSourceILabel(Label):
+
+    attr interface
+    attr index = 4
+    text = 'Channel'
+
+enamldef MultiChannelVoltageSourceIChannel(IntField):
+
+    attr interface
+    value := interface.channel
+
+INTERFACE_VIEW_MAPPING = {'MultiChannelVoltageSourceInterface':
+                          [MultiChannelVoltageSourceILabel,
+                           MultiChannelVoltageSourceIChannel]}

@@ -22,7 +22,7 @@ process log emitted in the measure process.
         them.
 """
 
-import logging, Queue, time, os, datetime
+import logging, Queue, time, os, datetime, sys
 from logging.handlers import TimedRotatingFileHandler
 from inspect import cleandoc
 from textwrap import fill
@@ -69,6 +69,7 @@ class StreamToLogRedirector(object):
             self.level = logging.CRITICAL
         else:
             self.level = logging.INFO
+        self.encoding = sys.getdefaultencoding()
 
     def write(self, message):
         """Record the received message using the logger stored in `logger`
@@ -82,6 +83,7 @@ class StreamToLogRedirector(object):
 
         """
         message = message.strip()
+        message = message.decode(self.encoding)
         if message != '':
             if self.level != logging.CRITICAL:
                 if '<DEBUG>' in message:
@@ -223,10 +225,11 @@ class GuiHandler(logging.Handler):
         except:
             self.handleError(record)
 
-    @staticmethod
-    def _write_in_panel(model, string):
+    def _write_in_panel(self, model, string):
         """
         """
+        if sys.platform == 'win32':
+            string = string.decode('cp1252')
         model.text += string
 
 

@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : measure.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
 from atom.api import (Atom, Instance, Dict, Unicode, ForwardTyped, Str)
 from configobj import ConfigObj
 import logging
@@ -83,7 +88,7 @@ class Measure(Atom):
         self.path = path
 
     @classmethod
-    def load_measure(cls, measure_plugin, path):
+    def load_measure(cls, measure_plugin, path, build_dep=None):
         """ Build a measure from a ConfigObj file.
 
         Parameters
@@ -105,7 +110,8 @@ class Measure(Atom):
         workbench = measure_plugin.workbench
         core = workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'hqc_meas.task_manager.build_root'
-        kwarg = {'mode': 'config', 'config': config['root_task']}
+        kwarg = {'mode': 'config', 'config': config['root_task'],
+                 'build_dep': build_dep}
         measure.root_task = core.invoke_command(cmd, kwarg, measure)
         database = measure.root_task.task_database
         entries = database.list_all_entries(values=True)

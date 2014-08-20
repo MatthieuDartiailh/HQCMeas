@@ -7,12 +7,31 @@
 from enaml.workbench.api import Extension, PluginManifest, ExtensionPoint
 from enaml.workbench.ui.api import ActionItem, Branding, MenuItem, ItemGroup
 from enaml.workbench.ui.workbench_window import WorkbenchWindow
+from enaml.icon import IconImage, Icon
+from enaml.image import Image
+import os
+
+ICON_PATH = os.path.join(os.path.dirname(__file__), 'icons', 'dummy.png')
+ICON = Image(data=open(ICON_PATH, 'rb').read())
 
 
 def app_plugin_factory():
     from .app_plugin import HqcAppPlugin
     return HqcAppPlugin()
 
+
+def hqc_application_factory():
+    from enaml.qt.qt_application import QtApplication
+    from enaml.qt import QtGui
+    import sys
+    app = QtApplication()
+    app._qapp.setWindowIcon(QtGui.QIcon(ICON_PATH))
+    if sys.platform == 'win32':
+        import ctypes
+        myappid = 'hqc.hqc_meas' # arbitrary string
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
+    return app
 
 def allow_closing(window, event):
     """ Perform all the checks contributed by the different plugin before
@@ -49,11 +68,17 @@ enamldef HqcAppManifest(PluginManifest):
         point = 'enaml.workbench.ui.branding'
         Branding:
             title = 'HQC Meas App'
+            icon = Icon(images=[IconImage(image=ICON)])
 
     Extension:
         id = 'window_factory'
         point = 'enaml.workbench.ui.window_factory'
         factory = lambda workbench: HqcAppWindow(workbench=workbench)
+
+    Extension:
+        id = 'app_factory'
+        point = 'enaml.workbench.ui.application_factory'
+        factory = hqc_application_factory
 
     Extension:
         id = 'actions'

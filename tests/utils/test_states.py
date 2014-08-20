@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : test_states.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from enaml.workbench.api import Workbench
 from nose.tools import assert_equal, assert_true, assert_is
 import enaml

@@ -1,18 +1,33 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : save_views.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
 from enaml.layout.api import hbox, align, spacer, vbox, grid
 from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, ObjectCombo, Dialog, MultilineField,
                                 Form)
+from inspect import cleandoc
 
 from hqc_meas.tasks.tools.pair_editor import PairEditor
+from hqc_meas.tasks.tools.string_evaluation import (EVALUATER_TOOLTIP,
+                                                    FORMATTER_TOOLTIP)
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 
 
 enamldef HeaderDialog(Dialog): dial:
+
     attr model
     alias header : field.text
+    title = 'Header'
+
     Container:
         constraints = [vbox(field,
-                            )]
+                            hbox(default, spacer, cancel, ok))]
+
         MultilineField: field:
             hug_height = 'weak'
         PushButton: default:
@@ -42,7 +57,12 @@ enamldef SavedValueView(Form):
         text := model.label
     QtLineCompleter:
         text := model.value
-        entries_updater = model.task._list_database_entries
+        entries_updater = model.task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
+
+ARRAY_SIZE_TOOLTIP = cleandoc('''If left empty the file will be closed at the
+                              end of the measure.\n''') + EVALUATER_TOOLTIP
 
 
 enamldef SaveView(GroupBox):
@@ -58,21 +78,30 @@ enamldef SaveView(GroupBox):
     ObjectCombo: mode_val:
         items = list(task.get_member('saving_target').items)
         selected := task.saving_target
+
     Label: points_lab:
         text = 'Points number'
     QtLineCompleter: points_val:
         text := task.array_size
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip << EVALUATER_TOOLTIP if task.saving_target != 'File'\
+                    else ARRAY_SIZE_TOOLTIP
+
     Container: file_cont:
+
         hug_height = 'strong'
         enabled << bool(task.saving_target != 'Array')
+
         GroupBox: folder:
+
             title = 'Directory'
             constraints = [hbox(path, explore),
                             align('v_center', path, explore)]
+
             QtLineCompleter: path:
                 text := task.folder
-                entries_updater << task._list_database_entries
+                entries_updater << task.accessible_database_entries
+                tool_tip = FORMATTER_TOOLTIP
             PushButton: explore:
                 text = 'E'
                 hug_width = 'strong'
@@ -82,13 +111,20 @@ enamldef SaveView(GroupBox):
                                     ).exec_()
                     if path:
                         task.folder = path
+
         GroupBox: file:
+
             title = 'File'
-            constraints = [hbox(name, header),
+            constraints = [hbox(name, mode, header),
                             align('v_center', name, header)]
+
             QtLineCompleter: name:
                 text := task.filename
-                entries_updater << task._list_database_entries
+                entries_updater << task.accessible_database_entries
+                tool_tip = FORMATTER_TOOLTIP
+            ObjectCombo: mode:
+                items = list(task.get_member('file_mode').items)
+                selected := task.file_mode
             PushButton: header:
                 text = 'Header'
                 hug_width = 'strong'
@@ -111,13 +147,16 @@ enamldef SaveArrayView(GroupBox):
                         grid([mode_lab, arr_lab],
                              [mode_val, arr_val]))]
     GroupBox: folder:
+
         title = 'Folder'
         hug_height = 'strong'
         constraints = [hbox(path, explore),
                         align('v_center', path, explore)]
+
         QtLineCompleter: path:
             text := task.folder
-            entries_updater << task._list_database_entries
+            entries_updater << task.accessible_database_entries
+            tool_tip = FORMATTER_TOOLTIP
         PushButton: explore:
             text = 'E'
             hug_width = 'strong'
@@ -127,14 +166,18 @@ enamldef SaveArrayView(GroupBox):
                                 ).exec_()
                 if path:
                     task.folder = path
+
     GroupBox: file:
+
         title = 'File'
         hug_height = 'strong'
         constraints = [hbox(name, header),
                         align('v_center', name, header)]
+
         QtLineCompleter: name:
             text := task.filename
-            entries_updater << task._list_database_entries
+            entries_updater << task.accessible_database_entries
+            tool_tip = FORMATTER_TOOLTIP
         PushButton: header:
             text = 'Header'
             hug_width = 'strong'
@@ -142,6 +185,7 @@ enamldef SaveArrayView(GroupBox):
                 dial = HeaderDialog(header = task.header, model = task)
                 if dial.exec_():
                     task.header = dial.header
+
     Label: mode_lab:
         text = 'Mode'
     ObjectCombo: mode_val:
@@ -152,7 +196,8 @@ enamldef SaveArrayView(GroupBox):
     QtLineCompleter: arr_val:
         hug_width = 'ignore'
         text := task.target_array
-        entries_updater << task._list_database_entries
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
 
 TASK_VIEW_MAPPING = {'SaveTask' : SaveView,
                      'SaveArrayTask' : SaveArrayView}

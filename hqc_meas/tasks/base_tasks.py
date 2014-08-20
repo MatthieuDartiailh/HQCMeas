@@ -1,24 +1,31 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_tasks.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api\
     import (Atom, Str, Int, Instance, Bool, Value, observe, Unicode, List,
-            ForwardTyped, Typed, ContainerList, set_default, Callable, Dict)
+            ForwardTyped, Typed, ContainerList, set_default, Callable, Dict,
+            Tuple, Coerced)
 
 from configobj import Section, ConfigObj
-from threading import Thread
-from itertools import chain
 from inspect import cleandoc
+from copy import deepcopy
 import os
+import logging
 
 from ..utils.atom_util import member_from_str, tagged_members
 from .tools.task_database import TaskDatabase
-from .tools.task_decorator import make_stoppable
+from .tools.task_decorator import (make_parallel, make_wait, make_stoppable,
+                                   smooth_crash)
+from .tools.string_evaluation import safe_eval
+from .tools.shared_resources import SharedDict, SharedCounter
+
+
+PREFIX = '_a'
 
 
 class BaseTask(Atom):
@@ -28,18 +35,68 @@ class BaseTask(Atom):
     members and methods.
 
     """
+    # --- Public API ----------------------------------------------------------
+    #: Name of the class, used for persistence.
     task_class = Str().tag(pref=True)
-    task_name = Str().tag(pref=True)
-    task_label = Str()
-    task_depth = Int()
-    task_preferences = Instance(Section)
-    task_database = Typed(TaskDatabase)
-    task_database_entries = Dict(Str(), Value())
-    task_path = Str()
-    root_task = ForwardTyped(lambda: RootTask)
-    process_ = Callable()
 
-    def process(self):
+    #: Name of the task this should be unique in hierarchy.
+    task_name = Str().tag(pref=True)
+
+    #: Label of the task to display in the tree editor.
+    # XXXX this requires some reformating.
+    task_label = Str()
+
+    #: Depth of the task in the hierarchy. this should not be manipulated
+    #: directly by user code.
+    task_depth = Int()
+
+    #: Reference to the Section in which the task stores its preferences.
+    task_preferences = Instance(Section)
+
+    #: Reference to the database used by the task to exchange information.
+    task_database = Typed(TaskDatabase)
+
+    #: Entries the task declares in the database and the associated default
+    #: values.
+    task_database_entries = Dict(Str(), Value())
+
+    #: Path of the task in the hierarchy. This refers to the parent task and
+    #: is used when writing in the database.
+    task_path = Str()
+
+    #: Reference to the root task in the hierarchy.
+    root_task = ForwardTyped(lambda: RootTask)
+
+    #: Refrence to the parent task.
+    parent_task = ForwardTyped(lambda: BaseTask)
+
+    #: Unbound method called when the task is asked to do its job. This is
+    #: basically the perform method but wrapped with useful stuff such as
+    #: interruption check or parallel, wait features.
+    perform_ = Callable()
+
+    #: Flag indicating if this task can be stopped.
+    stoppable = Bool(True).tag(pref=True)
+
+    #: Dictionary indicating whether the task is executed in parallel
+    #: ('activated' key) and which is pool it belongs to ('pool' key).
+    parallel = Dict(Str()).tag(pref=True)
+
+    #: Dictionary indicating whether the task should wait on any pool before
+    #: performing its job. Three valid keys can be used :
+    #: - 'activated' : a bool indicating whether or not to wait.
+    #: - 'wait' : the list should then specify which pool should be waited.
+    #: - 'no_wait' : the list should specify which pool not to wait on.
+    wait = Dict(Str()).tag(pref=True)
+
+    def __init__(self, **kwargs):
+        """ Overridden init to make sure perform is wrapped correctly.
+
+        """
+        super(BaseTask, self).__init__(**kwargs)
+        self._redefine_perform_()
+
+    def perform(self):
         """ The main method of any task as it is this one which is called when
         the measurement is performed. This method should always be decorated
         with make_stoppable, and return True if things went well.
@@ -59,6 +116,29 @@ class BaseTask(Atom):
         AbstractTask. This method is called when the program requires the task\
         to check that all parameters are ok'
         raise NotImplementedError(cleandoc(err_str))
+
+    def answer(self, members, callables):
+        """ Method used by to retrieve information about a task.
+
+        Parameters
+        ----------
+        members : list(str)
+            List of members names whose values should be returned.
+
+        callables : dict(str, callable)
+            Dict of name callable to invoke on the task or interface to get
+            some infos.
+
+        Returns
+        -------
+        infos : dict
+            Dict holding all the answers for the specified members and
+            callables.
+
+        """
+        answers = {m: getattr(self, m, None) for m in members}
+        answers.update({k: c(self) for k, c in callables.iteritems()})
+        return answers
 
     def register_in_database(self):
         """ Method used to create entries in the database.
@@ -97,32 +177,187 @@ class BaseTask(Atom):
         to update the entries in the preference object before saving'
         raise NotImplementedError(cleandoc(err_str))
 
-    def update_members_from_preferences(self, **parameters):
-        """ Method used to update the trait values using the info extracted
-        from a config file.
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
 
-        Parameters:
+        Parameters
         ----------
-        parameters : dict
+        config : dict(str)
+            Dictionary holding the new values to give to the members in string
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+            This is assembled by the TaskManager.
 
         """
-        err_str = 'This method should be implemented by subclasses of\
-        AbstractTask. This method is called when the program requires the task\
-        to update update the trait values using the info extracted from\
-        a config file.'
+        err_str = '''This method should be implemented by subclasses of
+        AbstractTask. This method is called when the program requires the task
+        to reconstruct itself using the infos stored in a dictionary.'''
         raise NotImplementedError(cleandoc(err_str))
+
+    def accessible_database_entries(self):
+        """ Convenience to get the accesible entries in the database.
+
+        """
+        return self.task_database.list_accessible_entries(self.task_path)
+
+    def format_string(self, string):
+        """ Replace values in {} by their corresponding database value.
+
+        Parameters
+        ----------
+        string : str
+            The string to format using the current values of the database.
+
+        Returns
+        -------
+        formatted : str
+            Formatted version of the input.
+
+        """
+        # If a cache evaluation of the string already exists use it.
+        if string in self._format_cache:
+            preformatted, ids = self._format_cache[string]
+            vals = self.task_database.get_values_by_index(ids, PREFIX)
+            return preformatted.format(**vals)
+
+        # Otherwise if we are in running mode build a cache formatting.
+        elif self.task_database.running:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                database_indexes = database.get_entries_indexes(self.task_path,
+                                                                elements[1::2])
+                str_to_format = ''
+                length = len(elements)
+                for i in range(0, length, 2):
+                    if i + 1 < length:
+                        repl = PREFIX + str(database_indexes[elements[i + 1]])
+                        str_to_format += elements[i] + '{' + repl + '}'
+                    else:
+                        str_to_format += elements[i]
+
+                indexes = database_indexes.values()
+                self._format_cache[string] = (str_to_format, indexes)
+                vals = self.task_database.get_values_by_index(indexes, PREFIX)
+                return str_to_format.format(**vals)
+            else:
+                self._format_cache[string] = (string, [])
+                return string
+
+        # In edition mode simply perfom the formatting as execution time is not
+        # critical.
+        else:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                replacement_values = [database.get_value(self.task_path, key)
+                                      for key in elements[1::2]]
+                str_to_format = ''
+                for key in elements[::2]:
+                    str_to_format += key + '{}'
+
+                str_to_format = str_to_format[:-2]
+
+                return str_to_format.format(*replacement_values)
+            else:
+                return string
+
+    def format_and_eval_string(self, string):
+        """ Replace values in {} by their corresponding database value and eval
+
+        Parameters
+        ----------
+        string : str
+            The string to eval using the current values of the database.
+
+        Returns
+        -------
+        formatted : str
+            Formatted version of the input.
+
+        """
+        # If a cache evaluation of the string already exists use it.
+        if string in self._eval_cache:
+            preformatted, ids = self._eval_cache[string]
+            vals = self.task_database.get_values_by_index(ids, PREFIX)
+            return safe_eval(preformatted, vals)
+
+        # Otherwise if we are in running mode build a cache evaluation.
+        elif self.task_database.running:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                database_indexes = database.get_entries_indexes(self.task_path,
+                                                                elements[1::2])
+                str_to_eval = ''
+                length = len(elements)
+                for i in range(0, length, 2):
+                    if i + 1 < length:
+                        repl = PREFIX + str(database_indexes[elements[i + 1]])
+                        str_to_eval += elements[i] + repl
+                    else:
+                        str_to_eval += elements[i]
+
+                indexes = database_indexes.values()
+                self._eval_cache[string] = (str_to_eval, indexes)
+                vals = self.task_database.get_values_by_index(indexes, PREFIX)
+                return safe_eval(str_to_eval, vals)
+            else:
+                self._eval_cache[string] = (string, [])
+                return safe_eval(string)
+
+        # In edition mode simply perfom the evaluation as execution time is not
+        # critical.
+        else:
+            database = self.task_database
+            aux_strings = string.split('{')
+            if len(aux_strings) > 1:
+                elements = [el
+                            for aux in aux_strings
+                            for el in aux.split('}')]
+                replacement_token = [PREFIX + str(i)
+                                     for i in xrange(len(elements[1::2]))]
+                repl = {PREFIX + str(i): database.get_value(self.task_path,
+                                                            key)
+                        for i, key in enumerate(elements[1::2])}
+                str_to_format = ''
+                for key in elements[::2]:
+                    str_to_format += key + '{}'
+
+                str_to_format = str_to_format[:-2]
+
+                expr = str_to_format.format(*replacement_token)
+                return safe_eval(expr, repl)
+            else:
+                return safe_eval(string)
+
+    # --- Private API ---------------------------------------------------------
+
+    #: Dictionary storing in infos necessary to perform fast formatting.
+    #: Only used in running mode.
+    _format_cache = Dict()
+
+    #: Dictionary storing in infos necessary to perform fast evaluation.
+    #: Only used in running mode.
+    _eval_cache = Dict()
 
     def _default_task_class(self):
         """ Default value for the task_class member.
 
         """
         return self.__class__.__name__
-
-    def _default_process_(self):
-        """ Default value for the process_ member.
-
-        """
-        return self.process.__func__
 
     def _observe_task_name(self, change):
         """ Update the label any time the task name changes.
@@ -143,24 +378,45 @@ class BaseTask(Atom):
                 for entry in removed:
                     self.remove_from_database(self.task_name + '_' + entry)
                 for entry in added:
-                    self.write_in_database(entry,
-                                           self.task_database_entries[entry])
+                    new_value = deepcopy(self.task_database_entries[entry])
+                    self.write_in_database(entry, new_value)
 
-    def _list_database_entries(self):
-        """ Convenience to get the accesible entries in the database.
+    @observe('wait', 'parallel', 'stopable')
+    def _parallell_wait_update(self, change):
+        """
 
         """
-        return self.task_database.list_accessible_entries(self.task_path)
+        self._redefine_perform_()
+
+    def _redefine_perform_(self):
+        """ Make perform_ refects the parallel/wait settings.
+
+        """
+        perform_func = self.perform.__func__
+        parallel = self.parallel
+        if parallel.get('activated') and parallel.get('pool'):
+            perform_func = make_parallel(perform_func, parallel['pool'])
+
+        wait = self.wait
+        if wait.get('activated'):
+            perform_func = make_wait(perform_func,
+                                     wait.get('wait'),
+                                     wait.get('no_wait'))
+
+        if self.stoppable:
+            self.perform_ = make_stoppable(perform_func)
+        else:
+            self.perform_ = perform_func
 
 
 class SimpleTask(BaseTask):
     """ Task with no child task, written in pure Python.
 
     """
-    #Class attribute specifying if instances of that class can be used in loop
-    loopable = False
+    # --- Public API ----------------------------------------------------------
 
-    #--- Public API -----------------------------------------------------------
+    #: Class attribute specifying if that task can be used in a loop
+    loopable = False
 
     def write_in_database(self, name, value):
         """ Write a value to the right database entry.
@@ -214,9 +470,13 @@ class SimpleTask(BaseTask):
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
+                # Perform a deepcopy of the entry value as I don't want to
+                # alter that default value when dealing with the database later
+                # on (apply for list and dict).
+                value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
                                              self.task_name + '_' + entry,
-                                             self.task_database_entries[entry])
+                                             value)
 
     def unregister_from_database(self):
         """ Remove the task entries from the database.
@@ -241,216 +501,48 @@ class SimpleTask(BaseTask):
 
     update_preferences_from_members = register_preferences
 
-    def update_members_from_preferences(self, **parameters):
-        """ Update the members values using a dict.
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        config : dict(str)
             Dictionary holding the new values to give to the members in string
-            format.
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+            This is assembled by the TaskManager.
 
         """
-        for name, member in tagged_members(self, 'pref').iteritems():
+        task = cls()
+        for name, member in tagged_members(task, 'pref').iteritems():
 
-            if name not in parameters:
+            if name not in config:
                 continue
 
-            value = parameters[name]
+            value = config[name]
             converted = member_from_str(member, value)
-            setattr(self, name, converted)
+            setattr(task, name, converted)
 
-    def make_parallel(self, pool, switch=''):
-        """ Make the execution of a task happens in parallel.
-
-        This method should be called in __init__ when there is no need to
-        wait for the process method to return to start the next task,ie the
-        process method decorated don't use any data succeptible to be corrupted
-        by the next task.
-
-        Parameters
-        ----------
-        pool : str
-            Name of the pool this task is part of.
-
-        switch : str
-            Name of the member indicating whether or not to run this task in
-            parallel.
-
-        """
-        par = self._parallel
-        par['pool'] = pool
-        par['activated'] = getattr(self, switch, True)
-        if switch:
-            self.observe('switch', self._redefine_process_)
-        self._redefine_process_()
-
-    def make_wait(self, wait=[], no_wait=[]):
-        """ Make the execution of a task wait for the completion fo others.
-
-        This method should be be called in __init__ when the process method
-        need to access data in the database or need to be sure that physical
-        quantities reached their expected values.
-
-        Parameters
-        ----------
-        wait : list(str)
-            Names of the pools this task waits to complete before starting .
-
-        no_wait : list(str)
-            Names of the pools this task does not wait to complete before
-            starting .
-
-        This parameters are mutually exclusive.
-        """
-        _wait = self._wait
-        _wait['wait'] = wait
-        _wait['no_wait'] = no_wait
-        self._redefine_process_()
-
-    #--- Private API ----------------------------------------------------------
-
-    # Is the task parallel and what is its execution pool.
-    _parallel = Dict(Str(), default={'activated': False, 'pool': ''})
-
-    # Is the task waiting for execution pools and which.
-    _wait = Dict(Str(), List())
-
-    def _redefine_process_(self, change={}):
-        """ Make process_ refects the parallel/wait settings.
-
-        """
-        if change:
-            self._parallel['activated'] = change['value']
-        process = self.process.__func__
-        parallel = self._parallel
-        if parallel['activated'] and parallel['pool']:
-            process = self._make_parallel_process_(process, parallel['pool'])
-
-        wait = self._wait
-        if 'wait' in wait and 'no_wait' in wait:
-            process = self._make_wait_process_(process,
-                                               wait['wait'],
-                                               wait['no_wait'])
-
-        self.process_ = make_stoppable(process)
-
-    @staticmethod
-    def _make_parallel_process_(process, pool):
-        """ Machinery to execute process_ in parallel.
-
-        Create a wrapper around a method to execute it in a thread and
-        register the thread.
-
-        Parameters
-        ----------
-        process : method
-            Method which should be wrapped to run in parallel.
-
-        pool : str
-            Name of the execution pool to which the created thread belongs.
-
-        """
-        def wrapper(*args, **kwargs):
-
-            obj = args[0]
-            thread = Thread(group=None,
-                            target=process,
-                            args=args,
-                            kwargs=kwargs)
-            all_threads = obj.task_database.get_value('root', 'threads')
-            threads = all_threads.get(pool, None)
-            if threads:
-                threads.append(thread)
-            else:
-                all_threads[pool] = [thread]
-
-            return thread.start()
-
-        wrapper.__name__ = process.__name__
-        wrapper.__doc__ = process.__doc__
-        return wrapper
-
-    @staticmethod
-    def _make_wait_process_(process, wait, no_wait):
-        """ Machinery to make process_ wait on other tasks execution.
-
-        Create a wrapper around a method to wait for some threads to terminate
-        before calling the method. Threads are grouped in execution pools.
-
-        Parameters
-        ----------
-        process : method
-            Method which should be wrapped to wait on threads.
-
-        wait : list(str)
-            Names of the execution pool which should be waited for.
-
-        no_wait : list(str)
-            Names of the execution pools which should not be waited for.
-
-        Both parameters are mutually exlusive. If both lists are empty the
-        execution will be differed till all the execution pools have completed
-        their works.
-
-        """
-        if wait:
-            def wrapper(*args, **kwargs):
-
-                obj = args[0]
-                all_threads = obj.task_database.get_value('root', 'threads')
-
-                threads = chain.from_iterable([all_threads.get(w, [])
-                                               for w in wait])
-                for thread in threads:
-                    thread.join()
-                all_threads.update({w: [] for w in wait if w in all_threads})
-
-                obj.task_database.set_value('root', 'threads', all_threads)
-                return process(*args, **kwargs)
-
-        elif no_wait:
-            def wrapper(*args, **kwargs):
-
-                obj = args[0]
-                all_threads = obj.task_database.get_value('root', 'threads')
-
-                pools = [k for k in all_threads if k not in no_wait]
-                threads = chain.from_iterable([all_threads[p] for p in pools])
-                for thread in threads:
-                    thread.join()
-                all_threads.update({p: [] for p in pools})
-
-                obj.task_database.set_value('root', 'threads', all_threads)
-                return process(*args, **kwargs)
-        else:
-            def wrapper(*args, **kwargs):
-
-                obj = args[0]
-                all_threads = obj.task_database.get_value('root', 'threads')
-
-                threads = chain.from_iterable(all_threads.values())
-                for thread in threads:
-                    thread.join()
-                all_threads.update({w: [] for w in all_threads})
-
-                obj.task_database.set_value('root', 'threads', all_threads)
-                return process(*args, **kwargs)
-
-        wrapper.__name__ = process.__name__
-        wrapper.__doc__ = process.__doc__
-
-        return wrapper
+        return task
 
 
 class ComplexTask(BaseTask):
     """Task composed of several subtasks.
 
     """
-    # List of all the children of the task.
+    # --- Public API ----------------------------------------------------------
+
+    #: List of all the children of the task.
     children_task = ContainerList(Instance(BaseTask)).tag(child=True)
 
-    # Flag indicating whether or not the task has a root task.
+    #: Dict of access exception in the database. This should not be manipulated
+    #: by user code.
+    access_exs = ContainerList().tag(pref=True)
+
+    #: Flag indicating whether or not the task has a root task.
     has_root = Bool(False)
 
     def __init__(self, *args, **kwargs):
@@ -459,16 +551,13 @@ class ComplexTask(BaseTask):
         self.observe('task_path', self._update_paths)
         self.observe('task_depth', self._update_paths)
 
-    #--- Public API -----------------------------------------------------------
-
-    @make_stoppable
-    def process(self):
+    def perform(self):
         """ Run sequentially all child tasks.
 
         """
         result = True
         for child in self.children_task:
-            result &= child.process_(child)
+            result &= child.perform_(child)
 
         return result
 
@@ -513,11 +602,11 @@ class ComplexTask(BaseTask):
             List summarizing the result of the exploration.
 
         """
-        answer = [self._answer(self, members, callables)]
-        for task in self.children_task:
+        answer = [self.answer(members, callables)]
+        for task in self._gather_children_task():
             if isinstance(task, SimpleTask):
-                answer.append(self._answer(task, members, callables))
-            else:
+                answer.append(task.answer(members, callables))
+            elif task:
                 answer.append(task.walk(members, callables))
 
         return answer
@@ -577,21 +666,22 @@ class ComplexTask(BaseTask):
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
+                # Perform a deepcopy of the entry value as I don't want to
+                # alter that default value when dealing with the database later
+                # on (apply for list and dict).
+                value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
                                              self.task_name + '_' + entry,
-                                             self.task_database_entries[entry])
+                                             value)
 
         self.task_database.create_node(self.task_path, self.task_name)
 
-        #ComplexTask defines children_task so we always get something
-        for name in tagged_members(self, 'child'):
-            child = getattr(self, name)
-            if child:
-                if isinstance(child, list):
-                    for aux in child:
-                        aux.register_in_database()
-                else:
-                    child.register_in_database()
+        # ComplexTask defines children_task so we always get something
+        for child in self._gather_children_task():
+            child.register_in_database()
+
+        # Add access exception in database.
+        self._refresh_access_exceptions()
 
     def unregister_from_database(self):
         """ Unregister all entries and delete associated database node.
@@ -600,21 +690,88 @@ class ComplexTask(BaseTask):
         as child.
 
         """
+        # Remove access exception from database.
+        self._refresh_access_exceptions(removed=self.access_exs)
+
         if self.task_database_entries:
             for entry in self.task_database_entries:
                 self.task_database.delete_value(self.task_path,
                                                 self.task_name + '_' + entry)
 
-        for name in tagged_members(self, 'child'):
-            child = getattr(self, name)
-            if child:
-                if isinstance(child, list):
-                    for aux in child:
-                        aux.unregister_from_database()
-                else:
-                    child.unregister_from_database()
+        for child in self._gather_children_task():
+            child.unregister_from_database()
 
         self.task_database.delete_node(self.task_path, self.task_name)
+
+    def add_access_exception(self, entry):
+        """ Add an access exception for an entry.
+
+        This method first look for the location of the entry to determine if it
+        exists and whether or not it is itself an access exception. If it is an
+        access exception add an observer to the child to be notified when this
+        exception is removed.
+
+        Parameters
+        ----------
+        entry : str
+            Full name of the entry database for which to add an exception.
+            This entry must be present in the task or in one of its chilren.
+
+        """
+        database = self.task_database
+        # Find the child declaring the entry to get the path and
+        # determine if the entry is an access exception.
+        for child in self._gather_children_task():
+            entries = [child.task_name + '_' + e
+                       for e in child.task_database_entries]
+            if entry in entries:
+                database.add_access_exception(self.parent_task.task_path,
+                                              entry, child.task_path)
+                self.access_exs.append(entry)
+                return
+
+            elif hasattr(child, 'access_exs') and entry in child.access_exs:
+                database.add_access_exception(self.parent_task.task_path,
+                                              entry, self.task_path)
+                child.observe('access_exs', self._child_access_exs_changed)
+                self.access_exs.append(entry)
+                return
+
+        raise KeyError('Entry {} is not accessible from task {}'.format(entry,
+                       self.task_name))
+
+    def remove_access_exception(self, entry):
+        """ Remove the access exception for an entry.
+
+        Parameters
+        ----------
+        entry_name : str
+            Full name of the entry database for which to remove an exception.
+
+        """
+        # Check that the entry is known.
+        if entry not in self.access_exs:
+            raise KeyError('No access exeption for entry {} in {}.'.format(
+                           entry, self.task_name))
+
+        database = self.task_database
+        # Find the child declaring the entry to determine if the
+        # entry is an access exception.
+        for child in self._gather_children_task():
+            entries = [child.task_name + '_' + e
+                       for e in child.task_database_entries]
+            if entry in entries:
+                database.remove_access_exception(self.parent_task.task_path,
+                                                 entry)
+                self.access_exs.remove(entry)
+                return
+
+            elif hasattr(child, 'access_exs') and entry in child.access_exs:
+                database.remove_access_exception(self.parent_task.task_path,
+                                                 entry)
+                child.unobserve('access_exs', self._child_access_exs_changed)
+                self.access_exs.remove(entry)
+                return
 
     def register_preferences(self):
         """ Register the task preferences into the preferences system.
@@ -665,23 +822,27 @@ class ComplexTask(BaseTask):
             else:
                 self.task_preferences[name] = repr(val)
 
-        for name in tagged_members(self, 'child'):
-            child = getattr(self, name)
-            if child:
-                if isinstance(child, list):
-                    for aux in child:
-                        aux.update_preferences_from_members()
-                else:
-                    child.update_preferences_from_members()
+        for child in self._gather_children_task():
+            child.update_preferences_from_members()
 
-    def update_members_from_preferences(self, **parameters):
-        """ Update the members values using a dict.
+    @classmethod
+    def build_from_config(cls, config, dependencies):
+        """ Create a new instance using the provided infos for initialisation.
 
         Parameters
         ----------
-        parameters : dict(str: str)
+        config : dict(str)
             Dictionary holding the new values to give to the members in string
-            format.
+            format, or dictionnary like for instance with prefs.
+
+        dependencies : dict
+            Dictionary holding the necessary classes needed when rebuilding.
+            This is assembled by the TaskManager.
+
+        Returns
+        -------
+        task :
+            Newly created and initiliazed task.
 
         Notes
         -----
@@ -689,36 +850,129 @@ class ComplexTask(BaseTask):
         don't override it without checking that it works.
 
         """
-        for name, member in self.members().iteritems():
+        task = cls()
+        for name, member in task.members().iteritems():
 
             # First we set the preference members
             meta = member.metadata
             if meta and 'pref' in meta:
-                if name not in parameters:
+                if name not in config:
                     continue
 
                 # member_from_str handle containers
-                value = parameters[name]
+                value = config[name]
                 validated = member_from_str(member, value)
 
-                setattr(self, name, validated)
+                setattr(task, name, validated)
 
-            # Then we deal with the choild tasks
+            # Then we deal with the child tasks
             elif meta and 'child' in meta:
-                if name not in parameters:
-                    continue
+                if isinstance(member, (ContainerList, List)):
+                    i = 0
+                    pref = name + '_{}'
+                    validated = []
+                    while True:
+                        child_name = pref.format(i)
+                        if child_name not in config:
+                            break
+                        child_config = config[child_name]
+                        child_class_name = child_config.pop('task_class')
+                        child_class = dependencies['tasks'][child_class_name]
+                        child = child_class.build_from_config(child_config,
+                                                              dependencies)
+                        validated.append(child)
+                        i += 1
 
-                value = parameters[name]
-
-                if isinstance(member, ContainerList):
-                    validated = value
                 else:
-                    validated = value[0]
+                    child_config = config[child_name]
+                    child_class_name = child_config.pop('task_class')
+                    child_class = dependencies['tasks'][child_class_name]
+                    validated = child_class.build_from_config(child_config,
+                                                              dependencies)
 
-                setattr(self, name, validated)
+                setattr(task, name, validated)
 
-    @observe('children_task')
-    def on_children_modified(self, change):
+        return task
+
+    # --- Private API ---------------------------------------------------------
+
+    #: Last removed child and list of database access exceptions attached to
+    #: it and necessity to observe its _access_exs.
+    _last_removed = Tuple(default=(None, None, False))
+
+    #: Last access exceptions desactivayed from a child.
+    _last_exs = Coerced(set)
+
+    #: List of access_exs, linked to access exs in child, disabled because
+    #: child disabled some access_exs.
+    _disabled_exs = List()
+
+    # @observe('task_name, task_path, task_depth')
+    def _update_paths(self, change):
+        """Takes care that the paths, the database and the task names remains
+        coherent.
+
+        """
+        if change['type'] == 'update':
+            name = change['name']
+            new = change['value']
+            old = change.get('oldvalue', None)
+            if self.has_root:
+                if name == 'task_name':
+                    self.task_database.rename_node(self.task_path, new, old)
+                    for name in tagged_members(self, 'child'):
+                        child = getattr(self, name)
+                        if child:
+                            if isinstance(child, list):
+                                for aux in child:
+                                    aux.task_path = self.task_path + '/' + new
+                            else:
+                                child.task_path = self.task_path + '/' + new
+
+                elif name == 'task_path':
+                    for name in tagged_members(self, 'child'):
+                        child = getattr(self, name)
+                        if child:
+                            if isinstance(child, list):
+                                for aux in child:
+                                    aux.task_path = new + '/' + self.task_name
+                            else:
+                                child.task_path = new + '/' + self.task_name
+
+                elif name == 'task_depth':
+                    for name in tagged_members(self, 'child'):
+                        child = getattr(self, name)
+                        if child:
+                            if isinstance(child, list):
+                                for aux in child:
+                                    aux.task_depth = new + 1
+                            else:
+                                child.task_depth = new + 1
+
+    def _gather_children_task(self):
+        """ Build a flat list of all children task.
+
+        The children_task tasks are garanteed to always appear last in that
+        list.
+
+        """
+        children = []
+        for name in tagged_members(self, 'child'):
+            if name == 'children_task':
+                continue
+
+            child = getattr(self, name)
+            if child:
+                if isinstance(child, list):
+                    children.extend(child)
+                else:
+                    children.append(child)
+
+        children.extend(self.children_task)
+
+        return children
+
+    def _observe_children_task(self, change):
         """Handle children being added or removed from the task.
 
         """
@@ -754,7 +1008,7 @@ class ComplexTask(BaseTask):
                             self._child_removed(child)
 
                 # One child was replaced.
-                elif op in ('__setitem__'):
+                elif op in ('__setitem__',):
                     old = change['olditem']
                     if isinstance(old, list):
                         for child in old:
@@ -769,48 +1023,6 @@ class ComplexTask(BaseTask):
                     else:
                         self._child_added(new)
 
-    #--- Private API ----------------------------------------------------------
-
-    #@observe('task_name, task_path, task_depth')
-    def _update_paths(self, change):
-        """Takes care that the paths, the database and the task names remains
-        coherent.
-
-        """
-        if change['type'] == 'update':
-            name = change['name']
-            new = change['value']
-            old = change.get('oldvalue', None)
-            if self.has_root:
-                if name == 'task_name':
-                    self.task_database.rename_node(self.task_path, new, old)
-                    for name in tagged_members(self, 'child'):
-                        child = getattr(self, name)
-                        if child:
-                            if isinstance(child, list):
-                                for aux in child:
-                                    aux.task_path = self.task_path + '/' + new
-                            else:
-                                child.task_path = self.task_path + '/' + new
-                elif name == 'task_path':
-                    for name in tagged_members(self, 'child'):
-                        child = getattr(self, name)
-                        if child:
-                            if isinstance(child, list):
-                                for aux in child:
-                                    aux.task_path = new + '/' + self.task_name
-                            else:
-                                child.task_path = new + '/' + self.task_name
-                elif name == 'task_depth':
-                    for name in tagged_members(self, 'child'):
-                        child = getattr(self, name)
-                        if child:
-                            if isinstance(child, list):
-                                for aux in child:
-                                    aux.task_depth = new + 1
-                            else:
-                                child.task_depth = new + 1
-
     def _child_added(self, child):
         """Update the database, depth and preferences when a child is added.
 
@@ -819,21 +1031,67 @@ class ComplexTask(BaseTask):
         child.task_database = self.task_database
         child.task_path = self.task_path + '/' + self.task_name
 
-        #Give him its root so that it can proceed to any child
-        #registration it needs to.
+        # Give him its root so that it can proceed to any child
+        # registration it needs to.
         child.root_task = self.root_task
+        child.parent_task = self
 
-        #Ask the child to register in database
+        # Ask the child to register in database
         child.register_in_database()
-        #Register anew preferences to keep the right ordering for the childs
+        # Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
+
+        if child is self._last_removed[0]:
+            entries = self._last_removed[1]
+            self._refresh_access_exceptions(entries,
+                                            child=child,
+                                            observer=self._last_removed[2])
+            access_ex = self.access_exs[:]
+            access_ex.extend(entries)
+            self.access_exs = access_ex
+
+        self._last_removed = (None, None, False)
 
     def _child_removed(self, child):
         """Update the database, depth and preferences when a child is removed.
 
         """
+        # List all the task database entries associated with the child just
+        # removed.
+        access_obs = False
+        data_entries = [child.task_name + '_' + entry
+                        for entry in child.task_database_entries]
+
+        # Take access exceptions into account for ComplexTask and remove
+        # observer if any.
+        if isinstance(child, ComplexTask):
+            data_entries += child.access_exs
+            access_obs = child.has_observer('access_exs',
+                                            self._child_access_exs_changed)
+            if access_obs:
+                child.unobserve('access_exs',
+                                self._child_access_exs_changed)
+
+        # Update preferences, cleanup database
         self.register_preferences()
         child.unregister_from_database()
+        child.root_task = None
+        child.parent_task = None
+
+        # Remove all access exception linked to that child from
+        # exceptions.
+        access_exs = self.access_exs[:]
+        sus_access_exs = [ex for ex in access_exs if ex in data_entries]
+        self._refresh_access_exceptions(removed=sus_access_exs, child=child,
+                                        observer=access_obs)
+        for ex in sus_access_exs:
+            access_exs.remove(ex)
+        self.access_exs = access_exs
+
+        # Keep list of exceptions to restore them if child is re-added.
+        # This avoids screwing up access exceptions when moving a task.
+        if sus_access_exs:
+            self._last_removed = (child, sus_access_exs, access_obs)
 
     def _observe_root_task(self, change):
         """ Observer.
@@ -859,6 +1117,7 @@ class ComplexTask(BaseTask):
                         # Give him its root so that it can proceed to any child
                         # registration it needs to.
                         aux.root_task = self.root_task
+                        aux.parent_task = self
                 else:
                     child.task_depth = self.task_depth + 1
                     child.task_database = self.task_database
@@ -867,44 +1126,193 @@ class ComplexTask(BaseTask):
                     # Give him its root so that it can proceed to any child
                     # registration it needs to.
                     child.root_task = self.root_task
+                    child.parent_task = self
 
-    @staticmethod
-    def _answer(obj, members, callables):
-        """ Collect answers for the walk method.
+    def _refresh_access_exceptions(self, added=[], removed=[], child=None,
+                                   observer=False):
+        """ Refresh the database access exceptions.
+
+        This method leave the access_exs attribute unchanged it is the
+        responsability of the caller to update it.
+
+        Parameters
+        ----------
+        added : list, optional
+            List of database access exceptions to add to the database.
+
+        removed : list, optional
+            List of database access exceptions to remove from the database.
+
+        child : BaseTask, optional
+            Child task declaring the database entries. If provided all database
+            entries will be assumed to be declared by this child.
 
         """
-        answers = {m: getattr(obj, m, None) for m in members}
-        answers.update({k: c(obj) for k, c in callables.iteritems()})
-        return answers
+        if not added and not removed:
+            added = self.access_exs
+
+        database = self.task_database
+        ex_path = self.parent_task.task_path
+        if added:
+            for entry in added:
+                # If a child is provided assume it is the one declaring the
+                # entry.
+                if child and observer:
+                    database.add_access_exception(ex_path,
+                                                  entry, self.task_path)
+                    child.observe('access_exs', self._child_access_exs_changed)
+                elif child:
+                    database.add_access_exception(ex_path,
+                                                  entry, child.task_path)
+
+                # Find the child declaring the entry to determine if the
+                # entry is an access exception.
+                else:
+                    for child in self._gather_children_task():
+                        entries = [child.task_name + '_' + e
+                                   for e in child.task_database_entries]
+                        if entry in entries:
+                            database.add_access_exception(ex_path,
+                                                          entry,
+                                                          child.task_path)
+
+                        elif hasattr(child, 'access_exs') and\
+                                entry in child.access_exs:
+                            database.add_access_exception(ex_path,
+                                                          entry,
+                                                          self.task_path)
+                            child.observe('access_exs',
+                                          self._child_access_exs_changed)
+
+        else:
+            for entry in removed:
+                # Check that the entry is known.
+                if entry not in self.access_exs:
+                    err = 'No access exeption for entry {} in {}.'
+                    raise KeyError(err.format(entry, self.task_name))
+
+                # If a child is provided assume it is the one declaring the
+                # entry.
+                if child and observer:
+                    database.remove_access_exception(ex_path,
+                                                     entry)
+                    child.unobserve('access_exs',
+                                    self._child_access_exs_changed)
+                elif child:
+                    database.remove_access_exception(ex_path,
+                                                     entry)
+
+                # Find the child declaring the entry to determine if the
+                # entry is an access exception.
+                else:
+                    for child in self._gather_children_task():
+                        entries = [child.task_name + '_' + e
+                                   for e in child.task_database_entries]
+                        if entry in entries:
+                            database.remove_access_exception(ex_path,
+                                                             entry)
+
+                        elif hasattr(child, 'access_exs') and\
+                                entry in child.access_exs:
+                            database.remove_access_exception(ex_path,
+                                                             entry)
+                            child.unobserve('access_exs',
+                                            self._child_access_exs_changed)
+
+    def _child_access_exs_changed(self, change):
+        """ Observer connected to ComplexTask children to watch their
+        access_exs.
+
+        """
+        if change['type'] != 'new':
+            added = set(change['value']) - set(change['oldvalue'])
+            removed = set(change['oldvalue']) - set(change['value'])
+            if added and self._last_exs == added:
+                self._refresh_access_exceptions(added, child=change['object'],
+                                                observer=False)
+                self.access_exs.extend(added)
+                self._last_exs = []
+
+            elif removed:
+                sus_access_exs = [ex for ex in removed
+                                  if ex in self.access_exs]
+                if sus_access_exs:
+                    self._refresh_access_exceptions(removed=sus_access_exs,
+                                                    child=change['object'],
+                                                    observer=False)
+                    access_exs = self.access_exs
+                    for ex in sus_access_exs:
+                        access_exs.remove(ex)
+                        self.access_exs = access_exs
+                    self._last_exs = removed
+
+            else:
+                change['object'].unobserve('access_exs',
+                                           self._child_access_exs_changed)
+
 
 from multiprocessing.synchronize import Event
+from threading import Event as tEvent
 
 
 class RootTask(ComplexTask):
     """Special task which is always the root of a measurement.
 
+    On this class and this class only perform can and should be called
+    directly.
+
     """
-    # Path to which log infos, prefernces, etc should be written by default.
+    # --- Public API ----------------------------------------------------------
+
+    #: Path to which log infos, preferences, etc should be written by default.
     default_path = Unicode('').tag(pref=True)
 
-    # Header assembled just before the measure is run.
+    #: Header assembled just before the measure is run.
     default_header = Str('')
 
-    # Dict storing data needed at execution time (ex: drivers classes)
+    #: Dict storing data needed at execution time (ex: drivers classes)
     run_time = Dict()
 
-    # Inter-process event signaling the task it should stop execution.
+    #: Inter-process event signaling the task it should stop execution.
     should_stop = Instance(Event)
 
-    # Seeting default values for the root task.
+    #: Inter-process event signaling the task it should pause execution.
+    should_pause = Instance(Event)
+
+    #: Inter-process event signaling the task is paused.
+    paused = Instance(Event)
+
+    #: Inter-Thread event signaling the main thread is done, handling the
+    #: measure resuming.
+    resume = Value()
+
+    #: Dict like object used to store references to all running threads.
+    #: Keys are pools ids, values list of threads. Keys are never deleted.
+    threads = Typed(SharedDict, (list,))
+
+    #: Dict like object used to store references to used instruments.
+    #: Keys are instrument profile names, values instr instance. Keys are never
+    #: deleted.
+    instrs = Typed(SharedDict, ())
+
+    #: Dict like object used to store file handle.
+    #: Keys are file handle id as defined by the first user of the file.
+    #: Keys can be deleted.
+    files = Typed(SharedDict, ())
+
+    #: Counter keeping track of the active threads.
+    active_threads_counter = Typed(SharedCounter, kwargs={'count': 1})
+
+    #: Counter keeping track of the paused threads.
+    paused_threads_counter = Typed(SharedCounter, ())
+
+    # Setting default values for the root task.
     has_root = set_default(True)
     task_name = set_default('Root')
     task_label = set_default('Root')
     task_depth = set_default(0)
     task_path = set_default('root')
-    task_database_entries = set_default({'threads': {},
-                                         'instrs': {},
-                                         'default_path': ''})
+    task_database_entries = set_default({'default_path': ''})
 
     def __init__(self, *args, **kwargs):
         self.task_preferences = ConfigObj(indent_type='    ')
@@ -912,8 +1320,7 @@ class RootTask(ComplexTask):
         super(RootTask, self).__init__(*args, **kwargs)
         self.register_in_database()
         self.root_task = self
-
-    #--- Public API -----------------------------------------------------------
+        self.parent_task = self
 
     def check(self, *args, **kwargs):
         traceback = {}
@@ -928,23 +1335,50 @@ class RootTask(ComplexTask):
         traceback.update(check[1])
         return test, traceback
 
-    @make_stoppable
-    def process(self):
+    @smooth_crash
+    def perform(self):
         """ Run sequentially all child tasks, and close ressources.
 
         """
-        result = True
-        for child in self.children_task:
-            result &= child.process_(child)
-        pools = self.task_database.get_value('root', 'threads')
-        for pool in pools.values():
-            for thread in pool:
-                thread.join()
-        instrs = self.task_database.get_value('root', 'instrs')
-        for instr_profile in instrs:
-            instrs[instr_profile].close_connection()
+        try:
+            for child in self.children_task:
+                child.perform_(child)
+        except Exception:
+            log = logging.getLogger(__name__)
+            mes = 'The following unhandled exception occured:'
+            log.exception(mes)
+            self.should_stop.set()
+        finally:
+            # Wait for all threads to terminate.
+            for pool_name in self.threads:
+                with self.threads.safe_access(pool_name) as pool:
+                    for thread in pool:
+                        try:
+                            thread.join()
+                        except Exception:
+                            log = logging.getLogger(__name__)
+                            mes = 'Failed to close join thread:'
+                            log.exception(mes)
 
-        return result
+            # Close connection to all instruments.
+            instrs = self.instrs
+            for instr_profile in instrs:
+                try:
+                    instrs[instr_profile].close_connection()
+                except Exception:
+                    log = logging.getLogger(__name__)
+                    mes = 'Failed to close connection to instr:'
+                    log.exception(mes)
+
+            # Close all opened files.
+            files = self.files
+            for file_id in files:
+                try:
+                    files[file_id].close()
+                except Exception:
+                    log = logging.getLogger(__name__)
+                    mes = 'Failed to close file handler:'
+                    log.exception(mes)
 
     def register_in_database(self):
         """ Create a node in the database and register all entries.
@@ -955,13 +1389,17 @@ class RootTask(ComplexTask):
         """
         if self.task_database_entries:
             for entry in self.task_database_entries:
+                # Perform a deepcopy of the entry value as I don't want to
+                # alter that default value when dealing with the database later
+                # on (apply for list and dict).
+                value = deepcopy(self.task_database_entries[entry])
                 self.task_database.set_value(self.task_path,
                                              entry,
-                                             self.task_database_entries[entry])
+                                             value)
 
         self.task_database.create_node(self.task_path, self.task_name)
 
-        #ComplexTask defines children_task so we always get something
+        # ComplexTask defines children_task so we always get something
         for name in tagged_members(self, 'child'):
             child = getattr(self, name)
             if child:
@@ -971,29 +1409,29 @@ class RootTask(ComplexTask):
                 else:
                     child.register_in_database()
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     # Overrided here to give the child its root task right away.
     def _child_added(self, child):
-        #Give the child all the info it needs to register
+        # Give the child all the info it needs to register
         child.task_depth = self.task_depth + 1
         child.task_database = self.task_database
         child.task_path = self.task_path
 
-        #Give him its root so that it can proceed to any child
-        #registration it needs to.
+        # Give him its root so that it can proceed to any child
+        # registration it needs to.
         child.root_task = self.root_task
+        child.parent_task = self
 
-        #Ask the child to register in database
+        # Ask the child to register in database
         child.register_in_database()
-        #Register anew preferences to keep the right ordering for the childs
+        # Register anew preferences to keep the right ordering for the childs
         self.register_preferences()
 
     def _default_task_class(self):
         return ComplexTask.__name__
 
-    @observe('default_path')
-    def _update_default_path_in_database(self, change):
+    def _observe_default_path(self, change):
         """
         """
         new = change['value']
@@ -1007,6 +1445,22 @@ class RootTask(ComplexTask):
 
         """
         pass
+
+    @observe('active_threads_counter.count', 'paused_threads_counter.count')
+    def _state(self, change):
+        """
+
+        """
+        p_count = self.paused_threads_counter.count
+        a_count = self.active_threads_counter.count
+        if a_count == p_count:
+            self.paused.set()
+
+        if p_count == 0:
+            self.paused.clear()
+
+    def _default_resume(self):
+        return tEvent()
 
 KNOWN_PY_TASKS = [ComplexTask]
 

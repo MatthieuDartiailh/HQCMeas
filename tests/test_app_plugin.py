@@ -8,7 +8,7 @@ with enaml.imports():
     from hqc_meas.app_manifest import HqcAppManifest
     from .app_helpers import (ClosingContributor1, ClosingContributor1bis,
                               ClosingContributor2, ClosingContributor3,
-                              ClosingContributor4)
+                              ClosingContributor4, ClosingContributor1ter)
 
 from .util import complete_line
 
@@ -105,6 +105,10 @@ class Test_Prefs(object):
         self.workbench.register(ClosingContributor1())
         assert_equal(len(plugin._closing_extensions), 1)
         assert_equal(len(plugin._closing_checks), 1)
+        
+        self.workbench.register(ClosingContributor1ter())
+        assert_equal(len(plugin._closing_extensions), 2)
+        assert_equal(len(plugin._closing_checks), 2)
 
         self.workbench.unregister(u'test.closing')
         self.workbench.unregister(u'hqc_meas.app')
@@ -133,9 +137,9 @@ class Test_Prefs(object):
 
         """
         self.workbench.register(HqcAppManifest())
+        self.workbench.get_plugin(u'hqc_meas.app')
         self.workbench.register(ClosingContributor1())
         self.workbench.register(ClosingContributor1bis())
-        self.workbench.get_plugin(u'hqc_meas.app')
 
     @raises(ValueError)
     def test_check_errors2(self):

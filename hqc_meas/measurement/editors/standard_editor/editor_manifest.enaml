@@ -22,7 +22,7 @@ def editor_factory(declaration, workbench):
 
 
 enamldef StandardEditorManifest(PluginManifest):
-    """ Manifest contributing the ProcessEngine to the MeasurePlugin.
+    """ Manifest contributing the StandardEditor to the MeasurePlugin.
 
     """
     id = STANDARD_EDITOR_ID

@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
-from atom.api import (Str, List, Dict, Int, Bool)
+from atom.api import (Atom, Str, List, Dict, Int, Bool)
 from enaml.workbench.api import PluginManifest, Extension, Plugin
 from enaml.workbench.ui.api import ActionItem
 from enaml.widgets.api import DockItem, Container
@@ -39,6 +39,22 @@ def debug_view(dock_area, debugger, name):
     return TestDebuggerView(dock_area, debugger=debugger, name=name)
 
 
+class Tester(Atom):
+
+    contributing = Bool()
+
+    def contribute_space(self, workspace):
+        """
+        """
+        self.contributing = True
+
+    def remove_contrib(self, workspace):
+        """
+        """
+        self.contributing = False
+
+tester = Tester()
+
 enamldef TestSuiteManifest(PluginManifest):
     """ Plugin providing all the extesnions needed for testing.
 
@@ -53,6 +69,8 @@ enamldef TestSuiteManifest(PluginManifest):
             id = u'debugger1'
             factory = build_debugger
             view = debug_view
+            contribute_workspace = tester.contribute_space
+            remove_contribution = tester.remove_contrib
 
     # Avoid bug.
     Extension:

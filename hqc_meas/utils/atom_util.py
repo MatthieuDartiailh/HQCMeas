@@ -6,6 +6,7 @@
 # =============================================================================
 from collections import OrderedDict
 from atom.api import Str, Unicode, Enum, Atom, Member, Validate
+from ast import literal_eval
 
 
 def tagged_members(obj, meta=None, meta_value=None):
@@ -68,7 +69,7 @@ def simple_member_from_str(member, str_value):
 
     # Otherwise, we eval it!
     else:
-        value = eval(str_value)
+        value = literal_eval(str_value)
 
     return value
 

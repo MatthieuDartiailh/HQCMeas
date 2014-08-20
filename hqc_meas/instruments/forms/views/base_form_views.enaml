@@ -1,9 +1,16 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : connection_forms_view.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
 from atom.api import Enum
 from enaml.widgets.api import (Container, Form, ObjectCombo, Field, Label)
 from enaml.core.api import Conditional
-from .base_forms import (VisaForm, DummyForm)
 
-enamldef NoneFormView(Form):
+enamldef EmptyView(Form):
     attr model
     attr mode = Enum('static', 'new', 'edit')
 
@@ -20,9 +27,11 @@ enamldef VisaFormView(Form):
     Conditional:
         condition = bool(mode != 'static')
         ObjectCombo:
-            items = ['GPIB', 'USB', 'TCPIP']
+            items << model.protocoles.keys()
             selected = None
-            selected >> model.connection_type
+            selected := model.connection_type
+            selected ::
+                add.text = model.protocoles[change['value']]
     Label:
         text = 'Address'
     Field:
@@ -30,10 +39,9 @@ enamldef VisaFormView(Form):
         read_only = bool(mode == 'static')
     Label:
         text = 'Additionnal'
-    Field:
+    Field: add:
         text := model.additionnal_mode
         read_only = bool(mode == 'static')
 
-FORMS_MAP_VIEWS = {type(None) : NoneFormView,
-                   DummyForm : NoneFormView,
-                   VisaForm : VisaFormView}
+FORMS_MAP_VIEWS = {'DummyForm': EmptyView,
+                   'VisaForm' : VisaFormView}

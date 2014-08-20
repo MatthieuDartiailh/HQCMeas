@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_task_filters.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """ Modules defining the basic filters.
 
 :Contains:
@@ -13,17 +13,19 @@
     PyTaskFilter:
     TemplateTaskFilter:
     SubclassFilter:
-        Tool class for filter using issubclass.
+        Tool class for filtering using issubclass.
     SimpleTaskFilter:
     ComplexTaskFilter:
-    LoopTaskFilter:
     InstrumentTaskFilter:
+    ClassAttrTaskFilter:
+        Tool class for filtering using a class attribute value
+    LogicalTaskFilter:
     LoopableTaskFilter:
     TASK_FILTERS:
         Dict mapping useful filters to their names.
 
 """
-from ...tasks.api import (SimpleTask, ComplexTask, BaseLoopTask,
+from ...tasks.api import (SimpleTask, ComplexTask,
                           InstrumentTask)
 
 
@@ -125,13 +127,6 @@ class ComplexTaskFilter(SubclassFilter):
     task_class = ComplexTask
 
 
-class LoopTaskFilter(SubclassFilter):
-    """ Filter keeping only the subclasses of BaseLoopTask.
-
-    """
-    task_class = BaseLoopTask
-
-
 class InstrumentTaskFilter(SubclassFilter):
     """ Filter keeping only the subclasses of InstrumentTask.
 
@@ -160,6 +155,11 @@ class ClassAttrTaskFilter(AbstractTaskFilter):
 
         return tasks
 
+class LogicalTaskFilter(ClassAttrTaskFilter):
+    """ Filter keeping only the task declared to be loopable.
+
+    """
+    class_attr = {'name': 'logic_task', 'value': True}
 
 class LoopableTaskFilter(ClassAttrTaskFilter):
     """ Filter keeping only the task declared to be loopable.
@@ -175,4 +175,4 @@ TASK_FILTERS = {'All': AllTaskFilter,
                 'Complex': ComplexTaskFilter,
                 'Loopable': LoopableTaskFilter,
                 'Instrs': InstrumentTaskFilter,
-                'Loop': LoopTaskFilter}
+                'Logic': LogicalTaskFilter}

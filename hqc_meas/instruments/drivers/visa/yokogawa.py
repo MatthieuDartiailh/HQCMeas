@@ -13,13 +13,12 @@ This module defines drivers for yokogawa sources using VISA library.
 
 """
 import re
-from visa import VisaTypeError
 from textwrap import fill
 from inspect import cleandoc
 
 from ..driver_tools import (InstrIOError, instrument_property,
                             secure_communication)
-from ..visa_tools import VisaInstrument
+from ..visa_tools import VisaInstrument, VisaTypeError
 
 
 class YokogawaGS200(VisaInstrument):

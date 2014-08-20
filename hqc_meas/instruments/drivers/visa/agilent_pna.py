@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : agilent_pna.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 This module defines drivers for agilent PNA.
 
@@ -72,6 +72,9 @@ class AgilentPNAChannel(BaseInstrument):
             Array of Floating points holding the data.
 
         """
+        if meas_name:
+            self.selected_measure = meas_name
+
         data_request = 'CALCulate{}:DATA? FDATA'.format(self._channel)
         if self._pna.data_format == 'REAL,32':
             data = self._pna.ask_for_values(data_request, single)
@@ -203,7 +206,7 @@ class AgilentPNAChannel(BaseInstrument):
             self._pna.write(
                 "CALCulate{}:PARameter:DELete '{}'".format(self._channel,
                                                            meas['name']))
-        self.clear_instrument_cache(['selected_measure'])
+        self.clear_cache(['selected_measure'])
         if self.list_existing_measures():
             raise InstrIOError(cleandoc('''The Pna did not delete all meas
                 for channel {}'''.format(self._channel)))

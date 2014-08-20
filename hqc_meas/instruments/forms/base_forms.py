@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
-# module : connection_forms.py
+# =============================================================================
+# module : base_forms.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 Definition of the forms used to enter the information necessary to open a
 connection to an instrument according to the type of connection used.
@@ -16,12 +16,18 @@ connection to an instrument according to the type of connection used.
 """
 from textwrap import fill
 from inspect import cleandoc
-from atom.api import Atom, Unicode
+from atom.api import Atom, Unicode, Subclass, Dict
+from ..drivers.driver_tools import BaseInstrument
 
 
 class AbstractConnectionForm(Atom):
     """
     Abstract class defining what is expected from a form
+
+    Attributes
+    ----------
+    driver : type
+        Class of the driver for which a profile is edited.
 
     Methods
     -------
@@ -39,6 +45,8 @@ class AbstractConnectionForm(Atom):
         subclass which will use it.
 
     """
+    driver = Subclass(BaseInstrument)
+
     def check(self):
         """Check whether or not enough information have been given by the user.
         """
@@ -107,6 +115,8 @@ class VisaForm(AbstractConnectionForm):
     address = Unicode('')
     additionnal_mode = Unicode('')
 
+    protocoles = Dict(default={'GPIB': '', 'TCPIP': '', 'USB': ''})
+
     def check(self):
         """Check whether or not the user provided a type and an address.
         """
@@ -124,6 +134,16 @@ class VisaForm(AbstractConnectionForm):
         return {'connection_type': self.connection_type,
                 'address': self.address,
                 'additionnal_mode': self.additionnal_mode}
+
+    def _observe_driver(self, change):
+        """ Keep the protocoles in sync with the selected driver.
+
+        """
+        driver = change['value']
+        if hasattr(driver, 'protocoles'):
+            self.protocoles = driver.protocoles
+        else:
+            self.protocoles = {'GPIB': '', 'TCPIP': '', 'USB': ''}
 
 
 class DummyForm(AbstractConnectionForm):
@@ -146,8 +166,6 @@ class DummyForm(AbstractConnectionForm):
         """
         return {}
 
-FORMS = {'Dummy': DummyForm, 'Visa': VisaForm}
-"""Dictionnary mapping protocol names to their associated form. Used to
-determine the correct form to display once the user selected a driver type
-
+FORMS = {'DummyInstrument': DummyForm, 'VisaInstrument': VisaForm}
+"""Dictionnary mapping driver or driver type names to their associated form.
 """

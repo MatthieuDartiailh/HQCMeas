@@ -51,7 +51,7 @@ class PrefPlugin(Plugin):
                 self._prefs.merge(defaults)
 
         elif os.path.isfile(def_pref_path):
-            defaults = ConfigObj(pref_path)
+            defaults = ConfigObj(def_pref_path)
             self._prefs.merge(defaults)
 
         self._refresh_pref_decls()

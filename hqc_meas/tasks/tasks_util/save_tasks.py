@@ -8,14 +8,12 @@
 """
 from atom.api import (Tuple, ContainerList, Str, Enum, Value,
                       Bool, Int, observe, set_default, Unicode)
-
 import os
+import errno
 import numpy
 import logging
 from inspect import cleandoc
 
-from ..tools.database_string_formatter import (get_formatted_string,
-                                               format_and_eval_string)
 from ..base_tasks import SimpleTask
 
 
@@ -29,70 +27,71 @@ class SaveTask(SimpleTask):
     Currently only support saving floats.
 
     """
-    # Folder in which to save the data.
-    folder = Unicode().tag(pref=True)
-
-    # Name of the file in which to write the data.
-    filename = Str().tag(pref=True)
-
-    # Currently opened file object. (File mode)
-    file_object = Value()
-
-    # Header to write at the top of the file.
-    header = Str().tag(pref=True)
-
-    # Numpy array in which data are stored (Array mode)
-    array = Value()  # Array
-
-    # Kind of object in which to save the data.
+    #: Kind of object in which to save the data.
     saving_target = Enum('File', 'Array', 'File and array').tag(pref=True)
 
-    # Size of the data to be saved. (Evaluated at runtime)
+    #: Folder in which to save the data.
+    folder = Unicode().tag(pref=True)
+
+    #: Name of the file in which to write the data.
+    filename = Unicode().tag(pref=True)
+
+    #: Currently opened file object. (File mode)
+    file_object = Value()
+
+    #: Opening mode to use when saving to a file.
+    file_mode = Enum('New', 'Add')
+
+    #: Header to write at the top of the file.
+    header = Str().tag(pref=True)
+
+    #: Numpy array in which data are stored (Array mode)
+    array = Value()  # Array
+
+    #: Size of the data to be saved. (Evaluated at runtime)
     array_size = Str().tag(pref=True)
 
-    # Computed size of the data (post evaluation)
+    #: Computed size of the data (post evaluation)
     array_length = Int()
 
-    # Index of the current line.
+    #: Index of the current line.
     line_index = Int(0)
 
-    # List of values to be saved store as (label, value).
+    #: List of values to be saved store as (label, value).
     saved_values = ContainerList(Tuple()).tag(pref=True)
 
-    # Flag indicating whether or not initialisation has been performed.
+    #: Flag indicating whether or not initialisation has been performed.
     initialized = Bool(False)
 
     task_database_entries = set_default({'file': None})
 
-    def __init__(self, **kwargs):
-        super(SaveTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """ Collect all data and write them to array or file according to mode.
 
-        On first call initialise the systemby creating file and/or array. Close
+        On first call initialise the system by opening file and/or array. Close
         file when the expected number of lines has been written.
 
         """
         #Initialisation.
         if not self.initialized:
+
             self.line_index = 0
-            self.array_length = format_and_eval_string(self.array_size,
-                                                       self.task_path,
-                                                       self.task_database)
+            size_str = self.array_size
+            if size_str:
+                self.array_length = self.format_and_eval_string(size_str)
+            else:
+                self.array_length = -1
+
             if self.saving_target != 'Array':
-                full_folder_path = get_formatted_string(self.folder,
-                                                        self.task_path,
-                                                        self.task_database)
-
-                filename = get_formatted_string(self.filename,
-                                                self.task_path,
-                                                self.task_database)
-
+                full_folder_path = self.format_string(self.folder)
+                filename = self.format_string(self.filename)
                 full_path = os.path.join(full_folder_path, filename)
+                mode = 'wb' if self.file_mode == 'New' else 'ab'
+
                 try:
-                    self.file_object = open(full_path, 'w')
+                    self.file_object = open(full_path, mode)
                 except IOError:
                     log = logging.getLogger()
                     mes = cleandoc('''In {}, failed to open the specified
@@ -101,7 +100,7 @@ class SaveTask(SimpleTask):
                     self.root_task.should_stop.set()
                     return False
 
-                self.write_in_database('file', self.file_object)
+                self.root_task.files[full_path] = self.file_object
                 if self.header:
                     for line in self.header.split('\n'):
                         self.file_object.write('# ' + line + '\n')
@@ -120,9 +119,7 @@ class SaveTask(SimpleTask):
             self.initialized = True
 
         #writing
-        values = [format_and_eval_string(s[1],
-                                         self.task_path,
-                                         self.task_database)
+        values = [self.format_and_eval_string(s[1])
                   for s in self.saved_values]
         if self.saving_target != 'Array':
             self.file_object.write('\t'.join([str(val)
@@ -135,61 +132,67 @@ class SaveTask(SimpleTask):
 
         #Closing
         if self.line_index == self.array_length:
-            self.write_in_database('array', self.array)
-            self.file_object.close()
+            if self.file_object:
+                self.file_object.close()
             self.initialized = False
-
-        return True
 
     def check(self, *args, **kwargs):
         """
         """
+        err_path = self.task_path + '/' + self.task_name
         traceback = {}
         if self.saving_target != 'Array':
             try:
-                full_folder_path = get_formatted_string(self.folder,
-                                                        self.task_path,
-                                                        self.task_database)
-            except Exception:
-                traceback[self.task_path + '/' + self.task_name] = \
-                    'Failed to format the folder path'
+                full_folder_path = self.format_string(self.folder)
+            except Exception as e:
+                mess = 'Failed to format the folder path: {}'
+                traceback[err_path] = mess.format(e)
                 return False, traceback
 
             try:
-                filename = get_formatted_string(self.filename, self.task_path,
-                                                self.task_database)
-            except Exception:
-                traceback[self.task_path + '/' + self.task_name] = \
-                    'Failed to format the filename'
+                filename = self.format_string(self.filename)
+            except Exception as e:
+                mess = 'Failed to format the filename: {}'
+                traceback[err_path] = mess.format(e)
                 return False, traceback
 
             full_path = os.path.join(full_folder_path, filename)
 
+            overwrite = False
+            if self.file_mode == 'New' and os.path.isfile(full_path):
+                overwrite = True
+                traceback[err_path + '-file'] = \
+                    cleandoc('''File already exists, running the measure will
+                    override it.''')
+
             try:
-                f = open(full_path, 'wb')
+                f = open(full_path, 'ab')
                 f.close()
-            except Exception:
-                traceback[self.task_path + '/' + self.task_name] = \
-                    'Failed to open the specified file'
+                if self.file_mode == 'New' and not overwrite:
+                    os.remove(full_path)
+            except Exception as e:
+                mess = 'Failed to open the specified file'
+                traceback[err_path] = mess.format(e)
                 return False, traceback
 
-        try:
-            format_and_eval_string(self.array_size,
-                                   self.task_path,
-                                   self.task_database)
-        except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Failed to compute the array size'
+        if self.array_size:
+            try:
+                self.format_and_eval_string(self.array_size)
+            except Exception as e:
+                mess = 'Failed to compute the array size: {}'
+                traceback[err_path] = mess.format(e)
+                return False, traceback
+
+        elif self.saving_target != 'File':
+            traceback[err_path] = 'A size for the array must be provided.'
             return False, traceback
 
         test = True
         for i, s in enumerate(self.saved_values):
             try:
-                format_and_eval_string(s[1],
-                                       self.task_path,
-                                       self.task_database)
+                self.format_and_eval_string(s[1])
             except Exception as e:
-                traceback[self.task_path + '/' + self.task_name + str(i)] = \
+                traceback[err_path + '-entry' + str(i)] = \
                     'Failed to evaluate entry {}: {}'.format(s[0], e)
                 test = False
 
@@ -207,13 +210,10 @@ class SaveTask(SimpleTask):
         """
         """
         new = change['value']
-        if new == 'File':
-            self.task_database_entries = {'file': None}
-        elif new == 'Array':
+        if new != 'File':
             self.task_database_entries = {'array': numpy.array([1.0])}
         else:
-            self.task_database_entries = {'file': None,
-                                          'array': numpy.array([1.0])}
+            self.task_database_entries = {}
 
 
 class SaveArrayTask(SimpleTask):
@@ -223,69 +223,66 @@ class SaveArrayTask(SimpleTask):
 
     """
 
-    # Folder in which to save the data.
+    #: Folder in which to save the data.
     folder = Unicode().tag(pref=True)
 
-    # Name of the file in which to write the data.
+    #: Name of the file in which to write the data.
     filename = Str().tag(pref=True)
 
-    # Currently opened file object.
-    file_object = Value()
-
-    # Header to write at the top of the file.
+    #: Header to write at the top of the file.
     header = Str().tag(pref=True)
 
-    # Name of the array to save in the database.
+    #: Name of the array to save in the database.
     target_array = Str().tag(pref=True)
 
-    # Flag indicating whether to save as csv or .npy.
+    #: Flag indicating whether to save as csv or .npy.
     mode = Enum('Text file', 'Binary file').tag(pref=True)
 
-    def __init__(self, **kwargs):
-        super(SaveArrayTask, self).__init__(**kwargs)
-        self.make_wait()
+    wait = set_default({'no_wait': []})  # Wait on all pools by default.
 
-    def process(self):
+    def perform(self):
         """ Save array to file.
 
         """
         array_to_save = self.get_from_database(self.target_array[1:-1])
 
-        full_folder_path = get_formatted_string(self.folder,
-                                                self.task_path,
-                                                self.task_database)
+        full_folder_path = self.format_string(self.folder)
 
-        filename = get_formatted_string(self.filename,
-                                        self.task_path,
-                                        self.task_database)
+        filename = self.format_string(self.filename)
 
         full_path = os.path.join(full_folder_path, filename)
 
+        # Create folder if it does not exists.
+        try:
+            os.makedirs(full_folder_path)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+
         if self.mode == 'Text file':
             try:
-                self.file_object = open(full_path, 'wb')
+                file_object = open(full_path, 'wb')
             except IOError:
                 mes = cleandoc('''In {}, failed to open the specified
                                 file'''.format(self.task_name))
                 log = logging.getLogger()
                 log.error(mes)
-
-                self.root_task.should_stop.set()
-                return
+                raise
 
             if self.header:
                 for line in self.header.split('\n'):
-                    self.file_object.write('# ' + line + '\n')
+                    file_object.write('# ' + line + '\n')
+
             if array_to_save.dtype.names:
-                self.file_object.write('\t'.join(array_to_save.dtype.names) +
-                                       '\n')
-            numpy.savetxt(self.file_object, array_to_save, delimiter='\t')
-            self.file_object.close()
+                file_object.write('\t'.join(array_to_save.dtype.names) + '\n')
+
+            numpy.savetxt(file_object, array_to_save, delimiter='\t')
+            file_object.close()
 
         else:
             try:
-                self.file_object = open(full_path, 'wb')
-                self.file_object.close()
+                file_object = open(full_path, 'wb')
+                file_object.close()
             except IOError:
                 mes = cleandoc(''''In {}, failed to open the specified
                                 file'''.format(self.task_name))
@@ -302,45 +299,56 @@ class SaveArrayTask(SimpleTask):
 
         """
         traceback = {}
+        err_path = self.task_path + '/' + self.task_name
         try:
-            full_folder_path = get_formatted_string(self.folder,
-                                                    self.task_path,
-                                                    self.task_database)
-        except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Failed to format the folder path'
+            full_folder_path = self.format_string(self.folder)
+        except Exception as e:
+            traceback[err_path] = \
+                'Failed to format the folder path: {}'.format(e)
             return False, traceback
 
         if self.mode == 'Binary file':
-            if len(self.filename) > 3:
-                if self.filename[-4] == '.' and self.filename[-3:] != 'npy':
-                    self.filename = self.filename[:-4] + '.npy'
-                    log = logging.getLogger()
-                    mes = cleandoc("""The extension of the file will be
-                                    replaced by '.npy' in task
-                                    {}""".format(self.task_name))
-                    log.info(mes)
+            if len(self.filename) > 3 and self.filename[-4] == '.'\
+                    and self.filename[-3:] != 'npy':
+                self.filename = self.filename[:-4] + '.npy'
+                mes = cleandoc("""The extension of the file will be
+                                replaced by '.npy' in task
+                                {}""".format(self.task_name))
+                traceback[err_path + '-file_ext'] = mes
+
+            if self.header:
+                traceback[err_path + '-header'] =\
+                    'Cannot write a header when saving in binary mode.'
 
         try:
-            filename = get_formatted_string(self.filename, self.task_path,
-                                            self.task_database)
-        except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Failed to format the filename'
+            filename = self.format_string(self.filename)
+        except Exception as e:
+            traceback[err_path] = \
+                'Failed to format the filename: {}'.format(e)
             return False, traceback
 
         full_path = os.path.join(full_folder_path, filename)
 
+        overwrite = False
+        if os.path.isfile(full_path):
+            overwrite = True
+            traceback[err_path + '-file'] = \
+                cleandoc('''File already exists, running the measure will
+                override it.''')
+
         try:
-            f = open(full_path, 'wb')
+            f = open(full_path, 'ab')
             f.close()
-        except Exception:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Failed to open the specified file'
+            if not overwrite:
+                os.remove(full_path)
+        except Exception as e:
+            mess = 'Failed to open the specified file: {}'
+            traceback[err_path] = mess.format(e)
             return False, traceback
 
-        entries = self.task_database.list_accessible_entries(self.task_path)
-        if self.target_array[1:-1] not in entries:
+        try:
+            self.get_from_database(self.target_array[1:-1])
+        except KeyError:
             traceback[self.task_path + '/' + self.task_name] = \
                 'Specified array is absent from the database'
             return False, traceback

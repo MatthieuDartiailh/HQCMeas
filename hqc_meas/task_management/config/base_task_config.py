@@ -13,13 +13,14 @@
 
 """
 
-from atom.api import (Atom, Str, Bool, Unicode, Subclass, ForwardTyped, Dict,
+from atom.api import (Atom, Str, Bool, Unicode, Subclass, ForwardTyped,
                       observe)
 
 from inspect import getdoc, cleandoc
 
-from ...tasks.api import BaseTask, RootTask
+from ...tasks.api import BaseTask
 from ..templates import load_template
+from ..building import build_task_from_config
 
 
 # Circular import protection
@@ -114,10 +115,6 @@ class IniConfigTask(AbstractConfigTask):
     # Description of the template.
     template_doc = Str()
 
-    # Dict holding the task classes, if absent classes will be queried from
-    #the task manager.
-    task_classes = Dict(Str(), Subclass(BaseTask))
-
     def __init__(self, **kwargs):
         super(IniConfigTask, self).__init__(**kwargs)
         if self.template_path:
@@ -132,107 +129,9 @@ class IniConfigTask(AbstractConfigTask):
             self.config_ready = False
 
     def build_task(self):
-        """
+        """ Build the task stored in the selected template.
+
         """
         config, _ = load_template(self.template_path)
-        #Handle the case of an attempt to make a root task of a task which is
-        #not a ComplexTask. built_task will be returned but task will be the
-        #object used for the following manipulations.
-        task_class = self._get_task(config['task_class'])
-        if 'ComplexTask' not in [c.__name__ for c in type.mro(task_class)]:
-            built_task = RootTask()
-            task = task_class(task_name=config['task_name'])
-            built_task.children.append(task)
-        else:
-            task = task_class(task_name=self.task_name)
-            built_task = task
-
-        parameters = self._prepare_parameters(config)
-        task.update_members_from_preferences(**parameters)
+        built_task = build_task_from_config(config, self.manager)
         return built_task
-
-    def build_task_from_config(self, config):
-        """ Build a task hierarchy from a configobj.Section.
-
-        Parameters:
-        ----------
-            config : configobj.Section
-                Section holding the infos to build the task hierarchy.
-
-        Returns
-        -------
-            task : instance(AbstractTask)
-                Task object built using the user parameters.
-
-        """
-        built_task = RootTask(task_name='Root')
-        parameters = self._prepare_parameters(config)
-        built_task.update_members_from_preferences(**parameters)
-        return built_task
-
-    def _build_child(self, section):
-        """ Build a child task of the hierarchy using its config.
-
-        Parameters:
-        ----------
-            section : configobj.Section
-                Scetion storing the necessary infos to build the child.
-
-        Returns:
-        -------
-            task:
-                Built child task.
-
-        """
-        task = self._get_task(section['task_class'])(task_name=
-                                                     section['task_name'])
-        parameters = self._prepare_parameters(section)
-        task.update_members_from_preferences(**parameters)
-
-        return task
-
-    def _prepare_parameters(self, section):
-        """ Assemble task parameters, ie attr and childs.
-
-        Parameters:
-            section : Section
-                Section describing the parameters which must be sent to the
-                task.
-
-        Return:
-            parameters : dict
-                Dictionnary holding the parameters to be passed to a task.
-
-        """
-        #First getting the non-task traits as string
-        parameters = {}
-        if section.scalars:
-            for entry in section.scalars:
-                if entry != 'task_class' and entry != 'task_name':
-                    parameters[entry] = section[entry]
-
-        #Second creating all the neccessary children
-        if section.sections:
-            for entry in section.sections:
-                key = entry
-                if any(i in entry for i in '0123456789'):
-                    key = ''.join(c for c in entry if not c.isdigit())
-                    if key.endswith('_'):
-                        key = key[:-1]
-                if key in parameters:
-                    parameters[key].append(self._build_child(section[entry]))
-                else:
-                    parameters[key] = [self._build_child(section[entry])]
-
-        return parameters
-
-    def _get_task(self, name):
-        """ Helper to retrieve a task class from the manager.
-
-        """
-        if self.task_classes:
-            return self.task_classes[name]
-        else:
-            tasks, _ = self.manager.tasks_request([name],
-                                                  use_class_names=True)
-            return tasks.values()[0]

@@ -1,0 +1,43 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : def_task_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox
+from enaml.widgets.api import (Container, GroupBox, Field)
+
+from hqc_meas.tasks.tools.pair_editor import PairEditor
+
+
+enamldef Def(Container):
+
+    attr model
+    constraints = [hbox(lab, defi)]
+    padding = (0,2,0,0)
+
+    Field: lab:
+        hug_width = 'strong'
+        text := model.label
+    Field: defi:
+        hug_width = 'ignore'
+        text := model.value
+
+
+enamldef DefinitionView(GroupBox):
+
+    attr task
+    title << task.task_name
+    padding = 2
+
+    PairEditor(Def): defs:
+        defs.title = 'Label : Value'
+        defs.model := task
+        defs.iterable_name = 'definitions'
+
+
+TASK_VIEW_MAPPING = {'DefinitionTask' : DefinitionView}
+
+

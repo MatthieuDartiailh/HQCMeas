@@ -15,6 +15,7 @@ from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
 from inspect import cleandoc
 from textwrap import fill
 
+from hqc_meas.utils.widgets.errors_display import ErrorsDisplayContainer
 from hqc_meas.utils.widgets.qt_tree_widget import QtTreeWidget
 from hqc_meas.utils.widgets.tree_nodes import TreeNode
 from hqc_meas.utils.widgets.qt_tree_menu import \
@@ -37,13 +38,14 @@ enamldef SaveAction(Action):
         # TODO use core
 #        save_task(obj, mode='template')
 
-def build_task(workbench, parent_ui):
+def build_task(workbench):
     """ Call the Command responsible for building a task.
 
     """
     core = workbench.get_plugin('enaml.workbench.core')
+    ui = workbench.get_plugin('enaml.workbench.ui')
     return core.invoke_command('hqc_meas.task_manager.build_task',
-                               {'parent_ui': parent_ui}, workbench)
+                               {'parent_ui': ui.window}, workbench)
 
 
 enamldef SimpleMenu(Menu): menu:
@@ -57,12 +59,12 @@ enamldef SimpleMenu(Menu): menu:
         action_context << context
         factory = build_task
         mode = 'Add before'
-        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench}
     NewAction:
         action_context << context
         factory = build_task
         mode = 'Add after'
-        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench}
     Action:
         separator = True
     CutAction:
@@ -91,7 +93,7 @@ enamldef ComplexMenu(Menu): menu:
     NewAction:
         action_context << context
         factory = build_task
-        kwargs = {'workbench': workspace.workbench, 'parent_ui': menu}
+        kwargs = {'workbench': workspace.workbench}
     Action:
         separator = True
     SaveAction:
@@ -161,13 +163,9 @@ class _MeasEditionModel(Atom):
 
         """
         self.selected_editor = None
-        self._unvalid_editors.clear()
         self.valid_editors = []
 
     #--- Private API ----------------------------------------------------------
-
-    # Dict storing editor started and then removed from the valid ones.
-    _unvalid_editors = Dict()
 
     def _observe_selected_task(self, change):
         """ Keep the list of valid editors up to date and update editor.
@@ -189,17 +187,19 @@ class _MeasEditionModel(Atom):
             to_remove = current_editor_ids - valid_editor_ids
             to_add = valid_editor_ids - current_editor_ids
             for editor in self.valid_editors[:]:
-                if editor.id in to_remove:
+                ed_id = editor.declaration.id
+                if ed_id in to_remove:
                     self.valid_editors.remove(editor)
-                    self._unvalid_editors[editor.id] = editor
 
             for id in to_add:
-                if id not in self._unvalid_editors:
-                    decl = editors[id]
-                    editor = decl.factory(decl, self.workspace.workbench)
+                decl = editors[id]
+                editor = decl.factory(decl, self.workspace.workbench)
+
+                # Make sure the standard editor is the first one.
+                if id == u'hqc_meas.measure.editors.standard_editor':
+                    self.valid_editors.insert(0, editor)
                 else:
-                    editor = self._unvalid_editors[id]
-                self.valid_editors.append(editor)
+                    self.valid_editors.append(editor)
 
         if not self.selected_editor:
             self.selected_editor = self.valid_editors[0]
@@ -212,6 +212,9 @@ class _MeasEditionModel(Atom):
         """ Update infos for newly selected editor.
 
         """
+        if 'oldvalue' in change and change['oldvalue']:
+            change['oldvalue'].unselected = True
+
         editor = change['value']
         if editor:
             # Update selected task.
@@ -220,6 +223,28 @@ class _MeasEditionModel(Atom):
             # Get tree preferences.
             self.tree_enabled = editor.tree_enabled
             self.tree_visible = editor.tree_visible
+
+            editor.selected = True
+
+
+enamldef WarningsDisplay(Dialog): dial:
+    """
+
+    """
+    alias errors : cont.errors
+
+    title = 'Warnings'
+
+    ErrorsDisplayContainer: cont:
+        pass
+    PushButton: cancel:
+        text = 'Cancel'
+        clicked ::
+            dial.reject()
+    PushButton: enq:
+        text = 'Enqueue'
+        clicked ::
+            dial.accept()
 
 
 enamldef MeasEditionView(Container): ed:
@@ -302,8 +327,10 @@ enamldef MeasEditionView(Container): ed:
         # previously selected editor is removed.
         tabs_closable = False
         hug_width = 'ignore'
-#        selected_tab ::
-#            _internal.selected_editor = self.find(selected_tab)
+        selected_tab ::
+            ed = self.find(selected_tab)
+            if ed != editors:
+                _internal.selected_editor = ed
         Include:
             objects << _internal.valid_editors
 
@@ -394,6 +421,9 @@ enamldef MeasureEditorDialog(Dialog): main:
     attr workspace
     attr measure
     title = 'Edit measure {}'.format(measure.name)
+    closed::
+        if 'build_deps' in measure.store:
+            del measure.store['build_dep']
 
     Container:
         constraints = [vbox(editor, hbox(save, spacer))]
