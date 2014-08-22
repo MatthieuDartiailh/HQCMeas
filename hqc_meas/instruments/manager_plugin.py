@@ -25,6 +25,9 @@ from .drivers.driver_tools import BaseInstrument
 from .instr_user import InstrUser
 from .profile_utils import open_profile
 
+with enaml.imports():
+    from .forms.views.base_form_views import EmptyView
+
 
 USERS_POINT = u'hqc_meas.instr_manager.users'
 
@@ -324,10 +327,10 @@ class InstrManagerPlugin(HasPrefPlugin):
             View matching the form.
 
         """
-        form, f_view = None, None
+        form, f_view = None, EmptyView
         if driver in self._driver_types:
             aux = self._driver_types[driver].__name__
-            form, f_view = self._forms.get(aux, (None, None))
+            form, f_view = self._forms.get(aux, (None, EmptyView))
 
         elif driver in self._drivers:
             d_mro = self._drivers[driver].mro()
@@ -336,7 +339,7 @@ class InstrManagerPlugin(HasPrefPlugin):
                 driver = d_mro[i].__name__
                 i += 1
 
-            form, f_view = self._forms.get(driver, (None, None))
+            form, f_view = self._forms.get(driver, (None, EmptyView))
 
         if form is None:
             logger = logging.getLogger(__name__)

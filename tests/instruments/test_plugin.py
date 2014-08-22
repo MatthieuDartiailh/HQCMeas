@@ -10,13 +10,13 @@ import enaml
 import os
 from configobj import ConfigObj
 from nose.tools import assert_equal, assert_in, assert_not_in, assert_is_not
+from nose.plugins.attrib import attr
 from nose.plugins.skip import SkipTest
 
 from .tools import BaseClass
 
 with enaml.imports():
     from hqc_meas.instruments.manager_manifest import InstrManagerManifest
-    from hqc_meas.instruments.forms import FORMS, FORMS_MAP_VIEWS
 
     from .users import InstrUser1, InstrUser2, InstrUser3, InstrUser4
 
@@ -72,6 +72,7 @@ class Test_DriverManagement(BaseClass):
         self.workbench.unregister(u'test.user2')
         assert_equal(plugin._users.keys(), [u'test.user1'])
 
+    @attr('no_travis')
     def test_profile_observation(self):
         self.workbench.register(InstrManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.instr_manager')
@@ -83,13 +84,15 @@ class Test_DriverManagement(BaseClass):
         prof['driver_type'] = 'Dummy'
         prof['driver'] = 'PanelTestDummy'
         prof.write()
-        from time import sleep
-        sleep(0.1)
-        process_app_events()
-        assert_in(u'Test', plugin.all_profiles)
-        assert_in(u'Test', plugin.available_profiles)
-        os.remove(os.path.join(profile_path, 'test.ini'))
-        sleep(0.1)
+        try:
+            from time import sleep
+            sleep(0.5)
+            process_app_events()
+            assert_in(u'Test', plugin.all_profiles)
+            assert_in(u'Test', plugin.available_profiles)
+        finally:
+            os.remove(os.path.join(profile_path, 'test.ini'))
+        sleep(0.5)
         process_app_events()
         assert_not_in(u'Test', plugin.all_profiles)
         assert_not_in(u'Test', plugin.available_profiles)
@@ -156,14 +159,14 @@ class Test_DriverManagement(BaseClass):
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.matching_form'
         form = core.invoke_command(com, {'driver': 'Dummy'}, self)
-        assert_equal(form, FORMS['Dummy'])
+        assert_equal(form.__name__, 'DummyForm')
 
     def test_matching_form2(self):
         self.workbench.register(InstrManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         com = u'hqc_meas.instr_manager.matching_form'
         form = core.invoke_command(com, {'driver': 'PanelTestDummy'}, self)
-        assert_equal(form, FORMS['Dummy'])
+        assert_equal(form.__name__, 'DummyForm')
 
     def test_matching_form3(self):
         self.workbench.register(InstrManagerManifest())
@@ -172,7 +175,7 @@ class Test_DriverManagement(BaseClass):
         form, view = core.invoke_command(com, {'driver': '__xxxx__',
                                                'view': True}, self)
         assert_equal(form, None)
-        assert_equal(view, FORMS_MAP_VIEWS[type(None)])
+        assert_equal(view.__name__, 'EmptyView')
 
     def test_matching_profiles(self):
         self.workbench.register(InstrManagerManifest())
