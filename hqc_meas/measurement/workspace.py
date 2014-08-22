@@ -227,7 +227,7 @@ class MeasureSpace(Workspace):
         runtime_deps = res[2]
 
         test_instr = 'profiles' in runtime_deps and runtime_deps['profiles']
-        if 'profiles' in runtime_deps and test_instr:
+        if 'profiles' in runtime_deps and not test_instr:
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, instr tests will be skipped and
                            performed before actually starting the

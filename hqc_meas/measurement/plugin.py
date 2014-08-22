@@ -150,8 +150,6 @@ class MeasurePlugin(HasPrefPlugin):
         """ Start a new measure.
 
         """
-        self.flags.append('processing')
-
         logger = logging.getLogger(__name__)
 
         # Discard old monitors if there is any remaining.
@@ -161,6 +159,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         measure.enter_running_state()
         self.running_measure = measure
+        
+        self.flags.append('processing')
 
         instr_use_granted = False
         # Checking build dependencies, if present simply request instr profiles

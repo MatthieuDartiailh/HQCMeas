@@ -212,6 +212,7 @@ enamldef _ExEditor(Container):
 enamldef _SimpleExEditor(GroupBox):
     alias task : ed.task
     alias _model : ed._model
+    attr _map
 
     title = task.task_name
 

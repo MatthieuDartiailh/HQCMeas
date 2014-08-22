@@ -100,8 +100,9 @@ class InterfaceableTaskMixin(Atom):
         i = ancestors.index(InterfaceableTaskMixin)
         answers = ancestors[i + 1].answer(self, members, callables)
 
-        interface_answers = self.interface.answer(members, callables)
-        answers.update(interface_answers)
+        if self.interface:
+            interface_answers = self.interface.answer(members, callables)
+            answers.update(interface_answers)
         return answers
 
     def register_preferences(self):
@@ -150,13 +151,16 @@ class InterfaceableTaskMixin(Atom):
         """
         ancestors = cls.mro()
         i = ancestors.index(InterfaceableTaskMixin)
-        task = ancestors[i + 1].build_from_config(cls)
+        builder = ancestors[i + 1].build_from_config.__func__
+        task = builder(cls, config, dependencies)
 
         if 'interface' in config:
             inter_class_name = config['interface'].pop('interface_class')
             inter_class = dependencies['interfaces'][inter_class_name]
             task.interface = inter_class.build_from_config(config['interface'],
                                                            dependencies)
+                                                
+        return task
 
     def _observe_interface(self, change):
         """ Observer ensuring the interface always has a valid ref to the task
