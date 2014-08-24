@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : manager_plugin.py
+# module : pulses/manager/plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -17,12 +17,13 @@ from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
                              FileDeletedEvent, FileMovedEvent)
 from inspect import cleandoc
 
-from ..utils.has_pref_plugin import HasPrefPlugin
-from .pulses import Sequence, Pulse, RootSequence
-from .templates import load_template
+from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
+from .templates_io import load_template
+from ..pulse import Pulse
+from ..base_sequences import Sequence, RootSequence
 with enaml.imports():
-    from .pulse_view import PulseView
-    from .sequences_views import (SequenceView, RootSequenceView)
+    from ..pulse_view import PulseView
+    from ..sequences_views import (SequenceView, RootSequenceView)
 
 
 MODULE_PATH = os.path.dirname(__file__)

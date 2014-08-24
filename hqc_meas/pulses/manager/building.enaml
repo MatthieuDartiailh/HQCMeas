@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : building.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from atom.api import (Atom, Instance, Str, observe, ForwardTyped, Bool,
+                      ForwardInstance)
+from enaml.core.api import Include
+from enaml.core.object import Object
+from enaml.layout.api import hbox, spacer, vbox
+from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
+                               Label, MultilineField)
+
+from .browsing import TaskSelector
+
+
+# Circular import protections
+def pulse_manager():
+    from .pulses_plugin import PulsesManagerPlugin
+    return PulsesManagerPlugin
+
+
+def abstract_config():
+    from .config.base_task_config import AbstractConfigTask
+    return AbstractConfigTask
+
+
+class _PulseBuilderModel(Atom):
+    """ Simple model for the PulseBuilder dialog.
+
+    """
+    # Pulses manager.
+    manager = ForwardTyped(pulse_manager)
+
+    # Name of the currently selected item.
+    item_name = Str()
+
+    # Currently in use item config.
+    item_config = ForwardInstance(abstract_config)
+    config_view = Instance(Object)
+
+    # Bool indicating whether or not the item can be built.
+    ok_ready = Bool()
+
+    def _observe_item_name(self, change):
+        """ Observer requesting the appropriate config for a task.
+
+        """
+        self.ok_ready = False
+        config, view = self.manager.config_request(change['value'])
+        self.item_config = config
+        self.config_view = view(model=config)
+
+    @observe('item_config.config_ready')
+    def _config_complete(self, change):
+        """ Observe the config to notify the ui that config is ready.
+
+        """
+        self.ok_ready = change['value']
+
+enamldef BuilderView(Dialog): dial:
+    """ Simple Dialog to add an item to an existing sequence.
+
+    """
+    attr manager
+    attr model = _PulseBuilderModel(manager=manager)
+    title = 'Select the item you want to add'
+
+    Container:
+        constraints << [hbox(selector,
+                             *tuple(list(conf.objects) + [vbox(ok,
+                                                            cancel,
+                                                            spacer)]))]
+        QtListStrWidget: t_select:
+            hug_width = 'strong'
+            items << sorted(manager.sequences)
+            selected >> model.item_name
+        Include: conf:
+            objects  << [model.config_view] if model.config_view else []
+        PushButton: ok:
+            text = 'Ok'
+            enabled << model.ok_ready
+            clicked ::
+                dial.accept()
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()

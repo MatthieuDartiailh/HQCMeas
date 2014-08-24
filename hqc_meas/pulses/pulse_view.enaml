@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : pulses_views.enaml
+# module : pulses/pulses_views.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -91,6 +91,7 @@ enamldef PulseView(GroupBox): view:
 
     """
     attr item
+    attr context = item.root.context
     attr core
     attr add_displays = default_add_displays(core, item)
     attr pulse_state = core.invoke_command('hqc_meas.state.get',
@@ -115,8 +116,8 @@ enamldef PulseView(GroupBox): view:
     Label: ch_lab:
         text = 'Channel'
     ObjectCombo: ch_val:
-        items << item.context.logical_channels if item.kind == 'logical' else\
-                 item.context.analogical_channels
+        items << context.logical_channels if item.kind == 'logical' else\
+                 context.analogical_channels
         selected := item.channel
 
     Label: def_lab:

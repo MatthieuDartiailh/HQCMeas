@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : manager_manifest.py
+# module : pulses/manager/manifest.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================

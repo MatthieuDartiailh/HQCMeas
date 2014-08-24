@@ -24,64 +24,19 @@ class TemplateSequence(Sequence):
     channel_mapping = Dict().tag(pref=True)
 
     #: Special context providing channel mapping.
-    t_context = Typed(BaseContext)
+    context = Typed(BaseContext)
 
-    def compile_sequence(self, use_context=True):
-        """ Compile a sequence to useful format.
-
-        Parameters
-        ---------------
-        use_context : bool, optional
-            Should the context compile the pulse sequence.
-
-        Returns
-        -----------
-        result : bool
-            Flag indicating whether or not the compilation succeeded.
-
-        args : iterable
-            Objects depending on the result and use_context flag.
-            In case of failure: tuple
-                - a set of the entries whose values where never found and a
-                dict of the errors which occured during compilation.
-            In case of success:
-                - a flat list of Pulse if use_context is False
-                - a context dependent result.
+    def compile_sequence(self, sequence_locals, missing_locals, errors):
+        """
 
         """
-        missings = set()
-        errors = {}
-        sequence_locals = self.external_vars.copy()
-
-        if self.fix_sequence_duration:
-            try:
-                duration = eval_entry(self.sequence_duration, sequence_locals,
-                                      missings)
-                sequence_locals['sequence_end'] = duration
-            except Exception as e:
-                errors['root_seq_duration'] = repr(e)
-
-        res, pulses = super(TemplateSequence,
-                            self).compile_sequence(sequence_locals,
-                                                   missings, errors)
-
-        if not res:
-            return False, (missings, errors)
-
-        elif not use_context:
-            return True, pulses
-
-        else:
-            kwargs = {}
-            if self.fix_sequence_duration:
-                kwargs['sequence_duration'] = duration
-            return self.context.compile_sequence(pulses, **kwargs)
+        pass
 
     def get_bindable_vars(self):
         """ Access the list of bindable vars for the sequence.
 
         """
-        return self.linkable_vars + self.external_vars.keys()
+        return self.linkable_vars + self.template_vars.keys()
 
     def preferences_from_members(self):
         """ Get the members values as string to store them in .ini files.
@@ -102,7 +57,7 @@ class TemplateSequence(Sequence):
         Reimplemented here to update context.
 
         """
-        super(TemplateContext,
+        super(TemplateSequence,
               self).update_members_from_preferences(**parameters)
 
         para = parameters['t_context']
@@ -135,5 +90,5 @@ class TemplateSequence(Sequence):
         context = context_class()
         context.update_members_from_preferences(**context_config)
         config['context'] = context
-        return super(RootSequence, cls).build_from_config(config,
-                                                          dependencies)
+        return super(TemplateSequence, cls).build_from_config(config,
+                                                              dependencies)
