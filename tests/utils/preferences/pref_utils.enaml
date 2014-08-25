@@ -1,0 +1,25 @@
+# -*- coding: utf-8 -*-
+from atom.api import Atom, Str
+from enaml.workbench.api import PluginManifest, Extension
+
+from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
+from hqc_meas.utils.preferences.api import Preferences
+
+
+class _Pref(HasPrefPlugin):
+    """
+    """
+    string = Str().tag(pref=True)
+    auto = Str().tag(pref=True)
+
+enamldef PrefContributor(PluginManifest):
+    """
+    """
+    id = u'test.prefs'
+    factory = _Pref
+
+    Extension:
+        id = 'prefs'
+        point = u'hqc_meas.preferences.pref_plugin'
+        Preferences:
+            auto_save = ['auto']

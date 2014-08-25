@@ -22,12 +22,13 @@ with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from enaml.workbench.ui.ui_manifest import UIManifest
     from hqc_meas.app_manifest import HqcAppManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
-    from hqc_meas.log_system.log_manifest import LogManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.utils.log.manifest import LogManifest
+    from hqc_meas.utils.dependencies.manifest import DependenciesManifest
     from hqc_meas.measurement.manifest import MeasureManifest
-    from hqc_meas.task_management.manager_manifest import TaskManagerManifest
-    from hqc_meas.instruments.manager_manifest import InstrManagerManifest
+    from hqc_meas.tasks.manager.manifest import TaskManagerManifest
+    from hqc_meas.instruments.manager.manifest import InstrManagerManifest
 
     from .helpers import TestSuiteManifest
 
@@ -57,7 +58,8 @@ class TestMeasureSpace(object):
         create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils',
+                                 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
 
         # Making the preference manager look for info in test dir.
@@ -80,7 +82,8 @@ class TestMeasureSpace(object):
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils',
+                                 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
 
@@ -93,6 +96,7 @@ class TestMeasureSpace(object):
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
         self.workbench.register(LogManifest())
+        self.workbench.register(DependenciesManifest())
         self.workbench.register(TaskManagerManifest())
         self.workbench.register(InstrManagerManifest())
         self.workbench.register(MeasureManifest())
@@ -106,6 +110,7 @@ class TestMeasureSpace(object):
         self.workbench.unregister(u'hqc_meas.measure')
         self.workbench.unregister(u'hqc_meas.task_manager')
         self.workbench.unregister(u'hqc_meas.instr_manager')
+        self.workbench.unregister(u'hqc_meas.dependencies')
         self.workbench.unregister(u'hqc_meas.logging')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')

@@ -1,0 +1,77 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : browsing.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from atom.api import Atom, ForwardTyped, List, Str
+from enaml.layout.api import hbox, spacer
+from enaml.core.api import Conditional, Include
+from enaml.widgets.api import (PushButton, ObjectCombo, Action, Container,
+                               Dialog)
+
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+
+
+# Circular import protection
+def task_manager():
+    from .manager_plugin import TaskManagerPlugin
+    return TaskManagerPlugin
+
+class _SelectorModel(Atom):
+    """ Simple model for TaskSelector.
+
+    """
+    manager = ForwardTyped(task_manager)
+
+    selected_filter = Str('All')
+    display_tasks = List(Str())
+
+    def __init__(self, manager, selected_filter):
+        super(_SelectorModel, self).__init__(manager=manager)
+        if selected_filter:
+            self.selected_filter = selected_filter
+
+    def _observe_selected_filter(self, change):
+        """ Observer getting the tasks to display.
+
+        """
+        fil = change['value']
+        if fil:
+            tasks = self.manager.filter_tasks(fil)
+            if tasks:
+                self.display_tasks = tasks
+            else:
+                tasks = ['']
+        else:
+            self.display_tasks = self.manager.filter_tasks('All')
+
+    def _default_display_tasks(self):
+        """ Default value for the display task member.
+
+        """
+        return self.manager.filter_tasks('All')
+
+enamldef TaskSelector(Container):
+    """ Simple task selector supporting filtering.
+
+    """
+    attr manager
+    attr display_filters : bool = True
+    attr _internal = _SelectorModel(manager=manager,
+                                    selected_filter=selected_filter)
+    attr selected_filter >> _internal.selected_filter
+
+    alias selected_task : t_select.selected_item
+
+    Conditional:
+        condition << display_filters
+        ObjectCombo:
+            items << sorted(manager.filters)
+            selected >> _internal.selected_filter
+            selected = 'All'
+
+    QtListStrWidget: t_select:
+        items << sorted(_internal.display_tasks)

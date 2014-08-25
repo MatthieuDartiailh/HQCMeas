@@ -19,9 +19,9 @@ from hqc_meas.tasks.tasks_util.array_tasks import ArrayExtremaTask
 import enaml
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
-    from hqc_meas.task_management.manager_manifest import TaskManagerManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.tasks.manager.manifest import TaskManagerManifest
 
     from hqc_meas.tasks.tasks_util.views.array_views import ArrayExtremaView
 

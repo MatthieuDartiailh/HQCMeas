@@ -181,8 +181,8 @@ class MeasurePlugin(HasPrefPlugin):
             # Rebuild build and runtime dependencies (profiles automatically)
             # re-requested.
             core = self.workbench.get_plugin('enaml.workbench.core')
-            cmd = u'hqc_meas.task_manager.collect_dependencies'
-            res = core.invoke_command(cmd, {'task': measure.root_task}, self)
+            cmd = u'hqc_meas.dependencies.collect_dependencies'
+            res = core.invoke_command(cmd, {'obj': measure.root_task}, self)
             if not res[0]:
                 for id in res[1]:
                     logger.warn(res[1][id])

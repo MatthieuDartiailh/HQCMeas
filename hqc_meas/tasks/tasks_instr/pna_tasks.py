@@ -14,7 +14,7 @@ from inspect import cleandoc
 import numpy as np
 
 from hqc_meas.tasks.api import InstrumentTask, InstrTaskInterface
-from hqc_meas.instruments.drivers.driver_tools import InstrIOError
+from hqc_meas.instruments.driver_tools import InstrIOError
 
 
 def check_channels_presence(task, channels, *args, **kwargs):

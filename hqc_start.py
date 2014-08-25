@@ -10,12 +10,13 @@ with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from enaml.workbench.ui.ui_manifest import UIManifest
     from hqc_meas.app_manifest import HqcAppManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
-    from hqc_meas.utils.state_manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.dependencies.manifest import DependenciesManifest
     from hqc_meas.measurement.manifest import MeasureManifest
-    from hqc_meas.task_management.manager_manifest import TaskManagerManifest
-    from hqc_meas.instruments.manager_manifest import InstrManagerManifest
-    from hqc_meas.log_system.log_manifest import LogManifest
+    from hqc_meas.tasks.manager.manifest import TaskManagerManifest
+    from hqc_meas.instruments.manager.manifest import InstrManagerManifest
+    from hqc_meas.utils.log.manifest import LogManifest
     from hqc_meas.debug.debugger_manifest import DebuggerManifest
 
 if __name__ == '__main__':
@@ -27,6 +28,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Start the Hqc app')
     parser.add_argument("-w", "--workspace", help='select start-up workspace',
                         default='measure', choices=WORKSPACES)
+    parser.add_argument("-s", "--nocapture",
+                        help="Don't capture stdout/stderr",
+                        action='store_false')
     args = parser.parse_args()
 
     workbench = Workbench()
@@ -36,13 +40,15 @@ if __name__ == '__main__':
     workbench.register(StateManifest())
     workbench.register(PreferencesManifest())
     workbench.register(LogManifest())
+    workbench.register(DependenciesManifest())
     workbench.register(TaskManagerManifest())
     workbench.register(InstrManagerManifest())
     workbench.register(MeasureManifest())
     workbench.register(DebuggerManifest())
 
     core = workbench.get_plugin('enaml.workbench.core')
-    core.invoke_command('hqc_meas.logging.start_logging', {}, workbench)
+    core.invoke_command('hqc_meas.logging.start_logging',
+                        {'std': args.nocapture}, workbench)
     core.invoke_command('enaml.workbench.ui.select_workspace',
                         {'workspace': WORKSPACES[args.workspace]}, workbench)
 
@@ -58,6 +64,7 @@ if __name__ == '__main__':
     workbench.unregister(u'hqc_meas.logging')
     workbench.unregister(u'hqc_meas.preferences')
     workbench.unregister(u'hqc_meas.state')
+    workbench.unregister(u'hqc_meas.dependencies')
     workbench.unregister(u'hqc_meas.app')
     workbench.unregister(u'enaml.workbench.ui')
     workbench.unregister(u'enaml.workbench.core')

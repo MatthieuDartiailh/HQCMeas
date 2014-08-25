@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
-# module : test_measure.py
+# =============================================================================
+# module : measurement/test_measure.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from enaml.workbench.api import Workbench
@@ -17,10 +17,11 @@ from hqc_meas.tasks.api import RootTask
 from hqc_meas.measurement.measure import Measure
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.utils.dependencies.manifest import DependenciesManifest
     from hqc_meas.measurement.manifest import MeasureManifest
-    from hqc_meas.task_management.manager_manifest import TaskManagerManifest
+    from hqc_meas.tasks.manager.manifest import TaskManagerManifest
 
     from .helpers import TestSuiteManifest, Checker
 
@@ -49,7 +50,8 @@ class TestPluginCoreFunctionalities(object):
         create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils',
+                                 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
 
         # Making the preference manager look for info in test dir.
@@ -72,7 +74,8 @@ class TestPluginCoreFunctionalities(object):
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils',
+                                 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
 
@@ -82,6 +85,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(CoreManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
+        self.workbench.register(DependenciesManifest())
         self.workbench.register(TaskManagerManifest())
         self.workbench.register(MeasureManifest())
         self.workbench.register(TestSuiteManifest())
@@ -93,6 +97,7 @@ class TestPluginCoreFunctionalities(object):
             pass
         self.workbench.unregister(u'hqc_meas.measure')
         self.workbench.unregister(u'hqc_meas.task_manager')
+        self.workbench.unregister(u'hqc_meas.dependencies')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')
         self.workbench.unregister(u'enaml.workbench.core')

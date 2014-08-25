@@ -5,7 +5,7 @@
 # license : MIT license
 # =============================================================================
 from types import MethodType
-from hqc_meas.instruments.drivers.driver_tools import BaseInstrument
+from hqc_meas.instruments.driver_tools import BaseInstrument
 
 
 class HelperMeta(type):

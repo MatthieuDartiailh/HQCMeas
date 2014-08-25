@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
-# module : test_plugin.py
+# =============================================================================
+# module : measurement/test_plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from enaml.workbench.api import Workbench
@@ -14,8 +14,9 @@ from nose.tools import assert_in, assert_not_in, assert_equal, raises
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.utils.dependencies.manifest import DependenciesManifest
     from hqc_meas.measurement.manifest import MeasureManifest
 
     from .dummies import (DummyCheck1, DummyCheck1bis, DummyCheck2,
@@ -54,7 +55,8 @@ class TestPluginCoreFunctionalities(object):
         create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils',
+                                 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
 
         # Making the preference manager look for info in test dir.
@@ -77,7 +79,8 @@ class TestPluginCoreFunctionalities(object):
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils',
+                                 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
 
@@ -87,9 +90,11 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(CoreManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
+        self.workbench.register(DependenciesManifest())
 
     def teardown(self):
         self.workbench.unregister(u'hqc_meas.measure')
+        self.workbench.unregister(u'hqc_meas.dependencies')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')
         self.workbench.unregister(u'enaml.workbench.core')
@@ -113,7 +118,7 @@ class TestPluginCoreFunctionalities(object):
 
         # Automatically registered plugins are automatically unregistered.
 
-    #--- Checks tests ---------------------------------------------------------
+    # --- Checks tests --------------------------------------------------------
 
     def test_check_registation1(self):
         """ Test that checks are properly found at start-up.
@@ -186,7 +191,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(DummyCheck4())
         self.workbench.get_plugin(u'hqc_meas.measure')
 
-    #--- Headers tests --------------------------------------------------------
+    # --- Headers tests -------------------------------------------------------
 
     def test_header_registation1(self):
         """ Test that headers are properly found at start-up.
@@ -259,7 +264,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(DummyHeader4())
         self.workbench.get_plugin(u'hqc_meas.measure')
 
-    #--- Editors tests --------------------------------------------------------
+    # --- Editors tests -------------------------------------------------------
 
     def test_editor_registation1(self):
         """ Test that editors are properly found at start-up.
@@ -332,7 +337,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(DummyEditor4())
         self.workbench.get_plugin(u'hqc_meas.measure')
 
-    #--- Monitors tests -------------------------------------------------------
+    # --- Monitors tests ------------------------------------------------------
 
     def test_monitor_registation1(self):
         """ Test that monitors are properly found at start-up.
@@ -405,7 +410,7 @@ class TestPluginCoreFunctionalities(object):
         self.workbench.register(DummyMonitor4())
         self.workbench.get_plugin(u'hqc_meas.measure')
 
-    #--- Engines tests --------------------------------------------------------
+    # --- Engines tests -------------------------------------------------------
 
     def test_engine_registation1(self):
         """ Test that engines are properly found at start-up.

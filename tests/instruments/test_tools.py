@@ -6,10 +6,10 @@
 #==============================================================================
 """
 """
-from hqc_meas.instruments.drivers.driver_tools import (BaseInstrument,
-                                                       instrument_property,
-                                                       InstrIOError,
-                                                       secure_communication)
+from hqc_meas.instruments.driver_tools import (BaseInstrument,
+                                               instrument_property,
+                                               InstrIOError,
+                                               secure_communication)
 from nose.tools import assert_is_instance, assert_equal, raises
 
 from ..util import complete_line
