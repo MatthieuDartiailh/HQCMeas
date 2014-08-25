@@ -159,7 +159,7 @@ class _MeasEditionModel(Atom):
         self.selected_task = selected_task
 
     def clear_state(self, ):
-        """ Destroy all previously used monitors.
+        """ Destroy all previously used editors.
 
         """
         self.selected_editor = None
@@ -259,6 +259,7 @@ enamldef MeasEditionView(Container): ed:
         ed.selected_task = change['value'].root_task
         tree.root_node = change['value'].root_task
         tree.selection = change['value'].root_task
+        editors.selected_tab = 'standard_editor'
 
     attr dock : bool
     attr selected_task = measure.root_task
