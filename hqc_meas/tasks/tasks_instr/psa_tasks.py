@@ -38,13 +38,14 @@ class PSAGetTrace(InstrumentTask):
                        'WAV': 'Waveform'}
 
         d = self.driver
-        psa_config = '''Start freq {}, Stop freq {}, Span freq {}, Center freq
-                     {}, Average number {}, Resolution Bandwidth {},
-                     Video Bandwidth {}, Number of points {}, Mode
-                     {}'''.format(d.start_frequencySA, d.stop_frequencySA,
-                                  d.span_frequencySA, d.center_frequencySA,
-                                  d.average_count_SA, d.RBW, d.VBW_SA,
-                                  d.sweep_points_SA, sweep_modes[self.mode])
+        header = cleandoc('''Start freq {}, Stop freq {}, Span freq {},
+                          Center freq {}, Average number {}, Resolution
+                          Bandwidth {}, Video Bandwidth {}, Number of points
+                          {}, Mode {}''')
+        psa_config = header.format(d.start_frequency_SA, d.stop_frequency_SA,
+                                   d.span_frequency, d.center_frequency,
+                                   d.average_count_SA, d.RBW, d.VBW_SA,
+                                   d.sweep_points_SA, sweep_modes[self.mode])
 
         self.write_in_database('psa_config', psa_config)
         self.write_in_database('trace_data', self.driver.read_data(self.trace))
@@ -99,15 +100,15 @@ class PSASetParam(InstrumentTask):
 
         if self.mode == 'Start/Stop':
             if self.start_freq:
-                self.driver.start_freq = \
+                self.driver.start_frequency_SA = \
                     self.format_and_eval_string(self.start_freq)
 
             if self.stop_freq:
-                self.driver.stop_freq = \
+                self.driver.stop_frequency_SA = \
                     self.format_and_eval_string(self.stop_freq)
 # start_freq is set again in case the former value of stop prevented to do it
             if self.start_freq:
-                self.driver.start_freq = \
+                self.driver.start_frequency_SA = \
                     self.format_and_eval_string(self.start_freq)
         else:
             if self.center_freq:
@@ -142,8 +143,8 @@ class PSASetParam(InstrumentTask):
         psa_config = '''Start freq {}, Stop freq {}, Span freq {}, Center freq
                      {}, Average number {}, Resolution Bandwidth {},
                      Video Bandwidth {}, Number of points {}, Mode
-                     {}'''.format(d.start_frequencySA, d.stop_frequencySA,
-                                  d.span_frequencySA, d.center_frequencySA,
+                     {}'''.format(d.start_frequency_SA, d.stop_frequency_SA,
+                                  d.span_frequency, d.center_frequency,
                                   d.average_count_SA, d.RBW, d.VBW_SA,
                                   d.sweep_points_SA, sweep_modes[self.mode])
 
@@ -153,6 +154,12 @@ class PSASetParam(InstrumentTask):
         """
         """
         test, traceback = super(PSAGetTrace, self).check(*args, **kwargs)
+
+        if kwargs.get('test_instr'):
+            if self.driver.mode != 'SA':
+                test = False
+                traceback[self.task_path + '/' + self.task_name] = 'PSA is \
+                    not in Spectrum Analyzer mode'
 
         if self.mode == 'Start/Stop':
             try:
