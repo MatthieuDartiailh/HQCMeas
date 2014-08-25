@@ -884,6 +884,8 @@ class ComplexTask(BaseTask):
                         i += 1
 
                 else:
+                    if name not in config:
+                        continue
                     child_config = config[name]
                     child_class_name = child_config.pop('task_class')
                     child_class = dependencies['tasks'][child_class_name]

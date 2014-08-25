@@ -159,7 +159,7 @@ class MeasurePlugin(HasPrefPlugin):
 
         measure.enter_running_state()
         self.running_measure = measure
-        
+
         self.flags.append('processing')
 
         instr_use_granted = False

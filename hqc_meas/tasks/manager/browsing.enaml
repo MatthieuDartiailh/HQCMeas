@@ -17,7 +17,7 @@ from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
 # Circular import protection
 def task_manager():
-    from .manager_plugin import TaskManagerPlugin
+    from .plugin import TaskManagerPlugin
     return TaskManagerPlugin
 
 class _SelectorModel(Atom):

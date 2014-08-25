@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : manager_plugin.py
+# module : tasks/manager/plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
