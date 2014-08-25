@@ -159,7 +159,7 @@ class MeasureSpace(Workspace):
                 core = self.workbench.get_plugin(u'enaml.workbnch.core')
                 cmd = u'hqc_meas.task_manager.save_task'
                 core.invoke_command(cmd,
-                                    {'task': measure.root_task,
+                                    {'obj': measure.root_task,
                                      'mode': 'template'},
                                     self)
 
@@ -215,8 +215,8 @@ class MeasureSpace(Workspace):
 
         # First of all build the runtime dependencies
         core = self.workbench.get_plugin('enaml.workbench.core')
-        cmd = u'hqc_meas.task_manager.collect_dependencies'
-        res = core.invoke_command(cmd, {'task': measure.root_task},
+        cmd = u'hqc_meas.dependencies.collect_dependencies'
+        res = core.invoke_command(cmd, {'obj': measure.root_task},
                                   self.plugin)
         if not res[0]:
             for id in res[1]:
@@ -227,7 +227,7 @@ class MeasureSpace(Workspace):
         runtime_deps = res[2]
 
         test_instr = 'profiles' in runtime_deps and runtime_deps['profiles']
-        if 'profiles' in runtime_deps and test_instr:
+        if 'profiles' in runtime_deps and not test_instr:
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, instr tests will be skipped and
                            performed before actually starting the

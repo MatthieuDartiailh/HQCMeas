@@ -1,0 +1,85 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : utils/dependencies/manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
+from enaml.workbench.core.api import Command
+
+
+def dependencies_plugin_factory():
+    """ Factory function for the LogPlugin.
+
+    """
+    from .plugin import DependenciesManagerPlugin
+    return DependenciesManagerPlugin()
+
+def collect_dependencies(event):
+    """ Handler for the 'hqc_meas.dependencies.collect_dependencies' command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.dependencies')
+    if event.trigger:
+        event.parameters['caller'] = event.trigger.manifest.id
+    return manager.collect_dependencies(**event.parameters)
+
+
+def collect_build_dep_from_config(event):
+    """ Handler for the 'hqc_meas.dependencies.collect_build_dep_from_config'
+    command.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.dependencies')
+    return manager.collect_build_dep_from_config(**event.parameters)
+
+
+BUILD_DEPENDENCIES_PLUGINS_DESCRIPTION = \
+"""Plugins which expose objects suceptibles to be necessary to rebuild part
+of the application should declare a BuildDependency to this point."""
+
+
+RUNTIME_DEPENDENCIES_PLUGINS_DESCRIPTION = \
+"""Plugins which expose objects suceptibles to be necessary to run part
+of the application should declare a RuntimeDependency to this point."""
+
+
+COLLECT_DEPENDENCIES_DESCRIPTION=\
+"""
+"""
+
+
+COLLECT_BUILD_DEP_FROM_CONFIG_DESCRIPTION=\
+"""
+"""
+
+
+enamldef DependenciesManifest(PluginManifest):
+    """ Manifest for the plugin handling object dependencies.
+
+    """
+    id = u'hqc_meas.dependencies'
+    factory = dependencies_plugin_factory
+
+    ExtensionPoint:
+        id = 'build'
+        description = BUILD_DEPENDENCIES_PLUGINS_DESCRIPTION
+
+    ExtensionPoint:
+        id = 'runtime'
+        description = RUNTIME_DEPENDENCIES_PLUGINS_DESCRIPTION
+
+
+    Extension:
+        id = 'commands'
+        point = 'enaml.workbench.core.commands'
+        Command:
+            id = 'hqc_meas.dependencies.collect_dependencies'
+            description = COLLECT_DEPENDENCIES_DESCRIPTION
+            handler = collect_dependencies
+        Command:
+            id = 'hqc_meas.dependencies.collect_build_dep_from_config'
+            description = COLLECT_BUILD_DEP_FROM_CONFIG_DESCRIPTION
+            handler = collect_build_dep_from_config

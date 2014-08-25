@@ -3,4 +3,4 @@ omit =
     */hqc_start.py
     */hqc_meas/instruments/drivers/visa/*
     */hqc_meas/instruments/drivers/dll/*
-	*/hqc_meas/utils/widgets/*
+    */hqc_meas/utils/widgets/*

@@ -3,7 +3,8 @@
 try:
     from pyvisa.visa import Instrument, VisaIOError, VisaTypeError
 except Exception:
-    raise
+	from pyvisa.legacy.visa import Instrument, VisaIOError
+	from pyvisa.errors import VisaTypeError
 
 from .driver_tools import BaseInstrument, InstrIOError
 
@@ -13,7 +14,7 @@ class VisaInstrument(BaseInstrument):
 
     This class uses the PyVisa binder to the VISA library to open a
     communication. The PyVisa object (Instrument instance) is cached and this
-    class provides conveninence methods to call all its method and propeties
+    class provides convenience methods to call all its method and properties
     to set its attributes. The connection to the instrument is opened upon
     initialisation.
 
@@ -22,9 +23,9 @@ class VisaInstrument(BaseInstrument):
     connection_info : dict
         Dict containing all the necessary information to open a connection to
         the instrument
-    caching_allowed : bool, optionnal
+    caching_allowed : bool, optional
         Boolean use to determine if instrument properties can be cached
-    caching_permissions : dict(str : bool), optionnal
+    caching_permissions : dict(str : bool), optional
         Dict specifying which instrument properties can be cached, override the
         default parameters specified in the class attribute.
 

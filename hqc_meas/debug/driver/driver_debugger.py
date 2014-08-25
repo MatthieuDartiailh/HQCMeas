@@ -8,7 +8,7 @@ from atom.api import (Atom, List, Str, Callable, Bool, Instance, Value, Tuple,
                       Typed, ContainerList, Unicode)
 from inspect import getmembers, ismethod
 
-from hqc_meas.instruments.drivers.driver_tools\
+from hqc_meas.instruments.driver_tools\
     import BaseInstrument, instrument_property
 
 from ..debugger import BaseDebugger

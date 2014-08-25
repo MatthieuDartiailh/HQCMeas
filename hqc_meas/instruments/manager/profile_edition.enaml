@@ -1,0 +1,142 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : instruments/manager/profile_edition.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+
+"""
+
+from atom.api import Enum, set_default
+from enaml.widgets.api import (Dialog, Container, PushButton, Form,
+                               ObjectCombo, Label, Field)
+from enaml.stdlib.message_box import critical, information
+from enaml.layout.api import vertical, horizontal, hbox, spacer, align, vbox
+from enaml.core.api import Conditional, Include
+from inspect import cleandoc
+from textwrap import fill
+
+from ..driver_tools import InstrIOError
+
+
+enamldef ProfileView(Form): instr_form_view:
+    """
+    """
+    attr form
+    attr mode = Enum('static', 'new', 'edit')
+
+    Label:
+        text = 'Name'
+    Field:
+        text := form.name
+        read_only = bool(mode != 'new')
+
+    Label:
+        text = 'Driver type'
+    Conditional:
+        condition = bool(mode == 'static')
+        Field:
+            text << form.driver_type
+            read_only = True
+    Conditional:
+        condition = bool(mode != 'static')
+        ObjectCombo:
+            items << form.manager.driver_types
+            selected := form.driver_type
+
+    Label:
+        text = 'Driver'
+    Conditional:
+        condition = bool(mode == 'static')
+        Field:
+            text << form.driver
+            read_only = True
+    Conditional:
+        condition = bool(mode != 'static')
+        ObjectCombo:
+            items << form.drivers
+            selected := form.driver
+
+    Include:
+        objects << [form.connection_form_view(model=form.connection_form,
+                                             mode=mode)]\
+                   if form.connection_form_view else []
+
+
+def _handle_close(view, is_ok):
+    """
+
+    Before closing an InstrFormDialog ensures that the informations provided
+    allow to open the connection to the specified instrument.
+    """
+    model = view.model
+    manager = model.manager
+    connection_form = model.connection_form
+    if is_ok:
+        if (model.name != '' and model.driver_type and model.driver != ''
+                and connection_form.check()):
+            connection_dict = connection_form.connection_dict()
+            try:
+                drivers, _ = manager.drivers_request([model.driver])
+                driver = drivers[model.driver]
+                instr = driver(connection_dict)
+                instr.close_connection()
+            except InstrIOError:
+                message = cleandoc(u"""The software failed to
+                            establish the connection with the instrument
+                            please check all parameters and instrument
+                            state and try again""")
+
+                critical(parent=view,
+                         text=fill(message, 80),
+                         title='Connection failure')
+                return False
+
+            return True
+
+        else:
+            fields = connection_form.required_fields()
+            message = cleandoc(u"""You must fill the fields : name,
+                               driver type, driver, {} before
+                               validating""".format(fields))
+
+            information(parent=view, text=fill(message, 80),
+                        title='Missing information')
+
+    else:
+        return True
+
+
+# TODO allow to choose the folder if different ones exist
+enamldef ProfileDialog(Dialog): instr_dialog:
+    """
+    """
+    attr model
+    attr mode = Enum('new', 'edit')
+    title = 'Instrument form'
+
+    Container:
+        hug_width = 'medium'
+        hug_height = 'strong'
+        constraints = [
+            vbox(form, hbox(cancel, ok)),
+            align('midline', form),
+            ]
+        ProfileView: form:
+            hug_width = 'weak'
+            hug_height = 'medium'
+            form << instr_dialog.model
+            mode = instr_dialog.mode
+        PushButton: cancel:
+            text = 'Cancel'
+            hug_width = 'strong'
+            clicked ::
+                if _handle_close(instr_dialog, False):
+                    instr_dialog.reject()
+        PushButton: ok:
+            text = 'Ok'
+            hug_width = 'strong'
+            clicked ::
+                if _handle_close(instr_dialog, True):
+                    instr_dialog.accept()

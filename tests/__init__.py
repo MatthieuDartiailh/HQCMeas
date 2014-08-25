@@ -19,7 +19,8 @@ def setup_package():
     print('')
     print(complete_line(__name__ + '__init__.py : setup_package()', '='))
     directory = os.path.dirname(__file__)
-    util_path = os.path.join(directory, '..', 'hqc_meas', 'utils')
+    util_path = os.path.join(directory, '..', 'hqc_meas', 'utils',
+                             'preferences')
     def_path = os.path.join(util_path, 'default.ini')
     if os.path.isfile(def_path):
         os.rename(def_path, os.path.join(util_path, '_user_default.ini'))
@@ -27,7 +28,8 @@ def setup_package():
 
 def teardown_package():
     directory = os.path.dirname(__file__)
-    util_path = os.path.join(directory, '..', 'hqc_meas', 'utils')
+    util_path = os.path.join(directory, '..', 'hqc_meas', 'utils',
+                             'preferences')
     def_path = os.path.join(util_path, 'default.ini')
     safe_path = os.path.join(util_path, '_user_default.ini')
     if os.path.isfile(def_path):

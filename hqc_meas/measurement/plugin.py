@@ -150,8 +150,6 @@ class MeasurePlugin(HasPrefPlugin):
         """ Start a new measure.
 
         """
-        self.flags.append('processing')
-
         logger = logging.getLogger(__name__)
 
         # Discard old monitors if there is any remaining.
@@ -161,6 +159,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         measure.enter_running_state()
         self.running_measure = measure
+        
+        self.flags.append('processing')
 
         instr_use_granted = False
         # Checking build dependencies, if present simply request instr profiles
@@ -181,8 +181,8 @@ class MeasurePlugin(HasPrefPlugin):
             # Rebuild build and runtime dependencies (profiles automatically)
             # re-requested.
             core = self.workbench.get_plugin('enaml.workbench.core')
-            cmd = u'hqc_meas.task_manager.collect_dependencies'
-            res = core.invoke_command(cmd, {'task': measure.root_task}, self)
+            cmd = u'hqc_meas.dependencies.collect_dependencies'
+            res = core.invoke_command(cmd, {'obj': measure.root_task}, self)
             if not res[0]:
                 for id in res[1]:
                     logger.warn(res[1][id])

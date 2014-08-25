@@ -6,8 +6,8 @@
 #==============================================================================
 from enaml.workbench.api import PluginManifest, ExtensionPoint, Extension
 from enaml.workbench.ui.api import ActionItem
-from hqc_meas.utils.preferences import Preferences
-from hqc_meas.instruments.instr_user import InstrUser
+from hqc_meas.utils.preferences.api import Preferences
+from hqc_meas.instruments.manager.api import InstrUser
 
 
 def debug_plugin_factory():
