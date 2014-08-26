@@ -250,5 +250,5 @@ enamldef RootSequenceView(GroupBox): view:
             Include:
                 objects << [instantiate_context_view(sequence.context)]
 
-        Include:
+        Include: include:
             pass

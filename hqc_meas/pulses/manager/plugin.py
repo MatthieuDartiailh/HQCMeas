@@ -26,7 +26,7 @@ with enaml.imports():
     from ..sequences_views import (SequenceView, RootSequenceView)
 
 
-MODULE_PATH = os.path.dirname(__file__)
+PACKAGE_PATH = os.path.join(os.path.dirname(__file__), '..')
 
 MODULE_ANCHOR = 'hqc_meas.pulses'
 
@@ -37,7 +37,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
     #: Folders containings templates which should be loaded.
     templates_folders = List(Unicode(),
                              [os.path.realpath(
-                                 os.path.join(MODULE_PATH,
+                                 os.path.join(PACKAGE_PATH,
                                               'templates'))]
                              ).tag(pref=True)
 
@@ -67,7 +67,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
         """
         super(PulsesManagerPlugin, self).start()
-        path = os.path.realpath(os.path.join(MODULE_PATH,
+        path = os.path.realpath(os.path.join(PACKAGE_PATH,
                                              'templates'))
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -287,7 +287,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         """ Refresh the known sequences.
 
         """
-        path = os.path.join(MODULE_PATH, 'sequences')
+        path = os.path.join(PACKAGE_PATH, 'sequences')
         failed = {}
 
         modules, v_modules = self._explore_package('sequences', path, failed,
@@ -315,7 +315,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         """ Refresh the known contexts.
 
         """
-        path = os.path.join(MODULE_PATH, 'contexts')
+        path = os.path.join(PACKAGE_PATH, 'contexts')
         failed = {}
 
         modules, v_modules = self._explore_package('contexts', path, failed,
@@ -339,7 +339,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         """ Refresh the known shapes.
 
         """
-        path = os.path.join(MODULE_PATH, 'shapes')
+        path = os.path.join(PACKAGE_PATH, 'shapes')
         failed = {}
 
         modules, v_modules = self._explore_package('shapes', path, failed,

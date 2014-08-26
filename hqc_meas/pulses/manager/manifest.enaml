@@ -13,7 +13,7 @@ from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 from hqc_meas.utils.preferences.api import Preferences
 from hqc_meas.utils.state.api import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
-from hqc_meas.task_management.dependencies import BuildDependency
+from hqc_meas.utils.dependencies.api import BuildDependency
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
