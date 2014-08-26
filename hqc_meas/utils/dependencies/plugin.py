@@ -12,7 +12,7 @@ from collections import defaultdict
 from inspect import cleandoc
 import logging
 
-from hqc_meas.tasks.tools.walks import flatten_walk
+from hqc_meas.utils.walks import flatten_walk
 from hqc_meas.utils.configobj_ops import flatten_config
 
 from .dependencies import BuildDependency, RuntimeDependency
