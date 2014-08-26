@@ -5,7 +5,7 @@
 # license : MIT license
 # =============================================================================
 from atom.api import (Int, Instance, Str, Enum, Float, Dict, Typed, Bool,
-                      ContainerList, ForwardInstance, ForwardTyped, Property,
+                      ContainerList, ForwardInstance, Property,
                       set_default)
 from itertools import chain
 import numpy as np

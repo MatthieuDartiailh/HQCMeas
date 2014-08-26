@@ -31,7 +31,6 @@ def test_sequence_indexing1():
 
     root.items.append(pulse1)
     assert_equal(pulse1.index, 1)
-    assert_is(pulse1.context, context)
     assert_is(pulse1.root, root)
     assert_equal(root.linkable_vars, ['sequence_end',
                                       '1_start', '1_stop', '1_duration'])
@@ -39,7 +38,6 @@ def test_sequence_indexing1():
     root.items.append(pulse2)
     assert_equal(pulse1.index, 1)
     assert_equal(pulse2.index, 2)
-    assert_is(pulse2.context, context)
     assert_is(pulse2.root, root)
     assert_equal(root.linkable_vars, ['sequence_end',
                                       '1_start', '1_stop', '1_duration',
@@ -49,7 +47,6 @@ def test_sequence_indexing1():
     assert_equal(pulse1.index, 1)
     assert_equal(pulse2.index, 2)
     assert_equal(pulse3.index, 3)
-    assert_is(pulse3.context, context)
     assert_is(pulse3.root, root)
     assert_equal(root.linkable_vars, ['sequence_end',
                                       '1_start', '1_stop', '1_duration',
@@ -61,7 +58,6 @@ def test_sequence_indexing1():
     assert_equal(pulse1.index, 1)
     assert_equal(pulse2.index, 0)
     assert_equal(pulse3.index, 2)
-    assert_is(pulse2.context, None)
     assert_is(pulse2.root, None)
     assert_equal(root.linkable_vars, ['1_start', '1_stop', '1_duration',
                                       '2_start', '2_stop', '2_duration'])
@@ -70,7 +66,6 @@ def test_sequence_indexing1():
     assert_equal(pulse1.index, 1)
     assert_equal(pulse2.index, 2)
     assert_equal(pulse3.index, 3)
-    assert_is(pulse2.context, context)
     assert_is(pulse2.root, root)
     assert_equal(root.linkable_vars, ['1_start', '1_stop', '1_duration',
                                       '2_start', '2_stop', '2_duration',
@@ -97,13 +92,11 @@ def test_sequence_indexing2():
 
     assert_is(sequence1.parent, root)
     assert_is(sequence1.root, root)
-    assert_is(sequence1.context, context)
 
     sequence1.items.append(sequence2)
 
     assert_is(sequence2.parent, sequence1)
     assert_is(sequence2.root, root)
-    assert_is(sequence2.context, context)
     assert_equal(pulse1.index, 1)
     assert_equal(pulse2.index, 4)
     assert_equal(root.linkable_vars, ['1_start', '1_stop', '1_duration',
@@ -156,7 +149,7 @@ def test_sequence_indexing2():
 class TestPulse(object):
 
     def setup(self):
-        self.pulse = Pulse(context=TestContext())
+        self.pulse = Pulse(root=RootSequence(context=TestContext()))
 
     def test_eval_pulse1(self):
         # Test evaluating the entries of a pulse when everything is ok.

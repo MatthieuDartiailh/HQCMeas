@@ -4,7 +4,8 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from nose.tools import (assert_equal, assert_in, assert_is_instance)
+from nose.tools import (assert_equal, assert_in, assert_is_instance,
+                        assert_list_equal)
 from hqc_meas.pulses.pulse import Pulse
 from hqc_meas.pulses.base_sequences import RootSequence, Sequence
 from hqc_meas.pulses.contexts.base_context import BaseContext
@@ -26,11 +27,11 @@ def test_flat_sequence_persistence1():
     root.items.extend([pulse1, pulse2, pulse3])
 
     pref = root.preferences_from_members()
-    assert_equal(pref.keys(),
-                 ['external_vars', 'item_class',
-                  'sequence_duration', 'enabled', 'fix_sequence_duration',
-                  'item_0', 'item_1', 'item_2',
-                  'context'])
+    assert_list_equal(pref.keys(),
+                      ['name', 'external_vars', 'fix_sequence_duration',
+                       'enabled', 'item_class', 'sequence_duration',
+                       'item_0', 'item_1', 'item_2',
+                       'context'])
 
     assert_in('shape', pref['item_2'])
     assert_in('shape_class', pref['item_2']['shape'])
@@ -53,13 +54,13 @@ def test_nested_sequence_persistence1():
     root.items.extend([pulse1, pulse2, pulse3, seq])
 
     pref = root.preferences_from_members()
-    assert_equal(pref.keys(),
-                 ['external_vars', 'item_class',
-                  'sequence_duration', 'enabled', 'fix_sequence_duration',
-                  'item_0', 'item_1', 'item_2', 'item_3',
-                  'context'])
-    assert_equal(pref['item_3'].keys(),
-                 ['item_class', 'enabled', 'item_0'])
+    assert_list_equal(pref.keys(),
+                      ['name', 'external_vars', 'fix_sequence_duration',
+                       'enabled', 'item_class', 'sequence_duration',
+                       'item_0', 'item_1', 'item_2', 'item_3',
+                       'context'])
+    assert_list_equal(pref['item_3'].keys(),
+                      ['item_class', 'enabled', 'name', 'item_0'])
 
 
 def test_walk_sequence():
