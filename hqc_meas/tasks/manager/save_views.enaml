@@ -17,7 +17,7 @@ from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
 # Protection from circular imports
 def task_manager():
-    from .manager_plugin import TaskManagerPlugin
+    from .plugin import TaskManagerPlugin
     return TaskManager
 
 # TODO allow to access any folder known to the manager.

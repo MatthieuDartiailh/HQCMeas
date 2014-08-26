@@ -19,7 +19,7 @@ from .browsing import TaskSelector
 
 # Circular import protection
 def task_manager():
-    from .manager_plugin import TaskManagerPlugin
+    from .plugin import TaskManagerPlugin
     return TaskManagerPlugin
 
 

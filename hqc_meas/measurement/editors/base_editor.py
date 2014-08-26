@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_editor.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import (Callable, Unicode, Instance, Bool, ForwardTyped, Event)
 from enaml.core.declarative import Declarative, d_
 from enaml.widgets.api import Page

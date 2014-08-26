@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : templates.py
+# module : tasks/manager/templates.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================

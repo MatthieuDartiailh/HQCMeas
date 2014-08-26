@@ -22,15 +22,18 @@ def _constraints_helpers(view):
     if view.find('interface_include').objects:
         i_views = view.find('interface_include').objects
         i_len = len(i_views)
-        if hasattr(i_views[0], 'inline') and i_views[0].inline:
-            labels = children[:i_len+1:2]
-            vals = labels = children[1:i_len+1:2]
-            return [vbox(grid(labels, vals), *children[3+i_len+1:])]
+        if getattr(i_views[0], 'inline', False):
+            labels = children[:i_len+4:2]
+            vals = children[1:i_len+4:2]
+            return [vbox(grid(labels, vals), *children[i_len+4:])]
 
         else:
             c_1 = hbox(children[0], children[1], children[2], children[3],
                        spacer)
-            return [vbox(c_1, *children[4:])]
+            return [vbox(c_1, *children[4:]),
+                    align('v_center', children[0], children[1]),
+                    align('v_center', children[1], children[2]),
+                    align('v_center', children[2], children[3])]
 
     else:
         c_1 = hbox(children[0], children[1], children[2], children[3], spacer)
@@ -53,9 +56,25 @@ enamldef LoopView(GroupBox): view:
     title << task.task_name
     constraints << [factory(_constraints_helpers)]
 
+    initialized ::
+        t = self.task
+        i_include = view.find('interface_include')
+
+        if not t.interface:
+            t.interface = i_select.items[0]()
+
+        i_name = t.interface.interface_class
+
+        cmd = 'hqc_meas.task_manager.interface_views_request'
+        i_views, _ = core.invoke_command(cmd, {'interface_classes':
+                                               [i_name]})
+
+        i_include.objects = [i_view(interface=t.interface)
+                             for i_view in i_views[i_name]]
+
     Label:
         text = 'Interface'
-    ObjectCombo:
+    ObjectCombo: i_select:
         items << list(core.invoke_command(
                           'hqc_meas.task_manager.interfaces_request',
                           {'tasks': task.task_class})[0][task.task_class])
@@ -75,7 +94,7 @@ enamldef LoopView(GroupBox): view:
                                                    [i_name]})
 
             i_include.objects = [i_view(interface=interface)
-                                      for i_view in i_views[i_name]]
+                                 for i_view in i_views[i_name]]
 
     Label:
         text = 'Timing'
@@ -84,12 +103,11 @@ enamldef LoopView(GroupBox): view:
 
     Include: interface:
         name = 'interface_include'
-        pass
 
     Include:
         objects << [_model.instantiate_view(task.task, {'core': core,
                                                         'in_loop': True})]\
-                   if task.task else []
+                if task.task else []
 
     TaskEditor: editor:
         task := view.task

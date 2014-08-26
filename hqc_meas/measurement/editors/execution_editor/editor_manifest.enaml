@@ -20,12 +20,6 @@ def editor_factory(declaration, workbench):
     """
     return ExecutionEditor(declaration=declaration)
 
-def editor_test(workbench, selected_task):
-    """ Allow ExecutionEditor for all tasks.
-
-    """
-    return True
-
 
 enamldef ExecutionEditorManifest(PluginManifest):
     """ Manifest contributing the ExecutionEditor to the MeasurePlugin.
@@ -41,4 +35,3 @@ enamldef ExecutionEditorManifest(PluginManifest):
             description = cleandoc(u'''Editor allowing to control how a task
             is performed (parallel/wait/stop).''')
             factory = editor_factory
-            test = editor_test
