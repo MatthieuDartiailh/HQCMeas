@@ -12,8 +12,9 @@ def profile(call, *args, **kwargs):
     profiler.runcall(call, *args, **kwargs)
     profiler.print_stats()
 
-from hqc_meas.pulses.pulses import (RootSequence, Sequence, Pulse,
-                                    ConditionalSequence)
+from hqc_meas.pulses.base_sequences import RootSequence, Sequence
+from hqc_meas.pulses.pulse import Pulse
+from hqc_meas.pulses.sequences.conditional_sequence import ConditionalSequence
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
 from hqc_meas.pulses.shapes.modulation import Modulation
 

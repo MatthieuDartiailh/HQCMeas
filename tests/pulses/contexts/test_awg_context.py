@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_awg_context.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 import numpy as np
 from nose.tools import (assert_equal, assert_true, assert_sequence_equal,
                         assert_in, assert_false)
 
 from hqc_meas.pulses.contexts.awg_context import AWGContext
-from hqc_meas.pulses.pulses import RootSequence, Pulse, Sequence
+from hqc_meas.pulses.base_sequences import RootSequence, Sequence
+from hqc_meas.pulses.pulse import Pulse
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
 from hqc_meas.pulses.shapes.modulation import Modulation
 

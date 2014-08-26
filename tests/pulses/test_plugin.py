@@ -9,9 +9,9 @@ from nose.plugins.skip import SkipTest
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
-    from hqc_meas.pulses.pulses_manifest import PulsesManagerManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.pulses.manager.manifest import PulsesManagerManifest
 
 from ..util import complete_line
 

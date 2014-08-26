@@ -5,7 +5,8 @@
 # license : MIT license
 # =============================================================================
 from nose.tools import (assert_equal, assert_in, assert_is_instance)
-from hqc_meas.pulses.pulses import (RootSequence, Sequence, Pulse)
+from hqc_meas.pulses.pulse import Pulse
+from hqc_meas.pulses.base_sequences import RootSequence, Sequence
 from hqc_meas.pulses.contexts.base_context import BaseContext
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
 from hqc_meas.utils.walks import flatten_walk

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : benchmark_base_pulses.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from functools import partial
 from timeit import repeat
 
@@ -13,8 +13,9 @@ def time(*args, **kwargs):
     kwargs['repeat'] = 100
     return min(repeat(*args, **kwargs))/kwargs['number']
 
-from hqc_meas.pulses.pulses import (RootSequence, Sequence, Pulse,
-                                    ConditionalSequence)
+from hqc_meas.pulses.base_sequences import RootSequence, Sequence
+from hqc_meas.pulses.pulse import Pulse
+from hqc_meas.pulses.sequences.conditional_sequence import ConditionalSequence
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
 from hqc_meas.pulses.shapes.modulation import Modulation
 
