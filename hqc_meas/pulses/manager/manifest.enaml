@@ -10,8 +10,8 @@ from enaml.workbench.api import PluginManifest, Extension, ExtensionPoint
 from enaml.workbench.core.api import Command
 from enaml.workbench.ui.api import ActionItem, MenuItem, ItemGroup
 
-from ..utils.pref_plugin import Preferences
-from ..utils.state_plugin import State
+from hqc_meas.utils.preferences.api import Preferences
+from hqc_meas.utils.state.api import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 from hqc_meas.task_management.dependencies import BuildDependency
 
@@ -19,7 +19,7 @@ def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
 
     """
-    from .pulses_plugin import PulsesManagerPlugin
+    from .plugin import PulsesManagerPlugin
     return PulsesManagerPlugin()
 
 

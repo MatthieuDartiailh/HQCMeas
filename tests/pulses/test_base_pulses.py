@@ -9,7 +9,7 @@ from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
 from numpy.testing import assert_array_equal
 import numpy as np
 from hqc_meas.pulses.pulse import Pulse
-from hqc_meas.pulses.base_sequences import RootSequence, Sequence,
+from hqc_meas.pulses.base_sequences import RootSequence, Sequence
 from hqc_meas.pulses.sequences.conditional_sequence import ConditionalSequence
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
 from hqc_meas.pulses.shapes.modulation import Modulation
