@@ -40,8 +40,7 @@ enamldef ErrorsDisplayContainer(Container):
     attr errors
     attr model = _ErrorsDisplayModel(errors)
 
-    constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che),
-                        close),
+    constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che)),
                    align('left', lis_lab, lis),
                    align('left', che_lab, che)]
 
@@ -67,11 +66,11 @@ enamldef ErrorsDisplay(Dialog): dial:
     Conditional:
         condition = bool(errors)
         Container:
-            constraints = [vbox(cont, close),
-                           contents_right == close.right]
+            constraints = [vbox(cont, ex),
+                           contents_right == ex.right]
             ErrorsDisplayContainer: cont:
                 errors << dial.errors
-            PushButton: close:
+            PushButton: ex:
                 text = 'Close'
                 clicked :: dial.accept()
 
@@ -81,6 +80,6 @@ enamldef ErrorsDisplay(Dialog): dial:
             MultilineField:
                 read_only = True
                 text = 'No error happened on start-up'
-            PushButton: close:
+            PushButton:
                 text = 'Close'
                 clicked :: dial.accept()
