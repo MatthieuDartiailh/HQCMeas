@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : tast_base_pulses.py
+# module : tast_pulses_persistence.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
