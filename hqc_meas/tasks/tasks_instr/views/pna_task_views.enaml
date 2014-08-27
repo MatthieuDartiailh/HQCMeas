@@ -6,7 +6,7 @@
 #==============================================================================
 """
 """
-from atom.api import set_default, Value
+from atom.api import set_default, Value, observe
 from enaml.core.api import Conditional
 from enaml.layout.api import grid, vbox, hbox, factory
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, Container)
@@ -20,7 +20,7 @@ import re
 from hqc_meas.utils.layouts import auto_grid_layout
 from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
-from hqc_meas.tasks.tools.pair_editor import PairEditor
+from hqc_meas.tasks.tools.pair_editor import PairEditor, PairEditorModel
 from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 
@@ -57,6 +57,22 @@ INTERFACE_VIEW_MAPPING = {'PNASetRFFrequencyInterface':
 MODES = {'Raw': '', 'Mag lin': 'MLIN', 'Mag log': 'MLOG', 'Phase': 'PHAS',
          'Real part': 'REAL','Imaginary part': 'IMAG'}
 
+class PNAPairEditorModel(PairEditorModel):
+    """
+    """
+
+    @observe('pairs')
+    def refresh(self, change):
+        """
+        """
+        aux = []
+        for p in self.pairs:
+            if p.value:
+                aux.append((p.label, p.value))
+            else:
+                aux.append((p.label,))
+        setattr(self.model, self.iterable_name, aux)
+
 class SParametersValidator(Validator):
     """
 
@@ -84,10 +100,10 @@ enamldef MeasField(Container):
 
     Field: field:
         text := model.label
-        validator = SParameterValidator()
+        validator = SParametersValidator()
         tool_tip =  fill(cleandoc(
                         '''Measure should be described by the parameter to
-                          measure.'''))
+                          measure. ex : S21.'''))
 
     ObjectCombo: combo:
         items = ['Raw', 'Mag lin', 'Mag log', 'Phase', 'Real part',
@@ -143,6 +159,8 @@ enamldef PNASinglePointView(BaseInstrumentView): view:
             ed.model = task
             ed.iterable_name = 'measures'
             ed.alignment = 'v_center'
+            ed._model = PNAPairEditorModel(model=model,
+                                           iterable_name=iterable_name)
 
 
 def label_maker(label, mode):
@@ -225,6 +243,8 @@ enamldef PNASweepMeasView(BaseInstrumentView): view:
             ed.model = task
             ed.iterable_name = 'measures'
             ed.alignment = 'v_center'
+            ed._model = PNAPairEditorModel(model=model,
+                                           iterable_name=iterable_name)
 
 TASK_VIEW_MAPPING = {'PNASinglePointMeasureTask': PNASinglePointView,
                      'PNASweepTask': PNASweepMeasView}

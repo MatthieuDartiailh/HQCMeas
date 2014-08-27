@@ -155,6 +155,8 @@ class SingleChannelPNATask(InstrumentTask):
     # Id of the channel to use.
     channel = Int(1).tag(pref=True)
 
+    channel_driver = Value()
+
     def check(self, *args, **kwargs):
         """ Add checking for channels to the base tests.
 
@@ -257,12 +259,12 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
                                 self).check(*args, **kwargs)
 
         pattern = re.compile('S[1-4][1-4]')
-        for i, (s_par, f) in enumerate(self.measures):
-            match = pattern.match(s_par)
+        for i, meas in enumerate(self.measures):
+            match = pattern.match(meas[0])
             if not match:
                 path = self.task_path + '/' + self.task_name
                 path += '_Meas_{}'.format(i)
-                traceback[path] = 'Unvalid parameter : {}'.format(s_par)
+                traceback[path] = 'Unvalid parameter : {}'.format(meas[0])
                 test = False
 
         return test, traceback
@@ -373,12 +375,12 @@ class PNASweepTask(SingleChannelPNATask):
         test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
 
         pattern = re.compile('S[1-4][1-4]')
-        for i, (s_par, f) in enumerate(self.measures):
-            match = pattern.match(s_par)
+        for i, meas in enumerate(self.measures):
+            match = pattern.match(meas[0])
             if not match:
                 path = self.task_path + '/' + self.task_name
                 path += '_Meas_{}'.format(i)
-                traceback[path] = 'Unvalid parameter : {}'.format(s_par)
+                traceback[path] = 'Unvalid parameter : {}'.format(meas[0])
                 test = False
 
         try:

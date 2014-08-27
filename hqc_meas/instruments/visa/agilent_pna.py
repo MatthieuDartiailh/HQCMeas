@@ -15,7 +15,14 @@ This module defines drivers for agilent PNA.
 """
 from inspect import cleandoc
 import numpy as np
-from visa import ascii, single, double
+
+try:
+    from visa import ascii, single, double
+except ImportError:
+    ascii = 0
+    single = 1
+    double = 3
+
 from ..driver_tools import (BaseInstrument, InstrIOError,
                             secure_communication, instrument_property)
 from ..visa_tools import VisaInstrument
@@ -54,6 +61,11 @@ class AgilentPNAChannel(BaseInstrument):
                                                 caching_permissions)
         self._pna = pna
         self._channel = channel_num
+
+    def reopen_connection(self):
+        """
+        """
+        self._pna.reopen_connection()
 
     @secure_communication()
     def read_formatted_data(self, meas_name=''):

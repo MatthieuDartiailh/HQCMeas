@@ -29,7 +29,7 @@ class Pair(Atom):
     def _update_model(self, change):
         self.refresh_method({'name': 'pair'})
 
-class _PairEditorModel(Atom):
+class PairEditorModel(Atom):
     """ Model converting a list of pairs into an editable list of Pair.
 
     """
@@ -61,7 +61,7 @@ template PairEditor(Content):
         alias title: ed.title
         alias alignment : ed.alignment
 
-        attr _model = _PairEditorModel(model=model,
+        attr _model = PairEditorModel(model=model,
                                        iterable_name=iterable_name)
         ListEditor(Content): ed:
             ed.model = _model
