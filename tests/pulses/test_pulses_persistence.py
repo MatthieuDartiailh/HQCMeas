@@ -105,8 +105,8 @@ def test_build_from_config():
 
     pref = root.preferences_from_members()
     dependecies = {'pulses': {'Sequence': Sequence, 'Pulse': Pulse,
-                              'SquareShape': SquareShape,
-                              'BaseContext': BaseContext}}
+                              'shapes': {'SquareShape': SquareShape},
+                              'contexts': {'BaseContext': BaseContext}}}
 
     aux = RootSequence.build_from_config(pref, dependecies)
     assert_equal(aux.external_vars, {'a': 1.5})

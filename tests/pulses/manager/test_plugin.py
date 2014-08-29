@@ -4,16 +4,18 @@ import enaml
 import os
 import shutil
 from configobj import ConfigObj
-from nose.tools import assert_equal, assert_not_is_instance
+from nose.tools import (assert_equal, assert_not_is_instance, assert_true,
+                        assert_false, assert_in, assert_not_in)
 from nose.plugins.skip import SkipTest
 
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from hqc_meas.utils.state.manifest import StateManifest
     from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.utils.dependencies.manifest import DependenciesManifest
     from hqc_meas.pulses.manager.manifest import PulsesManagerManifest
 
-from ..util import complete_line
+from ...util import complete_line
 
 
 def setup_module():
@@ -22,6 +24,9 @@ def setup_module():
 
 def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
+
+HQC_MEAS_PATH = os.path.join(os.path.dirname(__file__), '..', '..', '..',
+                             'hqc_meas')
 
 
 class Test(object):
@@ -38,7 +43,7 @@ class Test(object):
         os.mkdir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(HQC_MEAS_PATH, 'utils')
         def_path = os.path.join(util_path, 'default.ini')
         if os.path.isfile(def_path):
             os.rename(def_path, os.path.join(util_path, '__default.ini'))
@@ -50,16 +55,14 @@ class Test(object):
         default.write()
 
         # Creating contexts preferences.
-        contexts_path = os.path.join(directory, '..', '..', 'hqc_meas',
-                                     'pulses', 'contexts')
+        contexts_path = os.path.join(HQC_MEAS_PATH, 'pulses', 'contexts')
         contexts_api = set(('awg_context.py',))
         contexts_loading = [unicode('contexts.' + mod[:-3])
                             for mod in os.listdir(contexts_path)
                             if mod.endswith('.py') and mod not in contexts_api]
 
         # Creating sequences preferences.
-        sequences_path = os.path.join(directory, '..', '..', 'hqc_meas',
-                                      'pulses', 'sequences')
+        sequences_path = os.path.join(HQC_MEAS_PATH, 'pulses', 'sequences')
         sequences_api = set(('conditional_sequence.py',))
         sequences_loading = [unicode('sequences.' + mod[:-3])
                              for mod in os.listdir(sequences_path)
@@ -67,8 +70,7 @@ class Test(object):
                              mod not in sequences_api]
 
         # Creating shapes preferences.
-        shapes_path = os.path.join(directory, '..', '..', 'hqc_meas', 'pulses',
-                                   'shapes')
+        shapes_path = os.path.join(HQC_MEAS_PATH, 'pulses', 'shapes')
         shapes_api = set(('base_shapes.py',))
         shapes_loading = [unicode('shapes.' + mod[:-3])
                           for mod in os.listdir(shapes_path)
@@ -113,7 +115,7 @@ class Test(object):
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
-        util_path = os.path.join(directory, '..', '..', 'hqc_meas', 'utils')
+        util_path = os.path.join(HQC_MEAS_PATH, 'utils')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
 
@@ -127,9 +129,11 @@ class Test(object):
         self.workbench.register(CoreManifest())
         self.workbench.register(StateManifest())
         self.workbench.register(PreferencesManifest())
+        self.workbench.register(DependenciesManifest())
 
     def teardown(self):
         self.workbench.unregister(u'hqc_meas.pulses_manager')
+        self.workbench.unregister(u'hqc_meas.dependencies')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')
         self.workbench.unregister(u'enaml.workbench.core')
@@ -139,7 +143,10 @@ class Test(object):
         plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
 
         assert_equal(sorted(plugin.sequences), sorted(['Conditional sequence',
-                     'Pulse', 'Sequence', 'RootSequence']))
+                     'Sequence']))
+        assert_equal(sorted(plugin._sequences.keys()),
+                     sorted(['Conditional sequence',
+                             'Pulse', 'Sequence', 'RootSequence']))
         assert_equal(plugin.shapes, ['Square'])
         assert_equal(plugin.contexts, ['AWG'])
 
@@ -245,3 +252,82 @@ class Test(object):
         assert_equal(sequences.keys(), ['ConditionalSequence'])
         assert_not_is_instance(sequences['ConditionalSequence'], tuple)
         assert_equal(miss, [])
+
+    def test_config_request_build1(self):
+        # Test requesting a config for a standard sequence.
+        self.workbench.register(PulsesManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+
+        conf, view = plugin.config_request('Conditional sequence')
+
+        assert_equal(type(conf).__name__, 'SequenceConfig')
+        conf.sequence_name = 'Test'
+        assert_equal(conf.config_ready, True)
+        sequence = conf.build_sequence()
+        assert_equal(sequence.name, 'Test')
+
+#    def test_config_request_build2(self):
+#        # Test requesting a config for a template sequence.
+#        self.workbench.register(PulsesManagerManifest())
+#        core = self.workbench.get_plugin(u'enaml.workbench.core')
+#        com = u'hqc_meas.task_manager.config_request'
+#
+#        conf, view = core.invoke_command(com, {'task': 'Template'}, self)
+#        assert_equal(type(conf).__name__, 'IniConfigTask')
+#        conf.task_name = 'Test'
+#        assert_equal(conf.config_ready, True)
+#        task = conf.build_task()
+#        assert_equal(task.task_name, 'Test')
+#        assert_equal(len(task.children_task), 1)
+#        task2 = task.children_task[0]
+#        assert_equal(task2.task_name, 'a')
+#        assert_equal(task2.task_class, 'LogTask')
+
+    def test_filter(self):
+        # Filtering sequences.
+        self.workbench.register(PulsesManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+
+        seq = plugin.filter_sequences('All')
+        assert_in('Sequence', seq)
+        assert_not_in('Pulse', seq)
+        assert_not_in('RootSequence', seq)
+
+    def test_collect_dependencies(self):
+        # Test collecting build dependencies.
+        self.workbench.register(PulsesManagerManifest())
+        from hqc_meas.pulses.base_sequences import RootSequence, Sequence
+        from hqc_meas.pulses.pulse import Pulse
+        from hqc_meas.pulses.shapes.base_shapes import SquareShape
+        from hqc_meas.pulses.contexts.awg_context import AWGContext
+        root = RootSequence(context=AWGContext())
+
+        pulse1 = Pulse(def_1='1.0', def_2='{7_start} - 1.0')
+        pulse2 = Pulse(def_1='{a} + 1.0', def_2='{6_start} + 1.0')
+        pulse3 = Pulse(def_1='{3_stop} + 0.5', def_2='10.0')
+        pulse4 = Pulse(def_1='2.0', def_2='0.5', def_mode='Start/Duration')
+        pulse5 = Pulse(def_1='{1_stop}', def_2='0.5',
+                       def_mode='Start/Duration')
+        pulse5.shape = SquareShape(amplitude='0.5')
+        pulse5.kind = 'analogical'
+
+        pulse5.modulation.frequency = '1.0**'
+        pulse5.modulation.phase = '1.0'
+        pulse5.modulation.activated = True
+
+        sequence2 = Sequence(items=[pulse3])
+        sequence1 = Sequence(items=[pulse2, sequence2, pulse4])
+
+        root.items = [pulse1, sequence1, pulse5]
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        com = u'hqc_meas.dependencies.collect_dependencies'
+        res, build, run = core.invoke_command(com, {'obj': root}, core)
+        assert_true(res)
+        assert_in('pulses', build)
+        assert_equal(sorted(['Sequence', 'Pulse', 'RootSequence', 'shapes',
+                             'contexts']),
+                     sorted(build['pulses'].keys()))
+        assert_equal(['SquareShape'], build['pulses']['shapes'].keys())
+        assert_equal(['AWGContext'], build['pulses']['contexts'].keys())
+        assert_false(run)

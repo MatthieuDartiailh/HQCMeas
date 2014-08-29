@@ -155,11 +155,13 @@ class ClassAttrTaskFilter(AbstractTaskFilter):
 
         return tasks
 
+
 class LogicalTaskFilter(ClassAttrTaskFilter):
     """ Filter keeping only the task declared to be loopable.
 
     """
     class_attr = {'name': 'logic_task', 'value': True}
+
 
 class LoopableTaskFilter(ClassAttrTaskFilter):
     """ Filter keeping only the task declared to be loopable.

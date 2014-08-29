@@ -21,12 +21,15 @@ from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
 from .templates_io import load_template
 from ..pulse import Pulse
 from ..base_sequences import Sequence, RootSequence
+from .config import SEQUENCE_CONFIG, CONFIG_MAP_VIEW
+from .filters import SEQUENCES_FILTERS
 with enaml.imports():
     from ..pulse_view import PulseView
     from ..sequences_views import (SequenceView, RootSequenceView)
 
 
 PACKAGE_PATH = os.path.join(os.path.dirname(__file__), '..')
+
 
 MODULE_ANCHOR = 'hqc_meas.pulses'
 
@@ -71,10 +74,12 @@ class PulsesManagerPlugin(HasPrefPlugin):
                                              'templates'))
         if not os.path.isdir(path):
             os.mkdir(path)
-        self._refresh_template_sequences()
         self._refresh_sequences()
+        self._refresh_template_sequences()
         self._refresh_contexts()
         self._refresh_shapes()
+        self._refresh_config()
+        self._refresh_filters()
         self._bind_observers()
 
     def stop(self):
@@ -90,6 +95,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         self._template_sequences.clear()
         self._contexts.clear()
         self._shapes.clear()
+        self._configs.clear()
+        self._filters.clear()
 
     def sequences_request(self, sequences, use_class_names=False,
                           views=True):
@@ -108,8 +115,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         Returns
         -------
         sequences : dict
-            The required sequences infos as a dict. For Python tasks the entry
-            will contain the class and the view ({name: (class, view)}).
+            The required sequences infos as a dict. For Python sequences the
+            entry will contain the class and the view ({name: (class, view)}).
             If use_class_names is True the class name will be used.
             For templates the entry will contain the path, the data as a
             ConfigObj object and the doc ({name : (path, data, doc)})
@@ -235,6 +242,65 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
         return answer, missing
 
+    def config_request(self, sequence):
+        """ Access the proper config for a sequence.
+
+        Parameters
+        ----------
+        sequence : str
+            Name of the sequnce for which a config is required
+
+        Returns
+        -------
+        config : tuple
+            Tuple containing the config object requested, and its visualisation
+
+        """
+        templates = self._template_sequences
+        if sequence in self._template_sequences:
+            conf, view = self._config['IniConfigSequence']
+            return conf(manager=self, template_path=templates[sequence]), view
+
+        elif sequence in self._sequences:
+            configs = self._configs
+            # Look up the hierarchy of the selected sequence to get the
+            # appropriate SequenceConfig
+            sequence_class, _ = self._sequences[sequence]
+            for i_class in type.mro(sequence_class):
+                if i_class in configs:
+                    config = configs[i_class][0]
+                    view = configs[i_class][1]
+                    return config(manager=self,
+                                  sequence_class=sequence_class), view
+
+        return None, None
+
+    def filter_sequences(self, filter_name):
+        """ Filter the known sequences using the specified filter.
+
+        Parameters
+        ----------
+        filter_name : str
+            Name of the filter to use
+
+        Returns
+        -------
+        sequences : list(str) or None
+            Sequences selected by the filter, or None if the filter does not
+            exist.
+
+        """
+        s_filter = self._filters.get(filter_name)
+        if s_filter:
+            return s_filter.filter_items(self._sequences,
+                                         self._template_sequences)
+
+    # implement dialog logic in manifest.
+    def build_sequence(self, config):
+        """ Build a sequence from a configuartion dictionary.
+        """
+        pass
+
     def report(self):
         """ Give access to the failures which happened at startup.
 
@@ -242,17 +308,24 @@ class PulsesManagerPlugin(HasPrefPlugin):
         return self._failed
 
     # --- Private API ---------------------------------------------------------
-    # Sequences implemented in Python
+
+    #: Sequences implemented in Python
     _sequences = Dict(Str(), Tuple())
 
-    # Template tasks (store full path to .ini)
+    #: Template sequences (store full path to .ini)
     _template_sequences = Dict(Str(), Unicode())
 
-    # Task filters
+    #: Sequence contexts.
     _contexts = Dict(Str(), Tuple())
 
-    # Task config dict for python tasks (task_class: (config, view))
+    #: Task config dict for python tasks (task_class: (config, view))
     _shapes = Dict(Str(), Tuple())
+
+    #: Filters for sequences.
+    _filters = Dict(Str())
+
+    #: Configuration object used to insert new sequences in existing ones.
+    _configs = Dict()
 
     # Dict holding the list of failures which happened during loading
     _failed = Dict()
@@ -281,7 +354,10 @@ class PulsesManagerPlugin(HasPrefPlugin):
                 logger.warn('{} is not a valid directory'.format(path))
 
         self._template_sequences = templates
-        self.sequences = list(self._sequences.keys()) + list(templates.keys())
+        aux = list(self._sequences.keys()) + list(templates.keys())
+        aux.remove('Pulse')
+        aux.remove('RootSequence')
+        self.sequences = aux
 
     def _refresh_sequences(self):
         """ Refresh the known sequences.
@@ -306,8 +382,13 @@ class PulsesManagerPlugin(HasPrefPlugin):
         valid_sequences['Pulse'] = (Pulse, PulseView)
 
         self._sequences = valid_sequences
-        self.sequences = list(valid_sequences.keys()) +\
+        # Here remove Pulse from the public sequence as there are other ways to
+        # access it. But keep it in private for requests.
+        aux = list(valid_sequences.keys()) +\
             list(self._template_sequences.keys())
+        aux.remove('Pulse')
+        aux.remove('RootSequence')
+        self.sequences = aux
 
         self._failed = failed
 
@@ -358,6 +439,22 @@ class PulsesManagerPlugin(HasPrefPlugin):
         self.shapes = list(valid_shapes.keys())
 
         self._failed = failed
+
+    def _refresh_filters(self):
+        """ Place holder for a future filter discovery function
+
+        """
+        self._filters = SEQUENCES_FILTERS
+
+    def _refresh_config(self):
+        """ Place holder for a future config discovery function
+
+        """
+        mapping = {}
+        for key, val in SEQUENCE_CONFIG.iteritems():
+            mapping[key] = (val, CONFIG_MAP_VIEW[val])
+
+        self._configs = mapping
 
     def _explore_package(self, pack, pack_path, failed, exceptions):
         """ Explore a package.

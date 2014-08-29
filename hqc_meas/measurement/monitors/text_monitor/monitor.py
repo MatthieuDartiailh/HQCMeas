@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : monitor.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import (Instance, Value, Str, List, Dict, ForwardTyped,
@@ -33,7 +33,7 @@ class TextMonitor(BaseMonitor):
     """ Simple monitor displaying entries as text in a widget.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: List of the entries which should be displayed when a measure is running.
     displayed_entries = ContainerList(Instance(MonitoredEntry))
@@ -48,7 +48,7 @@ class TextMonitor(BaseMonitor):
     hidden_entries = List(Instance(MonitoredEntry))
 
     #: Mapping between a database entry and a list of callable used for
-    #:updating an entry of the monitor which relies on the database entry.
+    #: updating an entry of the monitor which relies on the database entry.
     updaters = Dict(Str(), List(Callable()))
 
     #: List of rules which should be used to build monitor entries.
@@ -249,7 +249,7 @@ class TextMonitor(BaseMonitor):
         if config:
             plugin.rules[rule_name] = config
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     # Known values of the database entries used when recomputing an entry value
     # depending not on a single value. During edition all values are stored,

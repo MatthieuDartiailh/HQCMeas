@@ -12,13 +12,13 @@ from atom.api import (Atom, Str, Bool, Subclass, ForwardTyped,
 
 from inspect import getdoc, cleandoc
 
-from ..items.item import Item
+from ...item import Item
 
 
 # Circular import protection
 def pulses_manager():
-    from ..manager_plugin import TaskManagerPlugin
-    return TaskManagerPlugin
+    from ..plugin import PulsesManagerPlugin
+    return PulsesManagerPlugin
 
 
 class AbstractConfig(Atom):
@@ -30,7 +30,7 @@ class AbstractConfig(Atom):
     manager = ForwardTyped(pulses_manager)
 
     #: Class of the item to create.
-    item_class = Subclass(Item)
+    sequence_class = Subclass(Item)
 
     # Bool indicating if the build can be done.
     config_ready = Bool(False)
@@ -47,7 +47,7 @@ class AbstractConfig(Atom):
         to check if enough parameters has been provided to build the item.'''
         raise NotImplementedError(cleandoc(err_str))
 
-    def build_item(self):
+    def build_sequence(self):
         """This method use the user parameters to build the item object
 
          Returns
@@ -63,34 +63,30 @@ class AbstractConfig(Atom):
         raise NotImplementedError(cleandoc(err_str))
 
 
-class PulseConfig(AbstractConfig):
-    """
-
-    """
-
-    # Docstring of the class to help pepole know what they are going to create.
-    task_doc = Str()
-
-    def __init__(self, **kwargs):
-        super(PulseConfig, self).__init__(**kwargs)
-        self.task_doc = getdoc(self.task_class).replace('\n', ' ')
-
-    def build_task(self):
-        return self.task_class(task_name=self.task_name)
-
-    @observe('task_name')
-    def check_parameters(self, change):
-        """ Observer notifying that the configurer is ready to build.
-
-        """
-        if self.task_name != '':
-            self.config_ready = True
-        else:
-            self.config_ready = False
-
-
 class SequenceConfig(AbstractConfig):
     """
 
     """
-    pass
+
+    #: Name of the sequence used to make the sequence easier to read.
+    sequence_name = Str()
+
+    #: Docstring of the sequence.
+    sequence_doc = Str()
+
+    def __init__(self, **kwargs):
+        super(SequenceConfig, self).__init__(**kwargs)
+        self.sequence_doc = getdoc(self.sequence_class).replace('\n', ' ')
+
+    def build_sequence(self):
+        return self.sequence_class(name=self.sequence_name)
+
+    @observe('sequence_name')
+    def check_parameters(self, change):
+        """ Observer notifying that the configurer is ready to build.
+
+        """
+        if change['value']:
+            self.config_ready = True
+        else:
+            self.config_ready = False

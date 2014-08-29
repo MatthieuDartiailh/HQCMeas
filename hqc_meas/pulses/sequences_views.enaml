@@ -14,7 +14,84 @@ from enaml.widgets.api import (PushButton, Container, Label, Field,
 from enaml.core.api import Looper, Conditional, Include
 from enaml.workbench.core.core_plugin import CorePlugin
 
-from hqc_meas.utils.widgets.list_editor import PopupListMenu
+from .pulse import Pulse
+
+# Reimplemented here to accomodate the use of a menu to either insert Pulse
+# or sequence.
+enamldef PulsesPopupListMenu(Menu):
+    attr model
+    attr index
+    attr operations
+    attr factory
+    attr args = ()
+    attr kwargs = {}
+    Conditional:
+        condition = bool('add' in operations)
+        Menu:
+            title = 'Add before'
+            Action:
+                text = 'Pulse'
+                triggered ::
+                    obj = Pulse()
+                    model.insert(index, obj)
+            Action:
+                text = 'Sequence'
+                triggered ::
+                    obj = factory(*args, **kwargs)
+                    if obj is not None:
+                        model.insert(index, obj)
+        Menu:
+            title = 'Add before'
+            Action:
+                text = 'Pulse'
+                triggered ::
+                    obj = Pulse()
+                    model.insert(index + 1, obj)
+            Action:
+                text = 'Sequence'
+                triggered ::
+                    obj = factory(*args, **kwargs)
+                    if obj is not None:
+                        model.insert(index + 1, obj)
+        Action:
+            separator = True
+    Conditional:
+        condition = bool('remove' in operations)
+        Action:
+            text = 'Delete'
+            triggered :: del model[index]
+        Action:
+            separator = True
+    Conditional:
+        condition = bool('move' in operations)
+        Conditional:
+            condition = bool(index not in (0,1))
+            Action:
+                text = 'Move to top'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(0, obj)
+        Conditional:
+            condition = bool(index != 0)
+            Action:
+                text = 'Move up'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(index - 1, obj)
+        Conditional:
+            condition = bool(index != len(model)-1)
+            Action:
+                text = 'Move down'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(index + 1, obj)
+        Conditional:
+            condition = bool(index != len(model)-1)
+            Action:
+                text = 'Move to bottom'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(len(model), obj)
 
 
 class ViewsManager(Atom):
@@ -103,12 +180,12 @@ enamldef _SequenceListView(Container): list_view:
                 text = '>'
                 clicked ::
                     edited_list = item.items
-                    menu = PopupListMenu(
+                    menu = PulsesPopupListMenu(
                       model = edited_list,
                       index = edited_list.index(loop_item),
                       factory = core.invoke_command,
                       operations = operations,
-                      args = ('hqc_meas.pulses_manager.build_item',),
+                      args = ('hqc_meas.pulses_manager.build_sequence',),
                       kwargs = {'parameters': {'parent_ui': button},
                                 'trigger': button})
                     menu.popup()

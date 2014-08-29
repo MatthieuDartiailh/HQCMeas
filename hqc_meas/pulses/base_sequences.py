@@ -509,7 +509,7 @@ class RootSequence(Sequence):
         """
         context_config = config['context']
         context_class_name = context_config.pop('context_class')
-        context_class = dependencies['pulses'][context_class_name]
+        context_class = dependencies['pulses']['contexts'][context_class_name]
         context = context_class()
         context.update_members_from_preferences(**context_config)
         config['context'] = context
@@ -517,6 +517,18 @@ class RootSequence(Sequence):
                                                           dependencies)
 
     # --- Private API ---------------------------------------------------------
+
+    def _answer(self, members, callables):
+        """
+        
+        """
+        answers = super(RootSequence, self)._answer(members, callables)
+        con_members = [m for m in members
+                       if m.startswith('context.')]
+        answers.update({m: getattr(self.context, m[8:], None)
+                        for m in con_members})
+                            
+        return answers
 
     def _observe_fix_sequence_duration(self, change):
         """ Keep the linkable_vars list in sync with fix_sequence_duration.

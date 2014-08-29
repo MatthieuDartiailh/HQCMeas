@@ -15,6 +15,8 @@ from hqc_meas.utils.state.api import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 from hqc_meas.utils.dependencies.api import BuildDependency
 
+from .building import BuilderView
+
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
 
@@ -74,12 +76,33 @@ def save_task(event):
     return manager.save_task(**event.parameters)
 
 
-def build_task(event):
-    """ Handler for the 'hqc_meas.task_manager.build_task' command.
+def build_sequence(event):
+    """ Handler for the 'hqc_meas.pulses_manager.build_sequence' command.
+
+    Parameters
+    ----------
+    mode : {'ui', template', 'file'}
+        From what source should the sequence be built. If 'ui' a dialog will
+        open asking the user to select a sequence, in template mode a similar
+        dialog will open but display only templates, in file mode a file dialog
+        will be opened and the user will have to choose a config file.
+
+    Returns
+    -------
+    sequence : Sequence
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.task_manager')
-    return manager.build_task(**event.parameters)
+    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
+    mode = event.parameters.get('mode', 'ui')
+    if mode == 'path':
+        pass
+    elif mode == 'template':
+        pass
+    else:
+        dial = BuilderView(manager=manager)
+        dial.exec_()
+        if dial.result:
+            return dial.model.sequence_config.build_sequence()
 
 
 def build_root(event):
@@ -109,8 +132,8 @@ SHAPES_REQUEST_DESCRIPTION = \
 SAVE_TASK_DESCRIPTION = \
 """ Save a task to a file or object. """
 
-BUILD_TASK_DESCRIPTION = \
-""" Build a task to insert in a task hierarchy. """
+BUILD_SEQUENCE_DESCRIPTION = \
+""" Build a sequnce. """
 
 BUILD_ROOT_DESCRIPTION = \
 """ Build a root task. """
@@ -129,15 +152,15 @@ def collect_pulses_dependecies(workbench, flat_walk):
     # Collect items.
     s_res = manager.sequences_request(flat_walk['item_class'],
                                       use_class_names=True,
-                                      no_view=True)
+                                      views=False)
     # Collect contexts.
-    c_res = manager.contexts_request(flat_walk['context_class'],
+    c_res = manager.contexts_request(flat_walk['context.context_class'],
                                      use_class_names=True,
-                                     no_view=True)
+                                     views=False)
     # Collect shapes.
-    sh_res = manager.shapes_request(flat_walk['shape_class'],
+    sh_res = manager.shapes_request(flat_walk['shape.shape_class'],
                                       use_class_names=True,
-                                      no_view=True)
+                                      views=False)
 
     if s_res[1] or c_res[1] or sh_res[1]:
         mess = 'Missing sequences: {}, contexts: {}, shapes :{}'
@@ -147,8 +170,8 @@ def collect_pulses_dependecies(workbench, flat_walk):
     # Bundle all dependencies under a single dict.
     dependencies = {}
     dependencies.update(s_res[0])
-    dependencies.update(c_res[0])
-    dependencies.update(sh_res[0])
+    dependencies['contexts'] = c_res[0]
+    dependencies['shapes'] = sh_res[0]
 
     if dependencies:
         return {'pulses': dependencies}
@@ -162,6 +185,7 @@ enamldef PulsesManagerManifest(PluginManifest):
     """
     id = 'hqc_meas.pulses_manager'
     factory = manager_plugin_factory
+
     Extension:
         id = 'prefs'
         point = 'hqc_meas.preferences.pref_plugin'
@@ -169,6 +193,7 @@ enamldef PulsesManagerManifest(PluginManifest):
             saving_method = 'pref_from_members'
             loading_method = 'members_from_preferences'
             auto_save = []
+
     Extension:
         id = 'state'
         point = 'hqc_meas.state.states'
@@ -176,13 +201,16 @@ enamldef PulsesManagerManifest(PluginManifest):
             id = 'hqc_meas.states.pulses_manager'
             description = MANAGER_STATE_DESCRIPTION
             sync_members = ['sequences', 'contexts', 'shapes']
+
     Extension:
         id = 'item_classes'
-        point = 'hqc_meas.task_manager.build_dependencies'
+        point = 'hqc_meas.dependencies.build'
         BuildDependency:
             id = 'hqc_meas.pulses_manager.dependencies'
-            walk_members = ['item_class', 'context_class', 'shape_class']
+            walk_members = ['item_class', 'context.context_class',
+                            'shape.shape_class']
             collect = collect_pulses_dependecies
+
     Extension:
         id = 'commands'
         point = 'enaml.workbench.core.commands'
@@ -210,14 +238,15 @@ enamldef PulsesManagerManifest(PluginManifest):
 #            id = 'hqc_meas.task_manager.save_task'
 #            description = SAVE_TASK_DESCRIPTION
 #            handler = save_task
-#        Command:
-#            id = 'hqc_meas.task_manager.build_task'
-#            description = BUILD_TASK_DESCRIPTION
-#            handler = build_task
+        Command:
+            id = 'hqc_meas.pulses_manager.build_sequence'
+            description = BUILD_SEQUENCE_DESCRIPTION
+            handler = build_sequence
 #        Command:
 #            id = 'hqc_meas.task_manager.build_root'
 #            description = BUILD_ROOT_DESCRIPTION
 #            handler = build_root
+
     Extension:
         id = 'menu'
         point = 'enaml.workbench.ui.actions'
