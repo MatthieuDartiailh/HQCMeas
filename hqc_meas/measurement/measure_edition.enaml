@@ -227,26 +227,6 @@ class _MeasEditionModel(Atom):
             editor.selected = True
 
 
-enamldef WarningsDisplay(Dialog): dial:
-    """
-
-    """
-    alias errors : cont.errors
-
-    title = 'Warnings'
-
-    ErrorsDisplayContainer: cont:
-        pass
-    PushButton: cancel:
-        text = 'Cancel'
-        clicked ::
-            dial.reject()
-    PushButton: enq:
-        text = 'Enqueue'
-        clicked ::
-            dial.accept()
-
-
 enamldef MeasEditionView(Container): ed:
     """ Main view for measurement edition
 

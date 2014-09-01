@@ -24,7 +24,6 @@ with enaml.imports():
     from .checks.checks_display import ChecksDisplay
     from .engines.selection import EngineSelector
     from .content import MeasureContent, MeasureSpaceMenu
-    from .measure_edition import WarningsDisplay
 
 
 LOG_ID = u'hqc_meas.measure.workspace'
@@ -252,7 +251,7 @@ class MeasureSpace(Workspace):
             # which the user can either ignore and enqueue the measure, or he
             # can cancel the enqueuing and try again.
             if errors:
-                dial = WarningsDisplay(errors=errors)
+                dial = ChecksDisplay(errors=errors, is_warning=True)
                 dial.exec_()
                 if not dial.result:
                     return
