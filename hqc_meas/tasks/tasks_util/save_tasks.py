@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : save_tasks.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import (Tuple, ContainerList, Str, Enum, Value,
@@ -74,7 +74,7 @@ class SaveTask(SimpleTask):
         file when the expected number of lines has been written.
 
         """
-        #Initialisation.
+        # Initialisation.
         if not self.initialized:
 
             self.line_index = 0
@@ -92,10 +92,10 @@ class SaveTask(SimpleTask):
 
                 try:
                     self.file_object = open(full_path, mode)
-                except IOError:
+                except IOError as e:
                     log = logging.getLogger()
                     mes = cleandoc('''In {}, failed to open the specified
-                                    file'''.format(self.task_name))
+                                    file {}'''.format(self.task_name, e))
                     log.error(mes)
                     self.root_task.should_stop.set()
                     return False
@@ -118,7 +118,7 @@ class SaveTask(SimpleTask):
                 self.write_in_database('array', self.array)
             self.initialized = True
 
-        #writing
+        # Writing
         values = [self.format_and_eval_string(s[1])
                   for s in self.saved_values]
         if self.saving_target != 'Array':
@@ -130,7 +130,7 @@ class SaveTask(SimpleTask):
 
         self.line_index += 1
 
-        #Closing
+        # Closing
         if self.line_index == self.array_length:
             if self.file_object:
                 self.file_object.close()
@@ -171,7 +171,7 @@ class SaveTask(SimpleTask):
                 if self.file_mode == 'New' and not overwrite:
                     os.remove(full_path)
             except Exception as e:
-                mess = 'Failed to open the specified file'
+                mess = 'Failed to open the specified file : {}'.format(e)
                 traceback[err_path] = mess.format(e)
                 return False, traceback
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : set_dc_voltage_task.py
+# module : hqc_meas/tasks/task_instr/set_dc_voltage_task.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -94,10 +94,12 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
 
         if abs(last_value - value) < 1e-12:
             self.write_in_database('voltage', value)
+            return
 
         elif self.back_step == 0:
             self.write_in_database('voltage', value)
             setter(value)
+            return
 
         else:
             if (value - last_value)/self.back_step > 0:
