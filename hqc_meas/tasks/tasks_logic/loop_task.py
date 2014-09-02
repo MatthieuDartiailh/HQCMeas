@@ -34,6 +34,13 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
     task_database_entries = set_default({'point_number': 11, 'index': 1,
                                          'value': 0})
 
+    def __init__(self, **kwargs):
+        super(LoopTask, self).__init__(**kwargs)
+        # Observer not called at init time so take care of database entries
+        # here.
+        if self.task:
+            self.task_database_entries = {'point_number': 11, 'index': 1}
+
     def perform_loop(self, iterable):
         """ Perform the loop on the iterable calling all child tasks at each
         iteration.

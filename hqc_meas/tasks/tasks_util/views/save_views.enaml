@@ -66,6 +66,8 @@ ARRAY_SIZE_TOOLTIP = cleandoc('''If left empty the file will be closed at the
 
 
 enamldef SaveView(GroupBox):
+    """
+    """
     attr task
     attr mapping
     title << task.task_name
@@ -73,6 +75,7 @@ enamldef SaveView(GroupBox):
                     grid([mode_lab, points_lab],
                         [mode_val, points_val]),
                     file_cont, ed)]
+
     Label: mode_lab:
         text = 'Save to'
     ObjectCombo: mode_val:

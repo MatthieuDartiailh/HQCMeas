@@ -65,7 +65,7 @@ class SaveTask(SimpleTask):
 
     task_database_entries = set_default({'file': None})
 
-    wait = set_default({'no_wait': []})  # Wait on all pools by default.
+    wait = set_default({'activated': True})  # Wait on all pools by default.
 
     def perform(self):
         """ Collect all data and write them to array or file according to mode.
@@ -238,7 +238,7 @@ class SaveArrayTask(SimpleTask):
     #: Flag indicating whether to save as csv or .npy.
     mode = Enum('Text file', 'Binary file').tag(pref=True)
 
-    wait = set_default({'no_wait': []})  # Wait on all pools by default.
+    wait = set_default({'activated': True})  # Wait on all pools by default.
 
     def perform(self):
         """ Save array to file.

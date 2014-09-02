@@ -23,7 +23,7 @@ class LogTask(SimpleTask):
     loopable = True
     task_database_entries = set_default({'message': ''})
 
-    wait = set_default({'no_wait': []})  # Wait on all pools by default.
+    wait = set_default({'activated': True})  # Wait on all pools by default.
 
     def perform(self, *args, **kwargs):
         """ Format the message and print it.
