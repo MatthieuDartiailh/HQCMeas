@@ -418,6 +418,14 @@ class SimpleTask(BaseTask):
     #: Class attribute specifying if that task can be used in a loop
     loopable = False
 
+    def check(self, *args, **kwargs):
+        """ Empty check allowing super to call this method and not raise any
+        NotImplementedError.
+
+        """
+
+        return True, {}
+
     def write_in_database(self, name, value):
         """ Write a value to the right database entry.
 
