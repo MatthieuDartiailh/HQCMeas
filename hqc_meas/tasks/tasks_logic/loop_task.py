@@ -34,13 +34,6 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
     task_database_entries = set_default({'point_number': 11, 'index': 1,
                                          'value': 0})
 
-    def __init__(self, **kwargs):
-        super(LoopTask, self).__init__(**kwargs)
-        # Observer not called at init time so take care of database entries
-        # here.
-        if self.task:
-            self.task_database_entries = {'point_number': 11, 'index': 1}
-
     def perform_loop(self, iterable):
         """ Perform the loop on the iterable calling all child tasks at each
         iteration.
@@ -164,24 +157,27 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
         """ Keep the database entries in sync with the task member.
 
         """
-        if self.has_root:
-            c_type = change['type']
-            if 'oldvalue' in change and change['oldvalue']:
+        c_type = change['type']
+        if 'oldvalue' in change and change['oldvalue']:
+            if self.has_root:
                 self._child_removed(change['oldvalue'])
 
-            if change['value'] and c_type != 'delete':
+        if change['value'] and c_type != 'delete':
+            if self.has_root:
                 self._child_added(change['value'])
-                aux = self.task_database_entries.copy()
-                if 'value' in aux:
-                    del aux['value']
-                self.task_database_entries = aux
 
-            else:
-                if c_type == 'delete':
-                    self._child_removed(change['value'])
-                aux = self.task_database_entries.copy()
-                aux['value'] = 1.0
-                self.task_database_entries = aux
+            aux = self.task_database_entries.copy()
+            if 'value' in aux:
+                del aux['value']
+            self.task_database_entries = aux
+
+        else:
+            if c_type == 'delete' and self.has_root:
+                self._child_removed(change['value'])
+
+            aux = self.task_database_entries.copy()
+            aux['value'] = 1.0
+            self.task_database_entries = aux
 
     def _observe_timing(self, change):
         """ Keep the database entries in sync with the timing flag.

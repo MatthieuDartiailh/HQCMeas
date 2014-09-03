@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : entries.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import (Str, List)
 from enaml.application import deferred_call
 from hqc_meas.utils.atom_util import HasPrefAtom
