@@ -72,7 +72,7 @@ class BaseInstrumentView(GroupBox):
         else:
             self.drivers = self.task.driver_list
 
-        if self.task.interface:
+        if getattr(self.task, 'interface', None):
             self._insert_interface_views(self.task.interface)
 
         self._update_profiles({})
