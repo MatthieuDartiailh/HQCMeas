@@ -51,7 +51,7 @@ def handle_stop_pause(root):
                     instrs = root.instrs
                     for instr_id in instrs:
                         instrs[instr_id].owner = ''
-                        instrs.clear_cache()
+                        instrs[instr_id].clear_cache()
                     root.resume.set()
                     root.paused_threads_counter.decrement()
                     break
