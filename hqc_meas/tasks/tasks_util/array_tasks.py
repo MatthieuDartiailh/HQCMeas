@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : array_tasks.py
+# module : hqc_meas/tasks/tasks_util/array_tasks.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -132,7 +132,7 @@ class ArrayFindValueTask(SimpleTask):
 
         val = self.format_and_eval_string(self.value)
 
-        ind = np.where(array == val)[0][0]
+        ind = np.where(np.abs(array - val) < 1e-12)[0][0]
         self.write_in_database('index', ind)
 
     def check(self, *args, **kwargs):
