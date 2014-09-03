@@ -149,7 +149,7 @@ class BaseInstrumentView(GroupBox):
             self.task.observe('selected_driver', self._update_interface)
 
     def _unbind_observers(self):
-        """ Undind the observers at widget destruction.
+        """ Unbind the observers at widget destruction.
 
         """
         self.instr_man_state.unobserve('all_profiles', self._update_profiles)
