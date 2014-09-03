@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
-# module : AWG.py
+# =============================================================================
+# module : labbrick.py
 # author : Pierre Heidmann
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 
 This module defines drivers for LabBrick using DLL Library.
@@ -35,7 +35,7 @@ class LabBrickDll(DllLibrary):
         self.devIDs = {}
         self.initialized_devices = []
 
-        #See what we have connected
+        # See what we have connected
         self.connected_instruments()
 
     def connected_instruments(self):
@@ -80,7 +80,7 @@ class LabBrickDll(DllLibrary):
         """
 
         """
-        #Close device if open
+        # Close device if open
         if self.open(devID):
             self.dll.fnLMS_CloseDevice(devID)
         else:
@@ -105,7 +105,7 @@ class LabBrickDll(DllLibrary):
             raise ValueError(cleandoc('''{} is an invalid value'''
                                       .format(value)))
 
-    #Some properties of the device
+    # Some properties of the device
     def open(self, devID):
         statusBits = self.dll.fnLMS_GetDeviceStatus(devID)
         if statusBits < 2:
@@ -174,7 +174,7 @@ class LabBrickLMS103(DllInstrument):
 
         self._dll = LabBrickDll(connection_info['lib_path'])
 
-        #load the ID of the device from the serial number
+        # Load the ID of the device from the serial number
         serial = int(connection_info['instr_id'])
         self.devID = self._dll.id_from_serial_number(serial)
         self.serial = serial

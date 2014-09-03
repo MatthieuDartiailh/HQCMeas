@@ -8,11 +8,15 @@
 """
 from atom.api import (Typed, Value, List, Str, Dict, Tuple, set_default)
 from enaml.widgets.api import (GroupBox, PushButton, Container, Label, Field,
-                               FileDialog, ObjectCombo, CheckBox)
+                               FileDialog, ObjectCombo, CheckBox,
+                               ToolButton, PopupView, MultilineField)
 from enaml.workbench.core.core_plugin import CorePlugin
 from enaml.core.declarative import d_
-
+from enaml.core.api import Include
 from enaml.layout.api import hbox, align
+
+from inspect import cleandoc
+import logging
 
 from hqc_meas.tasks.tools.string_evaluation import (EVALUATER_TOOLTIP,
                                                     FORMATTER_TOOLTIP)
@@ -60,6 +64,9 @@ class BaseLoadView(GroupBox):
         self.file_formats = file_formats
         self._interfaces = interfaces
 
+        if self.task.interface:
+            self._insert_interface_views(self.task.interface)
+
         self._bind_observers()
 
     def destroy(self):
@@ -79,41 +86,45 @@ class BaseLoadView(GroupBox):
         """ Update the interface when the selected format change.
 
         """
-        f_format = self.task.selected_format
+        f_format = change['value']
         interface = self._interfaces[f_format]
 
         if type(self.task.interface) != interface:
             # Destroy the views associated with the ancient interface.
             for i_v in self.i_views:
                 i_v.destroy()
-
             # If no interface is used simply assign None
             if type(None) == interface:
                 self.task.interface = None
                 return
-
             # Otherwise create interface and insert its views.
             self.task.interface = interface()
 
-            cmd = 'hqc_meas.task_manager.interface_views_request'
-            views, _ = self.core.invoke_command(cmd,
-                                                {'interface_classes':
-                                                    [interface.__name__]}
-                                                )
+            self._insert_interface_views(self.task.interface)
 
-            if interface.has_view:
-                i_views = [v(self, interface=self.task.interface)
-                           for v in views[interface.__name__]]
-                # TODO handle more complex insertions.
-                if hasattr(i_views[0], 'index'):
-                    self.insert_children(i_views[0].index, i_views)
-                else:
-                    self.insert_children(None, i_views)
+    def _insert_interface_views(self, interface):
+        """
+        """
+        cmd = 'hqc_meas.task_manager.interface_views_request'
+        i_c_name = type(interface).__name__
+        views, _ = self.core.invoke_command(cmd,
+                                            {'interface_classes':
+                                                [i_c_name]}
+                                            )
 
-                self.i_views = tuple(i_views)
-
+        if interface.has_view:
+            i_views = [v(self, interface=self.task.interface)
+                       for v in views[i_c_name]]
+            # TODO handle more complex insertions.
+            if hasattr(i_views[0], 'index'):
+                self.insert_children(i_views[0].index, i_views)
             else:
-                self.i_views = ()
+                self.insert_children(None, i_views)
+
+            self.i_views = tuple(i_views)
+
+        else:
+            self.i_views = ()
 
     def _bind_observers(self):
         """ Bind the observers at widget initialisation.
@@ -162,15 +173,45 @@ enamldef LoadArrayView(BaseLoadView): main:
                 items = main.file_formats
                 selected := task.selected_format
 
+    Include:
+        objects << list(i_views)
+
 
 TASK_VIEW_MAPPING = {'LoadArrayTask' : LoadArrayView}
+
+
+enamldef _CNamesEditor(PopupView):
+    """
+    """
+    attr interface
+    closed::
+        names = []
+        try:
+            c_ns = c_names.text.split(',')
+            for c_n in c_ns:
+                aux = c_n.strip()
+                if aux:
+                    names.append(aux)
+            if names:
+                interface.c_names = names
+        except Exception:
+            logger = logging.getLogger(__file__)
+            logger.exception('Could not parse column names.')
+
+    Container:
+        Label:
+            text = 'Column names'
+        MultilineField: c_names:
+            tool_tip = cleandoc('''The list of column should be provided as
+                                a comma separated list.''')
+            text = ', '.join(interface.c_names)
 
 
 enamldef CSVLoadInterfaceView(Container):
     """
     """
     attr interface
-    constraints = [hbox(del_lab, del_val, com_lab, com_val, nam)]
+    constraints = [hbox(del_lab, del_val, com_lab, com_val, nam, c_n)]
 
     Label: del_lab:
         text = 'Delimiter'
@@ -180,11 +221,20 @@ enamldef CSVLoadInterfaceView(Container):
     Label: com_lab:
         text = 'Comment'
     Field: com_val:
-        text := interface.comment
+        text := interface.comments
 
     CheckBox: nam:
         text = 'Names'
         checked := interface.names
+    ToolButton: c_n:
+        text = '>'
+        tool_tip = cleandoc('''If the file cannot be found during the check,
+                            you should provide the names of the columns which
+                            will be available to allow check to run correctly.
+                            ''')
+        clicked::
+            _CNamesEditor(parent=self, interface=interface).show()
+
 
 
 INTERFACE_VIEW_MAPPING = {'CSVLoadInterface':

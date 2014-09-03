@@ -37,8 +37,8 @@ class DllForm(AbstractConnectionForm):
     required_fields()
         Return a string listing the field that the user must fill. Called when
         the check method fail.
-    connection_dict()
 
+    connection_dict()
         Return a dictionnary holding all the necessary informations to open a
         connection with an instrument using the protocol for which the form was
         written. The keys msut match the ones expected by the `BaseInstrument`

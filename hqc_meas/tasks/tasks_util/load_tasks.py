@@ -6,13 +6,21 @@
 # =============================================================================
 """
 """
-from atom.api import (Bool, Str, Unicode, set_default)
+from atom.api import (Bool, Str, Unicode, List, set_default)
 import numpy as np
 from inspect import cleandoc
 import os
 
 from ..base_tasks import SimpleTask
 from ..task_interface import InterfaceableTaskMixin, TaskInterface
+
+
+def _make_array(names, dtypes='f8'):
+    if isinstance(dtypes, basestring):
+        dtypes = [dtypes for i in range(len(names))]
+
+    dtype = [(name, dtypes[i]) for i, name in enumerate(names)]
+    return np.ones((5,), dtype=dtype)
 
 
 class LoadArrayTask(InterfaceableTaskMixin, SimpleTask):
@@ -28,7 +36,8 @@ class LoadArrayTask(InterfaceableTaskMixin, SimpleTask):
     #: Kind of file to load.
     selected_format = Str().tag(pref=True)
 
-    task_database_entries = set_default({'array': np.zeros((5,), dtype=[('var1', 'f8'), ('var2', 'f8')])})
+    task_database_entries = set_default({'array': _make_array(['var1',
+                                                               'var2'])})
 
     def check(self, *args, **kwargs):
         """
@@ -70,16 +79,22 @@ class CSVLoadInterface(TaskInterface):
     """
     """
     #: Delimiter used in the file to load.
-    delimiter = Str('\t')
+    delimiter = Str('\t').tag(pref=True)
 
     #: Character used to signal a comment.
-    comments = Str('#')
+    comments = Str('#').tag(pref=True)
 
     #: Flag indicating whether or not to use the first row as column names.
-    names = Bool(True)
+    names = Bool(True).tag(pref=True)
+
+    #: The users can provide the names which will be available in its file
+    #: if the file cannot be found when checks are run.
+    c_names = List(Str()).tag(pref=True)
 
     #: Class attr used in the UI.
     file_formats = ['CSV']
+
+    has_view = True
 
     def perform(self):
         """
@@ -102,5 +117,40 @@ class CSVLoadInterface(TaskInterface):
                              skip_header=comment_lines)
 
         task.write_in_database('array', data)
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        task = self.task
+        if self.c_names:
+            return True, {}
+
+        try:
+            full_folder_path = task.format_string(task.folder)
+            filename = task.format_string(task.filename)
+        except Exception:
+            return True, {}
+
+        full_path = os.path.join(full_folder_path, filename)
+
+        if os.path.isfile(full_path):
+            with open(full_path) as f:
+                while True:
+                    line = f.readline()
+                    if not line.startswith(self.comments):
+                        names = line.split(self.delimiter)
+                        names = [n.strip() for n in names if n]
+                        self.task.write_in_database('array',
+                                                    _make_array(names))
+                        break
+
+        return True, {}
+
+    def _observe_c_names(self, change):
+        """ Observer keeping in sync the c_names and the array in the database.
+
+        """
+        if change['value']:
+            self.task.write_in_database('array', _make_array(change['value']))
 
 INTERFACES = {'LoadArrayTask': [CSVLoadInterface]}

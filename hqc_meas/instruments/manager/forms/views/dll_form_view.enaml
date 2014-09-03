@@ -32,6 +32,7 @@ enamldef DllFormView(Form):
                 tool_tip << model.lib_path
             ToolButton:
                 hug_width = 'strong'
+                text = 'E'
                 clicked ::
                     filt = ['.dll', '.lib', '.so']
                     path = FileDialogEx.get_open_file_name(name_filters=filt)

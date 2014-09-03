@@ -38,7 +38,7 @@ class TestLoadArrayTaskCSVInterface(object):
 
     @classmethod
     def setup_class(cls):
-        cls.data = np.zeros((5,), dtype=[('var1', 'f8'), ('var2', 'f8')])
+        cls.data = np.zeros((5,), dtype=[('Freq', 'f8'), ('Log', 'f8')])
         full_path = os.path.join(FOLDER_PATH, 'fake.dat')
         with open(full_path, 'wb') as f:
 
@@ -66,6 +66,8 @@ class TestLoadArrayTaskCSVInterface(object):
         test, traceback = self.task.check()
         assert_true(test)
         assert_false(traceback)
+        array = self.task.get_from_database('Test_array')
+        assert_equal(array.dtype.names, ('Freq', 'Log'))
 
     def test_check2(self):
         # Test handling wrong folder and filename.
