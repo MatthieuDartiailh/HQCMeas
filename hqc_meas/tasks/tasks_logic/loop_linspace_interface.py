@@ -34,6 +34,8 @@ class LinspaceLoopInterface(TaskInterface):
         task = self.task
         try:
             start = task.format_and_eval_string(self.start)
+            if 'value' in task.task_database_entries:
+                task.write_in_database('value', start)
         except Exception as e:
             test = False
             mess = 'Loop task did not succeed to compute  the start value: {}'

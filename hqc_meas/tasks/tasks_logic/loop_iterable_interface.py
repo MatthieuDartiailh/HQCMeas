@@ -36,6 +36,8 @@ class IterableLoopInterface(TaskInterface):
 
         if isinstance(iterable, Iterable):
             task.write_in_database('point_number', len(iterable))
+            if 'value' in task.task_database_entries:
+                task.write_in_database('value', iterable[0])
         else:
             test = False
             traceback[task.task_path + '/' + task.task_name] = \
