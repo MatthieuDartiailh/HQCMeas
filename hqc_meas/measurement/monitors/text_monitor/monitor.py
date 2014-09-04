@@ -62,7 +62,8 @@ class TextMonitor(BaseMonitor):
             self.show_monitor(parent_ui)
 
     def stop(self):
-        if self._view.proxy_is_active:
+        # Avoid raising errors if the view has already been destroyed.
+        if getattr(self._view, 'proxy_is_active', None):
             self._view.close()
         self._view = None
 
