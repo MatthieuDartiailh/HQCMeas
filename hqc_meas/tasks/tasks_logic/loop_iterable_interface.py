@@ -26,12 +26,14 @@ class IterableLoopInterface(TaskInterface):
         test = True
         traceback = {}
         task = self.task
+        err_path = task.task_path + '/' + task.task_name
         try:
             iterable = task.format_and_eval_string(self.iterable)
-        except Exception:
+        except Exception as e:
             test = False
-            traceback[task.task_path + '/' + task.task_name] = \
-                'Loop task did not success to compute  the iterable'
+            mess = 'Loop task did not success to compute the iterable: {}'
+            traceback[err_path] = mess.format(e)
+
             return test, traceback
 
         if isinstance(iterable, Iterable):
@@ -40,7 +42,7 @@ class IterableLoopInterface(TaskInterface):
                 task.write_in_database('value', iterable[0])
         else:
             test = False
-            traceback[task.task_path + '/' + task.task_name] = \
+            traceback[err_path] = \
                 'The computed iterable is not iterable.'
 
         return test, traceback

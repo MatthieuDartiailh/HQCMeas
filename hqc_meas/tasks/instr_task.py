@@ -10,7 +10,7 @@ from atom.api import (Str, Instance)
 from inspect import cleandoc
 
 from hqc_meas.instruments.driver_tools import (BaseInstrument,
-                                                       InstrIOError)
+                                               InstrIOError)
 from .base_tasks import SimpleTask
 from .task_interface import TaskInterface
 
