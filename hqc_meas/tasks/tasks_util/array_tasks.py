@@ -6,6 +6,7 @@
 # =============================================================================
 """
 """
+import logging
 from atom.api import (Enum, Str, set_default)
 import numpy as np
 
@@ -132,7 +133,12 @@ class ArrayFindValueTask(SimpleTask):
 
         val = self.format_and_eval_string(self.value)
 
-        ind = np.where(np.abs(array - val) < 1e-12)[0][0]
+        try:
+            ind = np.where(np.abs(array - val) < 1e-12)[0][0]
+        except IndexError:
+            logger = logging.getLogger()
+            logger.error('Could not find {} in array {} ({})'.format(val,
+                         self.target_array, array))
         self.write_in_database('index', ind)
 
     def check(self, *args, **kwargs):
