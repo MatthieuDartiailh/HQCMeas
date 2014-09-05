@@ -92,7 +92,8 @@ enamldef MeasView(GroupBox): widget:
                 measure.plugin.workspace.process_single_measure(measure)
 
     Conditional: cd2:
-        condition << bool(measure.status not in ('READY', 'RUNNING'))
+        condition << bool(measure.status not in ('READY', 'RUNNING',
+                                                 'EDITING'))
         PushButton:
             text = 'Re-enqueue'
             clicked::

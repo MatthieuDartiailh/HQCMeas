@@ -225,22 +225,23 @@ class MeasureSpace(Workspace):
         build_deps = res[1]
         runtime_deps = res[2]
 
-        test_instr = 'profiles' in runtime_deps and runtime_deps['profiles']
-        if 'profiles' in runtime_deps and not test_instr:
+        use_instrs = 'profiles' in runtime_deps
+        test_instrs = use_instrs and runtime_deps['profiles']
+        if use_instrs and not test_instrs:
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, instr tests will be skipped and
                            performed before actually starting the
                            measure.'''.format(measure.name))
-            logger.info(mes)
+            logger.info(mes.replace('\n', ' '))
 
         measure.root_task.run_time = runtime_deps.copy()
 
         check, errors = measure.run_checks(self.workbench,
-                                           test_instr=test_instr)
+                                           test_instr=test_instrs)
 
         measure.root_task.run_time.clear()
 
-        if 'profiles' in runtime_deps:
+        if use_instrs:
             profs = runtime_deps.pop('profiles').keys()
             core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
                                 {'profiles': profs}, self.plugin)
@@ -263,7 +264,7 @@ class MeasureSpace(Workspace):
             # purpose of the manager.
             meas.root_task.run_time = runtime_deps
             # Keep only a list of profiles to request (avoid to re-walk)
-            if 'profiles' in runtime_deps:
+            if use_instrs:
                 meas.store['profiles'] = profs
             meas.store['build_deps'] = build_deps
             meas.status = 'READY'

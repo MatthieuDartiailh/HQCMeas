@@ -168,7 +168,6 @@ class MeasurePlugin(HasPrefPlugin):
             # Requesting profiles as this is the only missing runtime.
             core = self.workbench.get_plugin('enaml.workbench.core')
             profs = measure.store['profiles']
-
             if not profs:
                 cmd = u'hqc_meas.dependencies.collect_dependencies'
                 id = 'hqc_meas.instruments.dependencies'
@@ -205,6 +204,7 @@ class MeasurePlugin(HasPrefPlugin):
                 runtime_deps['profiles']
 
             measure.store['build_deps'] = build_deps
+            measure.store['profiles'] = runtime_deps['profiles']
             measure.root_task.run_time = runtime_deps
 
         if not instr_use_granted:
@@ -222,7 +222,7 @@ class MeasurePlugin(HasPrefPlugin):
             return
 
         else:
-            if 'profiles' in runtime_deps:
+            if 'profiles' in measure.store:
                 mess = cleandoc('''The use of the instrument profiles has been
                                 granted by the manager.''')
                 logger.info(mess.replace('\n', ' '))
