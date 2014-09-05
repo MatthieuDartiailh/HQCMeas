@@ -83,7 +83,7 @@ class Sequence(Item):
             # If none of the variables found missing during last pass is now
             # known stop compilation as we now reached a dead end. Same if an
             # error occured.
-            if errors or missings and(not known_locals & missings):
+            if errors or missings and (not known_locals & missings):
                 # Update the missings given by caller so that it knows it this
                 # failure is linked to circle references.
                 missing_locals.update(missings)
@@ -95,7 +95,7 @@ class Sequence(Item):
                 return True, list(chain.from_iterable(compiled))
 
     def walk(self, members, callables):
-        """ Explore the items hierarchy looking.
+        """ Explore the items hierarchy.
 
         Missing values will be filled with None.
 
@@ -425,7 +425,7 @@ class RootSequence(Sequence):
                 dict of the errors which occured during compilation.
             In case of success:
                 - a flat list of Pulse if use_context is False
-                - a context dependent result.
+                - a context dependent result otherwise.
 
         """
         missings = set()
@@ -520,14 +520,14 @@ class RootSequence(Sequence):
 
     def _answer(self, members, callables):
         """
-        
+
         """
         answers = super(RootSequence, self)._answer(members, callables)
         con_members = [m for m in members
                        if m.startswith('context.')]
         answers.update({m: getattr(self.context, m[8:], None)
                         for m in con_members})
-                            
+
         return answers
 
     def _observe_fix_sequence_duration(self, change):

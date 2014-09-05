@@ -63,7 +63,7 @@ class _PulseBuilderModel(Atom):
         self.ok_ready = change['value']
 
 enamldef BuilderView(Dialog): dial:
-    """ Simple Dialog to add an sequence to an existing sequence.
+    """ Simple Dialog to add a sequence to an existing sequence.
 
     """
     attr manager

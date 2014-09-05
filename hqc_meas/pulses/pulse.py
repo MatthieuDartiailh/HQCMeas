@@ -154,10 +154,10 @@ class Pulse(Item):
                 sequence_locals[prefix + 'stop'] = self.stop
             elif self.def_mode == 'Start/Stop':
                 self.duration = d2 - d1
-                sequence_locals[prefix + 'duration'] = self.stop
+                sequence_locals[prefix + 'duration'] = self.duration
             else:
                 self.start = d2 - d1
-                sequence_locals[prefix + 'start'] = self.stop
+                sequence_locals[prefix + 'start'] = self.start
 
         if self.kind == 'analogical':
             success &= self.modulation.eval_entries(sequence_locals, missings,
