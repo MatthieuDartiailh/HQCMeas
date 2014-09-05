@@ -28,10 +28,10 @@ class DependenciesManagerPlugin(Plugin):
     """
     # --- Public API ----------------------------------------------------------
 
-    #: List holding all the build dependency collector.
+    #: Dict holding all the build dependency collector indexed by id.
     build_collectors = Dict()
 
-    #: List holding all the runtime dependency collector.
+    #: List holding all the runtime dependency collector indexed by id.
     runtime_collectors = Dict()
 
     def start(self):
@@ -53,7 +53,7 @@ class DependenciesManagerPlugin(Plugin):
         self._runtime_extensions.clear()
 
     def collect_dependencies(self, obj, dependencies=['build', 'runtime'],
-                             caller=None):
+                             ids=[], caller=None):
         """ Build a dict of dependencies for a given obj.
 
         NB : This assumes the obj has a walk method similar to the one found
@@ -67,6 +67,13 @@ class DependenciesManagerPlugin(Plugin):
         dependencies : {['build'], ['runtime'], ['build', 'runtime']}
             Kind of dependencies which should be gathered.
 
+        ids : list, optional
+            List of dependencies ids to use when collecting.
+
+        caller : optional
+            Calling plugin. Used for some runtime dependencies needing to know
+            the ressource owner.
+
         Returns
         -------
         result : bool
@@ -74,7 +81,7 @@ class DependenciesManagerPlugin(Plugin):
 
         dependencies : dict
             In case of success:
-            - Dict holding all the classes or other dependencies to build, run
+            - Dicts holding all the classes or other dependencies to build, run
             or build and run a task without any access to the workbench.
             If a single kind of dependencies is requested a single dict is
             returned otherwise two are returned one for the build ones and one
@@ -94,11 +101,21 @@ class DependenciesManagerPlugin(Plugin):
                 without knowing the caller plugin'''))
 
         if 'build' in dependencies:
-            for build_dep in self.build_collectors.values():
+            if ids:
+                build_deps = [dep for id, dep in self.build_collectors]
+            else:
+                build_deps = self.build_collectors.values()
+
+            for build_dep in build_deps:
                 members.update(set(build_dep.walk_members))
 
         if 'runtime' in dependencies:
-            for runtime_dep in self.runtime_collectors.values():
+            if ids:
+                runtime_deps = [dep for id, dep in self.runtime_collectors]
+            else:
+                runtime_deps = self.runtime_collectors.values()
+
+            for runtime_dep in runtime_deps:
                 members.update(set(runtime_dep.walk_members))
                 callables.update(runtime_dep.walk_callables)
 

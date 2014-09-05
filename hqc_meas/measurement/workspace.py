@@ -233,14 +233,13 @@ class MeasureSpace(Workspace):
                            measure.'''.format(measure.name))
             logger.info(mes)
 
-        measure.root_task.run_time = runtime_deps
+        measure.root_task.run_time = runtime_deps.copy()
 
         check, errors = measure.run_checks(self.workbench,
                                            test_instr=test_instr)
 
         measure.root_task.run_time.clear()
 
-        profs = []
         if 'profiles' in runtime_deps:
             profs = runtime_deps.pop('profiles').keys()
             core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
@@ -264,7 +263,8 @@ class MeasureSpace(Workspace):
             # purpose of the manager.
             meas.root_task.run_time = runtime_deps
             # Keep only a list of profiles to request (avoid to re-walk)
-            meas.store['profiles'] = profs
+            if 'profiles' in runtime_deps:
+                meas.store['profiles'] = profs
             meas.store['build_deps'] = build_deps
             meas.status = 'READY'
             meas.infos = 'The measure is ready to be performed by an engine.'
