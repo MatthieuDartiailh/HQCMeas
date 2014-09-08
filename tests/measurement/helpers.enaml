@@ -14,7 +14,7 @@ from hqc_meas.measurement.monitors.base_monitor import Monitor, BaseMonitor
 from hqc_meas.measurement.headers.base_header import Header
 from hqc_meas.measurement.checks.base_check import Check
 from hqc_meas.measurement.engines.base_engine import Engine, BaseEngine
-from hqc_meas.tasks.api import RootTask
+from hqc_meas.tasks.api import RootTask, InstrumentTask
 
 
 class TestMonitor(BaseMonitor):
@@ -233,3 +233,11 @@ enamldef TestSuiteManifest(PluginManifest):
             post_deselection = post_engine_deselection
             contribute_workspace = engine_contribution
             remove_contribution = engine_uncontribution
+
+
+class FalseInstrTask(InstrumentTask):
+    """
+
+    """
+    def perform(self):
+        pass

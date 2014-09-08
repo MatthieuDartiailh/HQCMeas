@@ -171,17 +171,20 @@ class MeasurePlugin(HasPrefPlugin):
             if not profs:
                 cmd = u'hqc_meas.dependencies.collect_dependencies'
                 id = 'hqc_meas.instruments.dependencies'
-                res, _ = core.invoke_command(cmd,
-                                             {'obj': measure, 'ids': [id],
-                                              'dependencies': ['runtime']},
-                                             self)
+                res = core.invoke_command(cmd,
+                                          {'obj': measure.root_task,
+                                           'ids': [id],
+                                           'dependencies': ['runtime']},
+                                          self)
 
-                profs = res[1].get('profiles', [])
+                profiles = res[1].get('profiles', [])
+                measure.store['profiles'] = profiles.keys()
 
-            com = u'hqc_meas.instr_manager.profiles_request'
-            profiles, _ = core.invoke_command(com,
-                                              {'profiles': list(profs)},
-                                              self)
+            else:
+                com = u'hqc_meas.instr_manager.profiles_request'
+                profiles, _ = core.invoke_command(com,
+                                                  {'profiles': list(profs)},
+                                                  self)
 
             instr_use_granted = not bool(profs) or profiles
             measure.root_task.run_time.update({'profiles': profiles})
@@ -204,7 +207,8 @@ class MeasurePlugin(HasPrefPlugin):
                 runtime_deps['profiles']
 
             measure.store['build_deps'] = build_deps
-            measure.store['profiles'] = runtime_deps['profiles']
+            if 'profiles' in runtime_deps:
+                measure.store['profiles'] = runtime_deps['profiles']
             measure.root_task.run_time = runtime_deps
 
         if not instr_use_granted:

@@ -30,7 +30,7 @@ with enaml.imports():
     from hqc_meas.tasks.manager.manifest import TaskManagerManifest
     from hqc_meas.instruments.manager.manifest import InstrManagerManifest
 
-    from .helpers import TestSuiteManifest
+    from .helpers import TestSuiteManifest, FalseInstrTask
 
 from ..util import (complete_line, process_app_events, close_all_windows,
                     remove_tree, create_test_dir)
@@ -68,6 +68,14 @@ class TestMeasureSpace(object):
         default['file'] = 'default_test.ini'
         default.write()
 
+        # Creating dummy profile.
+        profile_path = os.path.join(directory, '..', '..', 'hqc_meas',
+                                    'instruments', 'profiles')
+        if not os.path.isdir(profile_path):
+            os.mkdir(profile_path)
+        conf = ConfigObj(os.path.join(profile_path, '__dummy__.ini'))
+        conf.write()
+
         conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
         conf[u'hqc_meas.measure'] = {}
         conf.write()
@@ -79,6 +87,12 @@ class TestMeasureSpace(object):
                             77)
         # Removing pref files creating during tests.
         remove_tree(cls.test_dir)
+
+        directory = os.path.dirname(__file__)
+        # Removing false profile.
+        profile_path = os.path.join(directory, '..', '..', 'hqc_meas',
+                                    'instruments', 'profiles')
+        os.remove(os.path.join(profile_path, '__dummy__.ini'))
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
@@ -101,6 +115,10 @@ class TestMeasureSpace(object):
         self.workbench.register(InstrManagerManifest())
         self.workbench.register(MeasureManifest())
         self.workbench.register(TestSuiteManifest())
+
+        # Adding by hand the false instr task.
+        plugin = self.workbench.get_plugin('hqc_meas.task_manager')
+        plugin._py_tasks['False instr'] = FalseInstrTask
 
     def teardown(self):
         close_all_windows()
@@ -207,9 +225,8 @@ class TestMeasureSpace(object):
         assert_false(plugin.engines[u'engine1'].contributing)
 
     def test_enqueue_measure1(self):
-        """ Test enqueueing a measure passing the tests.
+        # Test enqueueing a measure passing the tests using no instruments.
 
-        """
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
@@ -232,12 +249,11 @@ class TestMeasureSpace(object):
         assert_equal(en_meas.infos,
                      'The measure is ready to be performed by an engine.')
         assert_in('build_deps', en_meas.store)
-        assert_in('profiles', en_meas.store)
+        assert_not_in('profiles', en_meas.store)
 
     def test_enqueue_measure2(self):
-        """ Test enqueueing a measure failing the tests.
+        # Test enqueueing a measure failing the tests using no instruments.
 
-        """
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
@@ -258,9 +274,8 @@ class TestMeasureSpace(object):
         close_all_windows()
 
     def test_enqueue_measure3(self):
-        """ Test enqueueing a measure passing the test but emitting warnings.
+        # Test enqueueing a measure passing the test but emitting warnings.
 
-        """
         # As there is no event loop running the exec_ is not blocking.
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
@@ -281,10 +296,68 @@ class TestMeasureSpace(object):
 
         close_all_windows()
 
-    def test_reenqueue_measure(self):
-        """ Test re-enqueueing a measure.
+    def test_enqueue_measure4(self):
+        # Test enqueueing a measure passing the tests using instruments.
 
-        """
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        false_instr_user = FalseInstrTask(selected_profile='  dummy  ',
+                                          selected_driver='PanelTestDummy')
+        measure = Measure(plugin=plugin, name='Test')
+        measure.root_task = RootTask(default_path=self.test_dir)
+        measure.root_task.children_task = [false_instr_user]
+        plugin.edited_measure = measure
+
+        res = plugin.workspace.enqueue_measure(plugin.edited_measure)
+
+        assert_true(res)
+        assert_false(measure.root_task.run_time)
+        assert_true(plugin.enqueued_measures)
+        en_meas = plugin.enqueued_measures[0]
+        assert_is_not(en_meas, measure)
+        assert_equal(en_meas.status, 'READY')
+        assert_equal(en_meas.infos,
+                     'The measure is ready to be performed by an engine.')
+        assert_in('build_deps', en_meas.store)
+        assert_equal(['  dummy  '], en_meas.store['profiles'])
+        assert_in('drivers', en_meas.root_task.run_time)
+
+        instr_plugin = self.workbench.get_plugin('hqc_meas.instr_manager')
+        assert_in('  dummy  ', instr_plugin.available_profiles)
+
+    def test_enqueue_measure5(self):
+        # Test enqueueing a measure failing the tests using instruments.
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+
+        measure = Measure(plugin=plugin, name='Test')
+        measure.root_task = RootTask()
+        plugin.edited_measure = measure
+
+        res = plugin.workspace.enqueue_measure(plugin.edited_measure)
+
+        assert_false(res)
+        assert_false(measure.root_task.run_time)
+        assert_false(plugin.enqueued_measures)
+
+        instr_plugin = self.workbench.get_plugin('hqc_meas.instr_manager')
+        assert_in('  dummy  ', instr_plugin.available_profiles)
+
+        close_all_windows()
+
+    def test_reenqueue_measure(self):
+        # Test re-enqueueing a measure.
+
         core = self.workbench.get_plugin(u'enaml.workbench.core')
         cmd = u'enaml.workbench.ui.select_workspace'
         core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
@@ -542,6 +615,227 @@ class TestMeasureSpace(object):
 
         assert_false(plugin.flags)
 
+    def test_measure_processing5(self):
+        # Test processing a measure using an instr, which has tested the
+        # connection to the instr and not been re-edited.
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        instr_plugin = self.workbench.get_plugin('hqc_meas.instr_manager')
+        measure1 = self._create_measure(plugin, instr=True)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        res = workspace.enqueue_measure(measure1)
+        assert_true(res)
+        workspace.start_processing_measures()
+
+        # Check the right flag is set in the plugin.
+        assert_in('processing', plugin.flags)
+
+        # Check an engine instance was created and is processing the measure.
+        assert_true(plugin.engine_instance)
+        engine = plugin.engine_instance
+        assert_true(engine.ready)
+        assert_true(engine.running)
+        # Check the plugin observe the done event.
+        assert_true(engine.has_observer('done', plugin._listen_to_engine))
+
+        # Check the measure has been registered as running and its status been
+        # updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_equal(measure.status, 'RUNNING')
+        assert_equal(measure.infos, 'The measure is running')
+
+        # Check the monitors connections, that it started and received notif.
+        monitor = measure.monitors.values()[0]
+        assert_true(engine.has_observer('news', monitor.process_news))
+        assert_equal(monitor.black_box, ['Started'])
+        assert_equal(monitor.engine_news, {'root/default_path': 'test'})
+
+        # Check the instr profile is not available.
+        assert_not_in('  dummy  ', instr_plugin.available_profiles)
+        assert_in('  dummy  ', measure.root_task.run_time['profiles'])
+
+        # Make the engine send the done event.
+        engine.complete_measure()
+
+        # Check engine state.
+        assert_false(engine.active)
+        assert_false(engine.has_observers('news'))
+
+        # Check measure state.
+        assert_equal(measure.status, 'COMPLETED')
+        assert_equal(measure.infos, 'Measure successfully completed')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+
+        # Check instrument profile has been released.
+        assert_in('  dummy  ', instr_plugin.available_profiles)
+
+        # Closing workspace.
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
+
+        # Check monitors stopped properly.
+        assert_equal(monitor.black_box, ['Started', 'Stopped'])
+
+    def test_measure_processing6(self):
+        # Test processing a measure using an instr, which has not tested the
+        # connection to the instr and not been re-edited.
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        instr_plugin = self.workbench.get_plugin('hqc_meas.instr_manager')
+        measure1 = self._create_measure(plugin, instr=True)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        res = workspace.enqueue_measure(measure1)
+        assert_true(res)
+        # Make everything looks like the instr has not been tested ie empty
+        # 'profile' entry in measure.store.
+        plugin.enqueued_measures[0].store['profiles'] = []
+
+        workspace.start_processing_measures()
+
+        # Check the right flag is set in the plugin.
+        assert_in('processing', plugin.flags)
+
+        # Check an engine instance was created and is processing the measure.
+        assert_true(plugin.engine_instance)
+        engine = plugin.engine_instance
+        assert_true(engine.ready)
+        assert_true(engine.running)
+        # Check the plugin observe the done event.
+        assert_true(engine.has_observer('done', plugin._listen_to_engine))
+
+        # Check the measure has been registered as running and its status been
+        # updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_equal(measure.status, 'RUNNING')
+        assert_equal(measure.infos, 'The measure is running')
+
+        # Check the monitors connections, that it started and received notif.
+        monitor = measure.monitors.values()[0]
+        assert_true(engine.has_observer('news', monitor.process_news))
+        assert_equal(monitor.black_box, ['Started'])
+        assert_equal(monitor.engine_news, {'root/default_path': 'test'})
+
+        # Check the instr profile is not available.
+        assert_not_in('  dummy  ', instr_plugin.available_profiles)
+        assert_in('  dummy  ', measure.root_task.run_time['profiles'])
+
+        # Make the engine send the done event.
+        engine.complete_measure()
+
+        # Check engine state.
+        assert_false(engine.active)
+        assert_false(engine.has_observers('news'))
+
+        # Check measure state.
+        assert_equal(measure.status, 'COMPLETED')
+        assert_equal(measure.infos, 'Measure successfully completed')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+
+        # Check instrument profile has been released.
+        assert_in('  dummy  ', instr_plugin.available_profiles)
+
+        # Closing workspace.
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
+
+        # Check monitors stopped properly.
+        assert_equal(monitor.black_box, ['Started', 'Stopped'])
+
+    def test_measure_processing7(self):
+        # Test processing a measure using an instr, which has tested the
+        # connection to the instr and been re-edited (ie no build-dep)
+
+        plugin = self.workbench.get_plugin(u'hqc_meas.measure')
+        instr_plugin = self.workbench.get_plugin('hqc_meas.instr_manager')
+        measure1 = self._create_measure(plugin, instr=True)
+
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        cmd = u'enaml.workbench.ui.select_workspace'
+        core.invoke_command(cmd, {'workspace': u'hqc_meas.measure.workspace'},
+                            self)
+
+        workspace = plugin.workspace
+        plugin.selected_engine = u'engine1'
+        res = workspace.enqueue_measure(measure1)
+        assert_true(res)
+        # Make everything looks like the measure has been re-edited ie no
+        # build_deps entry in measure.store.
+        del plugin.enqueued_measures[0].store['build_deps']
+
+        workspace.start_processing_measures()
+
+        # Check the right flag is set in the plugin.
+        assert_in('processing', plugin.flags)
+
+        # Check an engine instance was created and is processing the measure.
+        assert_true(plugin.engine_instance)
+        engine = plugin.engine_instance
+        assert_true(engine.ready)
+        assert_true(engine.running)
+        # Check the plugin observe the done event.
+        assert_true(engine.has_observer('done', plugin._listen_to_engine))
+
+        # Check the measure has been registered as running and its status been
+        # updated.
+        assert_true(plugin.running_measure)
+        measure = plugin.running_measure
+        assert_equal(measure.status, 'RUNNING')
+        assert_equal(measure.infos, 'The measure is running')
+
+        # Check the monitors connections, that it started and received notif.
+        monitor = measure.monitors.values()[0]
+        assert_true(engine.has_observer('news', monitor.process_news))
+        assert_equal(monitor.black_box, ['Started'])
+        assert_equal(monitor.engine_news, {'root/default_path': 'test'})
+
+        # Check the instr profile is not available.
+        assert_not_in('  dummy  ', instr_plugin.available_profiles)
+        assert_in('  dummy  ', measure.root_task.run_time['profiles'])
+
+        # Make the engine send the done event.
+        engine.complete_measure()
+
+        # Check engine state.
+        assert_false(engine.active)
+        assert_false(engine.has_observers('news'))
+
+        # Check measure state.
+        assert_equal(measure.status, 'COMPLETED')
+        assert_equal(measure.infos, 'Measure successfully completed')
+
+        # Check plugin state.
+        assert_false(plugin.flags)
+
+        # Check instrument profile has been released.
+        assert_in('  dummy  ', instr_plugin.available_profiles)
+
+        # Closing workspace.
+        core = self.workbench.get_plugin(u'enaml.workbench.core')
+        core.invoke_command(u'enaml.workbench.ui.close_workspace', {}, self)
+
+        # Check monitors stopped properly.
+        assert_equal(monitor.black_box, ['Started', 'Stopped'])
+
     def test_processing_single_measure(self):
         """ Test processing only a specific measure.
 
@@ -775,12 +1069,16 @@ class TestMeasureSpace(object):
         assert_false(plugin.flags)
         assert_false(plugin.engine_instance.running)
 
-    def _create_measure(self, plugin):
+    def _create_measure(self, plugin, instr=False):
         """ Create a measure.
 
         """
         measure = Measure(plugin=plugin, name='Test1')
         measure.root_task = RootTask(default_path=self.test_dir)
+        if instr:
+            false_instr_user = FalseInstrTask(selected_profile='  dummy  ',
+                                              selected_driver='PanelTestDummy')
+            measure.root_task.children_task = [false_instr_user]
         measure.status = 'READY'
         monitor_decl = plugin.monitors[u'monitor1']
         measure.add_monitor(monitor_decl.id,

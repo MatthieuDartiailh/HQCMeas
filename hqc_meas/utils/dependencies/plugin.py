@@ -102,7 +102,9 @@ class DependenciesManagerPlugin(Plugin):
 
         if 'build' in dependencies:
             if ids:
-                build_deps = [dep for id, dep in self.build_collectors]
+                b = self.build_collectors
+                build_deps = [dep for id, dep in b.iteritems()
+                              if id in ids]
             else:
                 build_deps = self.build_collectors.values()
 
@@ -111,7 +113,9 @@ class DependenciesManagerPlugin(Plugin):
 
         if 'runtime' in dependencies:
             if ids:
-                runtime_deps = [dep for id, dep in self.runtime_collectors]
+                r = self.runtime_collectors
+                runtime_deps = [dep for id, dep in r.iteritems()
+                                if id in ids]
             else:
                 runtime_deps = self.runtime_collectors.values()
 
