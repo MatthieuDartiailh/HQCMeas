@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import (Int, Instance, Str, Dict, Bool,
+from atom.api import (Int, Instance, Str, Dict, Bool, List, Tuple,
                       ContainerList, ForwardTyped, set_default)
 from itertools import chain
 
@@ -27,22 +27,42 @@ class Sequence(Item):
     #: List of items this sequence consists of.
     items = ContainerList(Instance(Item))
 
+    #: List of variables whose scope is limited to the sequence. Each element
+    #: is a length 2 tuple containing the variable name and definition.
+    local_vars = List(Tuple())
+
+    #: Bool indicating whether or not the sequence has a hard defined
+    #: start/stop/duration. In case it does not the associated values won't
+    #: be computed.
+    time_constrained = Bool().tag(pref=True)
+
     #: Parent sequence of this sequence.
     parent = ForwardTyped(lambda: Sequence)
 
-    def compile_sequence(self, sequence_locals, missing_locals, errors):
+    def prepare_compilation(self):
+        """ Clear all internal caches before compiling anew the sequence.
+
+        """
+        self._evaluated_vars = {}
+        self._compiled = []
+
+    def compile_sequence(self, root_vars, sequence_locals, missings, errors):
         """ Compile the sequence in a flat list of pulses.
 
         Parameters
         ----------
+        root_vars : dict
+            Dictionary of global variables for the all items. This will
+            tipically contains the i_start/stop/duration and the root vars.
+
         sequence_locals : dict
-            Dictionary of local variables.
+            Dictionary of variables whose scope is limited to this sequence
+            parent.
 
         missings : set
             Set of unfound local variables.
 
-        errors : dict, tagged_members,
-                                      member_from_str)
+        errors : dict
             Dict of the errors which happened when performing the evaluation.
 
         Returns
@@ -54,30 +74,61 @@ class Sequence(Item):
             List of pulses in which all the string entries have been evaluated.
 
         """
-        compiled = [None for i in xrange(len(self.items))]
-        while True:
-            missings = set()
+        namespace = sequence_locals.copy()
+        namespace.update(root_vars)
+        prefix = '{}_'.format(self.index)
 
-            for i, item in enumerate(self.items):
+        # Definition evaluation.
+        if self.time_constrained:
+            self.eval_entries(root_vars, sequence_locals, missings, errors)
+
+        # Local vars computation.
+        for name, formula in self.local_vars:
+            if name not in self._evaluated_vars:
+                try:
+                    val = eval_entry(formula, namespace, missings)
+                    self._evaluated_vars[name] = val
+                except Exception as e:
+                    errors[prefix + name] = repr(e)
+
+        local_namespace = sequence_locals.copy()
+        local_namespace.update(self._evaluated_vars)
+
+        # Compilation of items in multiple passes.
+        compiled = self._compiled if self._compiled\
+            else [None for i in self.items if i.enabled]
+        while True:
+            miss = set()
+
+            index = 0
+            for item in self.items:
                 # Skip disabled items
                 if not item.enabled:
+                    continue
+
+                # Increment index so that we set the right object in compiled.
+                index += 1
+
+                # Skip evaluation if object has already been compiled.
+                if compiled[index] is not None:
                     continue
 
                 # If we get a pulse simply evaluate the entries, to add their
                 # values to the locals and keep track of the missings to now
                 # when to abort compilation.
                 if isinstance(item, Pulse):
-                    success = item.eval_entries(sequence_locals, missings,
-                                                errors)
+                    success = item.eval_entries(root_vars, local_namespace,
+                                                miss, errors)
                     if success:
-                        compiled[i] = [item]
+                        compiled[index] = [item]
 
                 # Here we got a sequence so we must try to compile it.
                 else:
-                    success, items = item.compile_sequence(sequence_locals,
+                    success, items = item.compile_sequence(root_vars,
+                                                           local_namespace,
                                                            missings, errors)
                     if success:
-                        compiled[i] = items
+                        compiled[index] = items
 
             known_locals = set(sequence_locals.keys())
             # If none of the variables found missing during last pass is now
@@ -86,13 +137,24 @@ class Sequence(Item):
             if errors or missings and (not known_locals & missings):
                 # Update the missings given by caller so that it knows it this
                 # failure is linked to circle references.
-                missing_locals.update(missings)
+                missings.update(missings)
                 return False, []
 
             # If no var was found missing during last pass (and as no error
             # occured) it means the compilation succeeded.
             elif not missings:
+
+                # Check if start, stop and duration of sequence are compatible.
+                # TODO rr
+                pass
+
                 return True, list(chain.from_iterable(compiled))
+
+    def get_bindable_vars(self):
+        """ Access the list of bindable vars for the sequence.
+
+        """
+        return self.local_vars.keys() + self.parent.get_bindable_vars()
 
     def walk(self, members, callables):
         """ Explore the items hierarchy.
@@ -212,6 +274,12 @@ class Sequence(Item):
     #: Last index used by the sequence.
     _last_index = Int()
 
+    #: Dict of all already evaluated vars.
+    _evaluated_vars = Dict()
+
+    #: List of already compiled items.
+    _compiled = List()
+
     def _answer(self, members, callables):
         """ Collect answers for the walk method.
 
@@ -244,6 +312,13 @@ class Sequence(Item):
                     item.unobserve('_last_index',
                                    self._item_last_index_updated)
             self.observe('items', self._items_updated)
+
+    def _observe_time_constrained(self, change):
+        """
+
+        """
+        # TODO add updating linkable vars
+        pass
 
     def _items_updated(self, change):
         """ Observer for the items list.
@@ -302,6 +377,7 @@ class Sequence(Item):
 
         """
         item.root = self.root
+        item.observe('linkable_vars', self.root._update_linkable_vars)
         if isinstance(item, Sequence):
             item.observe('_last_index', self._item_last_index_updated)
             item.parent = self
@@ -310,6 +386,7 @@ class Sequence(Item):
         """ Clear the attributes of a removed item.
 
         """
+        item.unobserve('linkable_vars', self.root._update_linkable_vars)
         del item.root
         item.index = 0
         if isinstance(item, Sequence):
@@ -460,6 +537,7 @@ class RootSequence(Sequence):
         """ Access the list of bindable vars for the sequence.
 
         """
+        # TODO refactor according to sequence
         return self.linkable_vars + self.external_vars.keys()
 
     def preferences_from_members(self):
@@ -542,3 +620,9 @@ class RootSequence(Sequence):
             link_vars = self.linkable_vars[:]
             link_vars.remove('sequence_end')
             self.linkable_vars = link_vars
+
+    def _update_linkable_vars(self, change):
+        """
+        """
+        # TODO rr
+        pass

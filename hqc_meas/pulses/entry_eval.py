@@ -37,9 +37,8 @@ def eval_entry(string, seq_locals, missing_locals):
                              for i in xrange(len(elements[1::2]))]
         replacement_values = {'_a{}'.format(i): seq_locals[key]
                               for i, key in enumerate(elements[1::2])}
-        str_to_eval = ''
-        for key in elements[::2]:
-            str_to_eval += key + '{}'
+
+        str_to_eval = ''.join(key + '{}' for key in elements[::2])
         str_to_eval = str_to_eval[:-2]
 
         expr = str_to_eval.format(*replacement_token)
