@@ -124,6 +124,8 @@ def test_sequence_indexing2():
     pulse1.index = 200
     sequence2.items.append(pulse3)
 
+    assert_is(pulse3.parent, sequence2)
+    assert_is(pulse3.root, root)
     assert_equal(pulse2.index, 5)
     assert_equal(pulse3.index, 4)
     assert_items_equal(root.linkable_vars, ['1_start', '1_stop', '1_duration',

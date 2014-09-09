@@ -11,6 +11,11 @@ from hqc_meas.utils.atom_util import HasPrefAtom
 from .entry_eval import eval_entry
 
 
+def sequence():
+    from .base_sequences import Sequence
+    return Sequence
+
+
 def root():
     from .base_sequences import RootSequence
     return RootSequence
@@ -33,6 +38,9 @@ class Item(HasPrefAtom):
 
     #: Name of the variable which can be referenced in other items.
     linkable_vars = List()
+
+    #: Reference to the parent sequence.
+    parent = ForwardTyped(sequence)
 
     #: Reference to the root sequence.
     root = ForwardTyped(root)

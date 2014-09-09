@@ -5,7 +5,7 @@
 # license : MIT license
 # =============================================================================
 from atom.api import (Int, Instance, Str, Dict, Bool, List,
-                      ContainerList, ForwardTyped, set_default)
+                      ContainerList, set_default)
 from itertools import chain
 from inspect import cleandoc
 
@@ -36,9 +36,6 @@ class Sequence(Item):
     #: start/stop/duration. In case it does not the associated values won't
     #: be computed.
     time_constrained = Bool().tag(pref=True)
-
-    #: Parent sequence of this sequence.
-    parent = ForwardTyped(lambda: Sequence)
 
     def prepare_compilation(self):
         """ Clear all internal caches before compiling anew the sequence.
@@ -443,10 +440,10 @@ class Sequence(Item):
 
         """
         item.root = self.root
+        item.parent = self
         item.observe('linkable_vars', self.root._update_linkable_vars)
         if isinstance(item, Sequence):
             item.observe('_last_index', self._item_last_index_updated)
-            item.parent = self
 
     def _item_removed(self, item):
         """ Clear the attributes of a removed item.
@@ -454,10 +451,10 @@ class Sequence(Item):
         """
         item.unobserve('linkable_vars', self.root._update_linkable_vars)
         del item.root
+        del item.parent
         item.index = 0
         if isinstance(item, Sequence):
             item.unobserve('_last_index', self._item_last_index_updated)
-            del item.parent
 
     def _recompute_indexes(self, first_index=0, free_index=None):
         """ Recompute the item indexes and update the vars of the root_seq.
