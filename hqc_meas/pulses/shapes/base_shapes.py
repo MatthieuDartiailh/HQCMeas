@@ -107,7 +107,6 @@ class SquareShape(AbstractShape):
 
         if amp is not None:
             self._amplitude = amp
-            sequence_locals[prefix + 'amplitude'] = amp
             return True
 
         else:

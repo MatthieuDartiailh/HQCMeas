@@ -94,10 +94,6 @@ class Item(HasPrefAtom):
         # Flag indicating good completion.
         success = True
 
-        # Complete namespace.
-        namespace = sequence_locals.copy()
-        namespace.update(root_vars)
-
         # Reference to the sequence context.
         context = self.root.context
 
@@ -109,7 +105,7 @@ class Item(HasPrefAtom):
         # Evaluation of the first parameter.
         d1 = None
         try:
-            d1 = eval_entry(self.def_1, namespace, missings)
+            d1 = eval_entry(self.def_1, sequence_locals, missings)
             d1 = context.check_time(d1)
         except Exception as e:
             errors[prefix + par1] = repr(e)
@@ -117,6 +113,7 @@ class Item(HasPrefAtom):
         # Check the value makes sense as a start time or duration.
         if d1 is not None and d1 >= 0 and (par1 == 'start' or d1 != 0):
             setattr(self, par1, d1)
+            root_vars[prefix + par1] = d1
             sequence_locals[prefix + par1] = d1
         elif d1 is None:
             success = False
@@ -133,7 +130,7 @@ class Item(HasPrefAtom):
         # Evaluation of the second parameter.
         d2 = None
         try:
-            d2 = eval_entry(self.def_2, namespace, missings)
+            d2 = eval_entry(self.def_2, sequence_locals, missings)
             d2 = context.check_time(d2)
         except Exception as e:
             errors[prefix + par2] = repr(e)
@@ -141,6 +138,7 @@ class Item(HasPrefAtom):
         # Check the value makes sense as a duration or stop time.
         if d2 is not None and d2 > 0 and (par2 == 'duration' or d2 > d1):
             setattr(self, par2, d2)
+            root_vars[prefix + par2] = d2
             sequence_locals[prefix + par2] = d2
         elif d2 is None:
             success = False
@@ -160,12 +158,15 @@ class Item(HasPrefAtom):
             if self.def_mode == 'Start/Duration':
                 self.stop = d1 + d2
                 root_vars[prefix + 'stop'] = self.stop
+                sequence_locals[prefix + 'stop'] = self.stop
             elif self.def_mode == 'Start/Stop':
                 self.duration = d2 - d1
                 root_vars[prefix + 'duration'] = self.duration
+                sequence_locals[prefix + 'duration'] = self.duration
             else:
                 self.start = d2 - d1
                 root_vars[prefix + 'start'] = self.start
+                sequence_locals[prefix + 'start'] = self.start
 
         return success
 

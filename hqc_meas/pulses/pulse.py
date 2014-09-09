@@ -65,11 +65,11 @@ class Pulse(Item):
                                                   missings, errors)
 
         if self.kind == 'analogical':
-            success &= self.modulation.eval_entries(root_vars, sequence_locals,
+            success &= self.modulation.eval_entries(sequence_locals,
                                                     missings, errors,
                                                     self.index)
 
-            success &= self.shape.eval_entries(root_vars, sequence_locals,
+            success &= self.shape.eval_entries(sequence_locals,
                                                missings, errors, self.index)
 
         return success

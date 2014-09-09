@@ -82,7 +82,6 @@ class Modulation(HasPrefAtom):
 
         if freq is not None:
             self._frequency = freq
-            sequence_locals[prefix + 'frequency'] = freq
         else:
             eval_success = False
             m = 'Failed to evaluate {} expression: {}'.format('frequency',
@@ -100,7 +99,6 @@ class Modulation(HasPrefAtom):
 
         if phase is not None:
             self._phase = phase
-            sequence_locals[prefix + 'phase'] = phase
         else:
             eval_success = False
             m = 'Failed to evaluate {} expression: {}'.format('phase',

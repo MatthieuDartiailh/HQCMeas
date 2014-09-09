@@ -5,7 +5,7 @@
 # license : MIT license
 # =============================================================================
 from nose.tools import (assert_equal, assert_in, assert_is_instance,
-                        assert_list_equal)
+                        assert_items_equal)
 from hqc_meas.pulses.pulse import Pulse
 from hqc_meas.pulses.base_sequences import RootSequence, Sequence
 from hqc_meas.pulses.contexts.base_context import BaseContext
@@ -18,7 +18,7 @@ def test_flat_sequence_persistence1():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_vars = {'a': 1.5}
+    root.local_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -27,11 +27,11 @@ def test_flat_sequence_persistence1():
     root.items.extend([pulse1, pulse2, pulse3])
 
     pref = root.preferences_from_members()
-    assert_list_equal(pref.keys(),
-                      ['name', 'external_vars', 'fix_sequence_duration',
-                       'enabled', 'item_class', 'sequence_duration',
-                       'item_0', 'item_1', 'item_2',
-                       'context'])
+    assert_items_equal(pref.keys(),
+                       ['name', 'local_vars', 'time_constrained',
+                        'enabled', 'item_class', 'sequence_duration',
+                        'item_0', 'item_1', 'item_2',
+                        'context', 'def_1', 'def_2', 'def_mode'])
 
     assert_in('shape', pref['item_2'])
     assert_in('shape_class', pref['item_2']['shape'])
@@ -43,7 +43,7 @@ def test_nested_sequence_persistence1():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_vars = {'a': 1.5}
+    root.local_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -54,13 +54,15 @@ def test_nested_sequence_persistence1():
     root.items.extend([pulse1, pulse2, pulse3, seq])
 
     pref = root.preferences_from_members()
-    assert_list_equal(pref.keys(),
-                      ['name', 'external_vars', 'fix_sequence_duration',
-                       'enabled', 'item_class', 'sequence_duration',
-                       'item_0', 'item_1', 'item_2', 'item_3',
-                       'context'])
-    assert_list_equal(pref['item_3'].keys(),
-                      ['item_class', 'enabled', 'name', 'item_0'])
+    assert_items_equal(pref.keys(),
+                       ['name', 'local_vars', 'time_constrained',
+                        'enabled', 'item_class', 'sequence_duration',
+                        'item_0', 'item_1', 'item_2', 'item_3',
+                        'context', 'def_1', 'def_2', 'def_mode'])
+    assert_items_equal(pref['item_3'].keys(),
+                       ['item_class', 'enabled', 'name', 'item_0',
+                        'def_1', 'def_2', 'def_mode', 'local_vars',
+                        'time_constrained'])
 
 
 def test_walk_sequence():
@@ -68,7 +70,7 @@ def test_walk_sequence():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_vars = {'a': 1.5}
+    root.local_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -93,7 +95,7 @@ def test_build_from_config():
     root = RootSequence()
     context = BaseContext()
     root.context = context
-    root.external_vars = {'a': 1.5}
+    root.local_vars = {'a': 1.5}
 
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
@@ -109,7 +111,7 @@ def test_build_from_config():
                               'contexts': {'BaseContext': BaseContext}}}
 
     aux = RootSequence.build_from_config(pref, dependecies)
-    assert_equal(aux.external_vars, {'a': 1.5})
+    assert_equal(aux.local_vars, {'a': 1.5})
     assert_equal(len(aux.items), 4)
 
     pulse1 = aux.items[0]

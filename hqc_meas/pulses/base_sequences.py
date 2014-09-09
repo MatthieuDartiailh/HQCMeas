@@ -4,9 +4,10 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import (Int, Instance, Str, Dict, Bool, List, Tuple,
+from atom.api import (Int, Instance, Str, Dict, Bool, List,
                       ContainerList, ForwardTyped, set_default)
 from itertools import chain
+from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import member_from_str
 from .contexts.base_context import BaseContext
@@ -27,9 +28,9 @@ class Sequence(Item):
     #: List of items this sequence consists of.
     items = ContainerList(Instance(Item))
 
-    #: List of variables whose scope is limited to the sequence. Each element
-    #: is a length 2 tuple containing the variable name and definition.
-    local_vars = List(Tuple())
+    #: Dict of variables whose scope is limited to the sequence. Each key/value
+    #: pair represents the name and definition of the variable.
+    local_vars = Dict(Str()).tag(pref=True)
 
     #: Bool indicating whether or not the sequence has a hard defined
     #: start/stop/duration. In case it does not the associated values won't
@@ -45,19 +46,26 @@ class Sequence(Item):
         """
         self._evaluated_vars = {}
         self._compiled = []
+        for i in self.items:
+            if isinstance(i, Sequence):
+                i.prepare_compilation()
 
     def compile_sequence(self, root_vars, sequence_locals, missings, errors):
-        """ Compile the sequence in a flat list of pulses.
+        """ Evaluate the sequence vars and compile the list of pulses.
 
         Parameters
         ----------
         root_vars : dict
             Dictionary of global variables for the all items. This will
             tipically contains the i_start/stop/duration and the root vars.
+            This dict must be updated with global new values but for
+            evaluation sequence_locals must be used.
 
         sequence_locals : dict
             Dictionary of variables whose scope is limited to this sequence
-            parent.
+            parent. This dict must be updated with global new values and
+            must be used to perform evaluation (It always contains all the
+            names defined in root_vars).
 
         missings : set
             Set of unfound local variables.
@@ -74,8 +82,6 @@ class Sequence(Item):
             List of pulses in which all the string entries have been evaluated.
 
         """
-        namespace = sequence_locals.copy()
-        namespace.update(root_vars)
         prefix = '{}_'.format(self.index)
 
         # Definition evaluation.
@@ -83,10 +89,10 @@ class Sequence(Item):
             self.eval_entries(root_vars, sequence_locals, missings, errors)
 
         # Local vars computation.
-        for name, formula in self.local_vars:
+        for name, formula in self.local_vars.iteritems():
             if name not in self._evaluated_vars:
                 try:
-                    val = eval_entry(formula, namespace, missings)
+                    val = eval_entry(formula, sequence_locals, missings)
                     self._evaluated_vars[name] = val
                 except Exception as e:
                     errors[prefix + name] = repr(e)
@@ -94,61 +100,37 @@ class Sequence(Item):
         local_namespace = sequence_locals.copy()
         local_namespace.update(self._evaluated_vars)
 
-        # Compilation of items in multiple passes.
-        compiled = self._compiled if self._compiled\
-            else [None for i in self.items if i.enabled]
-        while True:
-            miss = set()
+        res, pulses = self._compile_items(root_vars, local_namespace,
+                                          missings, errors)
 
-            index = 0
-            for item in self.items:
-                # Skip disabled items
-                if not item.enabled:
-                    continue
-
-                # Increment index so that we set the right object in compiled.
-                index += 1
-
-                # Skip evaluation if object has already been compiled.
-                if compiled[index] is not None:
-                    continue
-
-                # If we get a pulse simply evaluate the entries, to add their
-                # values to the locals and keep track of the missings to now
-                # when to abort compilation.
-                if isinstance(item, Pulse):
-                    success = item.eval_entries(root_vars, local_namespace,
-                                                miss, errors)
-                    if success:
-                        compiled[index] = [item]
-
-                # Here we got a sequence so we must try to compile it.
-                else:
-                    success, items = item.compile_sequence(root_vars,
-                                                           local_namespace,
-                                                           missings, errors)
-                    if success:
-                        compiled[index] = items
-
-            known_locals = set(sequence_locals.keys())
-            # If none of the variables found missing during last pass is now
-            # known stop compilation as we now reached a dead end. Same if an
-            # error occured.
-            if errors or missings and (not known_locals & missings):
-                # Update the missings given by caller so that it knows it this
-                # failure is linked to circle references.
-                missings.update(missings)
-                return False, []
-
-            # If no var was found missing during last pass (and as no error
-            # occured) it means the compilation succeeded.
-            elif not missings:
-
+        if res:
+            if self.time_constrained:
                 # Check if start, stop and duration of sequence are compatible.
-                # TODO rr
-                pass
+                start_err = [pulse for pulse in pulses
+                             if pulse.start < self.start]
+                stop_err = [pulse for pulse in pulses
+                            if pulse.stop > self.stop]
 
-                return True, list(chain.from_iterable(compiled))
+                if start_err:
+                    mess = cleandoc('''The start time of the following items {}
+                        is smaller than the start time of the sequence {}''')
+                    mess = mess.replace('\n', ' ')
+                    ind = [p.index for p in start_err]
+                    errors[self.name + '-start'] = mess.format(ind, self.index)
+                if stop_err:
+                    mess = cleandoc('''The stop time of the following items {}
+                        is larger than the stop time of the sequence {}''')
+                    mess = mess.replace('\n', ' ')
+                    ind = [p.index for p in stop_err]
+                    errors[self.name + '-stop'] = mess.format(ind, self.index)
+
+                if errors:
+                    return False, []
+
+            return True, pulses
+
+        else:
+            return False, []
 
     def get_bindable_vars(self):
         """ Access the list of bindable vars for the sequence.
@@ -280,6 +262,88 @@ class Sequence(Item):
     #: List of already compiled items.
     _compiled = List()
 
+    def _compile_items(self, root_vars, sequence_locals, missings, errors):
+        """ Compile the sequence in a flat list of pulses.
+
+        Parameters
+        ----------
+        root_vars : dict
+            Dictionary of global variables for the all items. This will
+            tipically contains the i_start/stop/duration and the root vars.
+
+        sequence_locals : dict
+            Dictionary of variables whose scope is limited to this sequence.
+
+        missings : set
+            Set of unfound local variables.
+
+        errors : dict
+            Dict of the errors which happened when performing the evaluation.
+
+        Returns
+        -------
+        flag : bool
+            Boolean indicating whether or not the evaluation succeeded.
+
+        pulses : list
+            List of pulses in which all the string entries have been evaluated.
+
+        """
+        # Inplace modification of compile will update self._compiled.
+        if not self._compiled:
+            self._compiled = [None for i in self.items if i.enabled]
+        compiled = self._compiled
+
+        # Compilation of items in multiple passes.
+        while True:
+            miss = set()
+
+            index = -1
+            for item in self.items:
+                # Skip disabled items
+                if not item.enabled:
+                    continue
+
+                # Increment index so that we set the right object in compiled.
+                index += 1
+
+                # Skip evaluation if object has already been compiled.
+                if compiled[index] is not None:
+                    continue
+
+                # If we get a pulse simply evaluate the entries, to add their
+                # values to the locals and keep track of the missings to now
+                # when to abort compilation.
+                if isinstance(item, Pulse):
+                    success = item.eval_entries(root_vars, sequence_locals,
+                                                miss, errors)
+                    if success:
+                        compiled[index] = [item]
+
+                # Here we got a sequence so we must try to compile it.
+                else:
+                    success, items = item.compile_sequence(root_vars,
+                                                           sequence_locals,
+                                                           miss, errors)
+                    if success:
+                        compiled[index] = items
+
+            known_locals = set(sequence_locals.keys())
+            # If none of the variables found missing during last pass is now
+            # known stop compilation as we now reached a dead end. Same if an
+            # error occured.
+            if errors or miss and (not known_locals & miss):
+                # Update the missings given by caller so that it knows it this
+                # failure is linked to circle references.
+                missings.update(miss)
+                return False, []
+
+            # If no var was found missing during last pass (and as no error
+            # occured) it means the compilation succeeded.
+            elif not miss:
+                pulses = list(chain.from_iterable(compiled))
+                return True, pulses
+
     def _answer(self, members, callables):
         """ Collect answers for the walk method.
 
@@ -317,8 +381,10 @@ class Sequence(Item):
         """
 
         """
-        # TODO add updating linkable vars
-        pass
+        if change['value']:
+            self.linkable_vars = ['start', 'stop', 'duration']
+        else:
+            self.linkable_vars = []
 
     def _items_updated(self, change):
         """ Observer for the items list.
@@ -455,15 +521,14 @@ class RootSequence(Sequence):
 
     The linkable_vars of the RootSequence stores all the known linkable vars
     for the sequence.
+    The local_vars of the RootSequence acts as global variables and are not
+    evaluated.
+    The start, stop, duration and def_1, def_2 members are not used by the
+    RootSequence. The time_constrained member only affects the use of the
+    sequence duration.
 
     """
     # --- Public API ----------------------------------------------------------
-
-    #: Dict of external variables.
-    external_vars = Dict().tag(pref=True)
-
-    #: Flag to set the length of sequence to a fix duration.
-    fix_sequence_duration = Bool().tag(pref=True)
 
     #: Duration of the sequence when it is fixed. The unit of this time is
     # fixed by the context.
@@ -507,29 +572,38 @@ class RootSequence(Sequence):
         """
         missings = set()
         errors = {}
-        sequence_locals = self.external_vars.copy()
+        root_vars = self.local_vars.copy()
 
-        if self.fix_sequence_duration:
+        if self.time_constrained:
             try:
-                duration = eval_entry(self.sequence_duration, sequence_locals,
+                duration = eval_entry(self.sequence_duration, root_vars,
                                       missings)
-                sequence_locals['sequence_end'] = duration
+                root_vars['sequence_end'] = duration
             except Exception as e:
                 errors['root_seq_duration'] = repr(e)
 
-        res, pulses = super(RootSequence,
-                            self).compile_sequence(sequence_locals,
-                                                   missings, errors)
+        res, pulses = self._compile_items(root_vars, root_vars,
+                                          missings, errors)
 
         if not res:
             return False, (missings, errors)
 
-        elif not use_context:
+        if self.time_constrained:
+            err = [p for p in pulses if p.stop > duration]
+
+            if err:
+                mess = cleandoc('''The stop time of the following pulses {}
+                        is larger than the duration of the sequence.''')
+                ind = [p.index for p in err]
+                errors['Root-stop'] = mess.format(ind)
+                return False, (missings, errors)
+
+        if not use_context:
             return True, pulses
 
         else:
             kwargs = {}
-            if self.fix_sequence_duration:
+            if self.time_constrained:
                 kwargs['sequence_duration'] = duration
             return self.context.compile_sequence(pulses, **kwargs)
 
@@ -537,8 +611,7 @@ class RootSequence(Sequence):
         """ Access the list of bindable vars for the sequence.
 
         """
-        # TODO refactor according to sequence
-        return self.linkable_vars + self.external_vars.keys()
+        return self.linkable_vars + self.local_vars.keys()
 
     def preferences_from_members(self):
         """ Get the members values as string to store them in .ini files.
@@ -608,7 +681,7 @@ class RootSequence(Sequence):
 
         return answers
 
-    def _observe_fix_sequence_duration(self, change):
+    def _observe_time_constrained(self, change):
         """ Keep the linkable_vars list in sync with fix_sequence_duration.
 
         """
@@ -624,5 +697,16 @@ class RootSequence(Sequence):
     def _update_linkable_vars(self, change):
         """
         """
-        # TODO rr
-        pass
+        # Don't won't this to happen on member init.
+        if change['type'] == 'update':
+            link_vars = self.linkable_vars
+            item = change['object']
+            prefix = '{}_{{}}'.format(item.index)
+            added = set(change['value']) - set(change.get('oldvalue', []))
+            removed = set(change.get('oldvalue', [])) - set(change['value'])
+            link_vars.extend([prefix.format(var)
+                              for var in added])
+            for var in removed:
+                r = prefix.format(var)
+                if r in link_vars:
+                    link_vars.remove(r)
