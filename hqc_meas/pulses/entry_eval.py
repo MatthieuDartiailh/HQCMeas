@@ -8,6 +8,21 @@ from math import cos, sin, tan, acos, asin, atan, exp, log, log10
 import cmath as cm
 import numpy as np
 from math import pi as Pi
+from inspect import cleandoc
+from textwrap import fill
+
+
+EVALUATER_TOOLTIP = '\n'.join([
+    fill(cleandoc("""In this field you can enter a text and
+                  include fields which will be replaced by database
+                  entries by using the delimiters '{' and '}' and
+                  which will then be evaluated."""), 80),
+    "Available math functions:",
+    "- cos, sin, tan, acos, asin, atan, atan2",
+    "- exp, log, log10, cosh, sinh, tanh, sqrt",
+    "- complex math function are available under cm",
+    "- numpy function are avilable under np",
+    "- pi is available as Pi"])
 
 
 def safe_eval(expr, local_var=None):

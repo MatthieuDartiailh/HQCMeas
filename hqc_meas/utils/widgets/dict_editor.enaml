@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : hqc_meas/utils/widgets/dict_editor.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from atom.api import Atom, Str, Value, Callable, ContainerList, observe, Typed
+from enaml.widgets.api import Container
+from .list_editor import ListEditor
+
+class Pair(Atom):
+    """ Place holder class for the Pair editor.
+
+    """
+    key = Value('')
+    value = Value('')
+    model = Value()
+
+    refresh_method = Callable()
+
+    @observe('key', 'value')
+    def _update_model(self, change):
+        if change['type'] == 'update':
+            self.refresh_method({'name': 'pair'})
+
+class _DictEditorModel(Atom):
+    """ Model converting a dict into an editable list of Pair.
+
+    """
+    model = Value()
+    iterable_name = Str()
+
+    pairs = ContainerList(Typed(Pair))
+
+    @observe('pairs')
+    def refresh(self, change):
+        """ Synchronise pairs and the underlying model.
+
+        """
+        setattr(self.model, self.iterable_name,
+                {p.label: p.value for p in self.pairs})
+
+    def _default_pairs(self):
+        return [Pair(label=p[0], value=p[1], refresh_method=self.refresh,
+                     model=self.model)
+                for p in getattr(self.model, self.iterable_name).items()]
+
+
+template DictEditor(Content):
+    Container: main:
+        padding = 2
+        attr model
+        attr iterable_name
+        alias operations : ed.operations
+        alias title: ed.title
+        alias alignment : ed.alignment
+
+        attr _model = _DictEditorModel(model=model,
+                                       iterable_name=iterable_name)
+        ListEditor(Content): ed:
+            ed.model = _model
+            ed.iterable_name = 'pairs'
+            ed.factory = Pair
+            ed.kwargs = {'refresh_method': _model.refresh, 'task': main.model}
