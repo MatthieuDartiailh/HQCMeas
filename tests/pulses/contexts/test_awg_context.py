@@ -25,7 +25,7 @@ class TestAWGContext(object):
         self.root.context = self.context
 
     def test_compiling_A_pulse(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse = Pulse(kind='analogical', shape=SquareShape(amplitude='1.0'),
                       def_1='0.1', def_2='0.5', channel='Ch1_A')
@@ -44,7 +44,7 @@ class TestAWGContext(object):
                               bytearray(sequence))
 
     def test_compiling_M1_pulse(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M1')
@@ -61,7 +61,7 @@ class TestAWGContext(object):
                               bytearray(sequence))
 
     def test_compiling_M2_pulse(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M2')
@@ -93,7 +93,7 @@ class TestAWGContext(object):
                               bytearray(sequence))
 
     def test_too_short_fixed_length(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '0.3'
         pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M1')
@@ -103,7 +103,7 @@ class TestAWGContext(object):
         assert_false(res)
 
     def test_channel_kind_mixing(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '0.3'
         pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_A')
@@ -113,7 +113,7 @@ class TestAWGContext(object):
         assert_false(res)
 
     def test_overlapping_pulses(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse1 = Pulse(kind='analogical', def_1='0.1', def_2='0.5',
                        channel='Ch1_A', shape=SquareShape(amplitude='1.0'),
@@ -130,7 +130,7 @@ class TestAWGContext(object):
         assert_in('Ch1', arrays)
 
     def test_nearly_overlapping_M2(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse1 = Pulse(kind='logical', def_1='0.1', def_2='0.5',
                        channel='Ch1_M2')
@@ -149,7 +149,7 @@ class TestAWGContext(object):
                               bytearray(sequence))
 
     def test_overflow_check_A(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse1 = Pulse(kind='analogical', def_1='0.1', def_2='0.5',
                        channel='Ch1_A', shape=SquareShape(amplitude='1.0'),
@@ -166,7 +166,7 @@ class TestAWGContext(object):
         assert_in('Ch1_A', traceback)
 
     def test_overflow_check_M1(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse1 = Pulse(kind='logical', def_1='0.1', def_2='0.5',
                        channel='Ch1_M1')
@@ -179,7 +179,7 @@ class TestAWGContext(object):
         assert_in('Ch1_M1', traceback)
 
     def test_overflow_check_M2(self):
-        self.root.fix_sequence_duration = True
+        self.root.time_constrained = True
         self.root.sequence_duration = '1'
         pulse1 = Pulse(kind='logical', def_1='0.1', def_2='0.5',
                        channel='Ch1_M2')
@@ -192,7 +192,7 @@ class TestAWGContext(object):
         assert_in('Ch1_M2', traceback)
 
     def test_compiling_sequence1(self):
-        self.root.external_vars = {'a': 1.5}
+        self.root.local_vars = {'a': 1.5}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(channel='Ch1_M2',
