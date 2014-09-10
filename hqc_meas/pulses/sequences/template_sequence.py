@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import (Dict, ForwardTyped, Unicode, set_default)
+from atom.api import (Dict, ForwardTyped, Unicode)
 from inspect import cleandoc
 
 from ..entry_eval import eval_entry

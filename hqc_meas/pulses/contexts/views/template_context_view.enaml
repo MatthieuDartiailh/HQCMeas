@@ -7,7 +7,7 @@
 """
 """
 from enaml.layout.api import hbox, vbox
-from enaml.widgets.api import (Label, Field, Container, ObjectCombo, FlowArea
+from enaml.widgets.api import (Label, Field, Container, ObjectCombo, FlowArea,
                                FlowItem, GroupBox)
 from enaml.core.api import Conditional, Looper
 from enaml.validator import RegexValidator

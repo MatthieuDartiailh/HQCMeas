@@ -391,7 +391,7 @@ enamldef RootSequenceView(GroupBox): view:
         Page:
             title = 'Context'
             Include:
-                objects << [instantiate_context_view(sequence.context)]
+                objects << [instantiate_context_view(core, sequence.context)]
 
         Include: include:
             pass

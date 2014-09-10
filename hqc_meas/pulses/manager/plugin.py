@@ -390,7 +390,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         aux.remove('RootSequence')
         self.sequences = aux
 
-        self._failed = failed
+        if failed:
+            self._failed['sequences'] = failed
 
     def _refresh_contexts(self):
         """ Refresh the known contexts.
@@ -414,7 +415,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         self._contexts = valid_contexts
         self.contexts = list(valid_contexts.keys())
 
-        self._failed = failed
+        if failed:
+            self._failed['contexts'] = failed
 
     def _refresh_shapes(self):
         """ Refresh the known shapes.
@@ -438,7 +440,8 @@ class PulsesManagerPlugin(HasPrefPlugin):
         self._shapes = valid_shapes
         self.shapes = list(valid_shapes.keys())
 
-        self._failed = failed
+        if failed:
+            self._failed['shapes'] = failed
 
     def _refresh_filters(self):
         """ Place holder for a future filter discovery function
