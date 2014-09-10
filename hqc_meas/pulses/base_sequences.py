@@ -16,8 +16,12 @@ from .item import Item
 from .pulse import Pulse
 
 
-class Sequence(Item):
-    """ A sequence is an ensemble of pulses.
+class BaseSequence(Item):
+    """ Base class for all sequences.
+
+    This class defines the basic of a sequence but with only a very limited
+    child support : only construction is supported, indexing is not handled
+    nor is child insertion, deletion or displacement.
 
     """
     # --- Public API ----------------------------------------------------------
@@ -31,11 +35,6 @@ class Sequence(Item):
     #: Dict of variables whose scope is limited to the sequence. Each key/value
     #: pair represents the name and definition of the variable.
     local_vars = Dict(Str()).tag(pref=True)
-
-    #: Bool indicating whether or not the sequence has a hard defined
-    #: start/stop/duration. In case it does not the associated values won't
-    #: be computed.
-    time_constrained = Bool().tag(pref=True)
 
     def prepare_compilation(self):
         """ Clear all internal caches before compiling anew the sequence.
@@ -79,61 +78,7 @@ class Sequence(Item):
             List of pulses in which all the string entries have been evaluated.
 
         """
-        prefix = '{}_'.format(self.index)
-
-        # Definition evaluation.
-        if self.time_constrained:
-            self.eval_entries(root_vars, sequence_locals, missings, errors)
-
-        # Local vars computation.
-        for name, formula in self.local_vars.iteritems():
-            if name not in self._evaluated_vars:
-                try:
-                    val = eval_entry(formula, sequence_locals, missings)
-                    self._evaluated_vars[name] = val
-                except Exception as e:
-                    errors[prefix + name] = repr(e)
-
-        local_namespace = sequence_locals.copy()
-        local_namespace.update(self._evaluated_vars)
-
-        res, pulses = self._compile_items(root_vars, local_namespace,
-                                          missings, errors)
-
-        if res:
-            if self.time_constrained:
-                # Check if start, stop and duration of sequence are compatible.
-                start_err = [pulse for pulse in pulses
-                             if pulse.start < self.start]
-                stop_err = [pulse for pulse in pulses
-                            if pulse.stop > self.stop]
-
-                if start_err:
-                    mess = cleandoc('''The start time of the following items {}
-                        is smaller than the start time of the sequence {}''')
-                    mess = mess.replace('\n', ' ')
-                    ind = [p.index for p in start_err]
-                    errors[self.name + '-start'] = mess.format(ind, self.index)
-                if stop_err:
-                    mess = cleandoc('''The stop time of the following items {}
-                        is larger than the stop time of the sequence {}''')
-                    mess = mess.replace('\n', ' ')
-                    ind = [p.index for p in stop_err]
-                    errors[self.name + '-stop'] = mess.format(ind, self.index)
-
-                if errors:
-                    return False, []
-
-            return True, pulses
-
-        else:
-            return False, []
-
-    def get_bindable_vars(self):
-        """ Access the list of bindable vars for the sequence.
-
-        """
-        return self.local_vars.keys() + self.parent.get_bindable_vars()
+        raise NotImplementedError()
 
     def walk(self, members, callables):
         """ Explore the items hierarchy.
@@ -163,32 +108,6 @@ class Sequence(Item):
                 answer.append(item.walk(members, callables))
 
         return answer
-
-    def preferences_from_members(self):
-        """ Get the members values as string to store them in .ini files.
-
-        Reimplemented here to save items.
-
-        """
-        pref = super(Sequence, self).preferences_from_members()
-
-        for i, item in enumerate(self.items):
-            pref['item_{}'.format(i)] = item.preferences_from_members()
-
-        return pref
-
-    def update_members_from_preferences(self, **parameters):
-        """ Use the string values given in the parameters to update the members
-
-        This function will call itself on any tagged HasPrefAtom member.
-        Reimplemented here to update items.
-
-        """
-        super(Sequence, self).update_members_from_preferences(**parameters)
-
-        for i, item in enumerate(self.items):
-            para = parameters['item_{}'.format(i)]
-            item.update_members_from_preferences(**para)
 
     @classmethod
     def build_from_config(cls, config, dependencies):
@@ -249,9 +168,6 @@ class Sequence(Item):
         return sequence
 
     # --- Private API ---------------------------------------------------------
-
-    #: Last index used by the sequence.
-    _last_index = Int()
 
     #: Dict of all already evaluated vars.
     _evaluated_vars = Dict()
@@ -348,6 +264,137 @@ class Sequence(Item):
         answers = {m: getattr(self, m, None) for m in members}
         answers.update({k: c(self) for k, c in callables.iteritems()})
         return answers
+
+
+class Sequence(BaseSequence):
+    """ A sequence is an ensemble of pulses.
+
+    """
+    # --- Public API ----------------------------------------------------------
+
+    #: Bool indicating whether or not the sequence has a hard defined
+    #: start/stop/duration. In case it does not the associated values won't
+    #: be computed.
+    time_constrained = Bool().tag(pref=True)
+
+    def compile_sequence(self, root_vars, sequence_locals, missings, errors):
+        """ Evaluate the sequence vars and compile the list of pulses.
+
+        Parameters
+        ----------
+        root_vars : dict
+            Dictionary of global variables for the all items. This will
+            tipically contains the i_start/stop/duration and the root vars.
+            This dict must be updated with global new values but for
+            evaluation sequence_locals must be used.
+
+        sequence_locals : dict
+            Dictionary of variables whose scope is limited to this sequence
+            parent. This dict must be updated with global new values and
+            must be used to perform evaluation (It always contains all the
+            names defined in root_vars).
+
+        missings : set
+            Set of unfound local variables.
+
+        errors : dict
+            Dict of the errors which happened when performing the evaluation.
+
+        Returns
+        -------
+        flag : bool
+            Boolean indicating whether or not the evaluation succeeded.
+
+        pulses : list
+            List of pulses in which all the string entries have been evaluated.
+
+        """
+        prefix = '{}_'.format(self.index)
+
+        # Definition evaluation.
+        if self.time_constrained:
+            self.eval_entries(root_vars, sequence_locals, missings, errors)
+
+        # Local vars computation.
+        for name, formula in self.local_vars.iteritems():
+            if name not in self._evaluated_vars:
+                try:
+                    val = eval_entry(formula, sequence_locals, missings)
+                    self._evaluated_vars[name] = val
+                except Exception as e:
+                    errors[prefix + name] = repr(e)
+
+        local_namespace = sequence_locals.copy()
+        local_namespace.update(self._evaluated_vars)
+
+        res, pulses = self._compile_items(root_vars, local_namespace,
+                                          missings, errors)
+
+        if res:
+            if self.time_constrained:
+                # Check if start, stop and duration of sequence are compatible.
+                start_err = [pulse for pulse in pulses
+                             if pulse.start < self.start]
+                stop_err = [pulse for pulse in pulses
+                            if pulse.stop > self.stop]
+
+                if start_err:
+                    mess = cleandoc('''The start time of the following items {}
+                        is smaller than the start time of the sequence {}''')
+                    mess = mess.replace('\n', ' ')
+                    ind = [p.index for p in start_err]
+                    errors[self.name + '-start'] = mess.format(ind, self.index)
+                if stop_err:
+                    mess = cleandoc('''The stop time of the following items {}
+                        is larger than the stop time of the sequence {}''')
+                    mess = mess.replace('\n', ' ')
+                    ind = [p.index for p in stop_err]
+                    errors[self.name + '-stop'] = mess.format(ind, self.index)
+
+                if errors:
+                    return False, []
+
+            return True, pulses
+
+        else:
+            return False, []
+
+    def get_bindable_vars(self):
+        """ Access the list of bindable vars for the sequence.
+
+        """
+        return self.local_vars.keys() + self.parent.get_bindable_vars()
+
+    def preferences_from_members(self):
+        """ Get the members values as string to store them in .ini files.
+
+        Reimplemented here to save items.
+
+        """
+        pref = super(Sequence, self).preferences_from_members()
+
+        for i, item in enumerate(self.items):
+            pref['item_{}'.format(i)] = item.preferences_from_members()
+
+        return pref
+
+    def update_members_from_preferences(self, **parameters):
+        """ Use the string values given in the parameters to update the members
+
+        This function will call itself on any tagged HasPrefAtom member.
+        Reimplemented here to update items.
+
+        """
+        super(Sequence, self).update_members_from_preferences(**parameters)
+
+        for i, item in enumerate(self.items):
+            para = parameters['item_{}'.format(i)]
+            item.update_members_from_preferences(**para)
+
+    # --- Private API ---------------------------------------------------------
+
+    #: Last index used by the sequence.
+    _last_index = Int()
 
     def _observe_root(self, change):
         """ Observer passing the root to all children.
@@ -518,14 +565,16 @@ class RootSequence(Sequence):
 
     The linkable_vars of the RootSequence stores all the known linkable vars
     for the sequence.
-    The local_vars of the RootSequence acts as global variables and are not
-    evaluated.
     The start, stop, duration and def_1, def_2 members are not used by the
     RootSequence. The time_constrained member only affects the use of the
     sequence duration.
 
     """
     # --- Public API ----------------------------------------------------------
+
+    #: Dictionary of external variables whose values should be given before
+    #: the start of the compilation stage.
+    external_vars = Dict(Str()).tag(pref=True)
 
     #: Duration of the sequence when it is fixed. The unit of this time is
     # fixed by the context.
@@ -569,7 +618,18 @@ class RootSequence(Sequence):
         """
         missings = set()
         errors = {}
-        root_vars = self.local_vars.copy()
+        root_vars = self.external_vars.copy()
+
+        # Local vars computation.
+        for name, formula in self.local_vars.iteritems():
+            if name not in self._evaluated_vars:
+                try:
+                    val = eval_entry(formula, root_vars, missings)
+                    self._evaluated_vars[name] = val
+                except Exception as e:
+                    errors['root_' + name] = repr(e)
+
+        root_vars.update(self._evaluated_vars)
 
         if self.time_constrained:
             try:

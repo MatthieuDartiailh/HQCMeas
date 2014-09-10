@@ -192,7 +192,7 @@ class TestAWGContext(object):
         assert_in('Ch1_M2', traceback)
 
     def test_compiling_sequence1(self):
-        self.root.local_vars = {'a': 1.5}
+        self.root.external_vars = {'a': 1.5}
 
         pulse1 = Pulse(channel='Ch1_M1', def_1='1.0', def_2='{7_start} - 1.0')
         pulse2 = Pulse(channel='Ch1_M2',
