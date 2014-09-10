@@ -47,11 +47,11 @@ enamldef ConditionalSequenceView(GroupBox): view:
         condition << item.time_constrained
         Container:
             constraints = [hbox(vbox(def_lab, def_val), defs)]
-        Label: def_lab:
-            text = 'Mode'
-        ObjectCombo: def_val:
-            items << list(item.get_member('def_mode').items)
-            selected := item.def_mode
+            Label: def_lab:
+                text = 'Mode'
+            ObjectCombo: def_val:
+                items << list(item.get_member('def_mode').items)
+                selected := item.def_mode
 
         Splitter: defs:
             SplitItem:
