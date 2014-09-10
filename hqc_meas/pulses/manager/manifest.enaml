@@ -14,8 +14,10 @@ from hqc_meas.utils.preferences.api import Preferences
 from hqc_meas.utils.state.api import State
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 from hqc_meas.utils.dependencies.api import BuildDependency
+from hqc_meas.utils.configobj_ops import flatten_config
 
 from .building import BuilderView
+from .template_io import load_template
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
@@ -173,6 +175,17 @@ def collect_pulses_dependecies(workbench, flat_walk):
     dependencies['contexts'] = c_res[0]
     dependencies['shapes'] = sh_res[0]
 
+    # Collect template dependencies.
+    for t_path in flat_walk['template_path']:
+        if os.path.isfile(t_path):
+            t_conf = flatten_config(load_template(t_path)[0])
+            t_dep = collect_pulses_dependecies(workbench, t_conf)['pulses']
+            depedencies['shapes'].update(t_dep.pop('shapes'))
+            depedencies['context'].update(t_dep.pop('context'))
+            depedencies.update(t_dep)
+        else:
+            raise ValueError('Template {} not found'.format(t_path))
+
     if dependencies:
         return {'pulses': dependencies}
     else:
@@ -208,7 +221,7 @@ enamldef PulsesManagerManifest(PluginManifest):
         BuildDependency:
             id = 'hqc_meas.pulses_manager.dependencies'
             walk_members = ['item_class', 'context.context_class',
-                            'shape.shape_class']
+                            'shape.shape_class', 'template_path']
             collect = collect_pulses_dependecies
 
     Extension:
