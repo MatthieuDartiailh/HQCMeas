@@ -6,6 +6,7 @@
 # =============================================================================
 import os
 from configobj import ConfigObj
+from copy import deepcopy
 from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
                         assert_not_in, assert_in, assert_items_equal)
 from hqc_meas.pulses.pulse import Pulse
@@ -14,7 +15,6 @@ from hqc_meas.pulses.shapes.base_shapes import SquareShape
 from hqc_meas.pulses.contexts.template_context import TemplateContext
 from hqc_meas.pulses.sequences.template_sequence import TemplateSequence
 
-from ...util import create_test_dir, remove_tree
 from ..context import TestContext
 
 
@@ -40,44 +40,35 @@ def create_template_sequence():
 
     pref = root.preferences_from_members()
     pref['template_vars'] = repr(dict(b=''))
+    del pref['item_class']
+    del pref['external_vars']
+    del pref['time_constrained']
     return pref
 
 
 class TestBuilding(object):
 
-    test_dir = ''
-
-    @classmethod
-    def setup_class(cls):
-        test_dir = os.path.join(PACKAGE_PATH, 'tests')
-        create_test_dir(test_dir)
-        cls.test_dir = test_dir
-
-        pref = create_template_sequence()
-        conf = ConfigObj(os.path.join(test_dir, 'template.ini'))
-        conf.update(pref)
-        conf.initial_comment = 'Basic user comment\nff'
-        conf.write()
-
-    @classmethod
-    def teardown_class(cls):
-        remove_tree(cls.test_dir)
-
     def setup(self):
+        pref = create_template_sequence()
+        conf = ConfigObj()
+        conf.update(pref)
         dep = {'Sequence': Sequence, 'Pulse': Pulse,
+               'TemplateSequence': TemplateSequence,
                'shapes': {'SquareShape': SquareShape},
-               'contexts': {'BaseContext': TemplateContext}}
+               'contexts': {'TemplateContext': TemplateContext,
+                            'TestContext': TestContext},
+               'templates': {'test': ('', conf, 'Basic user comment\nff')}}
         self.dependecies = {'pulses': dep}
 
     def test_build_from_config1(self):
         # Test building a template sequence from only the template file.
-        t_path = os.path.join(self.test_dir, 'template.ini')
-        seq = TemplateSequence.build_from_config({'template_path': t_path,
+        # No information is knwon about channel mapping of template_vars values
+        seq = TemplateSequence.build_from_config({'template_id': 'test',
                                                   'name': 'Template'},
                                                  self.dependecies)
 
         assert_equal(seq.name, 'Template')
-        assert_equal(seq.template_path, t_path)
+        assert_equal(seq.template_id, 'test')
         assert_equal(seq.template_vars, dict(b=''))
         assert_equal(seq.local_vars, dict(a=1.5))
         assert_equal(len(seq.items), 4)
@@ -91,9 +82,39 @@ class TestBuilding(object):
         assert_equal(context.channel_mapping, {'A': '', 'B': '', 'Ch1': '',
                                                'Ch2': ''})
 
-    def test_building_from_config2(self):
+    def test_build_from_config2(self):
         # Test rebuilding a sequence including a template sequence.
-        pass
+        # Channel mapping of template_vars values are known.
+        dep = deepcopy(self.dependecies)
+        seq = TemplateSequence.build_from_config({'template_id': 'test',
+                                                  'name': 'Template'},
+                                                 dep)
+        seq.template_vars = {'b': 25}
+        seq.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                       'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'}
+        root = RootSequence()
+        context = TestContext(sampling=0.5)
+        root.context = context
+        root.items = [seq]
+        pref = root.preferences_from_members()
+
+        new = RootSequence.build_from_config(pref, self.dependecies)
+        assert_equal(new.items[0].index, 1)
+
+        assert_equal(seq.name, 'Template')
+        assert_equal(seq.template_id, 'test')
+        assert_equal(seq.template_vars, dict(b=25))
+        assert_equal(seq.local_vars, dict(a=1.5))
+        assert_equal(len(seq.items), 4)
+        assert_equal(seq.items[3].index, 5)
+        assert_equal(seq.docs, 'Basic user comment\nff')
+
+        context = seq.context
+        assert_equal(context.template, seq)
+        assert_equal(context.logical_channels, ['A', 'B'])
+        assert_equal(context.analogical_channels, ['Ch1', 'Ch2'])
+        assert_equal(context.channel_mapping, {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                               'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'})
 
 
 class TestCompilation(object):

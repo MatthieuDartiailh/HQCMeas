@@ -17,7 +17,6 @@ from hqc_meas.utils.dependencies.api import BuildDependency
 from hqc_meas.utils.configobj_ops import flatten_config
 
 from .building import BuilderView
-from .template_io import load_template
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
@@ -164,27 +163,29 @@ def collect_pulses_dependecies(workbench, flat_walk):
                                       use_class_names=True,
                                       views=False)
 
-    if s_res[1] or c_res[1] or sh_res[1]:
-        mess = 'Missing sequences: {}, contexts: {}, shapes :{}'
+    # Collect the templates.
+    tp_res = manager.sequences_request(flat_walk['template_id'])
 
-        raise ValueError(mess.format(s_res[1], c_res[1], sh_res[1]))
+    if s_res[1] or c_res[1] or sh_res[1] or tp_res[1]:
+        mess = 'Missing sequences: {}, contexts: {}, shapes: {}, templates: {}'
+
+        raise ValueError(mess.format(s_res[1], c_res[1], sh_res[1], tp_res[1]))
 
     # Bundle all dependencies under a single dict.
     dependencies = {}
     dependencies.update(s_res[0])
     dependencies['contexts'] = c_res[0]
     dependencies['shapes'] = sh_res[0]
+    dependencies['templates'] = tp_res[0]
 
     # Collect template dependencies.
-    for t_path in flat_walk['template_path']:
-        if os.path.isfile(t_path):
-            t_conf = flatten_config(load_template(t_path)[0])
-            t_dep = collect_pulses_dependecies(workbench, t_conf)['pulses']
-            depedencies['shapes'].update(t_dep.pop('shapes'))
-            depedencies['context'].update(t_dep.pop('context'))
-            depedencies.update(t_dep)
-        else:
-            raise ValueError('Template {} not found'.format(t_path))
+    for _, conf, _ in tp_res[0]:
+        t_conf = flatten_config(conf)
+        t_dep = collect_pulses_dependecies(workbench, t_conf)['pulses']
+        depedencies['shapes'].update(t_dep.pop('shapes'))
+        depedencies['context'].update(t_dep.pop('context'))
+        depedencies['templates'].update(t_dep.pop('templates'))
+        depedencies.update(t_dep)
 
     if dependencies:
         return {'pulses': dependencies}
@@ -221,7 +222,7 @@ enamldef PulsesManagerManifest(PluginManifest):
         BuildDependency:
             id = 'hqc_meas.pulses_manager.dependencies'
             walk_members = ['item_class', 'context.context_class',
-                            'shape.shape_class', 'template_path']
+                            'shape.shape_class', 'template_id']
             collect = collect_pulses_dependecies
 
     Extension:

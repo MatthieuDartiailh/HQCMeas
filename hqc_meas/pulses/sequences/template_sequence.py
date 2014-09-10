@@ -4,16 +4,15 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import (Dict, ForwardTyped, Unicode)
+from atom.api import (Dict, ForwardTyped, Unicode, set_default)
 from inspect import cleandoc
 
-from .entry_eval import eval_entry
+from ..entry_eval import eval_entry
 from ..base_sequences import BaseSequence, Sequence
-from ..manager.template_io import load_template
 
 
 def context():
-    from .contexts.template_context import TemplateContext
+    from ..contexts.template_context import TemplateContext
     return TemplateContext
 
 
@@ -23,8 +22,8 @@ class TemplateSequence(BaseSequence):
     """
     # --- Public API ----------------------------------------------------------
 
-    #: Path to the template file on which this sequence relies.
-    template_path = Unicode().tag(pref=True)
+    #: Id of the template on which this sequence relies.
+    template_id = Unicode().tag(pref=True)
 
     #: Dict of variables defined in the template scope.
     template_vars = Dict().tag(pref=True)
@@ -152,25 +151,24 @@ class TemplateSequence(BaseSequence):
             Newly created and initiliazed sequence.
 
         """
-        # First load the underlying template and merge config into it as it
-        # has more recent infos about the context and the vars.
-        # NB : the TemplateConfig have to pass a dummy config all the file
-        # logic happening actually here.
-        t_config, doc = load_template(config['template_path'])
+        # First get the underlying template from the dependencies and merge
+        # config into it as it has more recent infos about the context and
+        # the vars.
+        dep = dependencies['pulses']
+        _, t_config, doc = dep['templates'][config['template_id']]
         t_config.merge(config)
         config = t_config
 
         context_config = config['context']
         context_class_name = context_config.pop('context_class')
-        context_class = dependencies['pulses'][context_class_name]
+        context_class = dep['contexts'][context_class_name]
         context = context_class()
         context.update_members_from_preferences(**context_config)
-        config['context'] = context
 
         seq = super(TemplateSequence, cls).build_from_config(t_config,
                                                              dependencies)
-
         seq.docs = doc
+        seq.context = context
 
         # Do the indexing of the children once and for all.
         i = 1
@@ -179,9 +177,11 @@ class TemplateSequence(BaseSequence):
             item.root = seq
             if isinstance(item, Sequence):
                 item._recompute_indexes()
-                i += item._last_index + 1
+                i = item._last_index + 1
             else:
                 i += 1
+
+        return seq
 
     # --- Private API ---------------------------------------------------------
 

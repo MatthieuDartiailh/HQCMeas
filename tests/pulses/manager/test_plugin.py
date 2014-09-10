@@ -5,7 +5,8 @@ import os
 import shutil
 from configobj import ConfigObj
 from nose.tools import (assert_equal, assert_not_is_instance, assert_true,
-                        assert_false, assert_in, assert_not_in)
+                        assert_false, assert_in, assert_not_in,
+                        assert_items_equal)
 from nose.plugins.skip import SkipTest
 
 with enaml.imports():
@@ -325,9 +326,19 @@ class Test(object):
         res, build, run = core.invoke_command(com, {'obj': root}, core)
         assert_true(res)
         assert_in('pulses', build)
-        assert_equal(sorted(['Sequence', 'Pulse', 'RootSequence', 'shapes',
-                             'contexts']),
-                     sorted(build['pulses'].keys()))
+        assert_items_equal(['Sequence', 'Pulse', 'RootSequence', 'shapes',
+                            'contexts', 'templates'],
+                           build['pulses'].keys())
         assert_equal(['SquareShape'], build['pulses']['shapes'].keys())
         assert_equal(['AWGContext'], build['pulses']['contexts'].keys())
         assert_false(run)
+
+    def test_collect_dependencies2(self):
+        # Test collecting_dependencies for a sequence including a template
+        # sequence.
+        self.workbench.register(PulsesManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        plugin.contexts_loading = []
+        plugin.sequences_loading = []
+
+        # TODO rr
