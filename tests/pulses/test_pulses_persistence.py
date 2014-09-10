@@ -114,6 +114,7 @@ def test_build_from_config():
     aux = RootSequence.build_from_config(pref, dependecies)
     assert_equal(aux.external_vars, {'a': 1.5})
     assert_equal(len(aux.items), 4)
+    assert_is_instance(aux.context, BaseContext)
 
     pulse1 = aux.items[0]
     assert_equal(pulse1.def_1, '1.0')

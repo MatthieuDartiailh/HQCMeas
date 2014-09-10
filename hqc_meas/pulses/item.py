@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import (Int, Str, List, Bool, Float, Enum, ForwardTyped)
+from atom.api import (Int, Str, List, Bool, Float, Enum, ForwardTyped, Value)
 
 from hqc_meas.utils.atom_util import HasPrefAtom
 
@@ -14,11 +14,6 @@ from .entry_eval import eval_entry
 def sequence():
     from .base_sequences import Sequence
     return Sequence
-
-
-def root():
-    from .base_sequences import RootSequence
-    return RootSequence
 
 
 class Item(HasPrefAtom):
@@ -43,7 +38,7 @@ class Item(HasPrefAtom):
     parent = ForwardTyped(sequence)
 
     #: Reference to the root sequence.
-    root = ForwardTyped(root)
+    root = Value()
 
     #: Mode defining how the def_1 and def_2 attrs shiould be interpreted.
     def_mode = Enum('Start/Stop',

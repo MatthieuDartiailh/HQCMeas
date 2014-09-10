@@ -531,15 +531,15 @@ class Sequence(BaseSequence):
             linkable_vars = [prefix + var for var in item.linkable_vars]
             linked_vars.extend(linkable_vars)
 
-            if isinstance(item, Pulse):
-                free_index += 1
-
-            # We have a sequence.
-            else:
+            if isinstance(item, Sequence):
                 item.unobserve('_last_index', self._item_last_index_updated)
                 item._recompute_indexes()
                 item.observe('_last_index', self._item_last_index_updated)
                 free_index = item._last_index + 1
+
+            # We have a non indexed item (pulse or template).
+            else:
+                free_index += 1
 
         self._last_index = free_index - 1
 
@@ -720,9 +720,10 @@ class RootSequence(Sequence):
         context_class = dependencies['pulses']['contexts'][context_class_name]
         context = context_class()
         context.update_members_from_preferences(**context_config)
-        config['context'] = context
-        return super(RootSequence, cls).build_from_config(config,
-                                                          dependencies)
+        seq = super(RootSequence, cls).build_from_config(config,
+                                                         dependencies)
+        seq.context = context
+        return seq
 
     # --- Private API ---------------------------------------------------------
 
