@@ -563,11 +563,8 @@ class ComplexTask(BaseTask):
         """ Run sequentially all child tasks.
 
         """
-        result = True
         for child in self.children_task:
-            result &= child.perform_(child)
-
-        return result
+            child.perform_(child)
 
     def check(self, *args, **kwargs):
         """ Run test of all child tasks.
