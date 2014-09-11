@@ -6,8 +6,8 @@
 # =============================================================================
 import os
 from configobj import ConfigObj
-from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
-                        assert_not_in, assert_in, assert_items_equal)
+from nose.tools import (assert_equal, assert_true, assert_false,
+                        assert_in)
 from hqc_meas.pulses.pulse import Pulse
 from hqc_meas.pulses.base_sequences import RootSequence, Sequence
 from hqc_meas.pulses.shapes.base_shapes import SquareShape
@@ -63,14 +63,14 @@ class TestBuilding(object):
     def test_build_from_config1(self):
         # Test building a template sequence from only the template file.
         # No information is knwon about channel mapping of template_vars values
-        seq = TemplateSequence.build_from_config({'template_id': 'test',
-                                                  'name': 'Template'},
-                                                 self.dependecies)
+        conf = {'template_id': 'test', 'name': 'Template',
+                'template_vars': "{'b': '19', 'c': ''}"}
+        seq = TemplateSequence.build_from_config(conf, self.dependecies)
 
         assert_equal(seq.name, 'Template')
         assert_equal(seq.template_id, 'test')
-        assert_equal(seq.template_vars, dict(b=''))
-        assert_equal(seq.local_vars, dict(a=1.5))
+        assert_equal(seq.template_vars, dict(b='19'))
+        assert_equal(seq.local_vars, dict(a='1.5'))
         assert_equal(len(seq.items), 4)
         assert_equal(seq.items[3].index, 5)
         assert_equal(seq.docs, 'Basic user comment\nff')
@@ -85,10 +85,9 @@ class TestBuilding(object):
     def test_build_from_config2(self):
         # Test rebuilding a sequence including a template sequence.
         # Channel mapping of template_vars values are known.
-        seq = TemplateSequence.build_from_config({'template_id': 'test',
-                                                  'name': 'Template'},
-                                                 self.dependecies)
-        seq.template_vars = {'b': 25}
+        conf = {'template_id': 'test', 'name': 'Template',
+                'template_vars': "{'b': '25'}"}
+        seq = TemplateSequence.build_from_config(conf, self.dependecies)
         seq.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
                                        'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'}
         root = RootSequence()
@@ -103,7 +102,7 @@ class TestBuilding(object):
         seq = new.items[0]
         assert_equal(seq.name, 'Template')
         assert_equal(seq.template_id, 'test')
-        assert_equal(seq.template_vars, dict(b=25))
+        assert_equal(seq.template_vars, dict(b='25'))
         assert_equal(seq.local_vars, dict(a='1.5'))
         assert_equal(len(seq.items), 4)
         assert_equal(seq.items[3].index, 5)
@@ -118,17 +117,15 @@ class TestBuilding(object):
 
     def test_build_from_config(self):
         # Test rebuilding a sequence including twice the same template sequence
-        seq = TemplateSequence.build_from_config({'template_id': 'test',
-                                                  'name': 'Template'},
-                                                 self.dependecies)
-        seq.template_vars = {'b': 25}
+        conf = {'template_id': 'test', 'name': 'Template',
+                'template_vars': "{'b': '19'}"}
+        seq = TemplateSequence.build_from_config(conf, self.dependecies)
         seq.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
                                        'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'}
 
-        seq2 = TemplateSequence.build_from_config({'template_id': 'test',
-                                                   'name': 'Template'},
-                                                  self.dependecies)
-        seq2.template_vars = {'b': 12}
+        conf = {'template_id': 'test', 'name': 'Template',
+                'template_vars': "{'b': '12'}"}
+        seq2 = TemplateSequence.build_from_config(conf, self.dependecies)
         seq2.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
                                         'Ch1': 'Ch1_A', 'Ch2': 'Ch2_A'}
 
@@ -144,7 +141,7 @@ class TestBuilding(object):
         seq = new.items[0]
         assert_equal(seq.name, 'Template')
         assert_equal(seq.template_id, 'test')
-        assert_equal(seq.template_vars, dict(b=25))
+        assert_equal(seq.template_vars, dict(b='19'))
         assert_equal(seq.local_vars, dict(a='1.5'))
         assert_equal(len(seq.items), 4)
         assert_equal(seq.items[3].index, 5)
@@ -162,7 +159,7 @@ class TestBuilding(object):
         seq = new.items[1]
         assert_equal(seq.name, 'Template')
         assert_equal(seq.template_id, 'test')
-        assert_equal(seq.template_vars, dict(b=12))
+        assert_equal(seq.template_vars, dict(b='12'))
         assert_equal(seq.local_vars, dict(a='1.5'))
         assert_equal(len(seq.items), 4)
         assert_equal(seq.items[3].index, 5)
@@ -194,10 +191,9 @@ class TestCompilation(object):
         self.context = TestContext(sampling=0.5)
         self.root.context = self.context
 
-        seq = TemplateSequence.build_from_config({'template_id': 'test',
-                                                  'name': 'Template'},
-                                                 self.dependecies)
-        seq.template_vars = {'b': '19'}
+        conf = {'template_id': 'test', 'name': 'Template',
+                'template_vars': "{'b': '19'}"}
+        seq = TemplateSequence.build_from_config(conf, self.dependecies)
         seq.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
                                        'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'}
         seq.def_1 = '1.0'

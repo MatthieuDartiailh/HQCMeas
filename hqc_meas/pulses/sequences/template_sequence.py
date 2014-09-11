@@ -7,6 +7,7 @@
 from atom.api import (Dict, ForwardTyped, Unicode)
 from inspect import cleandoc
 from copy import deepcopy
+from ast import literal_eval
 
 from ..entry_eval import eval_entry
 from ..base_sequences import BaseSequence, Sequence
@@ -153,6 +154,15 @@ class TemplateSequence(BaseSequence):
         # Don't want to alter the dependencies dict in case somebody else use
         # the same template.
         t_config = deepcopy(t_config)
+
+        # Make sure the template_vars stored in the config match the one
+        # declared in the template.
+        t_vars = literal_eval(config.pop('template_vars'))
+        declared_t_vars = literal_eval(t_config['template_vars'])
+        for var in declared_t_vars:
+            declared_t_vars[var] = t_vars.get(var, '')
+        t_config['template_vars'] = repr(declared_t_vars)
+
         t_config.merge(config)
         config = t_config
 
