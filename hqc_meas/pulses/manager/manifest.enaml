@@ -95,16 +95,20 @@ def build_sequence(event):
     """
     manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
     mode = event.parameters.get('mode', 'ui')
+    parent_ui = event.parameters.get('parent_ui')
     if mode == 'path':
         pass
     elif mode == 'template':
         pass
     else:
-        dial = BuilderView(manager=manager)
+        dial = BuilderView(parent_ui, manager=manager, root=root)
         dial.exec_()
         if dial.result:
-            return dial.model.sequence_config.build_sequence()
-
+            seq = dial.model.sequence_config.build_sequence()
+            if seq:
+                return seq
+            else:
+                ErrorsDisplay(errors=dial.model.sequence_config.errors).exec_()
 
 def build_root(event):
     """ Handler for the 'hqc_meas.task_manager.build_root' command.

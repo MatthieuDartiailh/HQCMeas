@@ -4,7 +4,6 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from enaml.core.api import Conditional
 from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
                                Form, Label)
 
@@ -18,16 +17,15 @@ enamldef SimpleView(Form): main:
     """
     attr model
 
-    Conditional:
-        condition << not main.loop
-        Label:
-            text = 'Sequence name'
-        Field:
-            text >> model.task_name
-            submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+    Label:
+        text = 'Sequence name'
+    Field:
+        text >> model.sequence_name
+        submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+
     GroupBox:
         title = 'Description'
         MultilineField:
             hug_height = 'weak'
             read_only = True
-            text << model.task_doc
+            text << model.sequence_doc

@@ -1,0 +1,51 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : hqc_meas/pulses/manager/config/template_config_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+from inspect import cleandoc
+from textwrap import fill
+from enaml.core.api import Conditional
+from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
+                               Form, Label, CheckBox, RadioButton)
+from hqc_meas.pulses.contexts.views.template_context_view\
+     import MappingEditor
+
+enamldef TemplateView(Form): main:
+    """ View allowing the user to select how to insert the template.
+
+    """
+    attr model
+
+    Label:
+        text = 'Sequence name'
+    Field:
+        text >> model.template_name
+        submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+
+    CheckBox:
+        text = 'Merge'
+        checked := model.merge
+        tool_tip = fill(cleandoc('''Should the template be inserted as a
+            Sequence and forget it is a template.''')
+
+    GroupBox:
+        title = 'Description'
+        MultilineField:
+            hug_height = 'weak'
+            read_only = True
+            text << model.template_doc
+
+    Conditional:
+        condition << model.merge
+        RadioButton:
+            text = 'Insert template_vars in root'
+            checked := model.t_vars_as_root
+
+        RadioButton:
+            text = 'Keep template_vars as local avrs'
+
+        MappingEditor:
+            context = model.context
+            root = model.root

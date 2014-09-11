@@ -257,9 +257,10 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
         """
         templates = self._template_sequences
-        if sequence in self._template_sequences:
-            conf, view = self._config['IniConfigSequence']
-            return conf(manager=self, template_path=templates[sequence]), view
+        if sequence in templates:
+            conf, view = self._config['TemplateConfig']
+            t_config, t_doc = load_template(templates[sequence])
+            return conf(manager=self, config=t_config, doc=t_doc), view
 
         elif sequence in self._sequences:
             configs = self._configs

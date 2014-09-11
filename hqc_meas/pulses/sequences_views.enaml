@@ -183,14 +183,15 @@ enamldef _SequenceListView(Container): list_view:
                 font = 'bold 12pt Consolas'
                 text = '>'
                 clicked ::
-                    edited_list = item.items
+                    edited_list = sequence.items
                     menu = PulsesPopupListMenu(
                       model = edited_list,
                       index = edited_list.index(loop_item),
                       factory = core.invoke_command,
                       operations = operations,
                       args = ('hqc_meas.pulses_manager.build_sequence',),
-                      kwargs = {'parameters': {'parent_ui': button},
+                      kwargs = {'parameters': {'parent_ui': button,
+                                               'root': sequence.root},
                                 'trigger': button})
                     menu.popup()
             Include: view:

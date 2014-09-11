@@ -7,7 +7,7 @@
 """
 
 """
-from atom.api import (Atom, Str, Bool, Subclass, ForwardTyped,
+from atom.api import (Atom, Str, Bool, Subclass, ForwardTyped, Typed, Dict,
                       observe)
 
 from inspect import getdoc, cleandoc
@@ -32,8 +32,14 @@ class AbstractConfig(Atom):
     #: Class of the item to create.
     sequence_class = Subclass(Item)
 
-    # Bool indicating if the build can be done.
+    #: Root of the sequence in which an item will be added.
+    root = Typed(Item)
+
+    #: Bool indicating if the build can be done.
     config_ready = Bool(False)
+
+    #: Dict of errors which happened during construction.
+    errors = Dict()
 
     def check_parameters(self, change):
         """Check if enough parameters have been provided to build the item.
