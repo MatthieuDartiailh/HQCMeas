@@ -173,7 +173,7 @@ class PrefPlugin(Plugin):
         """
         # XXXX Issue with key encoding
         if self._prefs:
-            return self._prefs.get(str(plugin_id), {})
+            return self._prefs.get(unicode(plugin_id), {})
         else:
             return {}
 

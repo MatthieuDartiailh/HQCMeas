@@ -72,7 +72,7 @@ enamldef TemplateContextView(Container): view:
             FlowArea:
                 horizontal_spacing = 2
                 vertical_spacing = 2
-                Looper: lo:
+                Looper:
                     iterable << context.logical_channels
                     Mapping:
                         values = context.sequence.root.context.logical_channels
@@ -84,7 +84,7 @@ enamldef TemplateContextView(Container): view:
             FlowArea:
                 horizontal_spacing = 2
                 vertical_spacing = 2
-                Looper: lo:
+                Looper:
                     iterable << context.analogical_channels
                     Mapping:
                         values = context.sequence.root.context.analogical_channels

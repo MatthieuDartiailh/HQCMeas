@@ -44,7 +44,7 @@ class Test(object):
         os.mkdir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
-        util_path = os.path.join(HQC_MEAS_PATH, 'utils')
+        util_path = os.path.join(HQC_MEAS_PATH, 'utils/preferences')
         def_path = os.path.join(util_path, 'default.ini')
         if os.path.isfile(def_path):
             os.rename(def_path, os.path.join(util_path, '__default.ini'))
@@ -116,7 +116,7 @@ class Test(object):
 
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
-        util_path = os.path.join(HQC_MEAS_PATH, 'utils')
+        util_path = os.path.join(HQC_MEAS_PATH, 'utils/preferences')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
 
@@ -143,11 +143,14 @@ class Test(object):
         self.workbench.register(PulsesManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
 
-        assert_equal(sorted(plugin.sequences), sorted(['Conditional sequence',
-                     'Sequence']))
-        assert_equal(sorted(plugin._sequences.keys()),
-                     sorted(['Conditional sequence',
-                             'Pulse', 'Sequence', 'RootSequence']))
+        assert_in('sequences.__init__', plugin.sequences_loading)
+        assert_in('contexts.__init__', plugin.contexts_loading)
+        assert_in('shapes.__init__', plugin.shapes_loading)
+        assert_items_equal(plugin.sequences, ['Conditional sequence',
+                                              'Sequence'])
+        assert_items_equal(plugin._sequences.keys(),
+                           ['Conditional sequence',
+                            'Pulse', 'Sequence', 'RootSequence'])
         assert_equal(plugin.shapes, ['Square'])
         assert_equal(plugin.contexts, ['AWG'])
 
