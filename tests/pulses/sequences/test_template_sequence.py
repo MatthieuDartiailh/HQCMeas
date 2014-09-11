@@ -6,7 +6,6 @@
 # =============================================================================
 import os
 from configobj import ConfigObj
-from copy import deepcopy
 from nose.tools import (assert_equal, assert_is, assert_true, assert_false,
                         assert_not_in, assert_in, assert_items_equal)
 from hqc_meas.pulses.pulse import Pulse
@@ -28,13 +27,14 @@ def create_template_sequence():
                               channel_mapping={'A': '', 'B': '', 'Ch1': '',
                                                'Ch2': ''})
     root.context = context
-    root.local_vars = {'a': 1.5}
+    root.local_vars = {'a': '1.5'}
 
-    pulse1 = Pulse(def_1='1.0', def_2='{a}')
-    pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
-    pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='{b}',
+    pulse1 = Pulse(channel='A', def_1='1.0', def_2='{a}')
+    pulse2 = Pulse(channel='B', def_1='{a} + 1.0', def_2='3.0')
+    pulse3 = Pulse(channel='Ch1', def_1='{2_stop} + 0.5', def_2='{b}',
                    kind='analogical', shape=SquareShape())
-    seq = Sequence(items=[Pulse(def_1='{2_stop} + 0.5', def_2='10',
+    seq = Sequence(items=[Pulse(channel='Ch2',
+                                def_1='{2_stop} + 0.5', def_2='{sequence_end}',
                                 kind='analogical', shape=SquareShape())])
     root.items.extend([pulse1, pulse2, seq,  pulse3])
 
@@ -85,10 +85,9 @@ class TestBuilding(object):
     def test_build_from_config2(self):
         # Test rebuilding a sequence including a template sequence.
         # Channel mapping of template_vars values are known.
-        dep = deepcopy(self.dependecies)
         seq = TemplateSequence.build_from_config({'template_id': 'test',
                                                   'name': 'Template'},
-                                                 dep)
+                                                 self.dependecies)
         seq.template_vars = {'b': 25}
         seq.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
                                        'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'}
@@ -101,10 +100,11 @@ class TestBuilding(object):
         new = RootSequence.build_from_config(pref, self.dependecies)
         assert_equal(new.items[0].index, 1)
 
+        seq = new.items[0]
         assert_equal(seq.name, 'Template')
         assert_equal(seq.template_id, 'test')
         assert_equal(seq.template_vars, dict(b=25))
-        assert_equal(seq.local_vars, dict(a=1.5))
+        assert_equal(seq.local_vars, dict(a='1.5'))
         assert_equal(len(seq.items), 4)
         assert_equal(seq.items[3].index, 5)
         assert_equal(seq.docs, 'Basic user comment\nff')
@@ -116,112 +116,189 @@ class TestBuilding(object):
         assert_equal(context.channel_mapping, {'A': 'Ch1_L', 'B': 'Ch2_L',
                                                'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'})
 
+    def test_build_from_config(self):
+        # Test rebuilding a sequence including twice the same template sequence
+        seq = TemplateSequence.build_from_config({'template_id': 'test',
+                                                  'name': 'Template'},
+                                                 self.dependecies)
+        seq.template_vars = {'b': 25}
+        seq.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                       'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'}
+
+        seq2 = TemplateSequence.build_from_config({'template_id': 'test',
+                                                   'name': 'Template'},
+                                                  self.dependecies)
+        seq2.template_vars = {'b': 12}
+        seq2.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                        'Ch1': 'Ch1_A', 'Ch2': 'Ch2_A'}
+
+        root = RootSequence()
+        context = TestContext(sampling=0.5)
+        root.context = context
+        root.items = [seq, seq2]
+        pref = root.preferences_from_members()
+
+        new = RootSequence.build_from_config(pref, self.dependecies)
+        assert_equal(new.items[0].index, 1)
+
+        seq = new.items[0]
+        assert_equal(seq.name, 'Template')
+        assert_equal(seq.template_id, 'test')
+        assert_equal(seq.template_vars, dict(b=25))
+        assert_equal(seq.local_vars, dict(a='1.5'))
+        assert_equal(len(seq.items), 4)
+        assert_equal(seq.items[3].index, 5)
+        assert_equal(seq.docs, 'Basic user comment\nff')
+
+        context = seq.context
+        assert_equal(context.template, seq)
+        assert_equal(context.logical_channels, ['A', 'B'])
+        assert_equal(context.analogical_channels, ['Ch1', 'Ch2'])
+        assert_equal(context.channel_mapping, {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                               'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'})
+
+        assert_equal(new.items[1].index, 2)
+
+        seq = new.items[1]
+        assert_equal(seq.name, 'Template')
+        assert_equal(seq.template_id, 'test')
+        assert_equal(seq.template_vars, dict(b=12))
+        assert_equal(seq.local_vars, dict(a='1.5'))
+        assert_equal(len(seq.items), 4)
+        assert_equal(seq.items[3].index, 5)
+        assert_equal(seq.docs, 'Basic user comment\nff')
+
+        context = seq.context
+        assert_equal(context.template, seq)
+        assert_equal(context.logical_channels, ['A', 'B'])
+        assert_equal(context.analogical_channels, ['Ch1', 'Ch2'])
+        assert_equal(context.channel_mapping, {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                               'Ch1': 'Ch1_A', 'Ch2': 'Ch2_A'})
+
 
 class TestCompilation(object):
 
     def setup(self):
+        pref = create_template_sequence()
+        conf = ConfigObj()
+        conf.update(pref)
+        dep = {'Sequence': Sequence, 'Pulse': Pulse,
+               'TemplateSequence': TemplateSequence,
+               'shapes': {'SquareShape': SquareShape},
+               'contexts': {'TemplateContext': TemplateContext,
+                            'TestContext': TestContext},
+               'templates': {'test': ('', conf, 'Basic user comment\nff')}}
+        self.dependecies = {'pulses': dep}
+
         self.root = RootSequence()
         self.context = TestContext(sampling=0.5)
         self.root.context = self.context
 
+        seq = TemplateSequence.build_from_config({'template_id': 'test',
+                                                  'name': 'Template'},
+                                                 self.dependecies)
+        seq.template_vars = {'b': '19'}
+        seq.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                       'Ch1': 'Ch2_A', 'Ch2': 'Ch1_A'}
+        seq.def_1 = '1.0'
+        seq.def_2 = '20.0'
+
+        self.template = seq
+
+        self.root.items = [seq]
+
     def test_sequence_compilation1(self):
-        # Test compiling a flat sequence.
-        self.root.external_vars = {'a': 1.5}
-
-        pulse1 = Pulse(def_1='1.0', def_2='{a}')
-        pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
-        pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
-        self.root.items.extend([pulse1, pulse2, pulse3])
-
+        # Test compiling a template when everything is ok.
         res, pulses = self.root.compile_sequence(False)
-        print pulses
-        assert_true(res)
-        assert_equal(len(pulses), 3)
-        assert_equal(pulses[0].start, 1.0)
-        assert_equal(pulses[0].stop, 1.5)
-        assert_equal(pulses[0].duration, 0.5)
-        assert_equal(pulses[1].start, 2.5)
-        assert_equal(pulses[1].stop, 3.0)
-        assert_equal(pulses[1].duration, 0.5)
-        assert_equal(pulses[2].start, 3.5)
-        assert_equal(pulses[2].stop, 10.0)
-        assert_equal(pulses[2].duration, 6.5)
+
+        assert_true(res, '{}'.format(pulses))
+        assert_equal(len(pulses), 4)
+
+        pulse = pulses[0]
+        assert_equal(pulse.index, 1)
+        assert_equal(pulse.start, 2.0)
+        assert_equal(pulse.stop, 2.5)
+        assert_equal(pulse.duration, 0.5)
+        assert_equal(pulse.channel, 'Ch1_L')
+
+        pulse = pulses[1]
+        assert_equal(pulse.index, 2)
+        assert_equal(pulse.start, 3.5)
+        assert_equal(pulse.stop, 4)
+        assert_equal(pulse.duration, 0.5)
+        assert_equal(pulse.channel, 'Ch2_L')
+
+        pulse = pulses[2]
+        assert_equal(pulse.index, 4)
+        assert_equal(pulse.start, 4.5)
+        assert_equal(pulse.stop, 20)
+        assert_equal(pulse.duration, 15.5)
+        assert_equal(pulse.channel, 'Ch1_A')
+
+        pulse = pulses[3]
+        assert_equal(pulse.index, 5)
+        assert_equal(pulse.start, 4.5)
+        assert_equal(pulse.stop, 20)
+        assert_equal(pulse.duration, 15.5)
+        assert_equal(pulse.channel, 'Ch2_A')
 
     def test_sequence_compilation2(self):
-        # Test compiling a flat sequence of fixed duration.
-        self.root.external_vars = {'a': 1.5}
-        self.root.time_constrained = True
-        self.root.sequence_duration = '10.0'
+        # Test compiling a template : issue in context, incomplete mapping.
+        self.template.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                                 'Ch1': 'Ch2_A'}
 
-        pulse1 = Pulse(def_1='1.0', def_2='{a}')
-        pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
-        pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='{sequence_end}')
-        self.root.items.extend([pulse1, pulse2, pulse3])
+        res, (miss, errors) = self.root.compile_sequence(False)
 
-        res, pulses = self.root.compile_sequence(False)
-        assert_true(res)
-        assert_equal(len(pulses), 3)
-        assert_equal(pulses[0].start, 1.0)
-        assert_equal(pulses[0].stop, 1.5)
-        assert_equal(pulses[0].duration, 0.5)
-        assert_equal(pulses[1].start, 2.5)
-        assert_equal(pulses[1].stop, 3.0)
-        assert_equal(pulses[1].duration, 0.5)
-        assert_equal(pulses[2].start, 3.5)
-        assert_equal(pulses[2].stop, 10.0)
-        assert_equal(pulses[2].duration, 6.5)
+        assert_false(res)
+        assert_false(miss)
+        assert_in('Template-context', errors)
+        assert_in('Ch2', errors['Template-context'])
 
     def test_sequence_compilation3(self):
-        # Test compiling a flat sequence in two passes.
-        self.root.external_vars = {'a': 1.5}
+        # Test compiling a template : issue in context, erroneous mapping.
+        self.template.context.channel_mapping = {'A': 'Ch1_L', 'B': 'Ch2_L',
+                                                 'Ch1': 'Ch2_A', 'Ch2': 'A'}
 
-        pulse1 = Pulse(def_1='1.0', def_2='{2_start} - 1.0')
-        pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
-        pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
-        self.root.items.extend([pulse1, pulse2, pulse3])
+        res, (miss, errors) = self.root.compile_sequence(False)
 
-        res, pulses = self.root.compile_sequence(False)
-        assert_true(res)
-        assert_equal(len(pulses), 3)
-        assert_equal(pulses[0].start, 1.0)
-        assert_equal(pulses[0].stop, 1.5)
-        assert_equal(pulses[0].duration, 0.5)
-        assert_equal(pulses[1].start, 2.5)
-        assert_equal(pulses[1].stop, 3.0)
-        assert_equal(pulses[1].duration, 0.5)
-        assert_equal(pulses[2].start, 3.5)
-        assert_equal(pulses[2].stop, 10.0)
-        assert_equal(pulses[2].duration, 6.5)
+        assert_false(res)
+        assert_false(miss)
+        assert_in('Template-context', errors)
+        assert_in('Ch2', errors['Template-context'])
 
     def test_sequence_compilation4(self):
-        # Test compiling a flat sequence with circular references.
-        self.root.external_vars = {'a': 1.5}
+        # Test compiling a template : issue in defs.
+        self.template.def_1 = 'r*'
 
-        pulse1 = Pulse(def_1='1.0', def_2='{2_start} - 1.0')
-        pulse2 = Pulse(def_1='{1_stop} + 1.0', def_2='3.0')
-        pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
-        self.root.items.extend([pulse1, pulse2, pulse3])
+        res, (miss, errors) = self.root.compile_sequence(False)
 
-        res, (missings, errors) = self.root.compile_sequence(False)
         assert_false(res)
-        assert_equal(len(missings), 2)
-        assert_in('1_stop', missings)
-        assert_in('2_start', missings)
-        assert_equal(len(errors), 0)
+        assert_false(miss)
+        assert_in('1_start', errors)
 
     def test_sequence_compilation5(self):
-        # Test compiling a flat sequence with evaluation errors.
-        # missing global
-        self.root.time_constrained = True
-        self.root.sequence_duration = '10.0'
+        # Test compiling a template : issue in template_vars.
+        self.template.template_vars = {'b': '*1'}
 
-        pulse1 = Pulse(def_1='1.0', def_2='{a}')
-        pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
-        pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='{sequence_end}')
-        self.root.items.extend([pulse1, pulse2, pulse3])
+        res, (miss, errors) = self.root.compile_sequence(False)
 
-        res, (missings, errors) = self.root.compile_sequence(False)
         assert_false(res)
-        assert_equal(len(missings), 1)
-        assert_in('a', missings)
-        assert_equal(len(errors), 0)
+        assert_in('1_b', errors)
+
+    def test_sequence_compilation6(self):
+        # Test compiling a template : issue in local_vars.
+        self.template.local_vars = {'a': '*1'}
+
+        res, (miss, errors) = self.root.compile_sequence(False)
+
+        assert_false(res)
+        assert_in('1_a', errors)
+
+    def test_sequence_compilation7(self):
+        # Test compiling a template : issue in stop time.
+        self.template.items[0].def_2 = '200'
+
+        res, (miss, errors) = self.root.compile_sequence(False)
+
+        assert_false(res)
+        assert_in('Template-stop', errors)

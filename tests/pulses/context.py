@@ -12,9 +12,9 @@ class TestContext(BaseContext):
     """
 
     """
-    logical_channels = set_default(['Ch1_L', 'Ch2_L'])
+    logical_channels = set_default(('Ch1_L', 'Ch2_L'))
 
-    analogical_channels = set_default(['Ch1_A', 'Ch2_A'])
+    analogical_channels = set_default(('Ch1_A', 'Ch2_A'))
 
     sampling = Float(1.0)
 

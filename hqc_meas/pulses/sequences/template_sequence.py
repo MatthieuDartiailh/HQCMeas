@@ -6,6 +6,7 @@
 # =============================================================================
 from atom.api import (Dict, ForwardTyped, Unicode)
 from inspect import cleandoc
+from copy import deepcopy
 
 from ..entry_eval import eval_entry
 from ..base_sequences import BaseSequence, Sequence
@@ -39,7 +40,7 @@ class TemplateSequence(BaseSequence):
 
         """
         # Check the channel mapping makes sense.
-        if not self.context.prepare_compilation(self, errors):
+        if not self.context.prepare_compilation(errors):
             return False, []
 
         # Definition evaluation.
@@ -78,18 +79,11 @@ class TemplateSequence(BaseSequence):
                 pulse.stop += t_start
                 pulse.channel = c_mapping[pulse.channel]
 
-            # Check if start, stop and duration of sequence are compatible.
-            start_err = [pulse for pulse in pulses
-                         if pulse.start < self.start]
+            # Check if stop time of pulses are compatible with sequence
+            # duration.
             stop_err = [pulse for pulse in pulses
                         if pulse.stop > self.stop]
 
-            if start_err:
-                mess = cleandoc('''The start time of the following items {}
-                    is smaller than the start time of the sequence {}''')
-                mess = mess.replace('\n', ' ')
-                ind = [p.index for p in start_err]
-                errors[self.name + '-start'] = mess.format(ind, self.index)
             if stop_err:
                 mess = cleandoc('''The stop time of the following items {}
                     is larger than the stop time of the sequence {}''')
@@ -156,6 +150,9 @@ class TemplateSequence(BaseSequence):
         # the vars.
         dep = dependencies['pulses']
         _, t_config, doc = dep['templates'][config['template_id']]
+        # Don't want to alter the dependencies dict in case somebody else use
+        # the same template.
+        t_config = deepcopy(t_config)
         t_config.merge(config)
         config = t_config
 
