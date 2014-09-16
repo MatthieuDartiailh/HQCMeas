@@ -14,7 +14,7 @@ from hqc_meas.pulses.manager.config.base_config import SequenceConfig
 
 def test_sequence_config():
     # Test sequence config.
-    conf = SequenceConfig()
+    conf = SequenceConfig(sequence_class=Sequence)
     conf.sequence_name = 'test'
     assert_true(conf.config_ready)
     seq = conf.build_sequence()

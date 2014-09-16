@@ -165,7 +165,7 @@ class Test(object):
         if plugin.report():
             raise SkipTest(plugin.report())
 
-    @attr('no travis')
+    @attr('no_travis')
     def test_template_observation(self):
         self.workbench.register(PulsesManagerManifest())
         plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
