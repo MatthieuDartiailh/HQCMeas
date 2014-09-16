@@ -12,10 +12,10 @@ from copy import deepcopy
 from ast import literal_eval
 
 from .base_config import AbstractConfig
-from ..sequences.template_sequence import TemplateSequence
-from ..contexts.template_context import TemplateContext
-from ..base_sequences import Sequence
-from ..pulse import Pulse
+from ...sequences.template_sequence import TemplateSequence
+from ...contexts.template_context import TemplateContext
+from ...base_sequences import Sequence
+from ...pulse import Pulse
 
 
 # Circular import protection
@@ -44,14 +44,14 @@ class TemplateConfig(AbstractConfig):
     #: Docstring of the sequence.
     template_doc = Str()
 
-    #: Configobj object descrtibing the template.
+    #: Configobj object describing the template.
     template_config = Value()
 
     #: Flag indicating whether the Template should be merged as a standard
     #: sequence or included as a TemplateSequence. In the first case all
     #: reference to the template is lost, in the second the template sequence
     #: rememeber its templates and use it when rebuilding itself.
-    merge = Bool(True)
+    merge = Bool()
 
     #: When merging should the template vars be added as local_vars or
     #: external_vars in the root.
@@ -67,17 +67,19 @@ class TemplateConfig(AbstractConfig):
 
         """
         core = self.manager.workbench.get_plugin('enaml.workbench.core')
-        cmd = 'hqc_meas.dependencies.collect'
-        res, dep = core.invoke_command(cmd, {'obj': self.template_config})
-        if not res:
-            self.errors = dep
+        cmd = 'hqc_meas.dependencies.collect_build_dep_from_config'
+        dep = core.invoke_command(cmd, {'config': self.template_config})
+        if isinstance(dep, Exception):
+            self.errors = {'collections': repr(dep)}
             return
 
         config = self.template_config
         config['name'] = self.template_name
+        config['template_id'] = '__template__'
+        dep['pulses']['templates']['__template__'] = ('', config, '')
 
         if not self.merge:
-            seq = TemplateSequence.build_from_config(config, dep)
+            seq = TemplateSequence.build_from_config(deepcopy(config), dep)
             return seq
 
         else:
@@ -87,7 +89,7 @@ class TemplateConfig(AbstractConfig):
                 loc_vars.update(t_vars)
                 config['local_vars'] = repr(loc_vars)
             else:
-                self.root.update(t_vars)
+                self.root.external_vars.update(t_vars)
 
             _, t_config, _ = dep['pulses']['templates'][config['template_id']]
             # Don't want to alter the dependencies dict in case somebody else
@@ -130,10 +132,10 @@ class TemplateConfig(AbstractConfig):
                 self._apply_mapping(item)
 
     def _default_context(self):
-        """ Initialize tthe context using the config.
+        """ Initialize the context using the config.
 
         """
         config = self.template_config
         context = TemplateContext()
-        context.update_members_from_preferences(config['context'])
+        context.update_members_from_preferences(**config['context'])
         return context

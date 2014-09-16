@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
+# =============================================================================
+# module : tests/pulses/manager/test_plugin.py
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
 from enaml.workbench.api import Workbench
 import enaml
 import os
-import shutil
 from configobj import ConfigObj
 from nose.tools import (assert_equal, assert_not_is_instance, assert_true,
                         assert_false, assert_in, assert_not_in,
                         assert_items_equal)
+from nose.plugins.attrib import attr
 from nose.plugins.skip import SkipTest
 
 with enaml.imports():
@@ -16,7 +23,8 @@ with enaml.imports():
     from hqc_meas.utils.dependencies.manifest import DependenciesManifest
     from hqc_meas.pulses.manager.manifest import PulsesManagerManifest
 
-from ...util import complete_line
+from ...util import complete_line, create_test_dir, remove_tree
+from ..template_makers import create_template_sequence
 
 
 def setup_module():
@@ -40,8 +48,10 @@ class Test(object):
                             ':{}.setup_class()'.format(cls.__name__), '-', 77)
         # Creating dummy directory for prefs (avoid prefs interferences).
         directory = os.path.dirname(__file__)
+
+        # Creating dummy directory for prefs (avoid prefs interferences).
         cls.test_dir = os.path.join(directory, '_temps')
-        os.mkdir(cls.test_dir)
+        create_test_dir(cls.test_dir)
 
         # Creating dummy default.ini file in utils.
         util_path = os.path.join(HQC_MEAS_PATH, 'utils/preferences')
@@ -77,20 +87,19 @@ class Test(object):
                           for mod in os.listdir(shapes_path)
                           if mod.endswith('.py') and mod not in shapes_api]
 
-        # Copying false template.
-# TODO activate later when templates will be supported.
-#        template_path = os.path.join(cls.test_dir, 'temp_templates')
-#        os.mkdir(template_path)
-#        # Not in the root test dirt otherwise .ini got deleted ...
-#        # Not understood but unlinked to shutil.
-#        shutil.copyfile(os.path.join(directory, 'config_files',
-#                                     'template_ref.ini'),
-#                        os.path.join(template_path, 'template.ini'))
+        # Creating a false template.
+        template_path = os.path.join(cls.test_dir, 'temp_templates')
+        os.mkdir(template_path)
+        conf = ConfigObj()
+        conf.filename = os.path.join(template_path, 'test.ini')
+        conf.update(create_template_sequence())
+        conf.write()
 
         # Saving plugin preferences.
         man_conf = {'contexts_loading': repr(contexts_loading),
                     'sequences_loading': repr(sequences_loading),
-                    'shapes_loading': repr(shapes_loading)}
+                    'shapes_loading': repr(shapes_loading),
+                    'templates_folders': repr([template_path])}
 
         conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
         conf[u'hqc_meas.pulses_manager'] = {}
@@ -103,19 +112,9 @@ class Test(object):
                             ':{}.teardown_class()'.format(cls.__name__), '-',
                             77)
         # Removing pref files creating during tests.
-        try:
-            shutil.rmtree(cls.test_dir)
-
-        # Hack for win32.
-        except OSError:
-            print 'OSError'
-            dirs = os.listdir(cls.test_dir)
-            for directory in dirs:
-                shutil.rmtree(os.path.join(cls.test_dir), directory)
-            shutil.rmtree(cls.test_dir)
+        remove_tree(cls.test_dir)
 
         # Restoring default.ini file in utils
-        directory = os.path.dirname(__file__)
         util_path = os.path.join(HQC_MEAS_PATH, 'utils/preferences')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
@@ -147,10 +146,12 @@ class Test(object):
         assert_in('contexts.__init__', plugin.contexts_loading)
         assert_in('shapes.__init__', plugin.shapes_loading)
         assert_items_equal(plugin.sequences, ['Conditional sequence',
-                                              'Sequence'])
+                                              'Sequence', 'Test'])
         assert_items_equal(plugin._sequences.keys(),
                            ['Conditional sequence',
                             'Pulse', 'Sequence', 'RootSequence'])
+        assert_items_equal(plugin._template_sequences.keys(),
+                           ['Test'])
         assert_equal(plugin.shapes, ['Square'])
         assert_equal(plugin.contexts, ['AWG'])
 
@@ -164,21 +165,22 @@ class Test(object):
         if plugin.report():
             raise SkipTest(plugin.report())
 
-#    def test_template_observation(self):
-#        self.workbench.register(TaskManagerManifest())
-#        plugin = self.workbench.get_plugin(u'hqc_meas.task_manager')
-#        assert_in('Template',  plugin.tasks)
-#        template_path = os.path.join(self.test_dir, 'temp_templates')
-#        prof = ConfigObj(os.path.join(template_path, 'test.ini'))
-#        prof.write()
-#        from time import sleep
-#        sleep(0.1)
-#        assert_in('Test',  plugin.tasks)
-#        assert_in('Template',  plugin.tasks)
-#        os.remove(os.path.join(template_path, 'test.ini'))
-#        sleep(0.1)
-#        assert_not_in('Test',  plugin.tasks)
-#        assert_in('Template',  plugin.tasks)
+    @attr('no travis')
+    def test_template_observation(self):
+        self.workbench.register(PulsesManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        assert_in('Test',  plugin.sequences)
+        template_path = os.path.join(self.test_dir, 'temp_templates')
+        prof = ConfigObj(os.path.join(template_path, 'template.ini'))
+        prof.write()
+        from time import sleep
+        sleep(0.1)
+        assert_in('Test',  plugin.sequences)
+        assert_in('Template',  plugin.sequences)
+        os.remove(os.path.join(template_path, 'template.ini'))
+        sleep(0.1)
+        assert_in('Test',  plugin.sequences)
+        assert_not_in('Template',  plugin.sequences)
 
     def test_context_request1(self):
         # Request using context name

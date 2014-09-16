@@ -56,7 +56,7 @@ class AbstractConfig(Atom):
     def build_sequence(self):
         """This method use the user parameters to build the item object
 
-         Returns
+        Returns
         -------
         item : Item
             Item object built using the user parameters. Ready to be

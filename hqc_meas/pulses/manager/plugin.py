@@ -121,6 +121,9 @@ class PulsesManagerPlugin(HasPrefPlugin):
             For templates the entry will contain the path, the data as a
             ConfigObj object and the doc ({name : (path, data, doc)})
 
+        missings : list
+            List of the sequences which were not found.
+
         """
         answer = {}
 
@@ -344,7 +347,6 @@ class PulsesManagerPlugin(HasPrefPlugin):
                 filenames = sorted(f for f in os.listdir(path)
                                    if (os.path.isfile(os.path.join(path, f))
                                        and f.endswith('.ini')))
-
                 for filename in filenames:
                     template_name = self._normalise_name(filename)
                     template_path = os.path.join(path, filename)
