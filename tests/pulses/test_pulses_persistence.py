@@ -81,14 +81,14 @@ def test_walk_sequence():
                                 kind='analogical', shape=SquareShape())])
     root.items.extend([pulse1, pulse2, pulse3, seq])
 
-    walk = root.walk(['item_class', 'shape.shape_class'], {})
+    walk = root.walk(['item_class', 'shape_class'], {})
 
-    flat = flatten_walk(walk, ['item_class', 'shape.shape_class'])
+    flat = flatten_walk(walk, ['item_class', 'shape_class'])
     assert_in('item_class', flat)
     assert_equal(flat['item_class'],
                  set(['Pulse', 'RootSequence', 'Sequence']))
-    assert_in('shape.shape_class', flat)
-    assert_equal(flat['shape.shape_class'], set(['SquareShape']))
+    assert_in('shape_class', flat)
+    assert_equal(flat['shape_class'], set(['SquareShape']))
 
 
 def test_build_from_config():

@@ -159,11 +159,11 @@ def collect_pulses_dependecies(workbench, flat_walk):
                                       use_class_names=True,
                                       views=False)
     # Collect contexts.
-    c_res = manager.contexts_request(flat_walk['context.context_class'],
+    c_res = manager.contexts_request(flat_walk['context_class'],
                                      use_class_names=True,
                                      views=False)
     # Collect shapes.
-    sh_res = manager.shapes_request(flat_walk['shape.shape_class'],
+    sh_res = manager.shapes_request(flat_walk['shape_class'],
                                       use_class_names=True,
                                       views=False)
 
@@ -225,8 +225,8 @@ enamldef PulsesManagerManifest(PluginManifest):
         point = 'hqc_meas.dependencies.build'
         BuildDependency:
             id = 'hqc_meas.pulses_manager.dependencies'
-            walk_members = ['item_class', 'context.context_class',
-                            'shape.shape_class', 'template_id']
+            walk_members = ['item_class', 'context_class',
+                            'shape_class', 'template_id']
             collect = collect_pulses_dependecies
 
     Extension:

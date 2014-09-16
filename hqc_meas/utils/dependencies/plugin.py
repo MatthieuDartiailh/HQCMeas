@@ -147,11 +147,11 @@ class DependenciesManagerPlugin(Plugin):
 
         Returns
         -------
-        build_dep : nested dict or None
+        build_dep : nested dict or error
             Dictionary holding all the build dependencies of an obj.
             With this dict and the config the obj can be reconstructed without
             accessing the workbech.
-            None is case of failure.
+            The error leading to the failure in case of failure.
 
         """
         members = []
@@ -168,7 +168,7 @@ class DependenciesManagerPlugin(Plugin):
             except ValueError as e:
                 logger = logging.getLogger(__name__)
                 logger.error(e.message)
-                return None
+                return e
 
         return build_deps
 

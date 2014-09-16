@@ -65,6 +65,14 @@ class AbstractShape(HasPrefAtom):
     def _default_shape_class(self):
         return type(self).__name__
 
+    def _answer(self, members, callables):
+        """ Collect answers for the walk method.
+
+        """
+        answers = {m: getattr(self, m, None) for m in members}
+        answers.update({k: c(self) for k, c in callables.iteritems()})
+        return answers
+
 
 class SquareShape(AbstractShape):
     """ Basic square pulse with a variable amplitude.

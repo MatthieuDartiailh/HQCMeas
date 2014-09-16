@@ -670,6 +670,37 @@ class RootSequence(Sequence):
         """
         return self.linkable_vars + self.local_vars.keys()
 
+    def walk(self, members, callables):
+        """ Explore the items hierarchy.
+
+        Missing values will be filled with None. Overrided here to add context
+        entries.
+
+        Parameters
+        ----------
+        members : list(str)
+            Names of the members whose value should be retrieved.
+
+        callables : dict(callable)
+            Dict {name: callables} to call on every item in the hierarchy. Each
+            callable should take as single argument the task.
+
+        Returns
+        -------
+        answer : list
+            List summarizing the result of the exploration.
+
+        """
+        answer = [self._answer(members, callables),
+                  self.context._answer(members, callables)]
+        for item in self.items:
+            if isinstance(item, Pulse):
+                answer.append(item._answer(members, callables))
+            else:
+                answer.append(item.walk(members, callables))
+
+        return answer
+
     def preferences_from_members(self):
         """ Get the members values as string to store them in .ini files.
 

@@ -135,26 +135,20 @@ class Pulse(Item):
     def _answer(self, members, callables):
         """ Collect the answers for the walk method.
 
-        Dotted name are allowed for members to access either the modulation or
-        shape.
-        ex : 'modulation.amplitude', 'shape.shape_class'
+        A pulse also collect the answers of its modulation and shape.
 
         """
         answers = {m: getattr(self, m, None) for m in members}
+        answers.update({k: c(self) for k, c in callables.iteritems()})
+        answers = [answers]
+
         if self.kind == 'analogical':
             # Accessing modulation members.
-            mod_members = [m for m in members
-                           if m.startswith('modulation.')]
-            answers.update({m: getattr(self.modulation, m[11:], None)
-                            for m in mod_members})
+            answers.append(self.modulation._answer(members, callables))
 
             # Accessing shape members.
-            sha_members = [m for m in members
-                           if m.startswith('shape.')]
-            answers.update({m: getattr(self.shape, m[6:], None)
-                            for m in sha_members})
+            answers.append(self.shape._answer(members, callables))
 
-        answers.update({k: c(self) for k, c in callables.iteritems()})
         return answers
 
     def _get_waveform(self):

@@ -143,3 +143,11 @@ class Modulation(HasPrefAtom):
     _frequency = Float()
 
     _phase = Float()
+
+    def _answer(self, members, callables):
+        """ Collect answers for the walk method.
+
+        """
+        answers = {m: getattr(self, m, None) for m in members}
+        answers.update({k: c(self) for k, c in callables.iteritems()})
+        return answers
