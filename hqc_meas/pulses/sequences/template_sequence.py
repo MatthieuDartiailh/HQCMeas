@@ -75,10 +75,15 @@ class TemplateSequence(BaseSequence):
         if res:
             t_start = self.start
             c_mapping = self.context.channel_mapping
-            for pulse in pulses:
-                pulse.start += t_start
-                pulse.stop += t_start
-                pulse.channel = c_mapping[pulse.channel]
+            try:
+                for pulse in pulses:
+                    pulse.start += t_start
+                    pulse.stop += t_start
+                    pulse.channel = c_mapping[pulse.channel]
+            except KeyError as e:
+                errors[self.name + '-channels'] = \
+                    'Channel mapping is corrupted : {}'.format(e)
+                return False, []
 
             # Check if stop time of pulses are compatible with sequence
             # duration.

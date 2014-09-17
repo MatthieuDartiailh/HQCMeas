@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : templates.py
+# module : hqc_meas/pulses/manager/templates_io.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================

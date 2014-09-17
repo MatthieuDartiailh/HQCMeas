@@ -61,6 +61,7 @@ def contexts_request(event):
     manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
     return manager.contexts_request(**event.parameters)
 
+
 def shapes_request(event):
     """ Handler for the 'hqc_meas.pulses_manager.shapes_request' command.
 
@@ -68,25 +69,9 @@ def shapes_request(event):
     manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
     return manager.shapes_request(**event.parameters)
 
-#TODO rr
-def save_task(event):
-    """ Handler for the 'hqc_meas.task_manager.save_task' command.
-
-    """
-    manager = event.workbench.get_plugin('hqc_meas.task_manager')
-    return manager.save_task(**event.parameters)
-
 
 def build_sequence(event):
     """ Handler for the 'hqc_meas.pulses_manager.build_sequence' command.
-
-    Parameters
-    ----------
-    mode : {'ui', template', 'file'}
-        From what source should the sequence be built. If 'ui' a dialog will
-        open asking the user to select a sequence, in template mode a similar
-        dialog will open but display only templates, in file mode a file dialog
-        will be opened and the user will have to choose a config file.
 
     Returns
     -------
@@ -94,28 +79,15 @@ def build_sequence(event):
 
     """
     manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
-    mode = event.parameters.get('mode', 'ui')
     parent_ui = event.parameters.get('parent_ui')
-    if mode == 'path':
-        pass
-    elif mode == 'template':
-        pass
-    else:
-        dial = BuilderView(parent_ui, manager=manager, root=root)
-        dial.exec_()
-        if dial.result:
-            seq = dial.model.sequence_config.build_sequence()
-            if seq:
-                return seq
-            else:
-                ErrorsDisplay(errors=dial.model.sequence_config.errors).exec_()
-
-def build_root(event):
-    """ Handler for the 'hqc_meas.task_manager.build_root' command.
-
-    """
-    manager = event.workbench.get_plugin('hqc_meas.task_manager')
-    return manager.build_root(**event.parameters)
+    dial = BuilderView(parent_ui, manager=manager, root=root)
+    dial.exec_()
+    if dial.result:
+        seq = dial.model.sequence_config.build_sequence()
+        if seq:
+            return seq
+        else:
+            ErrorsDisplay(errors=dial.model.sequence_config.errors).exec_()
 
 # --- Descritpion -------------------------------------------------------------
 
@@ -138,7 +110,7 @@ SAVE_TASK_DESCRIPTION = \
 """ Save a task to a file or object. """
 
 BUILD_SEQUENCE_DESCRIPTION = \
-""" Build a sequnce. """
+""" Build a sequence from the one knwon to the plugin."""
 
 BUILD_ROOT_DESCRIPTION = \
 """ Build a root task. """
@@ -252,18 +224,10 @@ enamldef PulsesManagerManifest(PluginManifest):
             id = 'hqc_meas.pulses_manager.shapes_request'
             description = SHAPES_REQUEST_DESCRIPTION
             handler = shapes_request
-#        Command:
-#            id = 'hqc_meas.task_manager.save_task'
-#            description = SAVE_TASK_DESCRIPTION
-#            handler = save_task
         Command:
             id = 'hqc_meas.pulses_manager.build_sequence'
             description = BUILD_SEQUENCE_DESCRIPTION
             handler = build_sequence
-#        Command:
-#            id = 'hqc_meas.task_manager.build_root'
-#            description = BUILD_ROOT_DESCRIPTION
-#            handler = build_root
 
     Extension:
         id = 'menu'

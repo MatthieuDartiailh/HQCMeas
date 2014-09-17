@@ -237,6 +237,16 @@ class TestCompilation(object):
         assert_in('Template-context', errors)
         assert_in('Ch2', errors['Template-context'])
 
+    def test_sequence_compilation3bis(self):
+        # Test compiling a template : pulse as umapped channel.
+        self.template.items[0].channel = '__'
+        res, (miss, errors) = self.root.compile_sequence(False)
+
+        assert_false(res)
+        assert_false(miss)
+        assert_in('Template-channels', errors)
+        assert_in('__', errors['Template-channels'])
+
     def test_sequence_compilation4(self):
         # Test compiling a template : issue in defs.
         self.template.def_1 = 'r*'
