@@ -1,0 +1,27 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : hqc_meas/pulses/manager/edition.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.widgets.api import (Container, DockArea, DockItem, Menu, Action,
+                               PopupView, Label)
+from enaml.layout.api import HSplitLayout, VSplitLayout
+from enaml.workbench.api import PluginManifest, Extension
+from enaml.workbench.core.api import Command
+from enaml.workbench.ui.api import ActionItem, MenuItem
+from enaml.styling import StyleSheet, Style, Setter
+
+from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
+from .measure_edition import MeasureEditorDockItem
+from .measure_execution import ExecutionDockItem
+
+
+enamldef SequenceSpaceContent(Container): main:
+    """ Content for the sequence edition workspace.
+
+    """
+    attr workspace
+
+
+

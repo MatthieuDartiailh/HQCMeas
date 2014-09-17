@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : pulses/manager/plugin.py
+# module : hqc_meas/pulses/manager/plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -10,7 +10,7 @@ import os
 import logging
 import enaml
 from importlib import import_module
-from atom.api import (Str, Dict, List, Unicode, Typed, Tuple)
+from atom.api import (Str, Dict, List, Unicode, Typed, ForwardTyped, Tuple)
 
 from watchdog.observers import Observer
 from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
@@ -18,11 +18,11 @@ from watchdog.events import (FileSystemEventHandler, FileCreatedEvent,
 from inspect import cleandoc
 
 from hqc_meas.utils.has_pref_plugin import HasPrefPlugin
-from .templates_io import load_template
 from ..pulse import Pulse
 from ..base_sequences import Sequence, RootSequence
 from .config import SEQUENCE_CONFIG, CONFIG_MAP_VIEW
 from .filters import SEQUENCES_FILTERS
+from .templates_io import load_template
 with enaml.imports():
     from ..pulse_view import PulseView
     from ..sequences_views import (SequenceView, RootSequenceView)
@@ -32,6 +32,16 @@ PACKAGE_PATH = os.path.join(os.path.dirname(__file__), '..')
 
 
 MODULE_ANCHOR = 'hqc_meas.pulses'
+
+
+def workspace_state():
+    from .workspace import SequenceEditionSpaceState
+    return SequenceEditionSpaceState
+
+
+def workspace():
+    from .workspace import SequencesEditionSpace
+    return SequencesEditionSpace
 
 
 class PulsesManagerPlugin(HasPrefPlugin):
@@ -61,6 +71,12 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
     #: List of all known shape.
     shapes = List(Str())
+
+    #: Reference to the workspace or None if the workspace is not active.
+    workspace = ForwardTyped(workspace)
+
+    #: Reference to the workspace state.
+    workspace_state = ForwardTyped(workspace_state)
 
     def start(self):
         """ Start the plugin life-cycle.
