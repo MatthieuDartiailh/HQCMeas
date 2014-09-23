@@ -5,7 +5,7 @@
 # license : MIT license
 # =============================================================================
 from hqc_meas.tasks.api import RootTask, SimpleTask, ComplexTask
-from nose.tools import assert_equal, assert_is, assert_raises
+from nose.tools import assert_equal, assert_is, assert_raises, assert_not_in
 
 from ..util import complete_line
 
@@ -90,11 +90,11 @@ def test_giving_root1():
 
     root.children_task.append(task1)
 
-    assert_equal(root.get_from_database('task4_val2'), 'r')
+    assert_equal(task2.get_from_database('task4_val2'), 'r')
     task3.children_task = []
-    assert_raises(KeyError, root.get_from_database, 'task4_val2')
-    task3.children_task.append(task4)
-    assert_equal(root.get_from_database('task4_val2'), 'r')
+#    assert_raises(KeyError, task2.get_from_database, 'task4_val2')
+#    task3.children_task.append(task4)
+#    assert_equal(task2.get_from_database('task4_val2'), 'r')
 
 
 def test_ex_access_handling1():
@@ -106,8 +106,28 @@ def test_ex_access_handling1():
                        task_database_entries={'val2': 'r'})
     task1.children_task.append(task2)
 
+    assert_raises(KeyError, root.get_from_database, 'task2_val2')
     task1.add_access_exception('task2_val2')
     assert_equal(root.get_from_database('task2_val2'), 'r')
+
+
+def test_ex_access_handling1bis():
+    # Test adding an ex_access for a deep entry.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1')
+    root.children_task.append(task1)
+    task2 = ComplexTask(task_name='task2')
+    task1.children_task.append(task2)
+    task3 = SimpleTask(task_name='task3',
+                       task_database_entries={'val2': 'r'})
+    task2.children_task.append(task3)
+
+    assert_raises(KeyError, task2.get_from_database, 'task3_val2')
+    task2.add_access_exception('task3_val2')
+    assert_equal(task2.get_from_database('task3_val2'), 'r')
+    assert_raises(KeyError, task1.get_from_database, 'task3_val2')
+    task1.add_access_exception('task3_val2')
+    assert_equal(task1.get_from_database('task3_val2'), 'r')
 
 
 def test_ex_access_handling2():
@@ -198,8 +218,28 @@ def test_ex_access_handling6():
 
     task3.add_access_exception('task4_val2')
     task2.add_access_exception('task4_val2')
-    assert_equal(root.get_from_database('task4_val2'), 'r')
+    assert_equal(task2.get_from_database('task4_val2'), 'r')
     task3.children_task = []
-    assert_raises(KeyError, root.get_from_database, 'task4_val2')
+    assert_raises(KeyError, task2.get_from_database, 'task4_val2')
     task3.children_task.append(task4)
-    assert_equal(root.get_from_database('task4_val2'), 'r')
+    assert_equal(task2.get_from_database('task4_val2'), 'r')
+
+
+def test_ex_access_handling7():
+    # Test moving a task to which two access exs are linked.
+    root = RootTask()
+    task1 = ComplexTask(task_name='task1')
+    root.children_task.append(task1)
+    task2 = ComplexTask(task_name='task2')
+    task1.children_task.append(task2)
+    task3 = ComplexTask(task_name='task3')
+    task2.children_task.append(task3)
+    task4 = SimpleTask(task_name='task4',
+                       task_database_entries={'val2': 'r'})
+    task3.children_task.append(task4)
+
+    task3.add_access_exception('task4_val2')
+    task2.add_access_exception('task4_val2')
+    assert_equal(task2.get_from_database('task4_val2'), 'r')
+    task3.remove_access_exception('task4_val2')
+    assert_not_in('task4_val2', task2.access_exs)

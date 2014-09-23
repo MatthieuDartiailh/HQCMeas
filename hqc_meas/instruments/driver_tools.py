@@ -120,7 +120,7 @@ def secure_communication(max_iter=10):
             while i < max_iter + 1:
                 try:
                     return method(self, *args, **kwargs)
-                    
+
                 # Catch all the exception specified by the driver
                 except self.secure_com_except as e:
                     if i == max_iter:
