@@ -1,0 +1,39 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : hqc_meas/pulses/manager/workspace/dialogs.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.widgets.api import Dialog, Container, Stack, StackItem
+
+
+enamldef CompilationWidget(Container):
+    """
+    """
+    pass
+
+
+enamldef TypeSelectionDialog(Dialog):
+    """
+    """
+    pass
+
+
+enamldef TemplateLoadDialog(Dialog):
+    """
+    """
+    pass
+
+
+enamldef TemplateSaveDialog(Dialog):
+    """
+    """
+    pass
+
+
+enamldef CompileDialog(Dialog):
+    """
+    """
+    pass

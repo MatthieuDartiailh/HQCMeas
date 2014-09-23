@@ -53,7 +53,7 @@ enamldef SaveConfirm(PopupView):
 def save_sequence(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
-    if plugin.workspace_state.sequence_path:
+    if plugin.workspace_state.sequence_type != 'Unknown':
         plugin.workspace.save_sequence()
         window = workbench.get_plugin('enaml.workbench.ui').window
         SaveConfirm(window, measure_name=plugin.edited_measure.name).show()

@@ -8,20 +8,21 @@
 """
 import os
 import enaml
-from atom.api import Atom, Typed, Value, Enum, Unicode, Property, set_default
+from atom.api import (Atom, Typed, Value, Enum, Dict, Unicode, Property,
+                      set_default)
 from enaml.workbench.ui.api import Workspace
 from enaml.widgets.api import FileDialogEx
 from inspect import cleandoc
 from textwrap import fill
-from configobj import ConfigObj
 
-from ..api import RootSequence
+from ...api import RootSequence
+from ..sequences_io import save_sequence_prefs, load_sequences_prefs
 
 with enaml.imports():
-    from enaml.stdlib.message_box import question, information
-    from .checks.checks_display import ChecksDisplay
+    from enaml.stdlib.message_box import question
     from .content import SequenceSpaceContent, SequenceSpaceMenu
-    from .dialogs import TemplateLoadDialog, TemplateSaveDialog
+    from .dialogs import (TemplateLoadDialog, TemplateSaveDialog,
+                          TypeSelectionDialog, CompileDialog)
 
 
 LOG_ID = u'hqc_meas.pulses.workspace'
@@ -37,7 +38,7 @@ class SequenceEditionSpaceState(Atom):
     #: Currently edited sequence.
     sequence = Property()
 
-    #: If this measure has already been saved is it a template or not.
+    #: If this measure has already been saved,  is it a template or not ?
     sequence_type = Enum('Unknown', 'Standard', 'Template')
 
     #: Path to the file in which the edited sequence should be saved.
@@ -45,6 +46,9 @@ class SequenceEditionSpaceState(Atom):
 
     #: Description of the sequence (only applyt o template).
     sequence_doc = Unicode()
+
+    #: External set of variable used to compile the sequence.
+    ext_vars = Dict(Unicode())
 
     # --- Private API ---------------------------------------------------------
 
@@ -62,6 +66,7 @@ class SequenceEditionSpaceState(Atom):
         self.sequence_type = 'Unknown'
         self.sequence_path = u''
         self.sequence_doc = u''
+        self.ext_vars.clear()
         self._sequence = value
 
 
@@ -151,10 +156,43 @@ class SequenceEditionSpace(Workspace):
 
         """
         if mode == 'default':
-            pass
+            state = self.state
+            if state.sequence_type == 'Unknown':
+                # Here ask question and call save_sequence with right kind.
+                dial = TypeSelectionDialog(self.content)
+                dial.exec_()
+                if dial.result:
+                    self.save_sequence(dial.type)
+
+            elif state.sequence_type == 'Standard':
+                self._save_sequence_to_file(state.sequence_path)
+
+            # Use else here as sequence_type is an enum.
+            else:
+                # Here stuff is a bit more complex as compilation checks need
+                # to be performed.
+
+                # Could implement TemplateSaveDialog as a wizard using a stack
+                # widget here I would bypass the first item. This would avoid
+                # code duplication and allow the user to change the compilation
+                # vars (useful for loaded seq that will be identified but will
+                # lack vars, might later implement a cache for this using
+                # pickle)
+                # The compilation part would win at being implemented with a
+                # separate model and view, to be used in
+                # time_sequence_compilation.
+
+                dial = TemplateSaveDialog(self.content, workspace=self,
+                                          step=2)
+                dial.exec_()
+                if dial.result:
+                    s_ = self.state
+                    self.state
+                    self._save_sequence_to_template(s_.sequence_path,
+                                                    s_.sequence_doc)
 
         elif mode == 'file':
-            factory = FileDialogEx.get_open_file_name
+            factory = FileDialogEx.get_save_file_name
             path = ''
             if self.state.sequence_path:
                 path = os.path.dirname(self.state.sequence_path)
@@ -162,14 +200,21 @@ class SequenceEditionSpace(Workspace):
                                 name_filters=['*.ini'])
 
             if save_path:
-                self._save_to_file(self.state.sequence, save_path)
+                self._save_sequence_to_file(save_path)
+                self.state.sequence_type = 'Standard'
+                self.state.sequence_path = save_path
 
         elif mode == 'template':
             # Here must check context is TemplateContext and compilation is ok
             # (as template cannot be re-edited if not merged). Variable used
             # for compilation are cached.
-            dial = TemplateSaveDialog(workspace=self)
+            dial = TemplateSaveDialog(self.content, workspace=self)
             dial.exec_()
+            if dial.result:
+                self._save_sequence_to_template(dial.path, dial.doc)
+                self.state.sequence_type = 'Template'
+                self.state.sequence_path = dial.path
+                self.state.sequence_doc = dial.doc
 
         else:
             mess = cleandoc('''Invalid mode for save sequence : {}. Admissible
@@ -187,17 +232,33 @@ class SequenceEditionSpace(Workspace):
 
         """
         if mode == 'file':
-            pass
+            factory = FileDialogEx.get_open_file_name
+            path = ''
+            if self.state.sequence_path:
+                path = os.path.dirname(self.state.sequence_path)
+            load_path = factory(self.content, current_path=path,
+                                name_filters=['*.ini'])
+
+            if load_path:
+                self._load_sequence_from_file(load_path)
+                self.state.sequence_type = 'Standard'
+                self.state.sequence_path = load_path
 
         elif mode == 'template':
-            pass
+            dial = TemplateLoadDialog(self.content, workspace=self)
+            dial.exec_()
+            if dial.result:
+                self._save_sequence_to_template(dial.path, dial.doc)
+                self.state.sequence_type = 'Template'
+                self.state.sequence_path = dial.path
+                self.state.sequence_doc = dial.doc
 
         else:
             mess = cleandoc('''Invalid mode for load sequence : {}. Admissible
                             values are 'file' and 'template'.''')
             raise ValueError(mess.format(mode))
 
-    def time_sequence_compilation(self, use_context=False):
+    def time_sequence_compilation(self):
         """ Time the compilation time of the currently edited sequence.
 
         This can be useful to check the sequence compile correctly before
@@ -205,7 +266,8 @@ class SequenceEditionSpace(Workspace):
         are needed to reach an acceptable speed.
 
         """
-        pass
+        dial = CompileDialog(sequence=self.state.sequence)
+        dial.exec_()
 
     # --- Private API ---------------------------------------------------------
 
@@ -213,13 +275,26 @@ class SequenceEditionSpace(Workspace):
         if self.content and self.content.children:
             return self.content.children[0]
 
-    @staticmethod
-    def _save_to_file(sequence, path):
-        """ Logic to save a sequence to file given a path.
+    def _save_sequence_to_file(self, path):
+        prefs = self.state.sequence.preferences_from_members()
+        save_sequence_prefs(path, prefs)
 
-        """
-        config = ConfigObj()
-        config.filename = path
-        config.update(sequence.preferences_from_members())
+    def _save_sequence_to_template(self, path, doc):
+        prefs = self.state.sequence.preferences_from_members()
+        prefs['template_vars'] = prefs.pop('external_vars')
+        del prefs['item_class']
+        del prefs['time_constrained']
+        save_sequence_prefs(path, prefs, doc)
 
-        config.write()
+    def _load_sequence_from_file(self, path):
+        core = self.workbench.get_plugin('enaml.workbench.core')
+        cmd = 'hqc_meas.pulses.build_sequence'
+        return core.invoke_command(cmd, {'kind': 'file', 'path': path})
+
+    def _load_sequence_from_template(self, path):
+        prefs = load_sequences_prefs(path)
+        prefs['external_vars'] = prefs.pop('template_vars')
+        prefs['item_class'] = 'RootSequence'
+        core = self.workbench.get_plugin('enaml.workbench.core')
+        cmd = 'hqc_meas.pulses.build_sequence'
+        return core.invoke_command(cmd, {'kind': 'file', 'prefs': prefs})

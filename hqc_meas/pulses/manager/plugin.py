@@ -22,7 +22,7 @@ from ..pulse import Pulse
 from ..base_sequences import Sequence, RootSequence
 from .config import SEQUENCE_CONFIG, CONFIG_MAP_VIEW
 from .filters import SEQUENCES_FILTERS
-from .templates_io import load_template
+from .sequences_io import load_sequence_prefs
 with enaml.imports():
     from ..pulse_view import PulseView
     from ..sequences_views import (SequenceView, RootSequenceView)
@@ -154,7 +154,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
             answer.update({key: val for key, val in self._sequences.iteritems()
                            if key in sequences})
 
-            answer.update({key: tuple([val] + list(load_template(val)))
+            answer.update({key: tuple([val] + list(load_sequence_prefs(val)))
                            for key, val in self._template_sequences.iteritems()
                            if key in sequences})
         else:
@@ -278,7 +278,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
         templates = self._template_sequences
         if sequence in templates:
             conf, view = self._config['TemplateConfig']
-            t_config, t_doc = load_template(templates[sequence])
+            t_config, t_doc = load_sequence_prefs(templates[sequence])
             return conf(manager=self, config=t_config, doc=t_doc), view
 
         elif sequence in self._sequences:

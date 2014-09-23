@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : hqc_meas/pulses/manager/templates_io.py
+# module : hqc_meas/pulses/manager/sequences_io.py
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
@@ -10,8 +10,8 @@ from configobj import ConfigObj
 from textwrap import wrap
 
 
-def load_template(path):
-    """ Load the informations stored in a template.
+def load_sequence_prefs(path):
+    """ Load the preferences of a sequence stored in a file.
 
     Parameters
     ----------
@@ -20,7 +20,7 @@ def load_template(path):
 
     Returns
     -------
-        data : ConfigObj
+        prefs : ConfigObj
             The data needed to rebuild the tasks.
 
         doc : str
@@ -28,20 +28,22 @@ def load_template(path):
 
     """
     config = ConfigObj(path)
-    doc_list = [com[1:].strip() for com in config.initial_comment]
-    doc = '\n'.join(doc_list)
+    doc = ''
+    if config.initial_comment:
+        doc_list = [com[1:].strip() for com in config.initial_comment]
+        doc = '\n'.join(doc_list)
 
     return config, doc
 
 
-def save_template(path, data, doc):
-    """ Save a template to a file
+def save_sequence_prefs(path, prefs, doc=''):
+    """ Save a sequence to a file
 
     Parameters
     ----------
         path : unicode
             Path of the file to which save the template
-        data : dict(str : str)
+        prefs : dict(str : str)
             Dictionnary containing the tempate parameters
         doc : str
             The template doc
@@ -51,7 +53,8 @@ def save_template(path, data, doc):
     # not loaded. Otherwise merge might lead to corrupted data.
     config = ConfigObj(indent_type='    ')
     config.filename = path
-    config.merge(data)
-    config.initial_comment = wrap(doc, 79)
+    config.merge(prefs)
+    if doc:
+        config.initial_comment = wrap(doc, 79)
 
     config.write()

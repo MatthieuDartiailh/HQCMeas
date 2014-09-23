@@ -17,6 +17,7 @@ from hqc_meas.utils.dependencies.api import BuildDependency
 from hqc_meas.utils.configobj_ops import flatten_config
 
 from .building import BuilderView
+from ..base_sequences import RootSequence
 
 def manager_plugin_factory():
     """ Factory funcion for the instr manager plugin.
@@ -73,21 +74,59 @@ def shapes_request(event):
 def build_sequence(event):
     """ Handler for the 'hqc_meas.pulses_manager.build_sequence' command.
 
+    Parameters
+    ----------
+    mode : {'ui', 'file'}
+        Should the command open a dialog to select a sequence (ui), or should
+        it build a RootSequence from the given ressource.
+
+    root : RootSequence, optional
+        RootSequence in which to insert the new sequence once built (ui mode
+        only).
+
+    path : unicode, optional
+        Path to the file holding the sequence config. The stored sequence
+        should be a RootSequence not a TemplateSequence. Used in file mode.
+
+    prefs : dict, optional
+        Sequence config describing the sequence to rebuilf. The stored sequence
+        should be a RootSequence not a TemplateSequence. Used in file mode.
+
     Returns
     -------
     sequence : Sequence
 
     """
     manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
-    parent_ui = event.parameters.get('parent_ui')
-    dial = BuilderView(parent_ui, manager=manager, root=root)
-    dial.exec_()
-    if dial.result:
-        seq = dial.model.sequence_config.build_sequence()
-        if seq:
-            return seq
+    mode = event.parameters.get('mode')
+    if mode == 'ui'
+        parent_ui = event.parameters.get('parent_ui')
+        root = event.parameters['root']
+        dial = BuilderView(parent_ui, manager=manager, root=root)
+        dial.exec_()
+        if dial.result:
+            seq = dial.model.sequence_config.build_sequence()
+            if seq:
+                return seq
+            else:
+                ErrorsDisplay(errors=dial.model.sequence_config.errors).exec_()
+
+    elif mode == 'file':
+        if 'path' in event.parameters:
+            prefs = ConfigObj(event.parameters['path'])
+        elif 'prefs' in event.parameters:
+            prefs = event.parameters['prefs']
         else:
-            ErrorsDisplay(errors=dial.model.sequence_config.errors).exec_()
+            raise ValueError('No valid kwarg found for file mode')
+        # Implement the logic here to rebuild the sequence.
+        core = self.manager.workbench.get_plugin('enaml.workbench.core')
+        cmd = 'hqc_meas.dependencies.collect_build_dep_from_config'
+        dep = core.invoke_command(cmd, {'config': prefs})
+        if isinstance(dep, Exception):
+            raise dep
+
+        seq = RootSequence.build_from_config(deepcopy(prefs), dep)
+        return seq
 
 # --- Descritpion -------------------------------------------------------------
 
