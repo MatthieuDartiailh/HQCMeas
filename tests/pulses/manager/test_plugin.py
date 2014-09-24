@@ -102,8 +102,8 @@ class Test(object):
                     'templates_folders': repr([template_path])}
 
         conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
-        conf[u'hqc_meas.pulses_manager'] = {}
-        conf[u'hqc_meas.pulses_manager'].update(man_conf)
+        conf[u'hqc_meas.pulses'] = {}
+        conf[u'hqc_meas.pulses'].update(man_conf)
         conf.write()
 
     @classmethod
@@ -132,7 +132,7 @@ class Test(object):
         self.workbench.register(DependenciesManifest())
 
     def teardown(self):
-        self.workbench.unregister(u'hqc_meas.pulses_manager')
+        self.workbench.unregister(u'hqc_meas.pulses')
         self.workbench.unregister(u'hqc_meas.dependencies')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')
@@ -140,7 +140,7 @@ class Test(object):
 
     def test_init(self):
         self.workbench.register(PulsesManagerManifest())
-        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
 
         assert_in('sequences.__init__', plugin.sequences_loading)
         assert_in('contexts.__init__', plugin.contexts_loading)
@@ -157,7 +157,7 @@ class Test(object):
 
     def test_load_all(self):
         self.workbench.register(PulsesManagerManifest())
-        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
         plugin.contexts_loading = []
         plugin.shapes_loading = []
         plugin.sequences_loading = []
@@ -168,7 +168,7 @@ class Test(object):
     @attr('no_travis')
     def test_template_observation(self):
         self.workbench.register(PulsesManagerManifest())
-        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
         assert_in('Test',  plugin.sequences)
         template_path = os.path.join(self.test_dir, 'temp_templates')
         prof = ConfigObj(os.path.join(template_path, 'template.ini'))
@@ -186,7 +186,7 @@ class Test(object):
         # Request using context name
         self.workbench.register(PulsesManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.pulses_manager.contexts_request'
+        com = u'hqc_meas.pulses.contexts_request'
         contexts, miss = core.invoke_command(com,
                                              {'contexts': ['AWG', 'XXXX']},
                                              self)
@@ -199,7 +199,7 @@ class Test(object):
         # Request using class name, no views
         self.workbench.register(PulsesManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.pulses_manager.contexts_request'
+        com = u'hqc_meas.pulses.contexts_request'
         contexts, miss = core.invoke_command(com, {'contexts': ['AWGContext'],
                                                    'use_class_names': True,
                                                    'views': False},
@@ -212,7 +212,7 @@ class Test(object):
         # Request using shape name
         self.workbench.register(PulsesManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.pulses_manager.shapes_request'
+        com = u'hqc_meas.pulses.shapes_request'
         shapes, miss = core.invoke_command(com,
                                            {'shapes': ['Square', 'XXXX']},
                                            self)
@@ -225,7 +225,7 @@ class Test(object):
         # Request using class name, no views
         self.workbench.register(PulsesManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.pulses_manager.shapes_request'
+        com = u'hqc_meas.pulses.shapes_request'
         shapes, miss = core.invoke_command(com, {'shapes': ['SquareShape'],
                                                  'use_class_names': True,
                                                  'views': False},
@@ -238,7 +238,7 @@ class Test(object):
         # Request using sequence name
         self.workbench.register(PulsesManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.pulses_manager.sequences_request'
+        com = u'hqc_meas.pulses.sequences_request'
         kwargs = {'sequences': ['Conditional sequence', 'XXXX']}
         sequences, miss = core.invoke_command(com, kwargs, self)
 
@@ -250,7 +250,7 @@ class Test(object):
         # Request using class name, no views
         self.workbench.register(PulsesManagerManifest())
         core = self.workbench.get_plugin(u'enaml.workbench.core')
-        com = u'hqc_meas.pulses_manager.sequences_request'
+        com = u'hqc_meas.pulses.sequences_request'
         kwargs = {'sequences': ['ConditionalSequence'],
                   'use_class_names': True, 'views': False}
         sequences, miss = core.invoke_command(com, kwargs, self)
@@ -262,7 +262,7 @@ class Test(object):
     def test_config_request_build1(self):
         # Test requesting a config for a standard sequence.
         self.workbench.register(PulsesManagerManifest())
-        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
 
         conf, view = plugin.config_request('Conditional sequence')
 
@@ -292,7 +292,7 @@ class Test(object):
     def test_filter(self):
         # Filtering sequences.
         self.workbench.register(PulsesManagerManifest())
-        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
 
         seq = plugin.filter_sequences('All')
         assert_in('Sequence', seq)
@@ -342,7 +342,7 @@ class Test(object):
         # Test collecting_dependencies for a sequence including a template
         # sequence.
         self.workbench.register(PulsesManagerManifest())
-        plugin = self.workbench.get_plugin(u'hqc_meas.pulses_manager')
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
         plugin.contexts_loading = []
         plugin.sequences_loading = []
 

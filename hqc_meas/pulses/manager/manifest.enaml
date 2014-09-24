@@ -16,7 +16,7 @@ from hqc_meas.utils.widgets.errors_display import ErrorsDisplay
 from hqc_meas.utils.dependencies.api import BuildDependency
 from hqc_meas.utils.configobj_ops import flatten_config
 
-from .building import BuilderView
+from .building import BuilderView, ContextBuilderView
 from ..base_sequences import RootSequence
 
 def manager_plugin_factory():
@@ -25,6 +25,10 @@ def manager_plugin_factory():
     """
     from .plugin import PulsesManagerPlugin
     return PulsesManagerPlugin()
+
+def workspace_factory(workbench):
+    from .workspace.workspace import SequenceEditionSpace
+    return SequenceEditionSpace()
 
 
 # --- Command handlers --------------------------------------------------------
@@ -38,41 +42,42 @@ def manager_plugin_factory():
 #    TaskManagerView(manager=manager).show()
 
 def show_starting_errors(event):
-    """ Handler for the 'hqc_meas.pulses_manager.show_errors' command.
+    """ Handler for the 'hqc_meas.pulses.show_errors' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses')
     ui = event.workbench.get_plugin('enaml.workbench.ui')
     ErrorsDisplay(ui.window, title='Pulses manager start up errors',
-                  errors=manager.report()).exec_()
+                  errors=manager.report(),
+                  errors_type='Import failures').exec_()
 
 
 def sequences_request(event):
-    """ Handler for the 'hqc_meas.pulses_manager.sequences_request' command.
+    """ Handler for the 'hqc_meas.pulses.sequences_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses')
     return manager.sequences_request(**event.parameters)
 
 
 def contexts_request(event):
-    """ Handler for the 'hqc_meas.pulses_manager.contexts_request' command.
+    """ Handler for the 'hqc_meas.pulses.contexts_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses')
     return manager.contexts_request(**event.parameters)
 
 
 def shapes_request(event):
-    """ Handler for the 'hqc_meas.pulses_manager.shapes_request' command.
+    """ Handler for the 'hqc_meas.pulses.shapes_request' command.
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses')
     return manager.shapes_request(**event.parameters)
 
 
 def build_sequence(event):
-    """ Handler for the 'hqc_meas.pulses_manager.build_sequence' command.
+    """ Handler for the 'hqc_meas.pulses.build_sequence' command.
 
     Parameters
     ----------
@@ -97,9 +102,9 @@ def build_sequence(event):
     sequence : Sequence
 
     """
-    manager = event.workbench.get_plugin('hqc_meas.pulses_manager')
+    manager = event.workbench.get_plugin('hqc_meas.pulses')
     mode = event.parameters.get('mode')
-    if mode == 'ui'
+    if mode == 'ui':
         parent_ui = event.parameters.get('parent_ui')
         root = event.parameters['root']
         dial = BuilderView(parent_ui, manager=manager, root=root)
@@ -109,7 +114,8 @@ def build_sequence(event):
             if seq:
                 return seq
             else:
-                ErrorsDisplay(errors=dial.model.sequence_config.errors).exec_()
+                ErrorsDisplay(errors=dial.model.sequence_config.errors,
+                              errors_type='Config errors').exec_()
 
     elif mode == 'file':
         if 'path' in event.parameters:
@@ -127,6 +133,19 @@ def build_sequence(event):
 
         seq = RootSequence.build_from_config(deepcopy(prefs), dep)
         return seq
+
+
+def build_context(event):
+    """ Select a context for a given pulse sequence.
+
+    """
+    manager = event.workbench.get_plugin('hqc_meas.pulses')
+    parent_ui = event.parameters.get('parent_ui')
+    root = event.parameters['root']
+    dial = ContextBuilderView(parent_ui, manager=manager, root=root)
+    dial.exec_()
+    if dial.result:
+        root.context = dial.context()
 
 # --- Descritpion -------------------------------------------------------------
 
@@ -151,8 +170,8 @@ SAVE_TASK_DESCRIPTION = \
 BUILD_SEQUENCE_DESCRIPTION = \
 """ Build a sequence from the one knwon to the plugin."""
 
-BUILD_ROOT_DESCRIPTION = \
-""" Build a root task. """
+BUILD_CONTEXT_DESCRIPTION = \
+""" Build a context for the given root sequence."""
 
 MANAGER_STATE_DESCRIPTION = \
 """ The tasks manager gives access to the known tasks and filters."""
@@ -163,7 +182,7 @@ def collect_pulses_dependecies(workbench, flat_walk):
     """
     # Here we use direct call to plugin methods as this is internal to the
     # plugin
-    manager = workbench.get_plugin('hqc_meas.pulses_manager')
+    manager = workbench.get_plugin('hqc_meas.pulses')
 
     # Collect items.
     s_res = manager.sequences_request(flat_walk['item_class'],
@@ -212,7 +231,7 @@ def collect_pulses_dependecies(workbench, flat_walk):
 enamldef PulsesManagerManifest(PluginManifest):
     """
     """
-    id = 'hqc_meas.pulses_manager'
+    id = 'hqc_meas.pulses'
     factory = manager_plugin_factory
 
     Extension:
@@ -235,10 +254,15 @@ enamldef PulsesManagerManifest(PluginManifest):
         id = 'item_classes'
         point = 'hqc_meas.dependencies.build'
         BuildDependency:
-            id = 'hqc_meas.pulses_manager.dependencies'
+            id = 'hqc_meas.pulses.dependencies'
             walk_members = ['item_class', 'context_class',
                             'shape_class', 'template_id']
             collect = collect_pulses_dependecies
+
+    Extension:
+        id = 'workspace'
+        point = u'enaml.workbench.ui.workspaces'
+        factory = workspace_factory
 
     Extension:
         id = 'commands'
@@ -248,25 +272,29 @@ enamldef PulsesManagerManifest(PluginManifest):
 #            description = SHOW_MANAGER_DESCRIPTION
 #            handler = show_manager
         Command:
-            id = 'hqc_meas.pulses_manager.show_starting_errors'
+            id = 'hqc_meas.pulses.show_starting_errors'
             description = SHOW_ERRORS_DESCRIPTION
             handler = show_starting_errors
         Command:
-            id = 'hqc_meas.pulses_manager.sequences_request'
+            id = 'hqc_meas.pulses.sequences_request'
             description = SEQUENCES_REQUEST_DESCRIPTION
             handler = sequences_request
         Command:
-            id = 'hqc_meas.pulses_manager.contexts_request'
+            id = 'hqc_meas.pulses.contexts_request'
             description = CONTEXTS_REQUEST_DESCRIPTION
             handler = contexts_request
         Command:
-            id = 'hqc_meas.pulses_manager.shapes_request'
+            id = 'hqc_meas.pulses.shapes_request'
             description = SHAPES_REQUEST_DESCRIPTION
             handler = shapes_request
         Command:
-            id = 'hqc_meas.pulses_manager.build_sequence'
+            id = 'hqc_meas.pulses.build_sequence'
             description = BUILD_SEQUENCE_DESCRIPTION
             handler = build_sequence
+        Command:
+            id = 'hqc_meas.pulses.build_context'
+            description = BUILD_CONTEXT_DESCRIPTION
+            handler = build_context
 
     Extension:
         id = 'menu'
@@ -284,4 +312,12 @@ enamldef PulsesManagerManifest(PluginManifest):
         ActionItem:
             path = 'tools/pulses/show_errors'
             label = 'Start up errors'
-            command = 'hqc_meas.pulses_manager.show_starting_errors'
+            command = 'hqc_meas.pulses.show_starting_errors'
+        ActionItem:
+                path = '/workspace/pulses'
+                label = 'Pulses'
+                shortcut = 'Ctrl+3'
+                after = 'debug'
+                group = 'spaces'
+                command = 'enaml.workbench.ui.select_workspace'
+                parameters = {'workspace': 'hqc_meas.pulses.workspace'}

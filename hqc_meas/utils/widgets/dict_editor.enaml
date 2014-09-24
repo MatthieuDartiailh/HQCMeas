@@ -49,6 +49,9 @@ class _DictEditorModel(Atom):
 
 
 template DictEditor(Content):
+    """
+
+    """
     Container: main:
         padding = 2
         attr model

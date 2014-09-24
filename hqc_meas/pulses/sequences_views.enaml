@@ -191,7 +191,7 @@ enamldef _SequenceListView(Container): list_view:
                       operations = operations,
                       args = ('hqc_meas.pulses_manager.build_sequence',),
                       kwargs = {'parameters': {'parent_ui': button,
-                                               'root': sequence.root
+                                               'root': sequence.root,
                                                'mode': 'ui'},
                                 'trigger': button})
                     menu.popup()
@@ -392,8 +392,15 @@ enamldef RootSequenceView(GroupBox): view:
 
         Page:
             title = 'Context'
-            Include:
-                objects << [instantiate_context_view(core, sequence.context)]
+            Container:
+                PushButton:
+                    text = 'Change context' if item.context else 'Choose context'
+                    clicked ::
+                        cmd = 'hqc_meas.pulses_manager.build_context'
+                        self.core.invoke_command(cmd, {'root': item,
+                                                       'parent_ui': self})
+                Include:
+                    objects << [instantiate_context_view(core, item.context)]
 
         Include: include:
             pass

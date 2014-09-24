@@ -6,6 +6,7 @@
 #==============================================================================
 """
 """
+from inspect import getdoc
 from atom.api import (Atom, Instance, Str, observe, ForwardTyped, Bool,
                       ForwardInstance)
 from enaml.core.api import Include
@@ -14,6 +15,7 @@ from enaml.layout.api import hbox, spacer, vbox
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
                                Label, MultilineField)
 
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 from .browsing import SequenceSelector
 
 
@@ -90,3 +92,36 @@ enamldef BuilderView(Dialog): dial:
             text = 'Cancel'
             clicked ::
                 dial.reject()
+
+enamldef ContextBuilderView(Dialog): dial:
+    """ Simple dialog to choose the context to add to a sequence.
+
+    """
+    attr manager
+    attr context
+    title = 'Select the context you want to use.'
+
+    Container:
+        constraints << [hbox(selector, doc, vbox(ok, cancel, spacer))]
+        QtListStrWidget: selector:
+            items << manager.contexts
+            items ::
+                selected = items[0]
+            selected_item ::
+                c_s = manager.request_contexts([selected], views=False)
+                dial.context == c_s[selected]
+
+        MultilineField: doc:
+            text << getdoc(context)
+
+        PushButton: ok:
+            text = 'Ok'
+            enabled << model.ok_ready
+            clicked ::
+                dial.accept()
+
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()
+

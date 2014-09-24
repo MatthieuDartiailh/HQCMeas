@@ -8,7 +8,7 @@
 """
 import os
 import enaml
-from atom.api import (Atom, Typed, Value, Enum, Dict, Unicode, Property,
+from atom.api import (Atom, Typed, Value, Enum, Unicode, Property,
                       set_default)
 from enaml.workbench.ui.api import Workspace
 from enaml.widgets.api import FileDialogEx
@@ -16,13 +16,13 @@ from inspect import cleandoc
 from textwrap import fill
 
 from ...api import RootSequence
-from ..sequences_io import save_sequence_prefs, load_sequences_prefs
+from ..sequences_io import save_sequence_prefs
 
 with enaml.imports():
     from enaml.stdlib.message_box import question
     from .content import SequenceSpaceContent, SequenceSpaceMenu
     from .dialogs import (TemplateLoadDialog, TemplateSaveDialog,
-                          TypeSelectionDialog, CompileDialog)
+                          TypeSelectionDialog)
 
 
 LOG_ID = u'hqc_meas.pulses.workspace'
@@ -47,9 +47,6 @@ class SequenceEditionSpaceState(Atom):
     #: Description of the sequence (only applyt o template).
     sequence_doc = Unicode()
 
-    #: External set of variable used to compile the sequence.
-    ext_vars = Dict(Unicode())
-
     # --- Private API ---------------------------------------------------------
 
     _sequence = Typed(RootSequence)
@@ -66,7 +63,6 @@ class SequenceEditionSpaceState(Atom):
         self.sequence_type = 'Unknown'
         self.sequence_path = u''
         self.sequence_doc = u''
-        self.ext_vars.clear()
         self._sequence = value
 
 
@@ -74,6 +70,9 @@ class SequenceEditionSpace(Workspace):
     """
     """
     # --- Public API ----------------------------------------------------------
+
+    #: Refrence to the plugin.
+    plugin = Value()
 
     #: Reference to the workspace state store in the plugin.
     state = Typed(SequenceEditionSpaceState)
@@ -91,6 +90,7 @@ class SequenceEditionSpace(Workspace):
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
         plugin.workspace = self
+        self.plugin = plugin
         if plugin.workspace_state:
             self.state = plugin.workspace_state
         else:
@@ -183,7 +183,7 @@ class SequenceEditionSpace(Workspace):
                 # time_sequence_compilation.
 
                 dial = TemplateSaveDialog(self.content, workspace=self,
-                                          step=2)
+                                          step=1)
                 dial.exec_()
                 if dial.result:
                     s_ = self.state
@@ -240,34 +240,27 @@ class SequenceEditionSpace(Workspace):
                                 name_filters=['*.ini'])
 
             if load_path:
-                self._load_sequence_from_file(load_path)
+                seq = self._load_sequence_from_file(load_path)
                 self.state.sequence_type = 'Standard'
                 self.state.sequence_path = load_path
+                self.state.sequence = seq
+                self.state.ext_vars = seq.external_vars
 
         elif mode == 'template':
             dial = TemplateLoadDialog(self.content, workspace=self)
             dial.exec_()
             if dial.result:
-                self._save_sequence_to_template(dial.path, dial.doc)
+                seq = self._load_sequence_template(dial.prefs)
                 self.state.sequence_type = 'Template'
                 self.state.sequence_path = dial.path
                 self.state.sequence_doc = dial.doc
+                self.state.sequence = seq
+                self.state.ext_vars = seq.external_vars
 
         else:
             mess = cleandoc('''Invalid mode for load sequence : {}. Admissible
                             values are 'file' and 'template'.''')
             raise ValueError(mess.format(mode))
-
-    def time_sequence_compilation(self):
-        """ Time the compilation time of the currently edited sequence.
-
-        This can be useful to check the sequence compile correctly before
-        saving it. It will also give an idea if further optimisations (Cython)
-        are needed to reach an acceptable speed.
-
-        """
-        dial = CompileDialog(sequence=self.state.sequence)
-        dial.exec_()
 
     # --- Private API ---------------------------------------------------------
 
@@ -276,11 +269,17 @@ class SequenceEditionSpace(Workspace):
             return self.content.children[0]
 
     def _save_sequence_to_file(self, path):
-        prefs = self.state.sequence.preferences_from_members()
+        seq = self.state.sequence
+        prefs = seq.preferences_from_members()
+        prefs['external_vars'] = repr(dict.fromkeys(seq.external_vars.keys(),
+                                                    ''))
         save_sequence_prefs(path, prefs)
 
     def _save_sequence_to_template(self, path, doc):
-        prefs = self.state.sequence.preferences_from_members()
+        seq = self.state.sequence
+        prefs = seq.preferences_from_members()
+        prefs['external_vars'] = repr(dict.fromkeys(seq.external_vars.keys(),
+                                                    ''))
         prefs['template_vars'] = prefs.pop('external_vars')
         del prefs['item_class']
         del prefs['time_constrained']
@@ -291,8 +290,7 @@ class SequenceEditionSpace(Workspace):
         cmd = 'hqc_meas.pulses.build_sequence'
         return core.invoke_command(cmd, {'kind': 'file', 'path': path})
 
-    def _load_sequence_from_template(self, path):
-        prefs = load_sequences_prefs(path)
+    def _load_sequence_from_template(self, prefs):
         prefs['external_vars'] = prefs.pop('template_vars')
         prefs['item_class'] = 'RootSequence'
         core = self.workbench.get_plugin('enaml.workbench.core')

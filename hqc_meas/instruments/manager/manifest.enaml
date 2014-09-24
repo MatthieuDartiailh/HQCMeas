@@ -41,7 +41,8 @@ def show_starting_errors(event):
     manager = event.workbench.get_plugin('hqc_meas.instr_manager')
     ui = event.workbench.get_plugin('enaml.workbench.ui')
     ErrorsDisplay(ui.window, title='Instr manager start up errors',
-                  errors=manager.report()).exec_()
+                  errors=manager.report(),
+                  errors_type='Import failures').exec_()
 
 
 def matching_drivers(event):

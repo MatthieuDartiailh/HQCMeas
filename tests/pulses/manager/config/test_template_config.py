@@ -76,8 +76,8 @@ class TestTemplateConfig(object):
         man_conf = {'templates_folders': repr([template_path])}
 
         conf = ConfigObj(os.path.join(cls.test_dir, 'default_test.ini'))
-        conf[u'hqc_meas.pulses_manager'] = {}
-        conf[u'hqc_meas.pulses_manager'].update(man_conf)
+        conf[u'hqc_meas.pulses'] = {}
+        conf[u'hqc_meas.pulses'].update(man_conf)
         conf.write()
 
     @classmethod
@@ -102,10 +102,10 @@ class TestTemplateConfig(object):
         self.workbench.register(DependenciesManifest())
         self.workbench.register(PulsesManagerManifest())
 
-        self.plugin = self.workbench.get_plugin('hqc_meas.pulses_manager')
+        self.plugin = self.workbench.get_plugin('hqc_meas.pulses')
 
     def teardown(self):
-        self.workbench.unregister(u'hqc_meas.pulses_manager')
+        self.workbench.unregister(u'hqc_meas.pulses')
         self.workbench.unregister(u'hqc_meas.dependencies')
         self.workbench.unregister(u'hqc_meas.preferences')
         self.workbench.unregister(u'hqc_meas.state')

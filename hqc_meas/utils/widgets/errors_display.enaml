@@ -39,14 +39,14 @@ enamldef ErrorsDisplayContainer(Container):
     """
     attr errors
     attr model = _ErrorsDisplayModel(errors)
+    alias errors_type : lis_lab.text
 
-    constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che),
-                        close),
+    constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che)),
                    align('left', lis_lab, lis),
                    align('left', che_lab, che)]
 
     Label: lis_lab:
-        text = 'Import failures'
+        pass
     QtListStrWidget: lis:
         hug_height = 'ignore'
         items << model.errors.keys()
@@ -63,15 +63,17 @@ enamldef ErrorsDisplay(Dialog): dial:
     """
     """
     attr errors
+    attr errors_type
 
     Conditional:
         condition = bool(errors)
         Container:
-            constraints = [vbox(cont, close),
-                           contents_right == close.right]
+            constraints = [vbox(cont, ex),
+                           contents_right == ex.right]
             ErrorsDisplayContainer: cont:
                 errors << dial.errors
-            PushButton: close:
+                errors_type = dial.errors_type
+            PushButton: ex:
                 text = 'Close'
                 clicked :: dial.accept()
 
@@ -81,6 +83,6 @@ enamldef ErrorsDisplay(Dialog): dial:
             MultilineField:
                 read_only = True
                 text = 'No error happened on start-up'
-            PushButton: close:
+            PushButton:
                 text = 'Close'
                 clicked :: dial.accept()
