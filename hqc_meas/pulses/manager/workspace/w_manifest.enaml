@@ -56,7 +56,7 @@ def save_sequence(event):
     if plugin.workspace_state.sequence_type != 'Unknown':
         plugin.workspace.save_sequence()
         window = workbench.get_plugin('enaml.workbench.ui').window
-        SaveConfirm(window, measure_name=plugin.edited_measure.name).show()
+        SaveConfirm(window).show()
     else:
         plugin.workspace.save_sequence()
 
@@ -69,7 +69,7 @@ been saved to a file then simply override it.'''
 def save_sequence_as(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
-    plugin.workspace.save_measure('file')
+    plugin.workspace.save_sequence('file')
 
 
 SAVE_AS_DESCRIPTION =\
@@ -80,7 +80,7 @@ to choose a file to which the sequence should be saved.'''
 def save_sequence_as_template(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
-    plugin.workspace.save_measure('template')
+    plugin.workspace.save_sequence('template')
 
 
 SAVE_AS_TEMPLATE_DESCRIPTION =\
@@ -92,7 +92,7 @@ SAVE_AS_TEMPLATE_DESCRIPTION =\
 def load_sequence(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
-    plugin.workspace.load_measure('file')
+    plugin.workspace.load_sequence('file')
 
 
 LOAD_DESCRIPTION =\
@@ -102,7 +102,7 @@ LOAD_DESCRIPTION =\
 def load_template(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
-    plugin.workspace.load_measure('template')
+    plugin.workspace.load_sequence('template')
 
 
 LOAD_DESCRIPTION =\

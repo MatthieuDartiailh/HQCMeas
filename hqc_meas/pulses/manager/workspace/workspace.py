@@ -7,6 +7,7 @@
 """
 """
 import os
+import logging
 import enaml
 from atom.api import (Atom, Typed, Value, Enum, Unicode, Property,
                       set_default)
@@ -37,7 +38,7 @@ class SequenceEditionSpaceState(Atom):
 
     """
     #: Currently edited sequence.
-    sequence = Property()
+    sequence = Typed(RootSequence, ())
 
     #: If this measure has already been saved,  is it a template or not ?
     sequence_type = Enum('Unknown', 'Standard', 'Template')
@@ -50,21 +51,12 @@ class SequenceEditionSpaceState(Atom):
 
     # --- Private API ---------------------------------------------------------
 
-    _sequence = Typed(RootSequence, ())
-
-    def _get_sequence(self):
-        return self._sequence
-
-    def _set_sequence(self, value):
-        """ Allow to perform clean up action when changing the sequence.
-
-        Avoid the use of a static observer (disappear in Atom 1.0.0)
-
+    def _observe_sequence(self, change):
+        """
         """
         self.sequence_type = 'Unknown'
         self.sequence_path = u''
         self.sequence_doc = u''
-        self._sequence = value
 
 
 class SequenceEditionSpace(Workspace):
@@ -131,7 +123,7 @@ class SequenceEditionSpace(Workspace):
         """
         message = cleandoc("""Make sure you saved your modification to the
                         sequence you are editing before creating a new one.
-                        Press OK to confirm, or Cancel to go back to editing
+                        Press Yes to confirm, or No to go back to editing
                         and get a chance to save it.""")
 
         result = question(self.content,
@@ -141,6 +133,8 @@ class SequenceEditionSpace(Workspace):
 
         if result is not None and result.action == 'accept':
             self.state.sequence = RootSequence()
+            logger = logging.getLogger(__name__)
+            logger.info('New sequence created')
 
     def save_sequence(self, mode='default'):
         """ Save the currently edited sequence.
@@ -204,6 +198,8 @@ class SequenceEditionSpace(Workspace):
                 self._save_sequence_to_file(save_path)
                 self.state.sequence_type = 'Standard'
                 self.state.sequence_path = save_path
+                logger = logging.getLogger(__name__)
+                logger.info('Correctly saved sequence in file.')
 
         elif mode == 'template':
             # Here must check context is TemplateContext and compilation is ok
@@ -216,6 +212,8 @@ class SequenceEditionSpace(Workspace):
                 self.state.sequence_type = 'Template'
                 self.state.sequence_path = dial.path
                 self.state.sequence_doc = dial.doc
+                logger = logging.getLogger(__name__)
+                logger.info('Correctly saved sequence as template.')
 
         else:
             mess = cleandoc('''Invalid mode for save sequence : {}. Admissible
@@ -242,21 +240,23 @@ class SequenceEditionSpace(Workspace):
 
             if load_path:
                 seq = self._load_sequence_from_file(load_path)
+                self.state.sequence = seq
                 self.state.sequence_type = 'Standard'
                 self.state.sequence_path = load_path
-                self.state.sequence = seq
-                self.state.ext_vars = seq.external_vars
+                logger = logging.getLogger(__name__)
+                logger.info('Sequence correctly loaded from file.')
 
         elif mode == 'template':
             dial = TemplateLoadDialog(self.content, workspace=self)
             dial.exec_()
             if dial.result:
                 seq = self._load_sequence_template(dial.prefs)
+                self.state.sequence = seq
                 self.state.sequence_type = 'Template'
                 self.state.sequence_path = dial.path
                 self.state.sequence_doc = dial.doc
-                self.state.sequence = seq
-                self.state.ext_vars = seq.external_vars
+                logger = logging.getLogger(__name__)
+                logger.info('Sequence correctly loaded from template.')
 
         else:
             mess = cleandoc('''Invalid mode for load sequence : {}. Admissible
@@ -270,6 +270,8 @@ class SequenceEditionSpace(Workspace):
             return self.content.children[0]
 
     def _save_sequence_to_file(self, path):
+        if not path.endswith('.ini'):
+            path += '.ini'
         seq = self.state.sequence
         prefs = seq.preferences_from_members()
         prefs['external_vars'] = repr(dict.fromkeys(seq.external_vars.keys(),
@@ -289,11 +291,11 @@ class SequenceEditionSpace(Workspace):
     def _load_sequence_from_file(self, path):
         core = self.workbench.get_plugin('enaml.workbench.core')
         cmd = 'hqc_meas.pulses.build_sequence'
-        return core.invoke_command(cmd, {'kind': 'file', 'path': path})
+        return core.invoke_command(cmd, {'mode': 'file', 'path': path})
 
     def _load_sequence_from_template(self, prefs):
         prefs['external_vars'] = prefs.pop('template_vars')
         prefs['item_class'] = 'RootSequence'
         core = self.workbench.get_plugin('enaml.workbench.core')
         cmd = 'hqc_meas.pulses.build_sequence'
-        return core.invoke_command(cmd, {'kind': 'file', 'prefs': prefs})
+        return core.invoke_command(cmd, {'mode': 'file', 'prefs': prefs})

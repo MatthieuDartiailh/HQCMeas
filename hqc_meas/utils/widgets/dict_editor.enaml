@@ -40,10 +40,13 @@ class _DictEditorModel(Atom):
 
         """
         setattr(self.model, self.iterable_name,
-                {p.label: p.value for p in self.pairs})
+                {p.key: p.value for p in self.pairs})
+
+    def _observe_model(self, change):
+        self.pairs = self._default_pairs()
 
     def _default_pairs(self):
-        return [Pair(label=p[0], value=p[1], refresh_method=self.refresh,
+        return [Pair(key=p[0], value=p[1], refresh_method=self.refresh,
                      model=self.model)
                 for p in getattr(self.model, self.iterable_name).items()]
 
@@ -55,6 +58,7 @@ template DictEditor(Content):
     Container: main:
         padding = 2
         attr model
+        model >> _model.model
         attr iterable_name
         alias operations : ed.operations
         alias title: ed.title
@@ -66,4 +70,4 @@ template DictEditor(Content):
             ed.model = _model
             ed.iterable_name = 'pairs'
             ed.factory = Pair
-            ed.kwargs = {'refresh_method': _model.refresh, 'task': main.model}
+            ed.kwargs = {'refresh_method': _model.refresh, 'model': main.model}

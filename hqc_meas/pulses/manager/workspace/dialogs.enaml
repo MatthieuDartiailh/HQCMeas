@@ -39,7 +39,7 @@ enamldef _ValEditor(Container):
         text = model.key
     Field: val:
         text << repr(model.value)
-        text :: pair.value = literal_eval(text)
+        text :: model.value = literal_eval(text)
         validator = _VarValidator()
 
 
@@ -54,7 +54,7 @@ enamldef CompilationWidget(Container): main:
     attr workspace
     attr elapsed_time
     attr use_context : bool = False
-    attr errors
+    attr errors = {}
     event outcome
 
     constraints = [vbox(cont, nb, hbox(dur_lab, dur_val, comp))]
@@ -125,6 +125,7 @@ enamldef TypeSelectionDialog(Dialog): dial:
     """
     attr type
     title = 'How to save sequence ?'
+    initial_size = (700, 250)
 
     Container:
         padding = 2

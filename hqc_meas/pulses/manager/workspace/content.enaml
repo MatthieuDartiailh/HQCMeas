@@ -4,6 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 #==============================================================================
+from ast import literal_eval
 from enaml.widgets.api import (Container, DockArea, DockItem, Field,
                                PushButton, Menu, Action)
 from enaml.layout.api import TabLayout, VSplitLayout, hbox, vbox, spacer
@@ -27,6 +28,8 @@ enamldef SequenceEditorDockItem(DockItem):
 
         RootSequenceView: roo:
             item << workspace.state.sequence
+            item ::
+                self.cache = {'edition_mode': True}
             core = workspace.workbench.get_plugin('enaml.workbench.core')
             cache = {'edition_mode': True}
 
@@ -41,10 +44,11 @@ enamldef _KeyValEditor(Container):
     constraints = [hbox(lab, val)]
 
     Field: lab:
-        text = pair.key
+        hug_width = 'strong'
+        text = model.key
     Field: val:
-        text << repr(pair.value)
-        text :: pair.value = literal_eval(text)
+        text << repr(model.value) if model.value else ''
+        text :: model.value = literal_eval(text)
         validator = _VarValidator()
 
 enamldef VarEditorDockItem(DockItem):
@@ -58,7 +62,8 @@ enamldef VarEditorDockItem(DockItem):
 
     Container:
         DictEditor(_KeyValEditor): ed:
-            ed.model = workspace.state.sequence
+            ed.title = 'Name : value'
+            ed.model << workspace.state.sequence
             ed.iterable_name = 'external_vars'
 
 

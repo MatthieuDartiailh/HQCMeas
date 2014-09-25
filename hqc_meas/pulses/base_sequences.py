@@ -709,7 +709,8 @@ class RootSequence(Sequence):
         """
         pref = super(RootSequence, self).preferences_from_members()
 
-        pref['context'] = self.context.preferences_from_members()
+        if self.context:
+            pref['context'] = self.context.preferences_from_members()
 
         return pref
 
@@ -746,14 +747,17 @@ class RootSequence(Sequence):
             Newly created and initiliazed sequence.
 
         """
-        context_config = config['context']
-        context_class_name = context_config.pop('context_class')
-        context_class = dependencies['pulses']['contexts'][context_class_name]
-        context = context_class()
-        context.update_members_from_preferences(**context_config)
+        if 'context' in config:
+            context_config = config['context']
+            c_class_name = context_config.pop('context_class')
+            context_class = dependencies['pulses']['contexts'][c_class_name]
+            context = context_class()
+            context.update_members_from_preferences(**context_config)
+
         seq = super(RootSequence, cls).build_from_config(config,
                                                          dependencies)
-        seq.context = context
+        if 'context' in config:
+            seq.context = context
         return seq
 
     # --- Private API ---------------------------------------------------------

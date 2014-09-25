@@ -24,14 +24,16 @@ class _ErrorsDisplayModel(Atom):
     def __init__(self, errors):
         super(_ErrorsDisplayModel, self).__init__()
         self.errors = errors
-        self.selected_error= errors.keys()[0]
+        if errors:
+            self.selected_error= errors.keys()[0]
 
     def _observe_selected_error(self, change):
         """ Set the `full_path` and `message` attrs when a check is selected.
 
         """
-        new = change['value']
-        self.message = self.errors[new]
+        if change['value']:
+            new = change['value']
+            self.message = self.errors[new]
 
 enamldef ErrorsDisplayContainer(Container):
     """

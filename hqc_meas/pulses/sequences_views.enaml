@@ -302,9 +302,11 @@ enamldef VarEditor(Container):
 
     """
     attr model
-    Field:
+    constraints = [hbox(lab, val)]
+    Field: lab:
+        hug_width = 'strong'
         text := model.key
-    QtLineCompleter:
+    QtLineCompleter: val:
         text := model.value
         entries_updater << model.model.parent.get_bindable_vars
         tool_tip = EVALUATER_TOOLTIP
@@ -424,7 +426,7 @@ enamldef RootSequenceView(GroupBox): view:
                 Include:
                     objects << [instantiate_context_view(core, item.context,
                                                          cache)]\
-                        if item.context else []
+                        if getattr(item, 'context') else []
 
         Include: include:
             pass
