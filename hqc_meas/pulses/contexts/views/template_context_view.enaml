@@ -100,7 +100,7 @@ enamldef TemplateContextView(Container): view:
                             as a comma separated list. ex : Ch1, Ch2'''))
 
     Conditional:
-        condition = edition_mode
+        condition =  not edition_mode
         MappingEditor:
             context = view.context
             root = view.context.sequence.root

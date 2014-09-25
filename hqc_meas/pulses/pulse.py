@@ -20,7 +20,7 @@ class Pulse(Item):
     # --- Public API ----------------------------------------------------------
 
     #: The kind of pulse can be either logical or ananlogical.
-    kind = Enum('logical', 'analogical').tag(pref=True)
+    kind = Enum('Logical', 'Analogical').tag(pref=True)
 
     #: Channel of the executioner which should perfom the pulse.
     channel = Str().tag(pref=True)

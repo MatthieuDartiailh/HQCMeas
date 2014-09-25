@@ -95,6 +95,12 @@ class ListContainer(Container):
         return  constraints
 
 template ListEditor(Content):
+    """ Edit an iterable stored in an Atom object using the provided content.
+
+    The content should be an enaml widget with a model attribute which will
+    receive one item of the iterable being edited.
+
+    """
     GroupBox: cont:
         attr model
         attr iterable_name

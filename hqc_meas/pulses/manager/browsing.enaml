@@ -48,7 +48,7 @@ class _SelectorModel(Atom):
         else:
             self.display_sequences = self.manager.filter_sequences('All')
 
-    def _default_display_tasks(self):
+    def _default_display_sequences(self):
         """ Default value for the display task member.
 
         """

@@ -19,15 +19,15 @@ enamldef SquareShapeView(FlowItem):
 
     """
     attr item
-    attr modulation
+    attr shape
 
     GroupBox:
         title = 'Square'
 
-        Label: kind_lab:
-            text = 'Kind'
-        QtLineCompleter: freq_val:
-            text := modulation.frequency
+        Label: amp_lab:
+            text = 'Amplitude'
+        QtLineCompleter: amp_val:
+            text := shape.amplitude
             tool_tip = 'Relative amplitude of the pulse (should be between -1.0 and 1.0)'
 
 

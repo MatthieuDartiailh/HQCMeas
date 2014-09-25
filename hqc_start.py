@@ -23,7 +23,8 @@ with enaml.imports():
 if __name__ == '__main__':
 
     WORKSPACES = {'measure': 'hqc_meas.measure.workspace',
-                  'debug': 'hqc_meas.debug.workspace'}
+                  'debug': 'hqc_meas.debug.workspace',
+                  'pulses': 'hqc_meas.pulses.workspace'}
 
     import argparse
     parser = argparse.ArgumentParser(description='Start the Hqc app')
@@ -59,9 +60,9 @@ if __name__ == '__main__':
     ui.window.maximize()
     ui.start_application()
 
+    workbench.unregister(u'hqc_meas.pulses')
     workbench.unregister(u'hqc_meas.debug')
     workbench.unregister(u'hqc_meas.measure')
-    workbench.unregister(u'hqc_meas.pulses')
     workbench.unregister(u'hqc_meas.task_manager')
     workbench.unregister(u'hqc_meas.instr_manager')
     workbench.unregister(u'hqc_meas.logging')

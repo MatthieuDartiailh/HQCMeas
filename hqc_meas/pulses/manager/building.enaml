@@ -8,7 +8,7 @@
 """
 from inspect import getdoc
 from atom.api import (Atom, Instance, Str, observe, ForwardTyped, Bool,
-                      ForwardInstance)
+                      Value)
 from enaml.core.api import Include
 from enaml.core.object import Object
 from enaml.layout.api import hbox, spacer, vbox
@@ -21,13 +21,13 @@ from .browsing import SequenceSelector
 
 # Circular import protections
 def pulse_manager():
-    from .pulses_plugin import PulsesManagerPlugin
+    from .plugin import PulsesManagerPlugin
     return PulsesManagerPlugin
 
 
 def abstract_config():
-    from .config.base_task_config import AbstractConfigTask
-    return AbstractConfigTask
+    from .config.base_config import AbstractConfig
+    return AbstractConfig
 
 
 class _PulseBuilderModel(Atom):
@@ -37,11 +37,14 @@ class _PulseBuilderModel(Atom):
     # Pulses manager.
     manager = ForwardTyped(pulse_manager)
 
+    # Reference to the root sequence to which a sequence should be added.
+    root = Value()
+
     # Name of the currently selected sequence.
     sequence_name = Str()
 
     # Currently in use sequence config.
-    sequence_config = ForwardInstance(abstract_config)
+    sequence_config = ForwardTyped(abstract_config)
     config_view = Instance(Object)
 
     # Bool indicating whether or not the sequence can be built.
@@ -69,7 +72,8 @@ enamldef BuilderView(Dialog): dial:
 
     """
     attr manager
-    attr model = _PulseBuilderModel(manager=manager)
+    attr root
+    attr model = _PulseBuilderModel(manager=manager, root=root)
     title = 'Select the sequence you want to add'
 
     Container:
@@ -104,19 +108,20 @@ enamldef ContextBuilderView(Dialog): dial:
     Container:
         constraints << [hbox(selector, doc, vbox(ok, cancel, spacer))]
         QtListStrWidget: selector:
-            items << manager.contexts
+            items << sorted(manager.contexts)
+            selected_item = ''
             items ::
-                selected = items[0]
+                selected_item = items[0]
             selected_item ::
-                c_s = manager.request_contexts([selected], views=False)
-                dial.context == c_s[selected]
+                c_s, _ = manager.contexts_request([selected_item], views=False)
+                dial.context = c_s[selected_item]
 
         MultilineField: doc:
-            text << getdoc(context)
+            text << getdoc(context) if context else ''
 
         PushButton: ok:
             text = 'Ok'
-            enabled << model.ok_ready
+            enabled << bool(context)
             clicked ::
                 dial.accept()
 

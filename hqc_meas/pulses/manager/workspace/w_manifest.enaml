@@ -66,7 +66,7 @@ SAVE_DESCRIPTION =\
 been saved to a file then simply override it.'''
 
 
-def save_measure_as(event):
+def save_sequence_as(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
     plugin.workspace.save_measure('file')
@@ -77,7 +77,7 @@ SAVE_AS_DESCRIPTION =\
 to choose a file to which the sequence should be saved.'''
 
 
-def save_measure_as_template(event):
+def save_sequence_as_template(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
     plugin.workspace.save_measure('template')
@@ -89,7 +89,7 @@ SAVE_AS_TEMPLATE_DESCRIPTION =\
 # Sequence loading
 # ================
 
-def load_measure(event):
+def load_sequence(event):
     workbench = event.workbench
     plugin = workbench.get_plugin('hqc_meas.pulses')
     plugin.workspace.load_measure('file')
@@ -115,7 +115,7 @@ enamldef SequenceSpaceMenu(PluginManifest):
     """ Contribution to the main window of the SequenceSpace.
 
     """
-    id = u'hqc_meas.measure.workspace.menus'
+    id = u'hqc_meas.pulses.workspace.menus'
 
     Extension:
         id = 'commands'
@@ -123,23 +123,23 @@ enamldef SequenceSpaceMenu(PluginManifest):
         Command:
             id = 'hqc_meas.pulses.workspace.new'
             description = NEW_DESCRIPTION
-            handler = new_measure
+            handler = new_sequence
         Command:
             id = 'hqc_meas.pulses.workspace.save'
             description = SAVE_DESCRIPTION
-            handler = save_measure
+            handler = save_sequence
         Command:
             id = 'hqc_meas.pulses.workspace.save_as'
             description = SAVE_AS_DESCRIPTION
-            handler = save_measure_as
+            handler = save_sequence_as
         Command:
             id = 'hqc_meas.pulses.workspace.save_as_template'
             description = SAVE_AS_TEMPLATE_DESCRIPTION
-            handler = save_measure_as_template
+            handler = save_sequence_as_template
         Command:
             id = 'hqc_meas.pulses.workspace.load'
             description = LOAD_DESCRIPTION
-            handler = load_measure
+            handler = load_sequence
         Command:
             id = 'hqc_meas.pulses.workspace.load_template'
             description = LOAD_TEMPLATE_DESCRIPTION

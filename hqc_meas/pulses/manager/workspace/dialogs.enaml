@@ -14,7 +14,8 @@ from enaml.layout.api import hbox, vbox, spacer
 from enaml.validator import Validator
 from enaml.widgets.api import (Dialog, Container, Stack, StackItem,
                                MultilineField, PushButton, ObjectCombo,
-                               Field, GroupBox, CheckBox, Label)
+                               Field, GroupBox, CheckBox, Label, Notebook,
+                               Page)
 
 from hqc_meas.utils.widgets.dict_editor import DictEditor
 from hqc_meas.utils.widgets.errors_display import ErrorsDisplayContainer
@@ -31,13 +32,13 @@ class _VarValidator(Validator):
             return False
 
 enamldef _ValEditor(Container):
-    attr pair
+    attr model
     constraints = [hbox(lab, val)]
 
     Label: lab:
-        text = pair.key
+        text = model.key
     Field: val:
-        text << repr(pair.value)
+        text << repr(model.value)
         text :: pair.value = literal_eval(text)
         validator = _VarValidator()
 
@@ -63,7 +64,7 @@ enamldef CompilationWidget(Container): main:
         checked := use_context
 
     Notebook: nb:
-        tab_closable = False
+        tabs_closable = False
         Page:
             title = 'Variables'
             DictEditor(_ValEditor): ed:

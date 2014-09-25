@@ -6,7 +6,7 @@
 # =============================================================================
 """
 """
-from enaml.layout.api import hbox, vbox
+from enaml.layout.api import hbox, vbox, spacer, align
 from enaml.widgets.api import (Container, Label, GroupBox, CheckBox, Splitter,
                                SplitItem, FlowItem, FlowArea, ObjectCombo)
 from enaml.core.api import Conditional, Include
@@ -16,15 +16,24 @@ from .entry_eval import EVALUATER_TOOLTIP
 
 
 def default_add_displays(core, item):
-    if item.kind == 'analogical':
-        mod_view = ModulationView(item, item.modulation)
+    if item.kind == 'Analogical':
+        add_displays = []
+        if item.modulation.activated:
+            add_displays.append(ModulationView(item=item,
+                                               modulation=item.modulation))
 
-        cmd = 'hqc_meas.pulses_manager.shapes_request'
-        shapes, _ = core.invoke_command(cmd,
-                                        {'shapes': item.shape.shape_class,
-                                         'use_class_name': True})
-        shape = shapes[item.shape.shape_class]
-        add_displays.append(shape[1](item==item, shape=item.shape))
+        if item.shape:
+            cmd = 'hqc_meas.pulses.shapes_request'
+            shapes, _ = core.invoke_command(cmd,
+                                            {'shapes': item.shape.shape_class,
+                                             'use_class_name': True})
+            shape = shapes[item.shape.shape_class]
+            add_displays.append(shape[1](item==item, shape=item.shape))
+
+        return add_displays
+
+    else:
+        return []
 
 
 enamldef ModulationView(FlowItem):
@@ -37,7 +46,9 @@ enamldef ModulationView(FlowItem):
     GroupBox:
         title = 'Modulation'
         padding = 0
-        constraints << [hbox(*self.widgets)]
+        constraints << [hbox(*self.widgets()),
+                        align('v_center', kind_lab, kind_val),
+                        align('v_center', kind_lab, spl)]
 
         Label: kind_lab:
             text = 'Kind'
@@ -45,10 +56,11 @@ enamldef ModulationView(FlowItem):
             items = list(modulation.get_member('kind').items)
             selected := modulation.kind
 
-        Splitter:
+        Splitter: spl:
             SplitItem:
                 Container:
-                    constraints << [hbox(freq_lab, freq_val, freq_un)]
+                    constraints << [hbox(freq_lab, freq_val, freq_un),
+                                    align('v_center', freq_lab, freq_val)]
                     Label: freq_lab:
                         text = 'Frequency'
                     QtLineCompleter: freq_val:
@@ -61,7 +73,8 @@ enamldef ModulationView(FlowItem):
                         selected := modulation.frequency_unit
             SplitItem:
                 Container:
-                    constraints << [hbox(phase_lab, phase_val, phase_un)]
+                    constraints << [hbox(phase_lab, phase_val, phase_un),
+                                    align('v_center', phase_lab, phase_val)]
                     Label: phase_lab:
                         text = 'Phase'
                     QtLineCompleter: phase_val:
@@ -83,15 +96,15 @@ enamldef PulseView(GroupBox): view:
     attr core
     attr add_displays = default_add_displays(core, item)
     attr pulse_state = core.invoke_command('hqc_meas.state.get',
-                                           {'state':
-                                            'hqc_meas.states.pulses_manager'})
+                                           {'state_id':
+                                            'hqc_meas.states.pulses'})
 
-    title << '{}'.format(item)
+    title << 'Pulse {}'.format(item.index)
     hug_height = 'strong'
 
     constraints << [vbox(
                         hbox(kind_lab, kind_val, ch_lab, ch_val, def_lab,
-                             def_val, *analog.items),
+                             def_val, *analog.items+[spacer]),
                         defs,
                         *add.items)]
 
@@ -104,8 +117,9 @@ enamldef PulseView(GroupBox): view:
     Label: ch_lab:
         text = 'Channel'
     ObjectCombo: ch_val:
-        items << context.logical_channels if item.kind == 'logical' else\
-                 context.analogical_channels
+        items << getattr(context, 'logical_channels', [])\
+            if item.kind == 'logical'\
+            else getattr(context, 'analogical_channels', [])
         selected := item.channel
 
     Label: def_lab:
@@ -137,36 +151,47 @@ enamldef PulseView(GroupBox): view:
                     tool_tip = EVALUATER_TOOLTIP
 
     Conditional: analog:
-        condition << item.kind == 'analogical'
+        condition << item.kind == 'Analogical'
         Label:
             text = 'Modulation'
         CheckBox:
             text = 'Active'
-            checked := item.modulation.active
+            checked := item.modulation.activated
             checked ::
                 if change['value']:
-                    add_displays.insert(0, ModulationView(item,
-                                                          item.modulation))
+                    a_d = view.add_displays[:]
+                    mod = ModulationView(item=item, modulation=item.modulation)
+                    a_d.insert(0, mod)
+                    view.add_displays = a_d
                 else:
-                    add_displays.pop(0)
+                    a_d = view.add_displays[:]
+                    a_d.pop(0)
+                    view.add_displays = a_d
 
         Label:
             text = 'Shape'
         ObjectCombo:
             items << pulse_state.shapes
-            selected << item.shape.shape_class[:-5]  # Assume ends in Shape
+            # Assume ends in Shape
+            selected << item.shape.shape_class[:-5] if item.shape else ''
             selected ::
-                if change.get['oldvalue']:
-                    add_displays.pop()
-                cmd = 'hqc_meas.pulses_manager.shapes_request'
-                shapes, _ = core.invoke_command(cmd,
-                                                {'shapes': [change['value']]})
-                shape = shapes[change['value']]
-                item.shape = shape[0]()
-                add_displays.append(shape[1](item==item, shape=shape))
+                if change.get('oldvalue'):
+                    a_d = view.add_displays[:]
+                    a_d.pop()
+                    view.add_displays = a_d
+                if change['value']:
+                    cmd = 'hqc_meas.pulses.shapes_request'
+                    shapes, _ = core.invoke_command(cmd,
+                                                    {'shapes':
+                                                        [change['value']]})
+                    shape = shapes[change['value']]
+                    item.shape = shape[0]()
+                    disp = view.add_displays[:]
+                    disp.append(shape[1](item=item, shape=item.shape))
+                    view.add_displays = disp
 
     Conditional: add:
-        condition << item.kind == 'analogical'
+        condition << item.kind == 'Analogical' and bool(add_displays)
         FlowArea:
             margins = 2
             vertical_spacing = 5

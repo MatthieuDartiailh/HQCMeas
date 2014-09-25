@@ -13,6 +13,8 @@ from .base_context import BaseContext, TIME_CONVERSION
 
 
 class AWGContext(BaseContext):
+    """
+    """
 
     channels = ('Ch1_A', 'Ch1_M1', 'Ch1_M2',
                 'Ch2_A', 'Ch2_M1', 'Ch2_M2',

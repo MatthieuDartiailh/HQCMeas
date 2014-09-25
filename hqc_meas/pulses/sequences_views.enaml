@@ -11,7 +11,7 @@ from enaml.layout.api import hbox, align, spacer, vbox
 from enaml.widgets.api import (PushButton, Container, Label, Field,
                                GroupBox, ScrollArea, Menu, Action, Stack,
                                StackItem, Form, Notebook, Page, CheckBox,
-                               ObjectCombo, Splitter, SplitItem)
+                               ObjectCombo, Splitter, SplitItem, HGroup)
 from enaml.core.api import Looper, Conditional, Include
 from enaml.workbench.core.core_plugin import CorePlugin
 
@@ -45,7 +45,7 @@ enamldef PulsesPopupListMenu(Menu):
                     if obj is not None:
                         model.insert(index, obj)
         Menu:
-            title = 'Add before'
+            title = 'Add after'
             Action:
                 text = 'Pulse'
                 triggered ::
@@ -112,7 +112,7 @@ class ViewsManager(Atom):
     views = Dict()
 
     def __init__(self, children, **kwargs):
-        super(TaskViewManager, self).__init__(**kwargs)
+        super(ViewsManager, self).__init__(**kwargs)
         t_classes = set([type(item).__name__ for item in children])
         self.get_views(t_classes)
 
@@ -150,10 +150,10 @@ class ViewsManager(Atom):
         with the given names.
 
         """
-        cmd = 'hqc_meas.pulses_manager.sequences_request'
+        cmd = 'hqc_meas.pulses.sequences_request'
         items, _ = self.core.invoke_command(cmd,
-                                            {'contexts': class_names,
-                                             'use_class_name': True})
+                                            {'sequences': class_names,
+                                             'use_class_names': True})
         self.views.update({k: v[1] for k, v in items.iteritems()})
 
 
@@ -165,7 +165,7 @@ enamldef _SequenceListView(Container): list_view:
     attr core
     attr cache
     attr operations = ['add', 'remove', 'move']
-    attr model = TaskViewManager(sequence.items, core=core)
+    attr model = ViewsManager(sequence.items, core=core)
 
     hug_height = 'strong'
     padding = 0
@@ -189,7 +189,7 @@ enamldef _SequenceListView(Container): list_view:
                       index = edited_list.index(loop_item),
                       factory = core.invoke_command,
                       operations = operations,
-                      args = ('hqc_meas.pulses_manager.build_sequence',),
+                      args = ('hqc_meas.pulses.build_sequence',),
                       kwargs = {'parameters': {'parent_ui': button,
                                                'root': sequence.root,
                                                'mode': 'ui'},
@@ -213,13 +213,20 @@ enamldef SequenceEditor(Container): view:
     padding = 0
     Conditional:
         condition << not bool(item.items)
-        PushButton:
-            text = 'Add first item'
-            clicked ::
-                obj = core.invoke_command('hqc_meas.pulses_manager.build_item',
-                                          {'parent_ui': view}, view)
-                if obj:
-                    sequence.items.append(obj)
+        Container:
+            constraints = [hbox(pul, seq), pul.width == seq.width]
+            PushButton: pul:
+                text = 'Add pulse'
+                clicked ::  sequence.items.append(Pulse())
+            PushButton: seq:
+                text = 'Add sequence'
+                clicked ::
+                    obj = core.invoke_command('hqc_meas.pulses.build_sequence',
+                                              {'parent_ui': view,
+                                               'mode': 'ui',
+                                               'root': sequence.root}, view)
+                    if obj:
+                        sequence.items.append(obj)
     Conditional:
         condition << bool(sequence.items)
         Container: box:
@@ -267,16 +274,23 @@ enamldef NonFoldingSequenceEditor(Container): view:
     attr cache
 
     Conditional:
-        condition << not bool(item.items)
-        PushButton:
-            text = 'Add first item'
-            clicked ::
-                obj = core.invoke_command('hqc_meas.pulses_manager.build_item',
-                                          {'parent_ui': view}, view)
-                if obj:
-                    sequence.items.append(obj)
+        condition << not bool(sequence.items)
+        Container:
+            constraints = [hbox(pul, seq), pul.width == seq.width]
+            PushButton: pul:
+                text = 'Add pulse'
+                clicked ::  sequence.items.append(Pulse())
+            PushButton: seq:
+                text = 'Add sequence'
+                clicked ::
+                    obj = core.invoke_command('hqc_meas.pulses.build_sequence',
+                                              {'parent_ui': view,
+                                               'mode': 'ui',
+                                               'root': sequence.root}, view)
+                    if obj:
+                        sequence.items.append(obj)
     Conditional:
-        condition << bool(task.children_task)
+        condition << bool(sequence.items)
         Container:
             _SequenceListView:
                 sequence = view.sequence
@@ -304,10 +318,11 @@ enamldef SequenceView(GroupBox): view:
     alias core : editor.core
     alias cache : editor.cache
 
-    title << '{} {}'.format(sequence.index, sequence.name)
+    title << '{} {}'.format(item.index, item.name)
     padding = 2
-    constraints << [vbox(hbox(t_bool, *defs.items), nb)] if t_def.condition\
-        else [vbox(t_bool, nb)]
+    constraints << [vbox(hbox(t_bool, *t_def.items), nb),
+                    align('v_center', t_def.items[0], t_def.items[1])]\
+                    if t_def.condition else [vbox(t_bool, nb)]
 
     CheckBox: t_bool:
         text = 'Time'
@@ -316,8 +331,7 @@ enamldef SequenceView(GroupBox): view:
 
     Conditional: t_def:
         condition << item.time_constrained
-        Container:
-            constraints = [hbox(vbox(def_lab, def_val), defs)]
+
         Label: def_lab:
             text = 'Mode'
         ObjectCombo: def_val:
@@ -325,22 +339,27 @@ enamldef SequenceView(GroupBox): view:
             selected := item.def_mode
 
         Splitter: defs:
+            hug_width = 'ignore'
             SplitItem:
                 Container:
+                    constraints = [hbox(lab_1, val_1),
+                                   align('v_center', lab_1, val_1)]
                     padding = 0
-                    Label:
+                    Label: lab_1:
                         text << item.def_mode.split('/')[0]
-                    QtLineCompleter:
+                    QtLineCompleter: val_1:
                         hug_width = 'ignore'
                         text := item.def_1
                         entries_updater << item.parent.get_bindable_vars
                         tool_tip = EVALUATER_TOOLTIP
             SplitItem:
                 Container:
+                    constraints = [hbox(lab_2, val_2),
+                                   align('v_center', lab_2, val_2)]
                     padding = 0
-                    Label:
+                    Label: lab_2:
                         text << item.def_mode.split('/')[1]
-                    QtLineCompleter:
+                    QtLineCompleter: val_2:
                         hug_width = 'ignore'
                         text := item.def_2
                         entries_updater << item.parent.get_bindable_vars
@@ -361,17 +380,20 @@ enamldef SequenceView(GroupBox): view:
                 ed.iterable_name = 'local_vars'
 
 
-def instantiate_context_view(core, context):
+def instantiate_context_view(core, context, cache):
     """ Instantiate the appropriate view for the given context.
 
     """
-    cmd = 'hqc_meas.pulses_manager.contexts_request'
-    contexts, _ = self.core.invoke_command(cmd,
-                                           {'contexts': context.context_class,
-                                            'use_class_name': True})
-    view = contexts[context.context_class][1]
-    kwargs = {'context': context}
-    return view(**kwargs)
+    if context:
+        cmd = 'hqc_meas.pulses.contexts_request'
+        contexts, _ = core.invoke_command(cmd,
+                                          {'contexts': context.context_class,
+                                           'use_class_names': True})
+        view = contexts[context.context_class][1]
+        kwargs = {'context': context}
+        if hasattr(view, 'edition_mode'):
+            kwargs['edition_mode'] = cache.get('edition_mode', False)
+        return view(**kwargs)
 
 
 enamldef RootSequenceView(GroupBox): view:
@@ -396,11 +418,13 @@ enamldef RootSequenceView(GroupBox): view:
                 PushButton:
                     text = 'Change context' if item.context else 'Choose context'
                     clicked ::
-                        cmd = 'hqc_meas.pulses_manager.build_context'
-                        self.core.invoke_command(cmd, {'root': item,
+                        cmd = 'hqc_meas.pulses.build_context'
+                        view.core.invoke_command(cmd, {'root': item,
                                                        'parent_ui': self})
                 Include:
-                    objects << [instantiate_context_view(core, item.context)]
+                    objects << [instantiate_context_view(core, item.context,
+                                                         cache)]\
+                        if item.context else []
 
         Include: include:
             pass

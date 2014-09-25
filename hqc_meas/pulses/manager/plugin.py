@@ -35,13 +35,13 @@ MODULE_ANCHOR = 'hqc_meas.pulses'
 
 
 def workspace_state():
-    from .workspace import SequenceEditionSpaceState
+    from .workspace.workspace import SequenceEditionSpaceState
     return SequenceEditionSpaceState
 
 
 def workspace():
-    from .workspace import SequencesEditionSpace
-    return SequencesEditionSpace
+    from .workspace.workspace import SequenceEditionSpace
+    return SequenceEditionSpace
 
 
 class PulsesManagerPlugin(HasPrefPlugin):
@@ -71,6 +71,9 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
     #: List of all known shape.
     shapes = List(Str())
+
+    #: List of all known filters:
+    filters = List(Str())
 
     #: Reference to the workspace or None if the workspace is not active.
     workspace = ForwardTyped(workspace)
@@ -467,6 +470,7 @@ class PulsesManagerPlugin(HasPrefPlugin):
 
         """
         self._filters = SEQUENCES_FILTERS
+        self.filters = SEQUENCES_FILTERS.keys()
 
     def _refresh_config(self):
         """ Place holder for a future config discovery function

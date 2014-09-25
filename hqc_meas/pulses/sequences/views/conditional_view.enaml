@@ -17,6 +17,7 @@ from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.widgets.dict_editor import DictEditor
 
 from ...sequences_views import SequenceEditor, VarEditor
+from ...entry_eval import EVALUATER_TOOLTIP
 
 enamldef ConditionalSequenceView(GroupBox): view:
     """ View for Sequence.
@@ -29,7 +30,7 @@ enamldef ConditionalSequenceView(GroupBox): view:
     title << '{} {}'.format(sequence.index, sequence.name)
     padding = 2
     constraints << [vbox(hbox(t_bool, cond_lab, cond_val),
-                         *list(defs.items + [nb]))]\
+                         hbox(*t_def.items), nb)]\
                    if t_def.condition else\
                    [vbox(hbox(t_bool, cond_lab, cond_val), nb)]
 
@@ -46,6 +47,7 @@ enamldef ConditionalSequenceView(GroupBox): view:
     Conditional: t_def:
         condition << item.time_constrained
         Container:
+            padding = 0
             constraints = [hbox(vbox(def_lab, def_val), defs)]
             Label: def_lab:
                 text = 'Mode'

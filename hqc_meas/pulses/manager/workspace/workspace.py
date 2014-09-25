@@ -20,7 +20,8 @@ from ..sequences_io import save_sequence_prefs
 
 with enaml.imports():
     from enaml.stdlib.message_box import question
-    from .content import SequenceSpaceContent, SequenceSpaceMenu
+    from .content import SequenceSpaceContent
+    from .w_manifest import SequenceSpaceMenu
     from .dialogs import (TemplateLoadDialog, TemplateSaveDialog,
                           TypeSelectionDialog)
 
@@ -49,7 +50,7 @@ class SequenceEditionSpaceState(Atom):
 
     # --- Private API ---------------------------------------------------------
 
-    _sequence = Typed(RootSequence)
+    _sequence = Typed(RootSequence, ())
 
     def _get_sequence(self):
         return self._sequence

@@ -142,7 +142,7 @@ def build_context(event):
     manager = event.workbench.get_plugin('hqc_meas.pulses')
     parent_ui = event.parameters.get('parent_ui')
     root = event.parameters['root']
-    dial = ContextBuilderView(parent_ui, manager=manager, root=root)
+    dial = ContextBuilderView(parent_ui, manager=manager)
     dial.exec_()
     if dial.result:
         root.context = dial.context()
@@ -246,7 +246,7 @@ enamldef PulsesManagerManifest(PluginManifest):
         id = 'state'
         point = 'hqc_meas.state.states'
         State:
-            id = 'hqc_meas.states.pulses_manager'
+            id = 'hqc_meas.states.pulses'
             description = MANAGER_STATE_DESCRIPTION
             sync_members = ['sequences', 'contexts', 'shapes']
 
