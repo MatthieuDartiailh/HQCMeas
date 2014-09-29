@@ -23,7 +23,7 @@ def test_flat_sequence_persistence1():
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
     pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10',
-                   kind='analogical', shape=SquareShape())
+                   kind='Analogical', shape=SquareShape())
     root.items.extend([pulse1, pulse2, pulse3])
 
     pref = root.preferences_from_members()
@@ -48,9 +48,9 @@ def test_nested_sequence_persistence1():
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
     pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10',
-                   kind='analogical', shape=SquareShape())
+                   kind='Analogical', shape=SquareShape())
     seq = Sequence(items=[Pulse(def_1='{2_stop} + 0.5', def_2='10',
-                                kind='analogical', shape=SquareShape())])
+                                kind='Analogical', shape=SquareShape())])
     root.items.extend([pulse1, pulse2, pulse3, seq])
 
     pref = root.preferences_from_members()
@@ -76,9 +76,9 @@ def test_walk_sequence():
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
     pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10',
-                   kind='analogical', shape=SquareShape())
+                   kind='Analogical', shape=SquareShape())
     seq = Sequence(items=[Pulse(def_1='{2_stop} + 0.5', def_2='10',
-                                kind='analogical', shape=SquareShape())])
+                                kind='Analogical', shape=SquareShape())])
     root.items.extend([pulse1, pulse2, pulse3, seq])
 
     walk = root.walk(['item_class', 'shape_class'], {})
@@ -101,9 +101,9 @@ def test_build_from_config():
     pulse1 = Pulse(def_1='1.0', def_2='{a}')
     pulse2 = Pulse(def_1='{a} + 1.0', def_2='3.0')
     pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10',
-                   kind='analogical', shape=SquareShape())
+                   kind='Analogical', shape=SquareShape())
     seq = Sequence(items=[Pulse(def_1='{2_stop} + 0.5', def_2='10',
-                                kind='analogical', shape=SquareShape())])
+                                kind='Analogical', shape=SquareShape())])
     root.items.extend([pulse1, pulse2, pulse3, seq])
 
     pref = root.preferences_from_members()

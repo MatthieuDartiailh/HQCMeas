@@ -131,7 +131,7 @@ class Modulation(HasPrefAtom):
         unit_corr = 2*Pi*FREQ_TIME_UNIT_MAP[unit][self.frequency_unit]
         phase = self._phase
         if self.phase_unit == 'deg':
-            phase *= 2*Pi
+            phase *= Pi/180
 
         if self.kind == 'sin':
             return np.sin(unit_corr*self._frequency*time + phase)

@@ -25,10 +25,10 @@ def create_template_sequence():
     pulse1 = Pulse(channel='A', def_1='1.0', def_2='{a}')
     pulse2 = Pulse(channel='B', def_1='{a} + 1.0', def_2='3.0')
     pulse3 = Pulse(channel='Ch1', def_1='{2_stop} + 0.5', def_2='{b}',
-                   kind='analogical', shape=SquareShape())
+                   kind='Analogical', shape=SquareShape())
     seq = Sequence(items=[Pulse(channel='Ch2',
                                 def_1='{2_stop} + 0.5', def_2='{sequence_end}',
-                                kind='analogical', shape=SquareShape())])
+                                kind='Analogical', shape=SquareShape())])
     root.items.extend([pulse1, pulse2, seq,  pulse3])
 
     pref = root.preferences_from_members()

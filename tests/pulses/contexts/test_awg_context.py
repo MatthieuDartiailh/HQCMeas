@@ -27,7 +27,7 @@ class TestAWGContext(object):
     def test_compiling_A_pulse(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse = Pulse(kind='analogical', shape=SquareShape(amplitude='1.0'),
+        pulse = Pulse(kind='Analogical', shape=SquareShape(amplitude='1.0'),
                       def_1='0.1', def_2='0.5', channel='Ch1_A')
         self.root.items = [pulse]
 
@@ -46,7 +46,7 @@ class TestAWGContext(object):
     def test_compiling_M1_pulse(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M1')
         self.root.items = [pulse]
 
@@ -63,7 +63,7 @@ class TestAWGContext(object):
     def test_compiling_M2_pulse(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M2')
         self.root.items = [pulse]
 
@@ -78,7 +78,7 @@ class TestAWGContext(object):
                               bytearray(sequence))
 
     def test_compiling_variable_length(self):
-        pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M1')
         self.root.items = [pulse]
 
@@ -95,7 +95,7 @@ class TestAWGContext(object):
     def test_too_short_fixed_length(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '0.3'
-        pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M1')
         self.root.items = [pulse]
 
@@ -105,7 +105,7 @@ class TestAWGContext(object):
     def test_channel_kind_mixing(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '0.3'
-        pulse = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_A')
         self.root.items = [pulse]
 
@@ -115,11 +115,11 @@ class TestAWGContext(object):
     def test_overlapping_pulses(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse1 = Pulse(kind='analogical', def_1='0.1', def_2='0.5',
+        pulse1 = Pulse(kind='Analogical', def_1='0.1', def_2='0.5',
                        channel='Ch1_A', shape=SquareShape(amplitude='1.0'),
                        modulation=Modulation(frequency='2.5', kind='sin',
                                              activated=True))
-        pulse2 = Pulse(kind='analogical', def_1='0.1', def_2='0.5',
+        pulse2 = Pulse(kind='Analogical', def_1='0.1', def_2='0.5',
                        channel='Ch1_A', shape=SquareShape(amplitude='1.0'),
                        modulation=Modulation(frequency='2.5', kind='sin',
                                              phase='Pi', activated=True))
@@ -132,9 +132,9 @@ class TestAWGContext(object):
     def test_nearly_overlapping_M2(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse1 = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse1 = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                        channel='Ch1_M2')
-        pulse2 = Pulse(kind='logical', def_1='0.5', def_2='0.6',
+        pulse2 = Pulse(kind='Logical', def_1='0.5', def_2='0.6',
                        channel='Ch1_M2')
         self.root.items = [pulse1, pulse2]
 
@@ -151,11 +151,11 @@ class TestAWGContext(object):
     def test_overflow_check_A(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse1 = Pulse(kind='analogical', def_1='0.1', def_2='0.5',
+        pulse1 = Pulse(kind='Analogical', def_1='0.1', def_2='0.5',
                        channel='Ch1_A', shape=SquareShape(amplitude='1.0'),
                        modulation=Modulation(frequency='2.5', kind='sin',
                                              activated=True))
-        pulse2 = Pulse(kind='analogical', def_1='0.1', def_2='0.5',
+        pulse2 = Pulse(kind='Analogical', def_1='0.1', def_2='0.5',
                        channel='Ch1_A', shape=SquareShape(amplitude='1.0'),
                        modulation=Modulation(frequency='2.5', kind='sin',
                                              activated=True))
@@ -168,9 +168,9 @@ class TestAWGContext(object):
     def test_overflow_check_M1(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse1 = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse1 = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                        channel='Ch1_M1')
-        pulse2 = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse2 = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                        channel='Ch1_M1')
         self.root.items = [pulse1, pulse2]
 
@@ -181,9 +181,9 @@ class TestAWGContext(object):
     def test_overflow_check_M2(self):
         self.root.time_constrained = True
         self.root.sequence_duration = '1'
-        pulse1 = Pulse(kind='logical', def_1='0.1', def_2='0.5',
+        pulse1 = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                        channel='Ch1_M2')
-        pulse2 = Pulse(kind='logical', def_1='0.4', def_2='0.6',
+        pulse2 = Pulse(kind='Logical', def_1='0.4', def_2='0.6',
                        channel='Ch1_M2')
         self.root.items = [pulse1, pulse2]
 

@@ -64,7 +64,7 @@ class Pulse(Item):
         success = super(Pulse, self).eval_entries(root_vars, sequence_locals,
                                                   missings, errors)
 
-        if self.kind == 'analogical':
+        if self.kind == 'Analogical':
             success &= self.modulation.eval_entries(sequence_locals,
                                                     missings, errors,
                                                     self.index)
@@ -142,7 +142,7 @@ class Pulse(Item):
         answers.update({k: c(self) for k, c in callables.iteritems()})
         answers = [answers]
 
-        if self.kind == 'analogical':
+        if self.kind == 'Analogical':
             # Accessing modulation members.
             answers.append(self.modulation._answer(members, callables))
 
@@ -157,7 +157,7 @@ class Pulse(Item):
         """
         context = self.root.context
         n_points = context.len_sample(self.duration)
-        if self.kind == 'analogical':
+        if self.kind == 'Analogical':
             time = np.linspace(self.start, self.stop, n_points, False)
             mod = self.modulation.compute(time, context.time_unit)
             shape = self.shape.compute(time, context.time_unit)
