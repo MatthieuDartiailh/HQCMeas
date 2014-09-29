@@ -407,7 +407,26 @@ enamldef RootSequenceView(GroupBox): view:
     alias cache : editor.cache
     alias additional_pages : include.objects
 
-    Notebook:
+    constraints << [vbox(hbox(dur, *val.items), nb),
+                    align('v_center', val.items[0], val.items[1])] \
+                   if val.items else \
+                   [vbox(dur, nb)]
+
+    CheckBox: dur:
+        text = 'Fix duration'
+        checked := item.time_constrained
+
+    Conditional: val:
+        condition << item.time_constrained
+        Label:
+            text = 'Duration'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := item.sequence_duration
+            entries_updater << item.get_bindable_vars
+            tool_tip = EVALUATER_TOOLTIP
+
+    Notebook: nb:
         tabs_closable = False
         Page:
             title = 'Sequence'
