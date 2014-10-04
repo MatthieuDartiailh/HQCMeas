@@ -515,7 +515,7 @@ class TestPulse(object):
         self.pulse.def_2 = '5.0*{a}/{b} + {c}'
 
         self.pulse.shape = SquareShape(amplitude='0.5')
-        self.pulse.kind = 'analogical'
+        self.pulse.kind = 'Analogical'
 
         root_vars = {'a': 2.0, 'b': 5.0, 'c': 1.0}
         missing = set()
@@ -535,7 +535,7 @@ class TestPulse(object):
         self.pulse.def_2 = '5.0*{a}/{b} + {c}'
 
         self.pulse.shape = SquareShape(amplitude='0.5')
-        self.pulse.kind = 'analogical'
+        self.pulse.kind = 'Analogical'
 
         self.pulse.modulation.frequency = '1.0**'
         self.pulse.modulation.phase = '1.0'
@@ -558,7 +558,7 @@ class TestPulse(object):
         self.pulse.def_2 = '5.0*{a}/{b} + {c}'
 
         self.pulse.shape = SquareShape(amplitude='0.5*')
-        self.pulse.kind = 'analogical'
+        self.pulse.kind = 'Analogical'
 
         self.pulse.modulation.frequency = '1.0'
         self.pulse.modulation.phase = '1.0'

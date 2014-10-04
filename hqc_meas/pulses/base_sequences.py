@@ -497,9 +497,10 @@ class Sequence(BaseSequence):
 
         """
         item.unobserve('linkable_vars', self.root._update_linkable_vars)
-        del item.root
-        del item.parent
-        item.index = 0
+        with item.suppress_notifications():
+            del item.root
+            del item.parent
+            item.index = 0
         if isinstance(item, Sequence):
             item.unobserve('_last_index', self._item_last_index_updated)
 

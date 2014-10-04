@@ -274,6 +274,7 @@ enamldef TemplateSaveDialog(Dialog): dial:
             StackItem: comp:
                 attr valid : bool = False
                 CompilationWidget:
+                    workspace = workspace
                     outcome ::
                         comp.valid = change['value']
 

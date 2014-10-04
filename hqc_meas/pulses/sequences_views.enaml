@@ -212,7 +212,7 @@ enamldef SequenceEditor(Container): view:
 
     padding = 0
     Conditional:
-        condition << not bool(item.items)
+        condition << not bool(sequence.items)
         Container:
             constraints = [hbox(pul, seq), pul.width == seq.width]
             PushButton: pul:
@@ -260,7 +260,7 @@ enamldef SequenceEditor(Container): view:
                                 text = 'FOLDED ITEMS'
                     StackItem:
                         _SequenceListView:
-                            sequence = view.sequence
+                            sequence << view.sequence
                             core = view.core
                             cache = view.cache
 
@@ -293,7 +293,7 @@ enamldef NonFoldingSequenceEditor(Container): view:
         condition << bool(sequence.items)
         Container:
             _SequenceListView:
-                sequence = view.sequence
+                sequence << view.sequence
                 core = view.core
                 cache = view.cache
 
@@ -431,7 +431,7 @@ enamldef RootSequenceView(GroupBox): view:
         Page:
             title = 'Sequence'
             NonFoldingSequenceEditor: editor:
-                sequence := view.item
+                sequence << view.item
 
         Page:
             title = 'Context'

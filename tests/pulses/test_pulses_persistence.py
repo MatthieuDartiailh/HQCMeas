@@ -127,7 +127,7 @@ def test_build_from_config():
     pulse3 = aux.items[2]
     assert_equal(pulse3.def_1, '{2_stop} + 0.5')
     assert_equal(pulse3.def_2, '10')
-    assert_equal(pulse3.kind, 'analogical')
+    assert_equal(pulse3.kind, 'Analogical')
     assert_is_instance(pulse3.shape, SquareShape)
 
     seq = aux.items[3]

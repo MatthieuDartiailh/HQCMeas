@@ -315,7 +315,7 @@ class Test(object):
         pulse5 = Pulse(def_1='{1_stop}', def_2='0.5',
                        def_mode='Start/Duration')
         pulse5.shape = SquareShape(amplitude='0.5')
-        pulse5.kind = 'analogical'
+        pulse5.kind = 'Analogical'
 
         pulse5.modulation.frequency = '1.0**'
         pulse5.modulation.phase = '1.0'

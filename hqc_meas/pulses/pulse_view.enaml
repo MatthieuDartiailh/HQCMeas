@@ -27,9 +27,9 @@ def default_add_displays(core, item):
             cmd = 'hqc_meas.pulses.shapes_request'
             shapes, _ = core.invoke_command(cmd,
                                             {'shapes': item.shape.shape_class,
-                                             'use_class_name': True})
+                                             'use_class_names': True})
             shape = shapes[item.shape.shape_class]
-            add_displays.append(shape[1](item==item, shape=item.shape))
+            add_displays.append(shape[1](item=item, shape=item.shape))
 
         return add_displays
 
