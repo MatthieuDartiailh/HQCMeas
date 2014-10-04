@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : utils/state/plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 import contextlib
-from atom.api import (Atom, Unicode, Dict, Instance, Bool, Tuple, Typed, Value,
+from atom.api import (Atom, Unicode, Dict, Bool, Tuple, Typed, Value,
                       Property)
 from enaml.workbench.api import Plugin, Extension
 from new import classobj
@@ -83,11 +83,18 @@ class StatePlugin(Plugin):
         """ Return the state associated to the state id
 
         """
-        return self._states[unicode(state_id)]
+        pl_id, decl, cl, state = self._states[unicode(state_id)]
+        if not state:
+            state = self._create_state_object(pl_id, decl, cl)
+            self._states[unicode(state_id)] = (pl_id, decl, cl, state)
 
-    #---- Private API ---------------------------------------------------------
+        return state
 
-    _states = Dict(Unicode(), Instance(_StateHolder))
+    # --- Private API ---------------------------------------------------------
+
+    #: Dict storing the plugin_id, the state decl, the runtime class and the
+    #: instance if it has been created.
+    _states = Dict(Unicode(), Tuple())
 
     _state_extensions = Dict(Typed(Extension), Tuple())
 
@@ -99,7 +106,7 @@ class StatePlugin(Plugin):
         point = workbench.get_extension_point(STATES_POINT)
         extensions = point.extensions
 
-        # If no extension remain clear everything
+        # If no extension remains clear everything
         if not extensions:
             self._notify_state_death(self._state_extensions.keys())
             self._states.clear()
@@ -120,26 +127,27 @@ class StatePlugin(Plugin):
                 state = old_extensions[extension]
             else:
                 state = self._load_state(extension)
+
             new_extensions[extension] = state
 
         # Build the mapping between state ids and states object
         states = {}
         for extension in extensions:
             state = new_extensions[extension]
-            state_decl = state[0]
+            state_decl = state[1]
             if state_decl.id in states:
                 msg = "state '%s' is already registered"
                 raise ValueError(msg % state_decl.id)
             if not state_decl.sync_members and not state_decl.prop_getters:
                 msg = "state '%s' does not declare any attribute"
                 raise ValueError(msg % state_decl.id)
-            states[state_decl.id] = state[2]
+            states[state_decl.id] = tuple(list(state)+[None])
 
         self._states = states
         self._state_extensions = new_extensions
 
     def _load_state(self, extension):
-        """ Create a custom _StateHolder class at runtime and instantiate it
+        """ Create a custom _StateHolder class at runtime.
 
         Parameters
         ----------
@@ -151,9 +159,9 @@ class StatePlugin(Plugin):
         -------
         state_tuple: tuple
             Tuple containing the State declaration used to build the state
-            holder, the custom class derived _StateHolder dynamically created,
-            an instance of this class observing the plugin contributing the
-            extension
+            holder and  the custom class derived _StateHolder dynamically
+            created.
+
         """
         # Getting the state declaration contributed by the extension, either
         # as a child or returned by the factory. Only the first state is
@@ -182,10 +190,16 @@ class StatePlugin(Plugin):
             members[p] = Property()
         state_class = classobj(class_name, (_StateHolder,), members)
 
+        return (extension.plugin_id, state, state_class)
+
+    def _create_state_object(self, plugin_id, state, state_class):
+        """ Instantiate state object.
+
+        """
         # Instantiation , initialisation, and binding of the state object to
         # the plugin declaring it.
         state_object = state_class()
-        plugin = workbench.get_plugin(extension.plugin_id)
+        plugin = self.workbench.get_plugin(plugin_id)
         for m in state.sync_members:
             with state_object.setting_allowed():
                 setattr(state_object, m, getattr(plugin, m))
@@ -194,7 +208,7 @@ class StatePlugin(Plugin):
             prop = state_object.get_member(p)
             prop.getter(getattr(plugin, state.prop_getters[p]))
 
-        return (state, state_class, state_object)
+        return state_object
 
     def _notify_state_death(self, dead_extensions):
         """ Notify that the plugin contributing a state is not plugged anymore.
@@ -202,9 +216,11 @@ class StatePlugin(Plugin):
         """
         states = self._state_extensions
         for dead_state in dead_extensions:
-            state = states[dead_state][2]
-            with state.setting_allowed():
-                state.alive = False
+            state_id = states[dead_state][1].id
+            _, _, _, state = self._states[state_id]
+            if state:
+                with state.setting_allowed():
+                    state.alive = False
 
     def _on_states_updated(self, change):
         """ The observer for the state extension point

@@ -27,8 +27,8 @@ def validate_closing(window, event):
 
     """
     workbench = window.workbench
-    plugin = workbench.get_plugin('hqc_meas.measure')
-    if plugin.flags:
+    plugin = workbench.get_plugin('hqc_meas.measure', force_create=False)
+    if plugin and plugin.flags:
         event.ignore()
         warning(window, 'Measure running',
                 cleandoc('''A measure is currently running please stop it

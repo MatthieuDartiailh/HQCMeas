@@ -32,7 +32,7 @@ def manager_plugin_factory():
 #    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
 #
 #    """
-#    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+#    manager = event.workbench.get_plugin('hqc_meas.')
 #    from .manager_view import TaskManagerView
 #    TaskManagerView(manager=manager).show()
 
