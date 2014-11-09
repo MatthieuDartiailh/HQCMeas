@@ -244,7 +244,9 @@ class SaveArrayTask(SimpleTask):
         """ Save array to file.
 
         """
-        array_to_save = self.get_from_database(self.target_array[1:-1])
+        array_to_save = self.format_and_eval_string(self.target_array)
+
+        assert isinstance(array_to_save, numpy.ndarray), 'Wrong type returned.'
 
         full_folder_path = self.format_string(self.folder)
 
@@ -347,10 +349,15 @@ class SaveArrayTask(SimpleTask):
             return False, traceback
 
         try:
-            self.get_from_database(self.target_array[1:-1])
-        except KeyError:
-            traceback[self.task_path + '/' + self.task_name] = \
-                'Specified array is absent from the database'
+            array = self.format_and_eval_string(self.target_array)
+        except Exception as e:
+            traceback[err_path] = \
+                'Failed to evaluate target_array : {}'.format(e)
+            return False, traceback
+
+        if not isinstance(array, numpy.ndarray):
+            traceback[err_path] = \
+                'Target array evaluation did not return an array'
             return False, traceback
 
         return True, traceback
