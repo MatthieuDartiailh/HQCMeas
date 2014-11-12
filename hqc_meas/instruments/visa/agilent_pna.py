@@ -27,6 +27,8 @@ from ..driver_tools import (BaseInstrument, InstrIOError,
                             secure_communication, instrument_property)
 from ..visa_tools import VisaInstrument
 
+from time import sleep
+
 FORMATTING_DICT = {'PHAS': lambda x: np.angle(x, deg=True),
                    'MLIN': np.abs,
                    'MLOG': lambda x: 10*np.log10(np.abs(x)),
@@ -86,6 +88,8 @@ class AgilentPNAChannel(BaseInstrument):
         """
         if meas_name:
             self.selected_measure = meas_name
+        else:
+            meas_name = self.selected_measure
 
         data_request = 'CALCulate{}:DATA? FDATA'.format(self._channel)
         if self._pna.data_format == 'REAL,32':
@@ -96,9 +100,6 @@ class AgilentPNAChannel(BaseInstrument):
 
         else:
             data = self._pna.ask_for_values(data_request, ascii)
-
-        if not meas_name:
-            meas_name = self.selected_measure
 
         if data:
             return np.array(data)
@@ -155,6 +156,31 @@ class AgilentPNAChannel(BaseInstrument):
         return FORMATTING_DICT[meas_format](data)
 
     @secure_communication()
+    def run_averaging(self, aver_count=''):
+        """ Restart averaging on the channel and wait until it is over
+
+        Parameters
+        ----------
+        aver_count : str, optional
+            Number of averages to perform. Default value is the current one
+
+        """
+        if aver_count:
+            self.average_count = aver_count
+
+        self.average_state = 1
+        if self.average_mode == 'POIN' or self.average_count == 1:
+            self._pna.write('sense{}:sweep:mode single'.format(self._channel))
+        elif self.average_mode == 'SWE':
+            self._pna.write('sense{}:sweep:mode on'.format(self._channel))
+            self._pna.write('SENS{}:aver:cle'.format(self._channel))
+# there is no SCPI command to get the averaging count => cannot check if done
+            estimated_waiting_time = self.average_count * self.sweep_time
+            sleep(estimated_waiting_time)
+            self._pna.write('sense{}:sweep:mode hold'.format(self._channel))
+
+
+    @secure_communication()
     def list_existing_measures(self):
         """
         """
@@ -172,6 +198,7 @@ class AgilentPNAChannel(BaseInstrument):
         else:
             raise InstrIOError(cleandoc('''Agilent PNA did not return the
                     channel {} selected measure'''.format(self._channel)))
+
 
     @secure_communication()
     def create_meas(self, meas_name):
@@ -329,6 +356,70 @@ class AgilentPNAChannel(BaseInstrument):
 
     @instrument_property
     @secure_communication()
+    def tracenb(self):
+        """Current trace number getter method
+        WARNING: this command will not work if the trace selection has not been
+        made by the software beforehand
+        """
+        trace_nb = self._pna.ask_for_values('CALC{}:PAR:MNUM?'.format(
+                                        self._channel))
+        if trace_nb:
+            return trace_nb[0]
+        else:
+            raise InstrIOError(cleandoc('''Agilent PNA did not return the
+                    trace number on channel {} '''.format(self._channel)))
+
+    @tracenb.setter
+    @secure_communication()
+    def tracenb(self, value):
+        """Current trace number setter method
+        """
+        self._pna.write('CALC{}:PAR:MNUM {}'.format(self._channel,
+                                                            value))
+        result = self._pna.ask_for_values('CALC{}:PAR:MNUM?'.format(
+                                          self._channel))
+        if result:
+            if abs(result[0] - value)/value > 10**-12:
+                raise InstrIOError(cleandoc('''PNA could not set the
+                    trace number {} on channel {}'''.format(value,
+                    self._channel)))
+        else:
+            raise InstrIOError(cleandoc('''PNA could not set the
+                    trace number {} on channel {}'''.format(value,
+                    self._channel)))
+
+    @instrument_property
+    @secure_communication()
+    def sweep_Xaxis(self):
+        """List of values on the Sweep X axis getter method.
+
+        """
+        sweep_type = self.sweep_type
+        sweep_points = self.sweep_points
+        if sweep_type == 'LIN':
+            sweep_start = self._pna.ask_for_values(
+                'SENSe{}:FREQuency:STARt?'.format(self._channel))[0]*1e-9
+            sweep_stop = self._pna.ask_for_values(
+                'SENSe{}:FREQuency:STOP?'.format(self._channel))[0]*1e-9
+            return np.linspace(sweep_start, sweep_stop, sweep_points)
+        elif sweep_type == 'POW':
+            sweep_start = self._pna.ask_for_values('SOURce{}:POWer:STARt?' \
+                .format(self._channel))[0]
+            sweep_stop = self._pna.ask_for_values('SOURce{}:POWer:STOP?' \
+                .format(self._channel))[0]
+            return np.linspace(sweep_start, sweep_stop, sweep_points)
+        elif sweep_type == 'LOG':
+            sweep_start = self._pna.ask_for_values('SENSe{}:FREQuency:STARt?' \
+                .format(self._channel))[0]*1e-9
+            sweep_stop = self._pna.ask_for_values('SENSe{}:FREQuency:STOP?' \
+                .format(self._channel))[0]*1e-9
+            return np.logspace(sweep_start, sweep_stop, sweep_points)
+        else:
+            raise InstrIOError(cleandoc('''Sweep type of PNA not yet
+                supported for channel {}'''.format(self._channel)))
+
+    @instrument_property
+    @secure_communication()
     def power(self):
         """Power getter method
         """
@@ -367,6 +458,8 @@ class AgilentPNAChannel(BaseInstrument):
     @secure_communication()
     def selected_measure(self):
         """
+        WARNING: this command will not work if the trace selection has not been
+        made by the software beforehand
         """
         meas = self._pna.ask('CALC{}:PARameter:SELect?'.format(self._channel))
         if meas:
@@ -494,6 +587,27 @@ class AgilentPNAChannel(BaseInstrument):
         else:
             raise InstrIOError(cleandoc('''PNA did not set correctly the
                     channel {} sweep point number'''.format(self._channel)))
+
+    @instrument_property
+    @secure_communication()
+    def sweep_time(self):
+        """
+        """
+        time = self._pna.ask_for_values('sense{}:sweep:time?'.format(
+            self._channel))
+        if time:
+            return time[0]
+        else:
+            raise InstrIOError(cleandoc('''Agilent PNA did not return the
+                    channel {} sweep point number'''.format(self._channel)))
+
+    @sweep_time.setter
+    @secure_communication()
+    def sweep_time(self, value):
+        """
+        """
+        self._pna.write('sense{}:sweep:time {}'.format(self._channel,value))
+
 
     @instrument_property
     @secure_communication()

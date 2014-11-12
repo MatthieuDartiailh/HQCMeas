@@ -246,5 +246,33 @@ enamldef PNASweepMeasView(BaseInstrumentView): view:
             ed._model = PNAPairEditorModel(model=model,
                                            iterable_name=iterable_name)
 
+enamldef PNAGetTraceView(BaseInstrumentView): view:
+
+    title << task.task_name
+    constraints = [factory(auto_grid_layout)]
+
+    Label: driv_lab:
+        text = 'Driver'
+    ObjectCombo: driv_val:
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+
+    Label: instr_lab:
+        text = 'Instr'
+    ObjectCombo: instr_val:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Label: tracelist_lab:
+        text = 'Traces'
+    Field: tracelist_val:
+        text := task.tracelist
+        tool_tip = fill(cleandoc(
+                        '''The list of traces to be measured must be entered
+                        in the following formatch1,tr1;ch2,tr2;ch3,tr3;...
+                        ex: 1,1;1,3 for ch1, tr1 and ch1, tr3
+                        '''))
+
 TASK_VIEW_MAPPING = {'PNASinglePointMeasureTask': PNASinglePointView,
-                     'PNASweepTask': PNASweepMeasView}
+                     'PNASweepTask': PNASweepMeasView,
+                     'PNAGetTraces': PNAGetTraceView}
