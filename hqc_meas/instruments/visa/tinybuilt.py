@@ -77,14 +77,14 @@ class TinyBiltChannel(BaseInstrument):
         with self.secure():
             on = re.compile('on', re.IGNORECASE)
             off = re.compile('off', re.IGNORECASE)
-            if on.match(value) or value == 1:
+            if value == 1 or on.match(str(value)):
 
                 self._TB.write('i{};OUTP1'.format(self._channel))
                 if self._TB.ask_for_values('i{};OUTP?'
                                            .format(self._channel))[0] != 1:
                     raise InstrIOError(cleandoc('''Instrument did not set
                                                 correctly the output'''))
-            elif off.match(value) or value == 0:
+            elif value == 0 or off.match(str(value)):
                 self._TB.write('i{};OUTP0'.format(self._channel))
                 if self._TB.ask_for_values('i{};OUTP?'
                                            .format(self._channel))[0] != 0:
