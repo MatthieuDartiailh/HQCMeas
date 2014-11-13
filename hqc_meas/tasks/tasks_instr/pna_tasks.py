@@ -462,14 +462,21 @@ class PNAGetTraces(InstrumentTask):
 
         channel_driver = self.driver.get_channel(channelnb)
 
+
         channel_driver.tracenb = tracenb
+
+# je ne sais pas comment gérer  le cas où la trace n'existe pas
+
         measname = channel_driver.selected_measure
         data = channel_driver.sweep_Xaxis
-        complexdata = channel_driver.read_raw_data(measname)
-        aux = [data, complexdata.real, complexdata.imag]
+        complexdata = channel_driver.read_raw_data(measname)* \
+                np.exp(2*np.pi*1j*data*channel_driver.electrical_delay)
+        aux = [data, complexdata.real, complexdata.imag,
+                np.absolute(complexdata),
+                np.unwrap(np.angle(complexdata))]
 
         return np.rec.fromarrays(aux, names=['Freq (GHz)', measname+' real',
-                                             measname+' imag'])
+                    measname+' imag',  measname+' abs',  measname+' phase' ])
 
     def check(self, *args, **kwargs):
         """
@@ -563,11 +570,11 @@ class PNAGetTraces(InstrumentTask):
 #             [np.array([0.0, 1.0]) for meas in self.measures]
 #         names = [self.sweep_type] + \
 #             ['_'.join(meas) for meas in self.measures]
-#==============================================================================
-        final_arr = np.rec.fromarrays(data, names=names)
-
-        self.write_in_database('sweep_data', final_arr)
-        return test, traceback
+##==============================================================================
+#        final_arr = np.rec.fromarrays(data, names=names)
+#
+#        self.write_in_database('sweep_data', final_arr)
+#        return test, traceback
 
 KNOWN_PY_TASKS = [PNASinglePointMeasureTask,
                   PNASweepTask,

@@ -688,6 +688,27 @@ class AgilentPNAChannel(BaseInstrument):
             raise InstrIOError(cleandoc('''PNA did not set correctly the
                 channel {} average mode'''.format(self._channel)))
 
+    @instrument_property
+    @secure_communication()
+    def electrical_delay(self):
+        """
+        electrical delay for the selected trace in ns
+        """
+        mode = self._pna.ask_for_values('CALC{}:CORR:EDEL:TIME?'.format(
+                                                    self._channel))
+        if mode:
+            return mode[0]*1000000000.0
+        else:
+            raise InstrIOError(cleandoc('''Agilent PNA did not return the
+                    channel {} electrical delay'''.format(self._channel)))
+
+    @electrical_delay.setter
+    @secure_communication()
+    def electrical_delay(self, value):
+        """
+        electrical delay for the selected trace in ns
+        """
+        self._pna.write('CALC{}:CORR:EDEL:TIME {}NS'.format(self._channel, value))
 
 class AgilentPNA(VisaInstrument):
     """
