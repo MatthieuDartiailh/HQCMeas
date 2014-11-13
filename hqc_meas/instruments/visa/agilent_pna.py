@@ -163,8 +163,8 @@ class AgilentPNAChannel(BaseInstrument):
         ----------
         aver_count : str, optional
             Number of averages to perform. Default value is the current one
-
         """
+
         if aver_count:
             self.average_count = aver_count
 

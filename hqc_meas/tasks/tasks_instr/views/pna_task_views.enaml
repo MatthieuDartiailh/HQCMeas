@@ -9,7 +9,8 @@
 from atom.api import set_default, Value, observe
 from enaml.core.api import Conditional
 from enaml.layout.api import grid, vbox, hbox, factory
-from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, Container)
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, Container,
+                                   CheckBox)
 from enaml.stdlib.fields import IntField, FloatField
 from enaml.validator import Validator
 
@@ -271,6 +272,15 @@ enamldef PNAGetTraceView(BaseInstrumentView): view:
                         '''The list of traces to be measured must be entered
                         in the following formatch1,tr1;ch2,tr2;ch3,tr3;...
                         ex: 1,1;1,3 for ch1, tr1 and ch1, tr3
+                        '''))
+
+    Label: already_measured_lab:
+        text = 'Already measured'
+    CheckBox: already_measured_val:
+        checked := task.already_measured
+        tool_tip = fill(cleandoc(
+                        '''Check if you do not want to run a new measurement
+                        before recording what is on the PNA screen
                         '''))
 
 TASK_VIEW_MAPPING = {'PNASinglePointMeasureTask': PNASinglePointView,

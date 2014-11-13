@@ -6,7 +6,8 @@
 # =============================================================================
 """
 """
-from atom.api import (Str, Int, Enum, set_default, Tuple, ContainerList, Value)
+from atom.api import (Str, Int, Bool, Enum, set_default, Tuple,
+                              ContainerList, Value)
 
 import time
 import re
@@ -430,6 +431,8 @@ class PNASweepTask(SingleChannelPNATask):
         self.write_in_database('sweep_data', final_arr)
         return test, traceback
 
+
+
 class PNAGetTraces(InstrumentTask):
     """ Get the traces that are displayed right now (no new acquisition).
     The list of traces to be measured must be entered in the following format
@@ -437,7 +440,9 @@ class PNAGetTraces(InstrumentTask):
     ex: 1,1;1,3 for ch1, tr1 and ch1, tr3
 
     """
+
     tracelist = Str('1,1').tag(pref=True)
+    already_measured = Bool(False).tag(pref=True)
 
     driver_list = ['AgilentPNA']
     task_database_entries = set_default({'sweep_data': {}})
@@ -448,11 +453,27 @@ class PNAGetTraces(InstrumentTask):
             self.start_driver()
 
         tr_data = {}
+
+        if not self.already_measured:
+            print('il faut remesurer')
+            for i in range(1,30):
+                if str(i)+',' in self.tracelist:
+                    self.average_channel(i)
+
         for trace in traces:
             c_nb, t_nb = trace.split(',')
             tr_data[trace] = self.get_trace(int(c_nb), int(t_nb))
 
         self.write_in_database('sweep_data', tr_data)
+
+    def average_channel(self, channelnb):
+        """ Performs the averaging of a channel
+
+        """
+
+        channel_driver = self.driver.get_channel(channelnb)
+        channel_driver.run_averaging()
+
 
     def get_trace(self, channelnb, tracenb):
         """ Get the trace that is displayed right now (no new acquisition)
@@ -492,89 +513,8 @@ class PNAGetTraces(InstrumentTask):
         self.write_in_database('sweep_data', sweep_data)
         return test, traceback
 
-#==============================================================================
-# class PNAGetTrace(SingleChannelPNATask):
-#     """ Get the trace that is displayed right now (no new acquisition).
-#     Measure are saved in an array with named fields : Frequency or
-#     Power and then 'Measure'_'Format' (S21_MLIN, S33 if Raw)
-#
-#     Wait for any parallel operation before execution.
-#
-#     """
-#     channel = Int(1).tag(pref=True)
-#
-#     measures = ContainerList(Tuple()).tag(pref=True)
-#
-#     sweep_type = Str('').tag(pref=True)
-#
-#     driver_list = ['AgilentPNA']
-#     task_database_entries = set_default({'sweep_data': np.array([0]),
-#                                          'sweep_type': ''})
-#
-#     def perform(self):
-#         """
-#         """
-#         if not self.driver:
-#             self.start_driver()
-#             self.channel_driver = self.driver.get_channel(self.channel)
-#
-#         if self.driver.owner != self.task_name:
-#             self.driver.owner = self.task_name
-#
-#         meas_names = ['Ch{}:'.format(self.channel) + ':'.join(measure)
-#                       for measure in self.measures]
-#
-#         if self.channel_driver.owner != self.task_name:
-#             self.channel_driver.owner = self.task_name
-#
-#             # Check whether or not we are doing the same measures as the ones
-#             # already defined (IF NOT => GET ALL DISPLAYED TRACES, NOT WHAT
-#             # THE USER HAS WRONGLY ASKED)
-#             measures = self.channel_driver.list_existing_measures()
-#             existing_meas = [meas['name'] for meas in measures]
-#
-#             if not (all([meas in meas_names for meas in existing_meas])):
-#                 self.measures = measures
-#                 meas_names = existing_meas
-#
-#         self.sweep_type = self.channel_driver.sweep_type
-#         self.write_in_database('sweep_type', self.sweep_type)
-#         data = self.channel_driver.sweep_Xaxis
-#         for i, meas_name in enumerate(meas_names):
-#             if self.measures[i][1]:
-#                 data.append(
-#                     self.channel_driver.read_formatted_data(meas_name))
-#             else:
-#                 data.append(self.channel_driver.read_raw_data(meas_name))
-#
-#         names = [self.sweep_type] + ['_'.join(measure)
-#                                      for measure in self.measures]
-#         final_arr = np.rec.fromarrays(data, names=names)
-#         self.write_in_database('sweep_data', final_arr)
-#
-#     def check(self, *args, **kwargs):
-#         """
-#         """
-#         test, traceback = super(PNAGetTrace, self).check(*args, **kwargs)
-#
-#         pattern = re.compile('S[1-4][1-4]')
-#         for i, meas in enumerate(self.measures):
-#             match = pattern.match(meas[0])
-#             if not match:
-#                 path = self.task_path + '/' + self.task_name
-#                 path += '_Meas_{}'.format(i)
-#                 traceback[path] = 'Unvalid parameter : {}'.format(meas[0])
-#                 test = False
-#
-#         data = [np.array([0.0, 1.0])] + \
-#             [np.array([0.0, 1.0]) for meas in self.measures]
-#         names = [self.sweep_type] + \
-#             ['_'.join(meas) for meas in self.measures]
-##==============================================================================
-#        final_arr = np.rec.fromarrays(data, names=names)
-#
-#        self.write_in_database('sweep_data', final_arr)
-#        return test, traceback
+
+
 
 KNOWN_PY_TASKS = [PNASinglePointMeasureTask,
                   PNASweepTask,
