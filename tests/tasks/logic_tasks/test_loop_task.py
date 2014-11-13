@@ -149,6 +149,13 @@ class TestLoopTask(object):
         assert_false(traceback)
         assert_equal(self.task.get_from_database('Test_point_number'), 11)
 
+        interface.iterable = 'dict(a=1)'
+        test, traceback = self.task.check()
+        assert_true(test)
+        assert_false(traceback)
+        assert_equal(self.task.get_from_database('Test_point_number'), 1)
+        assert_equal(self.task.get_from_database('Test_value'), 'a')
+
     def test_check_iterable_interface2(self):
         # Test handling a wrong iterable formula.
         interface = IterableLoopInterface()
@@ -170,6 +177,18 @@ class TestLoopTask(object):
         assert_false(test)
         assert_equal(len(traceback), 1)
         assert_in('root/Test', traceback)
+
+    def test_check_execution_order(self):
+        # Test that the interface checks are run before the children checks.
+        interface = IterableLoopInterface()
+        interface.iterable = '[(1, 0)]'
+        self.task.interface = interface
+
+        subiter = IterableLoopInterface(iterable='{Test_value}')
+        self.task.children_task = [LoopTask(interface=subiter)]
+
+        test, traceback = self.task.check()
+        assert_true(test)
 
     def test_perform1(self):
         # Test performing a simple loop no timing. Iterable interface.

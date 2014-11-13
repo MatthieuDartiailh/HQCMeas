@@ -34,6 +34,28 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
     task_database_entries = set_default({'point_number': 11, 'index': 1,
                                          'value': 0})
 
+    def check(self, *args, **kwargs):
+        """ Overriden so that interface check are run before children ones.
+
+        """
+        test = True
+        traceback = {}
+        if not self.interface:
+            traceback[self.task_name + '_interface'] = 'Missing interface'
+            return False, traceback
+
+        i_test, i_traceback = self.interface.check(*args, **kwargs)
+
+        traceback.update(i_traceback)
+        test &= i_test
+
+        c_test, c_traceback = ComplexTask.check(self, *args, **kwargs)
+
+        traceback.update(c_traceback)
+        test &= c_test
+
+        return test, traceback
+
     def perform_loop(self, iterable):
         """ Perform the loop on the iterable calling all child tasks at each
         iteration.
