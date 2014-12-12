@@ -29,12 +29,15 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     #: Largest allowed step when changing the output of the instr.
     back_step = Float().tag(pref=True)
 
+    #: Largest allowed voltage
+    safe_max = Float(1.0).tag(pref=True)
+
     #: Time to wait between changes of the output of the instr.
     delay = Float(0.01).tag(pref=True)
 
     parallel = set_default({'activated': True, 'pool': 'instr'})
     loopable = True
-    task_database_entries = set_default({'voltage': 1.0})
+    task_database_entries = set_default({'voltage': 0.01})
 
     driver_list = ['YokogawaGS200', 'Yokogawa7651']
 
@@ -51,6 +54,7 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                 traceback[self.task_path + '/' + self.task_name + '-volt'] = \
                     cleandoc('''Failed to eval the target value formula
                         {} : '''.format(self.target_value, e))
+
 
         return test, traceback
 
@@ -90,6 +94,10 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
         else:
             value = self.format_and_eval_string(self.target_value)
 
+        if self.safe_max < abs(value):
+            raise ValueError(cleandoc('''Requested voltage {} exceeds safe max
+                                      : '''.format(value)))
+
         last_value = self.driver.voltage
 
         if abs(last_value - value) < 1e-12:
@@ -120,6 +128,30 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
         setter(value)
         self.write_in_database('voltage', value)
 
+
+    def quick_set(self, target_value, setter):
+        """ Quickly set the voltage.
+
+        target_value : float
+            Voltage to reach.
+
+        setter : callable
+            Function to set the voltage, should take as single argument the
+            value.
+
+        """
+        if target_value is not None:
+            value = target_value
+        else:
+            value = self.format_and_eval_string(self.target_value)
+
+        if self.safe_max < abs(value):
+            raise ValueError(cleandoc('''Requested voltage {} exceeds safe max
+                                      : '''.format(value)))
+
+        setter(value)
+        self.write_in_database('voltage', value)
+
 KNOWN_PY_TASKS = [SetDCVoltageTask]
 
 
@@ -131,7 +163,7 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
     driver_list = ['TinyBilt']
 
     #: Id of the channel to use.
-    channel = Int().tag(pref=True)
+    channel = Int(1).tag(pref=True)
 
     #: Reference to the driver for the channel.
     channel_driver = Value()
@@ -158,7 +190,7 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
 
         setter = lambda value: setattr(self.channel_driver, 'voltage', value)
 
-        task.smooth_set(value, setter)
+        task.quick_set(value, setter)
 
     def check(self, *args, **kwargs):
         if kwargs.get('test_instr'):
