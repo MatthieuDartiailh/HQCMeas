@@ -165,20 +165,30 @@ class AgilentPNAChannel(BaseInstrument):
             Number of averages to perform. Default value is the current one
         """
 
+        self._pna.write('sense{}:sweep:mode hold'.format(self._channel))
+        self._pna.write('Trig:sour imm')
+        self._pna.write('SENS:AVER:CLE')
+
         if aver_count:
             self.average_count = aver_count
 
         self.average_state = 1
-        if self.average_mode == 'POIN' or self.average_count == 1:
-            self._pna.write('sense{}:sweep:mode single'.format(self._channel))
-        elif self.average_mode == 'SWE':
-            self._pna.write('sense{}:sweep:mode on'.format(self._channel))
-            self._pna.write('SENS{}:aver:cle'.format(self._channel))
-# there is no SCPI command to get the averaging count => cannot check if done
-            estimated_waiting_time = self.average_count * self.sweep_time
-            sleep(estimated_waiting_time)
-            self._pna.write('sense{}:sweep:mode hold'.format(self._channel))
+        self._pna.write('sense{}:sweep:mode gro'.format(self._channel))
 
+        if self._pna.ask_for_values('*OPC?')[0] == 1:
+            return 1
+        else:
+            raise InstrIOError(cleandoc('''Agilent PNA did could  not perform
+            the average on channel {} '''.format(self._channel)))
+
+#        if self.average_mode == 'POIN' or self.average_count == 1:
+#            self._pna.write('sense{}:sweep:mode single'.format(self._channel))
+#        elif self.average_mode == 'SWE':
+#            self._pna.write('sense{}:sweep:mode on'.format(self._channel))
+#            self._pna.write('SENS{}:aver:cle'.format(self._channel))
+#            estimated_waiting_time = self.average_count * self.sweep_time
+#            sleep(estimated_waiting_time)
+#            self._pna.write('sense{}:sweep:mode hold'.format(self._channel))
 
     @secure_communication()
     def list_existing_measures(self):
@@ -198,7 +208,6 @@ class AgilentPNAChannel(BaseInstrument):
         else:
             raise InstrIOError(cleandoc('''Agilent PNA did not return the
                     channel {} selected measure'''.format(self._channel)))
-
 
     @secure_communication()
     def create_meas(self, meas_name):
@@ -652,7 +661,10 @@ class AgilentPNAChannel(BaseInstrument):
     def average_count(self, value):
         """
         """
+
         self._pna.write('SENSe{}:AVERage:COUNt {}'.format(self._channel,
+                        value))
+        self._pna.write('SENSe{}:SWE:GRO:COUNt {}'.format(self._channel,
                         value))
         result = self._pna.ask_for_values('SENSe{}:AVERage:COUNt?'.format(
                                           self._channel))

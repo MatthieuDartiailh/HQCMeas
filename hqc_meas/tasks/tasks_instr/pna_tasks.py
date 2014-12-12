@@ -431,8 +431,6 @@ class PNASweepTask(SingleChannelPNATask):
         self.write_in_database('sweep_data', final_arr)
         return test, traceback
 
-
-
 class PNAGetTraces(InstrumentTask):
     """ Get the traces that are displayed right now (no new acquisition).
     The list of traces to be measured must be entered in the following format
@@ -455,7 +453,6 @@ class PNAGetTraces(InstrumentTask):
         tr_data = {}
 
         if not self.already_measured:
-            print('il faut remesurer')
             for i in range(1,30):
                 if str(i)+',' in self.tracelist:
                     self.average_channel(i)
@@ -470,10 +467,10 @@ class PNAGetTraces(InstrumentTask):
         """ Performs the averaging of a channel
 
         """
-
         channel_driver = self.driver.get_channel(channelnb)
-        channel_driver.run_averaging()
-
+        if channel_driver.run_averaging() == 1:
+            raise ValueError(cleandoc('''Averaging of PNA channel {} failed
+                                      : '''.format(channelnb)))
 
     def get_trace(self, channelnb, tracenb):
         """ Get the trace that is displayed right now (no new acquisition)
@@ -482,7 +479,6 @@ class PNAGetTraces(InstrumentTask):
         """
 
         channel_driver = self.driver.get_channel(channelnb)
-
 
         channel_driver.tracenb = tracenb
 
