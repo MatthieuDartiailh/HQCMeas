@@ -75,10 +75,11 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                 self.root_task.should_stop.set()
 
         setter = lambda value: setattr(self.driver, 'voltage', value)
+        getter = getattr(self.driver, 'voltage')
 
-        self.smooth_set(value, setter)
+        self.smooth_set(value, setter, getter)
 
-    def smooth_set(self, target_value, setter):
+    def smooth_set(self, target_value, setter, getter):
         """ Smoothly set the voltage.
 
         target_value : float
@@ -98,7 +99,7 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
             raise ValueError(cleandoc('''Requested voltage {} exceeds safe max
                                       : '''.format(value)))
 
-        last_value = self.driver.voltage
+        last_value = getter
 
         if abs(last_value - value) < 1e-12:
             self.write_in_database('voltage', value)
@@ -124,30 +125,6 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                     time.sleep(self.delay)
                 else:
                     break
-
-        setter(value)
-        self.write_in_database('voltage', value)
-
-
-    def quick_set(self, target_value, setter):
-        """ Quickly set the voltage.
-
-        target_value : float
-            Voltage to reach.
-
-        setter : callable
-            Function to set the voltage, should take as single argument the
-            value.
-
-        """
-        if target_value is not None:
-            value = target_value
-        else:
-            value = self.format_and_eval_string(self.target_value)
-
-        if self.safe_max < abs(value):
-            raise ValueError(cleandoc('''Requested voltage {} exceeds safe max
-                                      : '''.format(value)))
 
         setter(value)
         self.write_in_database('voltage', value)
@@ -189,8 +166,9 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
                 task.root_task.should_stop.set()
 
         setter = lambda value: setattr(self.channel_driver, 'voltage', value)
+        getter = getattr(self.channel_driver, 'voltage')
 
-        task.quick_set(value, setter)
+        task.smooth_set(value, setter, getter)
 
     def check(self, *args, **kwargs):
         if kwargs.get('test_instr'):
