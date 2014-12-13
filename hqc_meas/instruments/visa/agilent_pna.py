@@ -173,14 +173,15 @@ class AgilentPNAChannel(BaseInstrument):
             self.average_count = aver_count
 
         self.average_state = 1
-        self._pna.write('sense{}:sweep:mode gro'.format(self._channel))
 
-        if self._pna.ask_for_values('*OPC?')[0] == 1:
-            return 1
-        else:
-            raise InstrIOError(cleandoc('''Agilent PNA did could  not perform
-            the average on channel {} '''.format(self._channel)))
+        for i in range(0,int(self.average_count)):
+            self._pna.write('sense{}:sweep:mode gro'.format(self._channel))
 
+            if self._pna.ask_for_values('*OPC?')[0] != 1:
+                raise InstrIOError(cleandoc('''Agilent PNA did could  not perform
+                the average on channel {} '''.format(self._channel)))
+
+        return 1
 #        if self.average_mode == 'POIN' or self.average_count == 1:
 #            self._pna.write('sense{}:sweep:mode single'.format(self._channel))
 #        elif self.average_mode == 'SWE':

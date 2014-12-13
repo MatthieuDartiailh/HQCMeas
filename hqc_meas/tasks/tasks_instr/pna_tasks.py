@@ -468,7 +468,7 @@ class PNAGetTraces(InstrumentTask):
 
         """
         channel_driver = self.driver.get_channel(channelnb)
-        if channel_driver.run_averaging() == 1:
+        if channel_driver.run_averaging() != 1:
             raise ValueError(cleandoc('''Averaging of PNA channel {} failed
                                       : '''.format(channelnb)))
 
