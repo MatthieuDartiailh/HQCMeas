@@ -23,7 +23,7 @@ enamldef LoopView(Container): view:
     Label: name_lab:
         text = 'Task name'
     Field: name_val:
-        text >> model.task_name
+        text := model.task_name
         submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
     CheckBox: sub:
         text = 'Use subtask'

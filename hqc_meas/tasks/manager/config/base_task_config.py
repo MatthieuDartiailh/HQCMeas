@@ -21,6 +21,8 @@ from inspect import getdoc, cleandoc
 from hqc_meas.tasks.api import BaseTask
 from ..templates import load_template
 from ..building import build_task_from_config
+import random
+import os
 
 
 # Circular import protection
@@ -71,6 +73,13 @@ class AbstractConfigTask(Atom):
         AbstractConfigTask. This method is called when the user validate its
         choices and that the task must be built.'''
         raise NotImplementedError(cleandoc(err_str))
+
+    def _default_task_name(self):
+        names = self.manager.auto_names
+        if names:
+            return random.choice(names)
+        else:
+            return ''
 
 
 class PyConfigTask(AbstractConfigTask):
