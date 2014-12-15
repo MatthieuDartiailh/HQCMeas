@@ -22,7 +22,6 @@ from hqc_meas.tasks.api import BaseTask
 from ..templates import load_template
 from ..building import build_task_from_config
 import random
-import os
 
 
 # Circular import protection
