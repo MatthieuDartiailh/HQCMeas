@@ -36,6 +36,10 @@ class TinyBiltChannel(BaseInstrument):
         self._TB = TB
         self._channel = channel_num
 
+    def reopen_connection(self):
+
+        self._TB.reopen_connection()
+
     @contextmanager
     def secure(self):
         """ Lock acquire and release method
@@ -202,7 +206,7 @@ class TinyBiltChannel(BaseInstrument):
         """output value getter method
         """
         with self.secure():
-            outp_val = self._TB.ask_for_values('i{};MEAS:Volt?'
+            outp_val = self._TB.ask_for_values('i{};Volt?'
                                                .format(self._channel))[0]
             if outp_val is not None:
                 return outp_val
@@ -217,11 +221,10 @@ class TinyBiltChannel(BaseInstrument):
         """
         with self.secure():
             self._TB.write('i{};Volt {}'.format(self._channel, value))
-            time.sleep(0.2)
-            result = round(self._TB.ask_for_values('i{};MEAS:Volt?'
+            result = round(self._TB.ask_for_values('i{};Volt?'
                                                    .format(self._channel))[0],
                            5)
-            if abs(result - value) > 10**-12:
+            if abs(result - value) > 1e-12:
                 raise InstrIOError(cleandoc('''Instrument did not set
                                             correctly the output
                                             value'''))
@@ -234,7 +237,7 @@ class TinyBiltChannel(BaseInstrument):
         """
         with self.secure():
             present_voltage = round(self._TB.ask_for_values
-                                   ('i{};MEAS:Volt?'.format(self._channel))[0],
+                                   ('i{};Volt?'.format(self._channel))[0],
                                     5)
             while abs(round(present_voltage - volt_destination,
                             5)) >= volt_step:

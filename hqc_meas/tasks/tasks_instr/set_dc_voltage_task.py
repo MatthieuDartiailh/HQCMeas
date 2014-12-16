@@ -29,12 +29,15 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     #: Largest allowed step when changing the output of the instr.
     back_step = Float().tag(pref=True)
 
+    #: Largest allowed voltage
+    safe_max = Float(1.0).tag(pref=True)
+
     #: Time to wait between changes of the output of the instr.
     delay = Float(0.01).tag(pref=True)
 
     parallel = set_default({'activated': True, 'pool': 'instr'})
     loopable = True
-    task_database_entries = set_default({'voltage': 1.0})
+    task_database_entries = set_default({'voltage': 0.01})
 
     driver_list = ['YokogawaGS200', 'Yokogawa7651']
 
@@ -71,10 +74,11 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                 self.root_task.should_stop.set()
 
         setter = lambda value: setattr(self.driver, 'voltage', value)
+        current_value = getattr(self.driver, 'voltage')
 
-        self.smooth_set(value, setter)
+        self.smooth_set(value, setter, current_value)
 
-    def smooth_set(self, target_value, setter):
+    def smooth_set(self, target_value, setter, current_value):
         """ Smoothly set the voltage.
 
         target_value : float
@@ -90,7 +94,11 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
         else:
             value = self.format_and_eval_string(self.target_value)
 
-        last_value = self.driver.voltage
+        if self.safe_max < abs(value):
+            raise ValueError(cleandoc('''Requested voltage {} exceeds safe max
+                                      : '''.format(value)))
+
+        last_value = current_value
 
         if abs(last_value - value) < 1e-12:
             self.write_in_database('voltage', value)
@@ -131,7 +139,7 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
     driver_list = ['TinyBilt']
 
     #: Id of the channel to use.
-    channel = Int().tag(pref=True)
+    channel = Int(1).tag(pref=True)
 
     #: Reference to the driver for the channel.
     channel_driver = Value()
@@ -157,8 +165,9 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
                 task.root_task.should_stop.set()
 
         setter = lambda value: setattr(self.channel_driver, 'voltage', value)
+        current_value = getattr(self.channel_driver, 'voltage')
 
-        task.smooth_set(value, setter)
+        task.smooth_set(value, setter, current_value)
 
     def check(self, *args, **kwargs):
         if kwargs.get('test_instr'):
