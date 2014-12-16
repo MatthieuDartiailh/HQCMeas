@@ -55,7 +55,6 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                     cleandoc('''Failed to eval the target value formula
                         {} : '''.format(self.target_value, e))
 
-
         return test, traceback
 
     def i_perform(self, value=None):
@@ -75,11 +74,11 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                 self.root_task.should_stop.set()
 
         setter = lambda value: setattr(self.driver, 'voltage', value)
-        getter = getattr(self.driver, 'voltage')
+        current_value = getattr(self.driver, 'voltage')
 
-        self.smooth_set(value, setter, getter)
+        self.smooth_set(value, setter, current_value)
 
-    def smooth_set(self, target_value, setter, getter):
+    def smooth_set(self, target_value, setter, current_value):
         """ Smoothly set the voltage.
 
         target_value : float
@@ -99,7 +98,7 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
             raise ValueError(cleandoc('''Requested voltage {} exceeds safe max
                                       : '''.format(value)))
 
-        last_value = getter
+        last_value = current_value
 
         if abs(last_value - value) < 1e-12:
             self.write_in_database('voltage', value)
@@ -166,9 +165,9 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
                 task.root_task.should_stop.set()
 
         setter = lambda value: setattr(self.channel_driver, 'voltage', value)
-        getter = getattr(self.channel_driver, 'voltage')
+        current_value = getattr(self.channel_driver, 'voltage')
 
-        task.smooth_set(value, setter, getter)
+        task.smooth_set(value, setter, current_value)
 
     def check(self, *args, **kwargs):
         if kwargs.get('test_instr'):

@@ -345,7 +345,7 @@ class PNASweepTask(SingleChannelPNATask):
                     self.channel_driver.prepare_measure(meas_name, self.window,
                                                         i+1, clear)
                     clear = False
-        current_Xaxis = self.channel_driver.sweep_Xaxis
+        current_Xaxis = self.channel_driver.sweep_x_axis
         if self.start:
             start = self.format_and_eval_string(self.start)
         else:
@@ -433,6 +433,7 @@ class PNASweepTask(SingleChannelPNATask):
 
 class PNAGetTraces(InstrumentTask):
     """ Get the traces that are displayed right now (no new acquisition).
+
     The list of traces to be measured must be entered in the following format
     ch1,tr1;ch2,tr2;ch3,tr3;...
     ex: 1,1;1,3 for ch1, tr1 and ch1, tr3
@@ -480,12 +481,16 @@ class PNAGetTraces(InstrumentTask):
 
         channel_driver = self.driver.get_channel(channelnb)
 
-        channel_driver.tracenb = tracenb
+        try:
+            channel_driver.tracenb = tracenb
+        except:
+            raise ValueError(cleandoc('''The trace {} does not exist on channel
+                                      {}: '''.format(tracenb, channelnb)))
 
 # je ne sais pas comment gérer  le cas où la trace n'existe pas
 
         measname = channel_driver.selected_measure
-        data = channel_driver.sweep_Xaxis
+        data = channel_driver.sweep_x_axis
         complexdata = channel_driver.read_raw_data(measname)* \
                 np.exp(2*np.pi*1j*data*channel_driver.electrical_delay)
         aux = [data, complexdata.real, complexdata.imag,

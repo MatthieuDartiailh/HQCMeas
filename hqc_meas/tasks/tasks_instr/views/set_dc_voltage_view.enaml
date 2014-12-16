@@ -18,12 +18,6 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
     title << task.task_name
     constraints = [factory(auto_grid_layout), (width==700)]
 
-#    constraints = [vbox(
-#                     grid([sel_driv, sel_prof, step],
-#                          [sel_val, prof_val, step_val]),
-#                    grid([safe, delay],
-#                         [safe_val, delay_val]))]
-
     Label: sel_driv:
         text = 'Driver'
     ObjectCombo: sel_val:

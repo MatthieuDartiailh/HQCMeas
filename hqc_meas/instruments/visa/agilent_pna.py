@@ -368,11 +368,12 @@ class AgilentPNAChannel(BaseInstrument):
     @secure_communication()
     def tracenb(self):
         """Current trace number getter method
+
         WARNING: this command will not work if the trace selection has not been
         made by the software beforehand
         """
         trace_nb = self._pna.ask_for_values('CALC{}:PAR:MNUM?'.format(
-                                        self._channel))
+            self._channel))
         if trace_nb:
             return trace_nb[0]
         else:
@@ -400,7 +401,7 @@ class AgilentPNAChannel(BaseInstrument):
 
     @instrument_property
     @secure_communication()
-    def sweep_Xaxis(self):
+    def sweep_x_axis(self):
         """List of values on the Sweep X axis getter method.
 
         """
@@ -467,7 +468,8 @@ class AgilentPNAChannel(BaseInstrument):
     @instrument_property
     @secure_communication()
     def selected_measure(self):
-        """
+        """Name of the selected measurement
+
         WARNING: this command will not work if the trace selection has not been
         made by the software beforehand
         """
@@ -601,7 +603,7 @@ class AgilentPNAChannel(BaseInstrument):
     @instrument_property
     @secure_communication()
     def sweep_time(self):
-        """
+        """Sweep time in seconds
         """
         time = self._pna.ask_for_values('sense{}:sweep:time?'.format(
             self._channel))
@@ -704,8 +706,7 @@ class AgilentPNAChannel(BaseInstrument):
     @instrument_property
     @secure_communication()
     def electrical_delay(self):
-        """
-        electrical delay for the selected trace in ns
+        """electrical delay for the selected trace in ns
         """
         mode = self._pna.ask_for_values('CALC{}:CORR:EDEL:TIME?'.format(
                                                     self._channel))
