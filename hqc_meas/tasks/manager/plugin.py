@@ -85,10 +85,9 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._refresh_tasks()
         self._refresh_filters()
         self._refresh_config()
-        if os.path.isfile(self.auto_task_path):
+        if self.auto_task_path:
             self.load_auto_task_names()
         self._bind_observers()
-        self.load_auto_task_names('')
 
     def stop(self):
         """ Stop the plugin life-cycle.
@@ -281,8 +280,14 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         return None, None
 
-    def load_auto_task_names(self, path):
+    def load_auto_task_names(self, path=None):
         """ Generate a list of task names from a file.
+
+        Parameters
+        ----------
+        path : unicode, optional
+            Path from which to load the default task names. If not provided
+            the auto_task_path is used.
 
         """
         if not path:
