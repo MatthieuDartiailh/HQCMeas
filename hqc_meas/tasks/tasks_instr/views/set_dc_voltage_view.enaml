@@ -16,17 +16,17 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
 
     attr in_loop : bool = False
     title << task.task_name
-    constraints = [factory(auto_grid_layout)]
+    constraints = [factory(auto_grid_layout), (width==700)]
 
-    Label:
+    Label: sel_driv:
         text = 'Driver'
-    ObjectCombo:
+    ObjectCombo: sel_val:
         items << sorted(drivers)
         selected := task.selected_driver
 
-    Label:
+    Label: sel_prof:
         text = 'Instr'
-    ObjectCombo:
+    ObjectCombo: prof_val:
         items << sorted(profiles)
         selected := task.selected_profile
 
@@ -40,14 +40,19 @@ enamldef SetDcVoltageView(BaseInstrumentView): view:
             entries_updater << task.accessible_database_entries
             tool_tip = EVALUATER_TOOLTIP
 
-    Label:
+    Label: step:
         text = 'Back step (V)'
-    FloatField:
+    FloatField: step_val:
         value := task.back_step
 
-    Label:
+    Label: safe:
+        text = 'Safe max (V)'
+    FloatField: safe_val:
+        value := task.safe_max
+
+    Label: delay:
         text = 'Delay (s)'
-    FloatField:
+    FloatField: delay_val:
         value := task.delay
 
 TASK_VIEW_MAPPING = {'SetDCVoltageTask' : SetDcVoltageView}

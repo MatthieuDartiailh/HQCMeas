@@ -8,8 +8,8 @@
 from atom.api import (Atom, Str, Dict, Unicode)
 from enaml.widgets.api import (Dialog, Container, Label, MultilineField,
                                PushButton, Notebook, Page)
-from enaml.layout.api import vbox, grid, hbox, align
-from enaml.core.api import Looper
+from enaml.layout.api import vbox, grid, hbox, align, spacer
+from enaml.core.api import Looper, Conditional
 
 from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
 
@@ -71,17 +71,17 @@ class _TaskCheckModel(Atom):
 enamldef ChecksDisplay(Dialog): dial:
     """
     """
+    attr is_warning : bool = False
     attr errors
     attr model = _TaskCheckModel(errors)
 
     Container:
         constraints = [vbox(hbox(lis_lab, che_lab), hbox(nb, che),
-                            ex),
+                            hbox(spacer, ex, *enq.items)),
                        align('left', lis_lab, nb),
-                       align('left', che_lab, che),
-                       contents_right == ex.right]
+                       align('left', che_lab, che)]
         Label: lis_lab:
-            text = 'Failed tests'
+            text = 'Failed tests' if not is_warning else 'Warnings'
         Notebook: nb:
             hug_height = 'ignore'
             selected_tab >> model.selected_category
@@ -95,6 +95,7 @@ enamldef ChecksDisplay(Dialog): dial:
                             hug_height = 'ignore'
                             items << model.name_to_path_dict[loop_item].keys()
                             selected_item >> model.selected_check
+
         Label: che_lab:
             text << model.full_path
         MultilineField: che:
@@ -102,4 +103,9 @@ enamldef ChecksDisplay(Dialog): dial:
             read_only = True
         PushButton: ex:
             text = 'Close'
-            clicked :: dial.accept()
+            clicked :: dial.reject()
+        Conditional: enq:
+            condition = is_warning
+            PushButton:
+                text = 'Enqueue'
+                clicked :: dial.accept()

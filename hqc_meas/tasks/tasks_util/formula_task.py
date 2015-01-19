@@ -36,11 +36,11 @@ class FormulaTask(SimpleTask):
             try:
                 val = self.format_and_eval_string(formula[1])
                 self.write_in_database(formula[0], val)
-            except Exception:
+            except Exception as e:
                 test = False
                 name = self.task_path + '/' + self.task_name + str(-(i+1))
                 traceback[name] =\
-                    "Failed to eval the formula {}".format(formula[0])
+                    "Failed to eval the formula {}: {}".format(formula[0], e)
         return test, traceback
 
     def _observe_formulas(self, change):

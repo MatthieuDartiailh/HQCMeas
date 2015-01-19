@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : monitor.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
 from atom.api import (Instance, Value, Str, List, Dict, ForwardTyped,
@@ -13,6 +13,7 @@ with enaml.imports():
     from enaml.stdlib.message_box import information
 
 from inspect import cleandoc
+from textwrap import fill
 
 from ..base_monitor import BaseMonitor
 from .entries import MonitoredEntry
@@ -33,7 +34,7 @@ class TextMonitor(BaseMonitor):
     """ Simple monitor displaying entries as text in a widget.
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: List of the entries which should be displayed when a measure is running.
     displayed_entries = ContainerList(Instance(MonitoredEntry))
@@ -48,7 +49,7 @@ class TextMonitor(BaseMonitor):
     hidden_entries = List(Instance(MonitoredEntry))
 
     #: Mapping between a database entry and a list of callable used for
-    #:updating an entry of the monitor which relies on the database entry.
+    #: updating an entry of the monitor which relies on the database entry.
     updaters = Dict(Str(), List(Callable()))
 
     #: List of rules which should be used to build monitor entries.
@@ -62,7 +63,8 @@ class TextMonitor(BaseMonitor):
             self.show_monitor(parent_ui)
 
     def stop(self):
-        if self._view.proxy_is_active:
+        # Avoid raising errors if the view has already been destroyed.
+        if getattr(self._view, 'proxy_is_active', None):
             self._view.close()
         self._view = None
 
@@ -195,11 +197,13 @@ class TextMonitor(BaseMonitor):
         hidden = [e for e in m_entries if e.path in pref_hidden]
         m_entries -= set(hidden)
         if m_entries:
+            e_l = [e.name for e in m_entries]
+            mess = cleandoc('''The following entries were not
+                        expected from the config : {} . These entries has been
+                        added to the displayed ones.''')
             information(parent=None,
                         title='Unhandled entries',
-                        text=cleandoc('''The application of new rules lead
-                        to the creation of new entries. These entries has been
-                        added to the displayed ones.'''))
+                        text=fill(mess.format(e_l)))
             pref_disp += list(m_entries)
 
         self.displayed_entries = disp
@@ -249,7 +253,7 @@ class TextMonitor(BaseMonitor):
         if config:
             plugin.rules[rule_name] = config
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     # Known values of the database entries used when recomputing an entry value
     # depending not on a single value. During edition all values are stored,

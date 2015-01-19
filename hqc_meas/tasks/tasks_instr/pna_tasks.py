@@ -6,7 +6,8 @@
 # =============================================================================
 """
 """
-from atom.api import (Str, Int, Enum, set_default, Tuple, ContainerList, Value)
+from atom.api import (Str, Int, Bool, Enum, set_default, Tuple,
+                              ContainerList, Value)
 
 import time
 import re
@@ -14,7 +15,7 @@ from inspect import cleandoc
 import numpy as np
 
 from hqc_meas.tasks.api import InstrumentTask, InstrTaskInterface
-from hqc_meas.instruments.drivers.driver_tools import InstrIOError
+from hqc_meas.instruments.driver_tools import InstrIOError
 
 
 def check_channels_presence(task, channels, *args, **kwargs):
@@ -155,6 +156,8 @@ class SingleChannelPNATask(InstrumentTask):
     # Id of the channel to use.
     channel = Int(1).tag(pref=True)
 
+    channel_driver = Value()
+
     def check(self, *args, **kwargs):
         """ Add checking for channels to the base tests.
 
@@ -257,12 +260,12 @@ class PNASinglePointMeasureTask(SingleChannelPNATask):
                                 self).check(*args, **kwargs)
 
         pattern = re.compile('S[1-4][1-4]')
-        for i, (s_par, f) in enumerate(self.measures):
-            match = pattern.match(s_par)
+        for i, meas in enumerate(self.measures):
+            match = pattern.match(meas[0])
             if not match:
                 path = self.task_path + '/' + self.task_name
                 path += '_Meas_{}'.format(i)
-                traceback[path] = 'Unvalid parameter : {}'.format(s_par)
+                traceback[path] = 'Unvalid parameter : {}'.format(meas[0])
                 test = False
 
         return test, traceback
@@ -296,11 +299,11 @@ class PNASweepTask(SingleChannelPNATask):
 
     points = Str().tag(pref=True)
 
-    sweep_type = Enum('Frequency', 'Power').tag(pref=True)
+    sweep_type = Enum('','Frequency', 'Power').tag(pref=True)
 
     measures = ContainerList(Tuple()).tag(pref=True)
 
-    if_bandwidth = Int(10).tag(pref=True)
+    if_bandwidth = Int(0).tag(pref=True)
 
     window = Int(1).tag(pref=True)
 
@@ -326,7 +329,8 @@ class PNASweepTask(SingleChannelPNATask):
 
         if self.channel_driver.owner != self.task_name:
             self.channel_driver.owner = self.task_name
-            self.channel_driver.if_bandwidth = self.if_bandwidth
+            if self.if_bandwidth>0:
+                self.channel_driver.if_bandwidth = self.if_bandwidth
 
             # Check whether or not we are doing the same measures as the ones
             # already defined (avoid losing display optimisation)
@@ -341,14 +345,31 @@ class PNASweepTask(SingleChannelPNATask):
                     self.channel_driver.prepare_measure(meas_name, self.window,
                                                         i+1, clear)
                     clear = False
+        current_Xaxis = self.channel_driver.sweep_x_axis
+        if self.start:
+            start = self.format_and_eval_string(self.start)
+        else:
+            start = current_Xaxis[0]*1e9
+        if self.stop:
+            stop = self.format_and_eval_string(self.stop)
+        else:
+            stop = current_Xaxis[-1]*1e9
+        if self.points:
+            points = self.format_and_eval_string(self.points)
+        else:
+            points = len(current_Xaxis)
+        if self.sweep_type:
+            self.channel_driver.prepare_sweep(self.sweep_type.upper(), start,
+                                              stop, points)
+        else:
+            if self.channel_driver.sweep_type.upper() == 'LIN':
+                self.channel_driver.prepare_sweep('FREQUENCY',
+                                                  start, stop, points)
+            elif self.channel_driver.sweep_type.upper() == 'POW':
+                 self.channel_driver.prepare_sweep('POWER',
+                                                  start, stop, points)
 
-        start = self.format_and_eval_string(self.start)
-        stop = self.format_and_eval_string(self.stop)
-        points = self.format_and_eval_string(self.points)
-        self.channel_driver.prepare_sweep(self.sweep_type.upper(), start, stop,
-                                          points)
-
-        waiting_time = 1.0/self.if_bandwidth*points
+        waiting_time = self.channel_driver.sweep_time
         self.driver.fire_trigger(self.channel)
         time.sleep(waiting_time)
         while not self.driver.check_operation_completion():
@@ -373,32 +394,34 @@ class PNASweepTask(SingleChannelPNATask):
         test, traceback = super(PNASweepTask, self).check(*args, **kwargs)
 
         pattern = re.compile('S[1-4][1-4]')
-        for i, (s_par, f) in enumerate(self.measures):
-            match = pattern.match(s_par)
+        for i, meas in enumerate(self.measures):
+            match = pattern.match(meas[0])
             if not match:
                 path = self.task_path + '/' + self.task_name
                 path += '_Meas_{}'.format(i)
-                traceback[path] = 'Unvalid parameter : {}'.format(s_par)
+                traceback[path] = 'Unvalid parameter : {}'.format(meas[0])
                 test = False
-
-        try:
-            self.format_and_eval_string(self.start)
-        except:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-start'] = \
-                'Failed to eval the start formula {}'.format(self.start)
-        try:
-            self.format_and_eval_string(self.stop)
-        except:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-stop'] = \
-                'Failed to eval the stop formula {}'.format(self.stop)
-        try:
-            self.format_and_eval_string(self.points)
-        except:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-step'] = \
-                'Failed to eval the points formula {}'.format(self.points)
+        if self.start:
+            try:
+                self.format_and_eval_string(self.start)
+            except:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-start'] = \
+                    'Failed to eval the start formula {}'.format(self.start)
+        if self.stop:
+            try:
+                self.format_and_eval_string(self.stop)
+            except:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-stop'] = \
+                    'Failed to eval the stop formula {}'.format(self.stop)
+        if self.points:
+            try:
+                self.format_and_eval_string(self.points)
+            except:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-step'] = \
+                    'Failed to eval the points formula {}'.format(self.points)
 
         data = [np.array([0.0, 1.0])] + \
             [np.array([0.0, 1.0]) for meas in self.measures]
@@ -408,6 +431,92 @@ class PNASweepTask(SingleChannelPNATask):
         self.write_in_database('sweep_data', final_arr)
         return test, traceback
 
+class PNAGetTraces(InstrumentTask):
+    """ Get the traces that are displayed right now (no new acquisition).
+
+    The list of traces to be measured must be entered in the following format
+    ch1,tr1;ch2,tr2;ch3,tr3;...
+    ex: 1,1;1,3 for ch1, tr1 and ch1, tr3
+
+    """
+
+    tracelist = Str('1,1').tag(pref=True)
+    already_measured = Bool(False).tag(pref=True)
+
+    driver_list = ['AgilentPNA']
+    task_database_entries = set_default({'sweep_data': {}})
+
+    def perform(self):
+        traces = self.tracelist.split(';')
+        if not self.driver:
+            self.start_driver()
+
+        tr_data = {}
+
+        if not self.already_measured:
+            for i in range(1,30):
+                if str(i)+',' in self.tracelist:
+                    self.average_channel(i)
+
+        for trace in traces:
+            c_nb, t_nb = trace.split(',')
+            tr_data[trace] = self.get_trace(int(c_nb), int(t_nb))
+
+        self.write_in_database('sweep_data', tr_data)
+
+    def average_channel(self, channelnb):
+        """ Performs the averaging of a channel
+
+        """
+        channel_driver = self.driver.get_channel(channelnb)
+        if channel_driver.run_averaging() != 1:
+            raise ValueError(cleandoc('''Averaging of PNA channel {} failed
+                                      : '''.format(channelnb)))
+
+    def get_trace(self, channelnb, tracenb):
+        """ Get the trace that is displayed right now (no new acquisition)
+        on channel and tracenb.
+
+        """
+
+        channel_driver = self.driver.get_channel(channelnb)
+
+        try:
+            channel_driver.tracenb = tracenb
+        except:
+            raise ValueError(cleandoc('''The trace {} does not exist on channel
+                                      {}: '''.format(tracenb, channelnb)))
+
+# je ne sais pas comment gérer  le cas où la trace n'existe pas
+
+        measname = channel_driver.selected_measure
+        data = channel_driver.sweep_x_axis
+        complexdata = channel_driver.read_raw_data(measname)* \
+                np.exp(2*np.pi*1j*data*channel_driver.electrical_delay)
+        aux = [data, complexdata.real, complexdata.imag,
+                np.absolute(complexdata),
+                np.unwrap(np.angle(complexdata))]
+
+        return np.rec.fromarrays(aux, names=['Freq (GHz)', measname+' real',
+                    measname+' imag',  measname+' abs',  measname+' phase' ])
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        test, traceback = super(PNAGetTraces, self).check(*args, **kwargs)
+
+        traces = self.tracelist.split(';')
+        sweep_data = {}
+        for trace in traces:
+            data = [np.array([0.0, 1.0]), np.array([1.0, 2.0])]
+            sweep_data[trace] = np.rec.fromarrays(data, names=['a', 'b'])
+
+        self.write_in_database('sweep_data', sweep_data)
+        return test, traceback
+
+
+
 
 KNOWN_PY_TASKS = [PNASinglePointMeasureTask,
-                  PNASweepTask]
+                  PNASweepTask,
+                  PNAGetTraces]

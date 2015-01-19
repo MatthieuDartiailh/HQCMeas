@@ -17,9 +17,9 @@ from hqc_meas.tasks.tasks_logic.conditional_task import ConditionalTask
 import enaml
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
-    from hqc_meas.task_management.manager_manifest import TaskManagerManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.tasks.manager.manifest import TaskManagerManifest
 
     from hqc_meas.tasks.tasks_logic.views.conditional_task_view\
         import ConditionalView

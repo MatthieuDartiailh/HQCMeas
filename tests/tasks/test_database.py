@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : test_database.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
-from nose.tools import raises, assert_equal, assert_false, assert_true
+# =============================================================================
+from nose.tools import (raises, assert_equal, assert_false, assert_true,
+                        assert_raises)
 from hqc_meas.tasks.tools.task_database import TaskDatabase
 
 from ..util import complete_line
@@ -18,7 +19,7 @@ def teardown_module():
     print complete_line(__name__ + ': teardown_module()', '~', 78)
 
 
-#--- Edition mode tests.
+# --- Edition mode tests.
 
 def test_database_nodes():
     # Test all nodes operations.
@@ -49,6 +50,17 @@ def test_database_values2():
     assert_equal(database.get_value('root', 'val1'), 1)
     database.delete_value('root', 'val1')
     database.get_value('root', 'val1')
+
+
+@raises(KeyError)
+def test_database_values3():
+    # Test delete value operation.
+    database = TaskDatabase()
+    database.create_node('root', 'node1')
+    database.create_node('root/node1', 'node2')
+    database.set_value('root/node1/node2', 'val1', 1)
+    assert_equal(database.get_value('root/node1/node2', 'val1'), 1)
+    database.get_value('root/node1', 'val1')
 
 
 def test_database_listing():
@@ -112,24 +124,35 @@ def test_access_exceptions2():
 
     assert_equal(database.list_accessible_entries('root'), ['val1'])
 
+    assert_raises(KeyError, database.get_value, 'root', 'val2')
+    assert_raises(KeyError, database.get_value, 'root/node1', 'val3')
+
     database.add_access_exception('root/node1', 'val3', 'root/node1/node2')
+
+    assert_raises(KeyError, database.get_value, 'root', 'val3')
+
     database.add_access_exception('root', 'val3', 'root/node1')
     assert_equal(database.list_accessible_entries('root'), ['val1', 'val3'])
     assert_equal(database.get_value('root', 'val3'), 2.0)
 
     database.remove_access_exception('root', 'val3')
+
+    assert_raises(KeyError, database.get_value, 'root', 'val3')
+
     assert_equal(database.list_accessible_entries('root'), ['val1'])
     assert_equal(database.list_accessible_entries('root/node1'),
                  ['val1', 'val2', 'val3'])
 
     database.remove_access_exception('root/node1', 'val3')
+
+    assert_raises(KeyError, database.get_value, 'root/node1', 'val3')
     assert_equal(database.list_accessible_entries('root/node1'),
                  ['val1', 'val2'])
 
 
-#--- Running mode tests.
+# --- Running mode tests.
 
-def test_flattening_database():
+def test_flattening_database1():
     database = TaskDatabase()
     database.set_value('root', 'val1', 1)
     database.create_node('root', 'node1')

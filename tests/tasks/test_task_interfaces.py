@@ -102,3 +102,12 @@ class TestInterfaceableTaskMixin(object):
         assert_true(traceback)
         assert_equal(len(traceback), 1)
         assert_true(self.mixin.interface.called)
+
+    def test_build_from_config1(self):
+        # Test building a interfaceable task from a config.
+        aux = RootTask()
+        aux.children_task = [IMixin()]
+        bis = RootTask.build_from_config(aux.task_preferences,
+                                         {'tasks': {'IMixin': IMixin,
+                                                    'RootTask': RootTask}})
+        assert_equal(type(bis.children_task[0]).__name__, 'IMixin')

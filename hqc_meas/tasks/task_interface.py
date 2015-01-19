@@ -159,7 +159,7 @@ class InterfaceableTaskMixin(Atom):
             inter_class = dependencies['interfaces'][inter_class_name]
             task.interface = inter_class.build_from_config(config['interface'],
                                                            dependencies)
-                                                
+
         return task
 
     def _observe_interface(self, change):

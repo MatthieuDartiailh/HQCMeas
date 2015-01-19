@@ -10,9 +10,9 @@ from nose.tools import (assert_in, assert_not_in, assert_equal, assert_true,
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
     from enaml.workbench.ui.ui_manifest import UIManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
-    from hqc_meas.log_system.log_manifest import LogManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.utils.log.manifest import LogManifest
     from hqc_meas.measurement.manifest import MeasureManifest
 
 from hqc_meas.measurement.monitors.text_monitor.monitor import TextMonitor
@@ -477,7 +477,7 @@ class TestPlugin(object):
 
         # Creating dummy default.ini file in utils.
         util_path = os.path.join(directory, '..', '..', '..', 'hqc_meas',
-                                 'utils')
+                                 'utils', 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
 
         # Making the preference manager look for info in test dir.
@@ -514,7 +514,7 @@ class TestPlugin(object):
         # Restoring default.ini file in utils
         directory = os.path.dirname(__file__)
         util_path = os.path.join(directory, '..', '..', '..', 'hqc_meas',
-                                 'utils')
+                                 'utils', 'preferences')
         def_path = os.path.join(util_path, 'default.ini')
         os.remove(def_path)
 

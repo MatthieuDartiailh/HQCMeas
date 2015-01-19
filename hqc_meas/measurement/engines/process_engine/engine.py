@@ -14,7 +14,7 @@ from threading import Thread
 from threading import Event as tEvent
 import logging
 
-from hqc_meas.log_system.tools import QueueLoggerThread
+from hqc_meas.utils.log.tools import QueueLoggerThread
 
 from ..base_engine import BaseEngine
 from ..tools import ThreadMeasureMonitor

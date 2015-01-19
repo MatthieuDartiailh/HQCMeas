@@ -7,7 +7,7 @@
 """
 """
 from nose.tools import (assert_equal, assert_true, assert_false, assert_in,
-                        assert_not_in)
+                        assert_not_in, assert_raises)
 from nose.plugins.attrib import attr
 from multiprocessing import Event
 from enaml.workbench.api import Workbench
@@ -21,9 +21,9 @@ from hqc_meas.tasks.tasks_util.save_tasks import SaveTask, SaveArrayTask
 import enaml
 with enaml.imports():
     from enaml.workbench.core.core_manifest import CoreManifest
-    from hqc_meas.utils.state_manifest import StateManifest
-    from hqc_meas.utils.pref_manifest import PreferencesManifest
-    from hqc_meas.task_management.manager_manifest import TaskManagerManifest
+    from hqc_meas.utils.state.manifest import StateManifest
+    from hqc_meas.utils.preferences.manifest import PreferencesManifest
+    from hqc_meas.tasks.manager.manifest import TaskManagerManifest
 
     from hqc_meas.tasks.tasks_util.views.save_views import (SaveView,
                                                             SaveArrayView)
@@ -373,12 +373,14 @@ class TestSaveArrayTask(object):
 
     def test_check1(self):
         # Check everything ok in Text mode.
+        array = np.empty(2, dtype=np.dtype([('a', 'f8'), ('b', 'f8')]))
+        self.root.write_in_database('arrays', {'a': array})
         task = self.task
         task.folder = self.test_dir
         task.filename = 'test_perform{Root_str}.txt'
         task.mode = 'Text file'
         task.header = 'teststs'
-        task.target_array = '{Root_array}'
+        task.target_array = '{Root_arrays}["a"]'
 
         test, traceback = task.check()
 
@@ -440,6 +442,21 @@ class TestSaveArrayTask(object):
         assert_false(test)
         assert_equal(len(traceback), 1)
 
+    def test_check6(self):
+        # Check handling a wrong type.
+        self.root.write_in_database('array', 1.0)
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test_perform{Root_str}.txt'
+        task.mode = 'Text file'
+        task.header = 'teststs'
+        task.target_array = '{Root_array}'
+
+        test, traceback = task.check()
+
+        assert_false(test)
+        assert_equal(len(traceback), 1)
+
     def test_perform1(self):
         # Test performing in text mode.
         task = self.task
@@ -460,6 +477,18 @@ class TestSaveArrayTask(object):
                          [0.0, 1.0])
             assert_equal([float(x) for x in lines[3][:-1].split('\t')],
                          [2.0, 3.0])
+
+    def test_perform1bis(self):
+        # Test performing in text mode wrong type.
+        self.root.write_in_database('array', 1.0)
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test_perform{Root_str}.txt'
+        task.mode = 'Text file'
+        task.header = 'tests'
+        task.target_array = '{Root_array}'
+
+        assert_raises(AssertionError, task.perform)
 
     def test_perform2(self):
         # Test performing in binary mode.

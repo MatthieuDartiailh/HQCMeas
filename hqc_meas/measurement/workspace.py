@@ -24,7 +24,6 @@ with enaml.imports():
     from .checks.checks_display import ChecksDisplay
     from .engines.selection import EngineSelector
     from .content import MeasureContent, MeasureSpaceMenu
-    from .measure_edition import WarningsDisplay
 
 
 LOG_ID = u'hqc_meas.measure.workspace'
@@ -159,7 +158,7 @@ class MeasureSpace(Workspace):
                 core = self.workbench.get_plugin(u'enaml.workbnch.core')
                 cmd = u'hqc_meas.task_manager.save_task'
                 core.invoke_command(cmd,
-                                    {'task': measure.root_task,
+                                    {'obj': measure.root_task,
                                      'mode': 'template'},
                                     self)
 
@@ -215,8 +214,8 @@ class MeasureSpace(Workspace):
 
         # First of all build the runtime dependencies
         core = self.workbench.get_plugin('enaml.workbench.core')
-        cmd = u'hqc_meas.task_manager.collect_dependencies'
-        res = core.invoke_command(cmd, {'task': measure.root_task},
+        cmd = u'hqc_meas.dependencies.collect_dependencies'
+        res = core.invoke_command(cmd, {'obj': measure.root_task},
                                   self.plugin)
         if not res[0]:
             for id in res[1]:
@@ -226,23 +225,23 @@ class MeasureSpace(Workspace):
         build_deps = res[1]
         runtime_deps = res[2]
 
-        test_instr = 'profiles' in runtime_deps and runtime_deps['profiles']
-        if 'profiles' in runtime_deps and not test_instr:
+        use_instrs = 'profiles' in runtime_deps
+        test_instrs = use_instrs and runtime_deps['profiles']
+        if use_instrs and not test_instrs:
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, instr tests will be skipped and
                            performed before actually starting the
                            measure.'''.format(measure.name))
-            logger.info(mes)
+            logger.info(mes.replace('\n', ' '))
 
-        measure.root_task.run_time = runtime_deps
+        measure.root_task.run_time = runtime_deps.copy()
 
         check, errors = measure.run_checks(self.workbench,
-                                           test_instr=test_instr)
+                                           test_instr=test_instrs)
 
         measure.root_task.run_time.clear()
 
-        profs = []
-        if 'profiles' in runtime_deps:
+        if use_instrs:
             profs = runtime_deps.pop('profiles').keys()
             core.invoke_command(u'hqc_meas.instr_manager.profiles_released',
                                 {'profiles': profs}, self.plugin)
@@ -252,7 +251,7 @@ class MeasureSpace(Workspace):
             # which the user can either ignore and enqueue the measure, or he
             # can cancel the enqueuing and try again.
             if errors:
-                dial = WarningsDisplay(errors=errors)
+                dial = ChecksDisplay(errors=errors, is_warning=True)
                 dial.exec_()
                 if not dial.result:
                     return
@@ -265,7 +264,8 @@ class MeasureSpace(Workspace):
             # purpose of the manager.
             meas.root_task.run_time = runtime_deps
             # Keep only a list of profiles to request (avoid to re-walk)
-            meas.store['profiles'] = profs
+            if use_instrs:
+                meas.store['profiles'] = profs
             meas.store['build_deps'] = build_deps
             meas.status = 'READY'
             meas.infos = 'The measure is ready to be performed by an engine.'

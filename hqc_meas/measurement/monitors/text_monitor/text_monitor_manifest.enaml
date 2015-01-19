@@ -8,7 +8,7 @@ import logging
 from atom.api import Str, List, Subclass, Dict
 
 from enaml.workbench.api import PluginManifest, Extension
-from hqc_meas.utils.preferences import Preferences
+from hqc_meas.utils.preferences.api import Preferences
 from ..base_monitor import Monitor
 
 

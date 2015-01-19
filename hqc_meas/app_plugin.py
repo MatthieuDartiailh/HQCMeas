@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : app_plugin.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import (Unicode, Dict, Typed)
 from enaml.workbench.api import Plugin
 from collections import defaultdict
@@ -14,7 +14,7 @@ CLOSING_POINT = u'hqc_meas.app.closing'
 
 
 class HqcAppPlugin(Plugin):
-    """ A plugin to manage application wide available states
+    """ A plugin to manage application closing.
 
     """
 
@@ -49,7 +49,7 @@ class HqcAppPlugin(Plugin):
             if not event.is_accepted():
                 break
 
-    #---- Private API ---------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     _closing_checks = Dict(Unicode(), Typed(ClosingApp))
 

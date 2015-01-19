@@ -1,0 +1,57 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : base_views.py
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.core.api import Conditional
+from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
+                               Form, Label)
+
+
+enamldef NoneView(Container):
+    attr model
+    attr loop
+
+
+enamldef SimpleView(Form): main:
+
+    attr model
+    attr loop
+
+    Conditional:
+        condition << not main.loop
+        Label:
+            text = 'Task name'
+        Field:
+            text := model.task_name
+            submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+    GroupBox:
+        title = 'Description'
+        MultilineField:
+            hug_height = 'weak'
+            read_only = True
+            text << model.task_doc
+
+
+# TODO still using traits .....
+def edit_template(template_path):
+        """
+        """
+        model = info.object
+        with open(model.template_path) as template_file:
+            model.template_content = template_file.read()
+        ui = model.edit_traits(view='edit_view', parent=info.ui.control)
+        if ui.result:
+            with open(model.template_path, 'w') as template_file:
+                template_file.write(model.template_content)
+
+        doc_list = ConfigObj(model.template_path).initial_comment
+        doc = ''
+        for line in doc_list:
+            doc += line.replace('#', '')
+        model.template_doc = doc
+
+# TODO implement.
+enamldef IniView(Container):
+    attr model
