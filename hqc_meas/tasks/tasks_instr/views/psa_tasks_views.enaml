@@ -1,0 +1,137 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : psa_tasks-views.py
+# author : Benjamin Huard
+# license : MIT license
+#==============================================================================
+from enaml.core.api import Conditional
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
+from enaml.layout.api import factory
+
+from inspect import cleandoc
+from textwrap import fill
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.layouts import auto_grid_layout
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+
+
+enamldef PSAGetTraceView(BaseInstrumentView): view:
+
+    title << task.task_name
+    constraints = [factory(auto_grid_layout)]
+
+    Label:
+        text = 'Driver'
+    ObjectCombo: driv:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:
+        text = 'Instr'
+    ObjectCombo: prof:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Label:
+        text = 'Trace number'
+    ObjectCombo:
+        items << [1,2,3]
+        selected := task.trace
+
+
+enamldef PSASetParamView(BaseInstrumentView): view:
+
+    title << task.task_name
+    constraints = [factory(auto_grid_layout)]
+
+    Label:
+        text = 'Driver'
+    ObjectCombo: driv:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:
+        text = 'Instr'
+    ObjectCombo: prof:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Label:
+        text = 'Trace number'
+    ObjectCombo:
+        items = [1,2,3]
+        selected := task.trace
+
+    Label:
+        text =  'Average number'
+    QtLineCompleter:
+        hug_width = 'ignore'
+        text := task.average_nb
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
+    Label:
+        text =  'Resolution Bandwidth'
+    QtLineCompleter:
+        hug_width = 'ignore'
+        text := task.resolution_bandwidth
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
+    Label:
+        text =  'Video Bandwidth'
+    QtLineCompleter:
+        hug_width = 'ignore'
+        text := task.video_bandwidth
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
+    Label:
+        text = 'Input mode'
+    ObjectCombo: mode:
+        items = ['Start/Stop','Center/Span']
+        selected := task.mode
+
+    Conditional:
+        condition << task.mode == 'Start/Stop'
+        Label:
+            text =  'Start Frequency'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.start_freq
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+        Label:
+            text =  'End Frequency'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.end_freq
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+    Conditional:
+        condition << task.mode == 'Center/Span'
+        Label:
+            text =  'Center Frequency'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.center_freq
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+        Label:
+            text =  'Span Frequency'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := task.span_freq
+            entries_updater << task.accessible_database_entries
+            tool_tip = EVALUATER_TOOLTIP
+
+
+
+
+TASK_VIEW_MAPPING = {'PSAGetTrace': PSAGetTraceView,
+                     'PSASetParam': PSASetParamView}

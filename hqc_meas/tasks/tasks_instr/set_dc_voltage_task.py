@@ -15,7 +15,6 @@ from inspect import cleandoc
 from hqc_meas.tasks.api import (InstrumentTask, InstrTaskInterface,
                                 InterfaceableTaskMixin)
 
-
 class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     """Set a DC voltage to the specified value.
 

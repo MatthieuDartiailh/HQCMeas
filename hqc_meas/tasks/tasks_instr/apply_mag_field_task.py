@@ -32,6 +32,7 @@ class ApplyMagFieldTask(InstrumentTask):
 
     parallel = set_default({'activated': True, 'pool': 'instr'})
     task_database_entries = set_default({'Bfield': 0.01})
+
     driver_list = ['IPS12010']
     loopable = True
 

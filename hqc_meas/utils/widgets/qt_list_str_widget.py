@@ -23,14 +23,14 @@ class QtListStrWidget(RawWidget):
     #: The list of index of the currently selected str
     selected_index = d_(Int(-1))
     selected_indexes = d_(List(Int(),[-1]))
-    
+
     #: The list of the currently selected str
     selected_item = d_(Unicode(''))
     selected_items = d_(List(Unicode(),['']))
 
     #: Whether or not the user can select multiple lines
     multiselect = d_(Bool(False))
-    
+
     #: List of operations the user can perform
     operations = d_(List(Enum( 'delete', 'insert', 'append', 'edit', 'move' ),
                        [ 'delete', 'insert', 'append', 'edit', 'move' ] ))
@@ -41,7 +41,9 @@ class QtListStrWidget(RawWidget):
 
      #: Cyclic notification guard. This a bitfield of multiple guards.
     _guard = Int(0)
-    
+
+    __slots__ = ['__weakref__']
+
     #--------------------------------------------------------------------------
     # Initialization API
     #--------------------------------------------------------------------------
@@ -83,13 +85,13 @@ class QtListStrWidget(RawWidget):
                 else:
                     new_index = indexes[0]
                     self.selected_index = new_index
-                    self.selected_item = items[new_index]                                
+                    self.selected_item = items[new_index]
 
     def is_auto_add(self, index):
         """ Returns whether or not the index is the special 'auto add' item at
             the end of the list.
         """
-        return (self.declarations.auto_add 
+        return (self.declarations.auto_add
                                 and (index >= self.widget._model.count()))
 
     #--------------------------------------------------------------------------
@@ -104,7 +106,7 @@ class QtListStrWidget(RawWidget):
         widget.clear()
         for item in items:
             widget.addItem(item)
-    
+
     def set_multiselect(self, multiselect, widget = None):
         """
         """
@@ -113,7 +115,7 @@ class QtListStrWidget(RawWidget):
             mode = QAbstractItemView.ExtendedSelection
         else:
             mode = QAbstractItemView.SingleSelection
-            
+
         widget.setSelectionMode(mode)
 
     #--------------------------------------------------------------------------
@@ -131,16 +133,15 @@ class QtListStrWidget(RawWidget):
                 self.set_items(change['value'])
             elif name == 'multiselect':
                 self.set_multi_select(self.multiselect)
-                
+
     def clear_selection(self):
         widget = self.get_widget()
         for i in range(widget.count()):
             item = widget.item(i)
             widget.setItemSelected(item, False)
-            
+
     def refresh_items(self):
         widget = self.get_widget()
         widget.clear()
         for item in self.items:
             widget.addItem(item)
-        

@@ -207,6 +207,8 @@ class TreeNodeController(Atom):
 
     _tree = ForwardTyped(lambda: _TreeWidget)
 
+    __slots__ = ['__weakref__']
+
     #--------------------------------------------------------------------------
     #  Expands from the specified node the specified number of sub-levels:
     #--------------------------------------------------------------------------
