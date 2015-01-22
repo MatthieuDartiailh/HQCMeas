@@ -421,7 +421,8 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._interfaces = {i.__name__: i for v in valid_interfaces.values()
                             for i in v}
         self._interface_views = interface_views
-        self.tasks = list(tasks.keys()) + list(self._template_tasks.keys())
+        self.tasks = (list(valid_tasks.keys()) +
+                      list(self._template_tasks.keys()))
 
         self._failed = failed
         # TODO do something with failed

@@ -106,7 +106,9 @@ class PSASetParam(InstrumentTask):
             if self.stop_freq:
                 self.driver.stop_frequency_SA = \
                     self.format_and_eval_string(self.stop_freq)
-# start_freq is set again in case the former value of stop prevented to do it
+
+            # start_freq is set again in case the former value of stop
+            # prevented to do it
             if self.start_freq:
                 self.driver.start_frequency_SA = \
                     self.format_and_eval_string(self.start_freq)
@@ -118,7 +120,9 @@ class PSASetParam(InstrumentTask):
             if self.span_freq:
                 self.driver.span_frequency = \
                     self.format_and_eval_string(self.span_freq)
-# center_freq is set again in case the former value of span prevented to do it
+
+            # center_freq is set again in case the former value of span
+            # prevented to do it
             if self.center_freq:
                 self.driver.center_frequency = \
                     self.format_and_eval_string(self.center_freq)

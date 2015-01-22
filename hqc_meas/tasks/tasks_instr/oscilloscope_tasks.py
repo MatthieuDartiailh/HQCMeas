@@ -14,7 +14,7 @@ import numpy as np
 from hqc_meas.tasks.api import InstrumentTask
 
 
-class Oscillo_get_trace(InstrumentTask):
+class OscilloGetTraceTask(InstrumentTask):
     """ Get the trace displayed on the oscilloscope.
 
     """
@@ -45,21 +45,23 @@ class Oscillo_get_trace(InstrumentTask):
                    data['VERT_COUPLING'])
         self.write_in_database('oscillo_config', oscillo_config)
 
-
+        # if the TrigArray lentgh is null, it's a simple single sweep waveform
         if data['TRIGTIME_ARRAY'][0] == 0:
-# if the TrigArray lentgh is null, it's a simple single sweep waveform
-            self.write_in_database('trace_data', np.rec.fromarrays([data[
-                'SingleSweepTimesValuesArray'], data['Volt_Value_array']],
-                                             names=['Time (s)', 'Voltage (V)']))
+            arr = np.rec.fromarrays([data['SingleSweepTimesValuesArray'],
+                                     data['Volt_Value_array']],
+                                    names=['Time (s)', 'Voltage (V)'])
+            self.write_in_database('trace_data', arr)
         else:
-            self.write_in_database('trace_data', np.rec.fromarrays([data[
-                'SEQNCEWaveformTimesValuesArray'], data['Volt_Value_array']],
-                                             names=['Time (s)', 'Voltage (V)']))
+            arr = np.rec.fromarrays([data['SEQNCEWaveformTimesValuesArray'],
+                                     data['Volt_Value_array']],
+                                    names=['Time (s)', 'Voltage (V)'])
+            self.write_in_database('trace_data', )
 
     def check(self, *args, **kwargs):
         """
         """
-        test, traceback = super(Oscillo_get_trace, self).check(*args, **kwargs)
+        test, traceback = super(OscilloGetTraceTask, self).check(*args,
+                                                                 **kwargs)
         if self.average_nb:
             try:
                 val = self.format_and_eval_string(self.average_nb)
@@ -72,4 +74,4 @@ class Oscillo_get_trace(InstrumentTask):
 
         return test, traceback
 
-KNOWN_PY_TASKS = [Oscillo_get_trace]
+KNOWN_PY_TASKS = [OscilloGetTraceTask]
