@@ -217,8 +217,7 @@ class SaveTask(SimpleTask):
 
 
 class SaveFileTask(SimpleTask):
-    """ Save the specified entries in a CSV file. The file is closed when the
-    measure terminates.
+    """ Save the specified entries in a CSV file. 
 
     Wait for any parallel operation before execution.
 
