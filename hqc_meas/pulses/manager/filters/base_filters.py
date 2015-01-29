@@ -60,7 +60,7 @@ class PySequenceFilter(AbstractFilter):
     """
 
     @classmethod
-    def filter_tasks(cls, py_sequences, template_sequences):
+    def filter_items(cls, py_sequences, template_sequences):
 
         sequences = py_sequences.keys()
         sequences.remove('RootSequence')
@@ -72,7 +72,7 @@ class TemplateSequenceFilter(AbstractFilter):
     """
 
     @classmethod
-    def filter_tasks(cls, py_sequences, template_sequences):
+    def filter_items(cls, py_sequences, template_sequences):
 
         return template_sequences.keys()
 
@@ -111,7 +111,7 @@ class ClassAttrTaskFilter(AbstractFilter):
     class_attr = {'name': '', 'value': None}
 
     @classmethod
-    def filter_tasks(cls, py_sequences, template_sequences):
+    def filter_items(cls, py_sequences, template_sequences):
         """
         """
         sequences = []
@@ -121,7 +121,7 @@ class ClassAttrTaskFilter(AbstractFilter):
             if (hasattr(t_class, attr_name)
                     and getattr(t_class, attr_name) == attr_val):
                 sequences.append(name)
-                
+
         try:
             sequences.remove('Pulse')
             sequences.remove('RootSequence')

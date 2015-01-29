@@ -154,7 +154,7 @@ enamldef TemplateLoadDialog(Dialog): dial:
 
     """
     attr workspace
-    attr doc
+    attr doc = ''
     attr prefs
 
     title = 'Load template.'
@@ -184,6 +184,7 @@ enamldef TemplateLoadDialog(Dialog): dial:
 
         PushButton: load:
             text = 'Load'
+            enabled << prefs is not None
             clicked :: dial.accept()
 
 
@@ -206,7 +207,8 @@ RIGHT_CONTEXT = \
 
 
 def _validate_context(workspace):
-    test = workspace.state.sequence.context.context_class != 'TemplateContext'
+    context = workspace.state.sequence.context
+    test = context is not None and context.context_class != 'TemplateContext'
     return WRONG_CONTEXT if not test else RIGHT_CONTEXT
 
 
@@ -215,7 +217,7 @@ enamldef TemplateSaveDialog(Dialog): dial:
     """
     attr workspace
     attr path
-    attr doc
+    attr doc = ''
     attr can_proceed : bool = False
     event stack_changed
     stack_changed ::
@@ -242,8 +244,9 @@ enamldef TemplateSaveDialog(Dialog): dial:
                     padding = 2
 
                     ObjectCombo: fol:
-                        items = workspace.plugin.template_folders
-                        selected = os.path.dirname(dial.path)
+                        items = workspace.plugin.templates_folders
+                        selected = (os.path.dirname(dial.path)
+                                    if dial.path else '')
                         selected ::
                             dial.path = _format_path(selected, fil.text)
                             if dial.path and dial.doc:
@@ -253,7 +256,8 @@ enamldef TemplateSaveDialog(Dialog): dial:
                     Field: fil:
                         submit_triggers = ['lost_focus', 'return_pressed',
                                            'auto_sync']
-                        text = os.path.split(dial.path)[1]
+                        text = (os.path.split(dial.path)[1]
+                                if dial.path else '')
                         text ::
                             dial.path = _format_path(fol.selected, text)
                             if dial.path and dial.doc:
@@ -274,7 +278,7 @@ enamldef TemplateSaveDialog(Dialog): dial:
             StackItem: comp:
                 attr valid : bool = False
                 CompilationWidget:
-                    workspace = workspace
+                    workspace = dial.workspace
                     outcome ::
                         comp.valid = change['value']
 

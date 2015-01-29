@@ -34,17 +34,17 @@ class _SelectorModel(Atom):
         if selected_filter:
             self.selected_filter = selected_filter
 
-    def _observe_selected_filter(self, change):
+    def _post_setattr_selected_filter(self, old, new):
         """ Observer getting the tasks to display.
 
         """
-        fil = change['value']
+        fil = new
         if fil:
             sequences = self.manager.filter_sequences(fil)
             if sequences:
-                self.display_sequences = tasks
+                self.display_sequences = sequences
             else:
-                tasks = ['']
+                self.display_sequences = ['']
         else:
             self.display_sequences = self.manager.filter_sequences('All')
 

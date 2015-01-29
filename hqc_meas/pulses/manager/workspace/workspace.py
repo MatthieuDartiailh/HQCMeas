@@ -250,7 +250,7 @@ class SequenceEditionSpace(Workspace):
             dial = TemplateLoadDialog(self.content, workspace=self)
             dial.exec_()
             if dial.result:
-                seq = self._load_sequence_template(dial.prefs)
+                seq = self._load_sequence_from_template(dial.prefs)
                 self.state.sequence = seq
                 self.state.sequence_type = 'Template'
                 self.state.sequence_path = dial.path

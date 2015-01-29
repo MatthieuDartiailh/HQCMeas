@@ -318,12 +318,6 @@ class PulsesManagerPlugin(HasPrefPlugin):
             return s_filter.filter_items(self._sequences,
                                          self._template_sequences)
 
-    # implement dialog logic in manifest.
-    def build_sequence(self, config):
-        """ Build a sequence from a configuartion dictionary.
-        """
-        pass
-
     def report(self):
         """ Give access to the failures which happened at startup.
 
