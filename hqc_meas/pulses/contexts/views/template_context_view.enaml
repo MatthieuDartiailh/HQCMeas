@@ -63,6 +63,7 @@ enamldef MappingEditor(Container):
                     key = loop_item
 
 
+# TODO fix validators
 enamldef TemplateContextView(Container): view:
     """ View for a pulse item.
 
@@ -84,7 +85,7 @@ enamldef TemplateContextView(Container): view:
                 context.logical_channels = text.split(', ')
                 aux = context.logical_channels + context.analogical_channels
                 context.channel_mapping = {c: '' for c in aux}
-            validator = RegexValidator(regex='^([a-zA-Z]+, )+[a-zA-Z]+$')
+#            validator = RegexValidator(regex='([a-zA-Z0-9])(, [a-zA-Z0-9])*')
             tool_tip = fill(cleandoc('''Enter the list of logical channels as
                             a comma separated list. ex : Ch1, Ch2'''))
         Label:
@@ -95,7 +96,7 @@ enamldef TemplateContextView(Container): view:
                 context.analogical_channels = text.split(', ')
                 aux = context.logical_channels + context.analogical_channels
                 context.channel_mapping = {c: '' for c in aux}
-            validator = RegexValidator(regex='^([a-zA-Z]+, )+[a-zA-Z]+$')
+#            validator = RegexValidator(regex='([a-zA-Z0-9])(, [a-zA-Z0-9])*')
             tool_tip = fill(cleandoc('''Enter the list of analogical channels
                             as a comma separated list. ex : Ch1, Ch2'''))
 

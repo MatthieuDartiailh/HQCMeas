@@ -1,0 +1,144 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : transfer_pulse_sequence_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.layout.api import factory
+from enaml.core.api import Conditional
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox,
+                               Notebook, Page, PushButton, Menu, Action)
+
+from inspect import cleandoc
+from textwrap import fill
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.widgets.dict_editor import DictEditor
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+from hqc_meas.pulses.sequences_views import instantiate_context_view
+
+enamldef VarEditor(Container):
+    """ Fields allowing top edit the local variables of a sequence.
+
+    """
+    attr model
+    attr task
+    constraints = [hbox(lab, val)]
+    Field: lab:
+        hug_width = 'strong'
+        text := model.key
+    QtLineCompleter: val:
+        text := model.value
+        entries_updater << task.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
+
+class BaseTransferSequenceView(BaseInstrumentView):
+    """Base view not including the interface view in the hierarchy.
+
+    """
+    def _update_interface(self, change):
+        """ Update the interface when the selected driver change.
+
+        """
+        driver = self.task.selected_driver
+        interface = self._interfaces[driver]
+
+        # The or clause handle the absence of an interface (ie None for both
+        # interface and task.interface).
+        if type(self.task.interface) != interface:
+            # Destroy the views associated with the ancient interface.
+            for i_v in self.i_views:
+                i_v.destroy()
+
+            # If no interface is used simply assign None
+            if type(None) == interface:
+                self.task.interface = None
+                return
+
+            # Otherwise create interface and insert its views.
+            self.task.interface = interface()
+
+            cmd = 'hqc_meas.task_manager.interface_views_request'
+            views, _ = self.core.invoke_command(cmd,
+                                                {'interface_classes':
+                                                    [interface.__name__]}
+                                                )
+
+            if interface.has_view:
+                i_views = [v(self, interface=self.task.interface)
+                           for v in views[interface.__name__]]
+                self.i_views = i_views
+
+            else:
+                self.i_views = ()
+
+
+enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
+
+    title << task.task_name
+
+    Label:  driver_lab:
+        text = 'Driver'
+    ObjectCombo: driver_val:
+        items << sorted(task.driver_list)
+        selected := task.selected_driver
+
+    Label:  profile_lab:
+        text = 'Instr'
+    ObjectCombo: profile_val:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    PushButton:
+        text = 'Select sequence'
+        Menu:
+            Action:
+                text = 'Saved sequence'
+                triggered ::
+                    pass
+            Action:
+                text = 'Template sequence'
+                triggered ::
+                    pass
+
+    Conditional: cnd:
+        condition << task.sequence
+        Notebook:
+            Page:
+                title = 'Variables'
+                DictEditor(VarEditor): ed:
+                    ed.title = 'Name : formula'
+                    ed.model = item
+                    ed.iterable_name = 'local_vars'
+            Page:
+                title = 'Context'
+                Include:
+                    objects << [instantiate_context_view(core,
+                                                         task.sequence.context,
+                                                         {})]\
+                               if getattr(item, 'context') else [])
+            Include:
+                objects << list(i_views)
+
+enamldef AWGTransferPulseSequenceInterfaceView(Page):
+    """
+    """
+    attr interface
+    title = 'AWG specials'
+
+    Container:
+        Label: lb:
+            text = 'Sequence name'
+
+        Field:
+            text := interface.sequence_name
+
+        CheckBox:
+            text = 'Select after transfert'
+            checked := interface.select_after_transfer
+
+
+TASK_VIEW_MAPPING = {'TransferPulseSequenceTask' : TransferPulseSequenceView}
