@@ -20,6 +20,7 @@ from hqc_meas.utils.dependencies.api import BuildDependency
 from hqc_meas.utils.configobj_ops import flatten_config
 
 from .building import BuilderView, ContextBuilderView
+from .sequences_io import load_sequence_prefs
 from ..base_sequences import RootSequence
 
 def manager_plugin_factory():
@@ -129,7 +130,7 @@ def build_sequence(event):
         elif 'prefs' in event.parameters:
             prefs = event.parameters['prefs']
         else:
-            raise ValueError('No valid kwarg found for file mode')
+            raise ValueError('No valid kwargs found for file mode')
         # Implement the logic here to rebuild the sequence.
         core = manager.workbench.get_plugin('enaml.workbench.core')
         cmd = 'hqc_meas.dependencies.collect_build_dep_from_config'
@@ -170,9 +171,6 @@ CONTEXTS_REQUEST_DESCRIPTION = \
 SHAPES_REQUEST_DESCRIPTION = \
 """ Request the infos associated to a list of shapes. """
 
-SAVE_TASK_DESCRIPTION = \
-""" Save a task to a file or object. """
-
 BUILD_SEQUENCE_DESCRIPTION = \
 """ Build a sequence from the one knwon to the plugin."""
 
@@ -181,6 +179,7 @@ BUILD_CONTEXT_DESCRIPTION = \
 
 MANAGER_STATE_DESCRIPTION = \
 """ The tasks manager gives access to the known tasks and filters."""
+
 
 def collect_pulses_dependecies(workbench, flat_walk):
     """ Collector function for the build-dependencies extensions.
@@ -206,6 +205,9 @@ def collect_pulses_dependecies(workbench, flat_walk):
     # Collect the templates.
     tp_res = manager.sequences_request(flat_walk['template_id'])
 
+    # Collect the sequences.
+    sq_res = {p: load_sequence_prefs(p)[0] for p in flat_walk['sequence_path']}
+
     if s_res[1] or c_res[1] or sh_res[1] or tp_res[1]:
         mess = 'Missing sequences: {}, contexts: {}, shapes: {}, templates: {}'
 
@@ -217,6 +219,7 @@ def collect_pulses_dependecies(workbench, flat_walk):
     dependencies['contexts'] = c_res[0]
     dependencies['shapes'] = sh_res[0]
     dependencies['templates'] = tp_res[0]
+    dependencies['sequencies'] = sq_res
 
     # Collect template dependencies.
     for _, conf, _ in tp_res[0]:
@@ -225,6 +228,15 @@ def collect_pulses_dependecies(workbench, flat_walk):
         depedencies['shapes'].update(t_dep.pop('shapes'))
         depedencies['context'].update(t_dep.pop('context'))
         depedencies['templates'].update(t_dep.pop('templates'))
+        depedencies.update(t_dep)
+
+    # NB : no nesting possible for pulse sequences.
+    for conf in sq_res.values():
+        s_conf = flatten_config(conf)
+        s_dep = collect_pulses_dependecies(workbench, s_conf)['pulses']
+        depedencies['shapes'].update(s_dep.pop('shapes'))
+        depedencies['context'].update(s_dep.pop('context'))
+        depedencies['templates'].update(s_dep.pop('templates'))
         depedencies.update(t_dep)
 
     if dependencies:

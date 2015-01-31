@@ -35,6 +35,25 @@ class AWGChannel(BaseInstrument):
         self._AWG = AWG
         self._channel = channel_num
 
+    @secure_communication()
+    def to_send(self, name, waveform):
+        """Command to send to the instrument. waveform = string of a bytearray
+
+        """
+        numbyte = len(waveform)
+        looplength = numbyte//2
+        with self.secure():
+            self._AWG.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
+            self._AWG.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger"
+                            .format(name, looplength))
+            self._AWG.write("SOURCE{}:WAVEFORM '{}'"
+                            .format(self._channel, name))
+            numApresDiese = len('{}'.format(numbyte))
+            header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
+                                                            numApresDiese,
+                                                            numbyte)
+            self._AWG.write('{},{}'.format(header, waveform))
+
     @contextmanager
     def secure(self):
         """ Lock acquire and release method
@@ -378,24 +397,6 @@ class AWGChannel(BaseInstrument):
                 raise InstrIOError(cleandoc('''AWG channel {} did not set
                                             correctly the phase'''
                                             .format(self._channel)))
-
-    @secure_communication()
-    def to_send(self, name, waveform, looplength):
-        """ command to send to the instrument. waveform = string of a bytearray
-
-        """
-        with self.secure():
-            self._AWG.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
-            self._AWG.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger"
-                            .format(name, looplength))
-            self._AWG.write("SOURCE{}:WAVEFORM '{}'"
-                            .format(self._channel, name))
-            numbyte = 2 * looplength
-            numApresDiese = len('{}'.format(numbyte))
-            header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
-                                                            numApresDiese,
-                                                            numbyte)
-            self._AWG.write('{},{}'.format(header, waveform))
 
 
 class AWG(VisaInstrument):

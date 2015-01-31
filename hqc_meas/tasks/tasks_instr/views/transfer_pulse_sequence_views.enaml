@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : transfer_pulse_sequence_view.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """
 """
-from enaml.layout.api import factory
-from enaml.core.api import Conditional
+import logging
+import traceback
+from enaml.layout.api import factory, hbox, vbox, spacer
+from enaml.core.api import Conditional, Include
 from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox,
-                               Notebook, Page, PushButton, Menu, Action)
+                               Notebook, Page, PushButton, Menu, Action,
+                               FileDialogEx, Container)
 
 from inspect import cleandoc
 from textwrap import fill
+def fc(txt):
+    return fill(cleandoc(txt))
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.widgets.dict_editor import DictEditor
@@ -70,15 +75,57 @@ class BaseTransferSequenceView(BaseInstrumentView):
             if interface.has_view:
                 i_views = [v(self, interface=self.task.interface)
                            for v in views[interface.__name__]]
-                self.i_views = i_views
+                self.i_views = tuple(i_views)
 
             else:
                 self.i_views = ()
 
 
+def load_sequence(view, core, task, mode='reference'):
+    """Open a dialog and load a pulse sequence.
+
+    Parameters
+    ----------
+    view : enaml.Widget
+        Parent for the dialog.
+    core : CorePlugin
+        Refrence to the core plugin of the application.
+    task : TransferPulseSequenceTask
+        Task for which to load the sequence.
+    mode : {'reference', 'merge'}
+        In referencve mode, the path to the sequence is saved and the sequence
+        is not stored in the task.
+        In merge mode, the path to the sequence is not saved and the sequence
+        is saved as part of the task.
+
+    """
+    path = FileDialogEx.get_open_file_name(view, name_filters=['*.ini'])
+    if path:
+        cmd = 'hqc_meas.pulses.build_sequence'
+        try:
+            seq = core.invoke_command(cmd, {'mode': 'file', 'path': path})
+        except Exception:
+            mess = 'Failed to load sequence {}: {}'
+            logging.warning(mess.format(path, traceback.format_exc()))
+
+        if not task.interface.validate_context(seq.context):
+            logging.warning('Invalid context driver combination.')
+            return
+
+        task.sequence = seq
+        # This makes sure the editor is kept in sync.
+        task.sequence_vars = seq.external_vars.copy()
+        if mode == 'reference':
+            task.sequence_path = path
+
+
 enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
 
     title << task.task_name
+    constraints << [vbox(hbox(driver_lab, driver_val,
+                              profile_lab, profile_val,
+                              seq, spacer),
+                         *cnd.items)]
 
     Label:  driver_lab:
         text = 'Driver'
@@ -92,36 +139,49 @@ enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
         items << sorted(profiles)
         selected := task.selected_profile
 
-    PushButton:
+    PushButton: seq:
+        enabled << bool(task.selected_driver)
         text = 'Select sequence'
         Menu:
             Action:
-                text = 'Saved sequence'
+                text = 'Reference'
+                tool_tip = fc('''A refernce to the sequence will be kept
+                              so that modifications on the sequence will be
+                              reflected on this measure.''')
                 triggered ::
-                    pass
+                    load_sequence(view, core, task)
             Action:
-                text = 'Template sequence'
+                text = 'Merge'
+                tool_tip = fc('''The sequence will be merged into the task
+                              and further modification to the sequence file
+                              won't be reflected on this measure.''')
                 triggered ::
-                    pass
+                    load_sequence(view, core, task, 'merge')
 
     Conditional: cnd:
-        condition << task.sequence
+        condition << bool(task.sequence)
         Notebook:
+            tabs_closable = False
             Page:
                 title = 'Variables'
                 DictEditor(VarEditor): ed:
                     ed.title = 'Name : formula'
-                    ed.model = item
-                    ed.iterable_name = 'local_vars'
+                    ed.operations = ['move']
+                    ed.model = task
+                    ed.iterable_name = 'sequence_vars'
             Page:
                 title = 'Context'
                 Include:
-                    objects << [instantiate_context_view(core,
+                    objects << ([instantiate_context_view(core,
                                                          task.sequence.context,
-                                                         {})]\
-                               if getattr(item, 'context') else [])
+                                                         {})]
+                                if getattr(task.sequence, 'context') else [])
             Include:
                 objects << list(i_views)
+
+
+TASK_VIEW_MAPPING = {'TransferPulseSequenceTask' : TransferPulseSequenceView}
+
 
 enamldef AWGTransferPulseSequenceInterfaceView(Page):
     """
@@ -130,15 +190,20 @@ enamldef AWGTransferPulseSequenceInterfaceView(Page):
     title = 'AWG specials'
 
     Container:
+        constraints = [hbox(lb, fd, cb)]
         Label: lb:
             text = 'Sequence name'
 
-        Field:
+        Field: fd:
             text := interface.sequence_name
+            tool_tip = fc('''If left empty the sequence will be named
+                          'Sequence'. In any case the channel name is appended.
+                          ex : Sequence_Ch1''')
 
-        CheckBox:
+        CheckBox: cb:
             text = 'Select after transfert'
             checked := interface.select_after_transfer
 
 
-TASK_VIEW_MAPPING = {'TransferPulseSequenceTask' : TransferPulseSequenceView}
+INTERFACE_VIEW_MAPPING = {'AWGTransferInterface':
+                          [AWGTransferPulseSequenceInterfaceView]}

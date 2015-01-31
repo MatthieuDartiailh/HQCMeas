@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : editor_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from enaml.workbench.api import PluginManifest, Extension
+
+from ..base_editor import Editor
+from .editor import PulseEditor
+
+
+PULSE_EDITOR_ID = u'hqc_meas.measure.editors.pulse_editor'
+
+
+def editor_factory(declaration, workbench):
+    """ Create a standard editor.
+
+    """
+    return PulseEditor(workbench=workbench,
+                       declaration=declaration)
+
+
+def editor_test(workbench, selected_task):
+    """ Only allow DatabaseAccessEditor for ComplexTask.
+
+    """
+    return hasattr(selected_task, 'sequence')
+
+
+enamldef PulseEditorManifest(PluginManifest):
+    """ Manifest contributing the StandardEditor to the MeasurePlugin.
+
+    """
+    id = PULSE_EDITOR_ID
+    Extension:
+        id = 'editor'
+        point = u'hqc_meas.measure.editors'
+        Editor:
+            id = PULSE_EDITOR_ID
+            name = 'Pulse sequence editor'
+            description = u'Editor used to edit the pulse sequence of a task.'
+            factory = editor_factory
+            test = editor_test
