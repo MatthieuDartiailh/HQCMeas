@@ -687,7 +687,6 @@ class TestCompilation(object):
         self.root.items.extend([pulse1, pulse2, pulse3])
 
         res, pulses = self.root.compile_sequence(False)
-        print pulses
         assert_true(res)
         assert_equal(len(pulses), 3)
         assert_equal(pulses[0].start, 1.0)

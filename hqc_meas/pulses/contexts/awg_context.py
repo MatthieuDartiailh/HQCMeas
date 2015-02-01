@@ -99,8 +99,10 @@ class AWGContext(BaseContext):
             elif channeltype == 'M2' and pulse.kind == 'Logical':
                 array_M2[channel][start_index:stop_index] -= waveform
             else:
+                msg = 'Selected channel does not match kind for pulse {} ({}).'
                 return False, {'Kind issue':
-                               'Selected channel does not match kind.'}
+                               msg.format(pulse.index,
+                                          (pulse.kind, pulse.channel))}
 
         # Check the overflows
         traceback = {}

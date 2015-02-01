@@ -54,9 +54,8 @@ class TransferPulseSequenceTask(InterfaceableTaskMixin, InstrumentTask):
                 if not res:
                     test = False
                     mess = cleandoc('''Compilation failed.
-                                    Missing entries : {}.
                                     Errors : {}.''')
-                    traceback[err_path+'compil'] = mess.format(*details)
+                    traceback[err_path+'compil'] = mess.format(details)
 
         else:
             test = False
@@ -167,6 +166,7 @@ class AWGTransferInterface(InstrTaskInterface):
 
         """
         self.task.write_in_database('sequence_name', self.sequence_name)
+        return True, {}
 
     def validate_context(self, context):
         """Validate the context is appropriate for the driver.
