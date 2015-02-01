@@ -42,7 +42,9 @@ class QtListStrWidget(RawWidget):
     #: Cyclic notification guard. This a bitfield of multiple guards.
     _guard = Int(0)
 
-    # -------------------------------------------------------------------------
+    __slots__ = ['__weakref__']
+
+    #--------------------------------------------------------------------------
     # Initialization API
     # -------------------------------------------------------------------------
     def create_widget(self, parent):

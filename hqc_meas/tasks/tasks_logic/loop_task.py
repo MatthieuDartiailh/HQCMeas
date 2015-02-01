@@ -34,6 +34,28 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
     task_database_entries = set_default({'point_number': 11, 'index': 1,
                                          'value': 0})
 
+    def check(self, *args, **kwargs):
+        """ Overriden so that interface check are run before children ones.
+
+        """
+        test = True
+        traceback = {}
+        if not self.interface:
+            traceback[self.task_name + '_interface'] = 'Missing interface'
+            return False, traceback
+
+        i_test, i_traceback = self.interface.check(*args, **kwargs)
+
+        traceback.update(i_traceback)
+        test &= i_test
+
+        c_test, c_traceback = ComplexTask.check(self, *args, **kwargs)
+
+        traceback.update(c_traceback)
+        test &= c_test
+
+        return test, traceback
+
     def perform_loop(self, iterable):
         """ Perform the loop on the iterable calling all child tasks at each
         iteration.
@@ -157,24 +179,27 @@ class LoopTask(InterfaceableTaskMixin, ComplexTask):
         """ Keep the database entries in sync with the task member.
 
         """
-        if self.has_root:
-            c_type = change['type']
-            if 'oldvalue' in change and change['oldvalue']:
+        c_type = change['type']
+        if 'oldvalue' in change and change['oldvalue']:
+            if self.has_root:
                 self._child_removed(change['oldvalue'])
 
-            if change['value'] and c_type != 'delete':
+        if change['value'] and c_type != 'delete':
+            if self.has_root:
                 self._child_added(change['value'])
-                aux = self.task_database_entries.copy()
-                if 'value' in aux:
-                    del aux['value']
-                self.task_database_entries = aux
 
-            else:
-                if c_type == 'delete':
-                    self._child_removed(change['value'])
-                aux = self.task_database_entries.copy()
-                aux['value'] = 1.0
-                self.task_database_entries = aux
+            aux = self.task_database_entries.copy()
+            if 'value' in aux:
+                del aux['value']
+            self.task_database_entries = aux
+
+        else:
+            if c_type == 'delete' and self.has_root:
+                self._child_removed(change['value'])
+
+            aux = self.task_database_entries.copy()
+            aux['value'] = 1.0
+            self.task_database_entries = aux
 
     def _observe_timing(self, change):
         """ Keep the database entries in sync with the timing flag.

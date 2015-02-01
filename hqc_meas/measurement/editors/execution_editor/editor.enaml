@@ -9,7 +9,7 @@ from enaml.widgets.api import (Container, GroupBox, CheckBox, ScrollArea,
                                ObjectCombo, PushButton)
 from enaml.core.api import Looper, Conditional
 from enaml.stdlib.mapped_view import MappedView
-from enaml.layout.api import vbox, hbox, spacer
+from enaml.layout.api import vbox, hbox, spacer, factory
 from inspect import cleandoc
 
 from hqc_meas.tasks.api import ComplexTask, SimpleTask
@@ -90,6 +90,10 @@ enamldef _ExEditor(Container):
         hug_width = 'strong'
 
     CheckBox: parallel:
+        # Workaround the fact that otherwise when the checkbox is unchecked
+        # the declaration for the ObjectCombo in par_cond is destroyed but the
+        # qt object try to refresh its items given the async nature of enaml.
+        attr active : bool = checked
         text = 'Parallel'
         tool_tip = cleandoc('''Should this task perform its job in parallel
                             (new thread).''')
@@ -111,6 +115,7 @@ enamldef _ExEditor(Container):
                     wait.checked = False
 
                 self.parent._lock = False
+                active = change['value']
 
     CheckBox: wait:
         text = 'Wait'
@@ -136,7 +141,7 @@ enamldef _ExEditor(Container):
                 self.parent._lock = False
 
     Conditional: par_cond:
-        condition << parallel.checked
+        condition << parallel.active
 
         ObjectCombo:
             items << _model.pools
@@ -219,6 +224,14 @@ enamldef _SimpleExEditor(GroupBox):
     _ExEditor: ed:
         pass
 
+
+def _complex_constraints(editor):
+    children = editor.widgets()
+    constraints = [vbox(*children)]
+    for child in children:
+        constraints.append(child.left == editor.contents_left)
+    return constraints
+
 enamldef _ComplexExEditor(GroupBox): main:
 
     attr task
@@ -226,6 +239,7 @@ enamldef _ComplexExEditor(GroupBox): main:
     attr _map
 
     title = task.task_name if task else ''
+    constraints << [factory(_complex_constraints)]
 
     Conditional:
         condition << task.task_depth != 0

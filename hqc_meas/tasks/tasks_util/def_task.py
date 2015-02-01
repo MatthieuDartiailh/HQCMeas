@@ -38,12 +38,12 @@ class DefinitionTask(SimpleTask):
             try:
                 val = safe_eval(entry[1])
                 self.write_in_database(entry[0], val)
-            except Exception:
+            except Exception as e:
                 test = False
                 path = self.task_path + '/' + self.task_name + \
                     '-' + entry[0]
-                traceback[path] = cleandoc('''Failed to eval definition {}
-                            '''.format(entry[1]))
+                traceback[path] = cleandoc('''Failed to eval definition {}: {}
+                            '''.format(entry[1], e))
         return test, traceback
 
     def _observe_definitions(self, change):

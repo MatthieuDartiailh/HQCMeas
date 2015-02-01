@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : measure.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from atom.api import (Atom, Instance, Dict, Unicode, ForwardTyped, Str)
 from configobj import ConfigObj
 import logging
@@ -21,7 +21,7 @@ class Measure(Atom):
     """
 
     """
-    #--- Public API -----------------------------------------------------------
+    # --- Public API ----------------------------------------------------------
 
     #: Reference to the measure plugin managing this measure.
     plugin = ForwardTyped(measure_plugin)
@@ -285,7 +285,7 @@ class Measure(Atom):
 
         return list(set(entries))
 
-    #--- Private API ----------------------------------------------------------
+    # --- Private API ---------------------------------------------------------
 
     def _observe_root_task(self, change):
         """ Observer ensuring that the monitors observe the right database.

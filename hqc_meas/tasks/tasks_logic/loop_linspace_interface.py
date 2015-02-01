@@ -32,27 +32,27 @@ class LinspaceLoopInterface(TaskInterface):
         test = True
         traceback = {}
         task = self.task
+        err_path = task.task_path + '/' + task.task_name
         try:
             start = task.format_and_eval_string(self.start)
+            if 'value' in task.task_database_entries:
+                task.write_in_database('value', start)
         except Exception as e:
             test = False
             mess = 'Loop task did not succeed to compute  the start value: {}'
-            traceback[task.task_path + '/' + task.task_name + '-start'] = \
-                mess.format(e)
+            traceback[err_path + '-start'] = mess.format(e)
         try:
             stop = task.format_and_eval_string(self.stop)
         except Exception as e:
             test = False
             mess = 'Loop task did not succeed to compute  the stop value: {}'
-            traceback[task.task_path + '/' + task.task_name + '-stop'] = \
-                mess.format(e)
+            traceback[err_path + '-stop'] = mess.format(e)
         try:
             step = task.format_and_eval_string(self.step)
         except Exception as e:
             test = False
             mess = 'Loop task did not succeed to compute the step value: {}'
-            traceback[task.task_path + '/' + task.task_name + '-step'] = \
-                mess.format(e)
+            traceback[err_path + '-step'] = mess.format(e)
 
         if not test:
             return test, traceback
@@ -63,16 +63,14 @@ class LinspaceLoopInterface(TaskInterface):
         except Exception as e:
             test = False
             mess = 'Loop task did not succeed to compute the point number: {}'
-            traceback[task.task_path + '/' + task.task_name + '-points'] = \
-                mess.format(e)
+            traceback[err_path + '-points'] = mess.format(e)
 
         try:
             linspace(start, stop, num)
-        except Exception:
+        except Exception as e:
             test = False
             mess = 'Loop task did not succeed to create a linspace: {}'
-            traceback[task.task_path + '/' + task.task_name + '-linspace'] = \
-                mess.format(e)
+            traceback[err_path + '-linspace'] = mess.format(e)
 
         return test, traceback
 

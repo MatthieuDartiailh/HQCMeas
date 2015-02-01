@@ -128,7 +128,7 @@ class _Model(Atom):
             counter = Counter(wait + no_wait)
 
             if not activated and counter:
-                self._counter.substract(counter)
+                self._counter.subtract(counter)
                 self.pools = list(set(self._counter.elements()))
 
             elif activated and counter:

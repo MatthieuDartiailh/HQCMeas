@@ -13,6 +13,7 @@ with enaml.imports():
     from enaml.stdlib.message_box import information
 
 from inspect import cleandoc
+from textwrap import fill
 
 from ..base_monitor import BaseMonitor
 from .entries import MonitoredEntry
@@ -62,7 +63,8 @@ class TextMonitor(BaseMonitor):
             self.show_monitor(parent_ui)
 
     def stop(self):
-        if self._view.proxy_is_active:
+        # Avoid raising errors if the view has already been destroyed.
+        if getattr(self._view, 'proxy_is_active', None):
             self._view.close()
         self._view = None
 
@@ -195,11 +197,13 @@ class TextMonitor(BaseMonitor):
         hidden = [e for e in m_entries if e.path in pref_hidden]
         m_entries -= set(hidden)
         if m_entries:
+            e_l = [e.name for e in m_entries]
+            mess = cleandoc('''The following entries were not
+                        expected from the config : {} . These entries has been
+                        added to the displayed ones.''')
             information(parent=None,
                         title='Unhandled entries',
-                        text=cleandoc('''The application of new rules lead
-                        to the creation of new entries. These entries has been
-                        added to the displayed ones.'''))
+                        text=fill(mess.format(e_l)))
             pref_disp += list(m_entries)
 
         self.displayed_entries = disp

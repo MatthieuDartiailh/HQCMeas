@@ -63,6 +63,12 @@ class TaskManagerPlugin(HasPrefPlugin):
     #: List of the filters.
     filters = List(Str(), TASK_FILTERS.keys())
 
+    #: Path to the file in which the names for the tasks are located.
+    auto_task_path = Unicode().tag(pref=True)
+
+    #: List of names to use when creating a new task.
+    auto_task_names = List()
+
     def start(self):
         """ Start the plugin life-cycle.
 
@@ -79,6 +85,8 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._refresh_tasks()
         self._refresh_filters()
         self._refresh_config()
+        if self.auto_task_path:
+            self.load_auto_task_names()
         self._bind_observers()
 
     def stop(self):
@@ -272,6 +280,25 @@ class TaskManagerPlugin(HasPrefPlugin):
 
         return None, None
 
+    def load_auto_task_names(self, path=None):
+        """ Generate a list of task names from a file.
+
+        Parameters
+        ----------
+        path : unicode, optional
+            Path from which to load the default task names. If not provided
+            the auto_task_path is used.
+
+        """
+        if not path:
+            path = self.auto_task_path
+        if not os.path.isabs(path):
+            path = os.path.join(PACKAGE_PATH, '..', 'utils', 'preferences',
+                                path)
+        with open(path) as f:
+            aux = f.readlines()
+            self.auto_task_names = [l.rstrip() for l in aux]
+
     def report(self):
         """ Give access to the failures which happened at startup.
 
@@ -394,7 +421,8 @@ class TaskManagerPlugin(HasPrefPlugin):
         self._interfaces = {i.__name__: i for v in valid_interfaces.values()
                             for i in v}
         self._interface_views = interface_views
-        self.tasks = list(tasks.keys()) + list(self._template_tasks.keys())
+        self.tasks = (list(valid_tasks.keys()) +
+                      list(self._template_tasks.keys()))
 
         self._failed = failed
         # TODO do something with failed

@@ -1,0 +1,241 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : hqc_meas/tasks/tasks_util/views/load_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from atom.api import (Typed, Value, List, Str, Dict, Tuple, set_default)
+from enaml.widgets.api import (GroupBox, PushButton, Container, Label, Field,
+                               FileDialog, ObjectCombo, CheckBox,
+                               ToolButton, PopupView, MultilineField)
+from enaml.workbench.core.core_plugin import CorePlugin
+from enaml.core.declarative import d_
+from enaml.core.api import Include
+from enaml.layout.api import hbox, align
+
+from inspect import cleandoc
+import logging
+
+from hqc_meas.tasks.tools.string_evaluation import (EVALUATER_TOOLTIP,
+                                                    FORMATTER_TOOLTIP)
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+
+
+class BaseLoadView(GroupBox):
+    """ Base class for load task views.
+
+    This class handles internally the access to the profiles.
+
+    """
+    #: Reference to the task being edited by this view.
+    task = d_(Value())
+
+    #: List of drivers which can be used with that task.
+    file_formats = d_(List(Str()))
+
+    #: Reference to the core plugin of the application.
+    core = d_(Typed(CorePlugin))
+
+    #: References to the currently instantiated interface views.
+    i_views = Tuple(default=())
+
+    padding = set_default((0, 0, 5, 5))
+
+    def initialize(self):
+        """
+
+        """
+        super(BaseLoadView, self).initialize()
+
+        cmd = 'hqc_meas.task_manager.interfaces_request'
+        inter, _ = self.core.invoke_command(cmd,
+                                            {'tasks':
+                                                [self.task.task_class]}
+                                            )
+
+        file_formats = []
+        interfaces = {}
+        # Get the file formats and map them to their interface.
+        for i in inter.get(self.task.task_class, []):
+            file_formats.extend(i.file_formats)
+            interfaces.update({d: i for d in i.file_formats})
+        self.file_formats = file_formats
+        self._interfaces = interfaces
+
+        if self.task.interface:
+            self._insert_interface_views(self.task.interface)
+
+        self._bind_observers()
+
+    def destroy(self):
+        """ Overriden destroyer to remove observers.
+
+        """
+        self._interfaces.clear()
+        self._unbind_observers()
+        super(BaseLoadView, self).destroy()
+
+    # --- Private API ---------------------------------------------------------
+
+    #: Map between driver and interface.
+    _interfaces = Dict(Str())
+
+    def _update_interface(self, change):
+        """ Update the interface when the selected format change.
+
+        """
+        f_format = change['value']
+        interface = self._interfaces[f_format]
+
+        if type(self.task.interface) != interface:
+            # Destroy the views associated with the ancient interface.
+            for i_v in self.i_views:
+                i_v.destroy()
+            # If no interface is used simply assign None
+            if type(None) == interface:
+                self.task.interface = None
+                return
+            # Otherwise create interface and insert its views.
+            self.task.interface = interface()
+
+            self._insert_interface_views(self.task.interface)
+
+    def _insert_interface_views(self, interface):
+        """
+        """
+        cmd = 'hqc_meas.task_manager.interface_views_request'
+        i_c_name = type(interface).__name__
+        views, _ = self.core.invoke_command(cmd,
+                                            {'interface_classes':
+                                                [i_c_name]}
+                                            )
+
+        if interface.has_view:
+            i_views = [v(self, interface=self.task.interface)
+                       for v in views[i_c_name]]
+            # TODO handle more complex insertions.
+            if hasattr(i_views[0], 'index'):
+                self.insert_children(i_views[0].index, i_views)
+            else:
+                self.insert_children(None, i_views)
+
+            self.i_views = tuple(i_views)
+
+        else:
+            self.i_views = ()
+
+    def _bind_observers(self):
+        """ Bind the observers at widget initialisation.
+
+        """
+        self.task.observe('selected_format', self._update_interface)
+
+    def _unbind_observers(self):
+        """ Undind the observers at widget destruction.
+
+        """
+        self.task.unobserve('selected_format', self._update_interface)
+
+
+enamldef LoadArrayView(BaseLoadView): main:
+    """
+    """
+    GroupBox: folder:
+        title = 'Directory'
+        constraints = [hbox(path, explore),
+                        align('v_center', path, explore)]
+
+        QtLineCompleter: path:
+            text := task.folder
+            entries_updater << task.accessible_database_entries
+            tool_tip = FORMATTER_TOOLTIP
+        PushButton: explore:
+            text = 'E'
+            hug_width = 'strong'
+            clicked ::
+                path = FileDialog(mode = 'directory',
+                                title = 'Select a default path',
+                                ).exec_()
+                if path:
+                    task.folder = path
+
+    GroupBox: file:
+        title = 'File'
+        constraints = [hbox(name, mode)]
+
+        QtLineCompleter: name:
+            text := task.filename
+            entries_updater << task.accessible_database_entries
+            tool_tip = FORMATTER_TOOLTIP
+        ObjectCombo: mode:
+                items = main.file_formats
+                selected := task.selected_format
+
+    Include:
+        objects << list(i_views)
+
+
+TASK_VIEW_MAPPING = {'LoadArrayTask' : LoadArrayView}
+
+
+enamldef _CNamesEditor(PopupView):
+    """
+    """
+    attr interface
+    closed::
+        names = []
+        try:
+            c_ns = c_names.text.split(',')
+            for c_n in c_ns:
+                aux = c_n.strip()
+                if aux:
+                    names.append(aux)
+            if names:
+                interface.c_names = names
+        except Exception:
+            logger = logging.getLogger(__file__)
+            logger.exception('Could not parse column names.')
+
+    Container:
+        Label:
+            text = 'Column names'
+        MultilineField: c_names:
+            tool_tip = cleandoc('''The list of column should be provided as
+                                a comma separated list.''')
+            text = ', '.join(interface.c_names)
+
+
+enamldef CSVLoadInterfaceView(Container):
+    """
+    """
+    attr interface
+    constraints = [hbox(del_lab, del_val, com_lab, com_val, nam, c_n)]
+
+    Label: del_lab:
+        text = 'Delimiter'
+    Field: del_val:
+        text := interface.delimiter
+
+    Label: com_lab:
+        text = 'Comment'
+    Field: com_val:
+        text := interface.comments
+
+    CheckBox: nam:
+        text = 'Names'
+        checked := interface.names
+    ToolButton: c_n:
+        text = '>'
+        tool_tip = cleandoc('''If the file cannot be found during the check,
+                            you should provide the names of the columns which
+                            will be available to allow check to run correctly.
+                            ''')
+        clicked::
+            _CNamesEditor(parent=self, interface=interface).show()
+
+
+
+INTERFACE_VIEW_MAPPING = {'CSVLoadInterface':
+                          [CSVLoadInterfaceView]}

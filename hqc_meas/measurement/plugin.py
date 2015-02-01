@@ -162,20 +162,32 @@ class MeasurePlugin(HasPrefPlugin):
 
         self.flags.append('processing')
 
-        instr_use_granted = False
+        instr_use_granted = 'profiles' not in measure.store
         # Checking build dependencies, if present simply request instr profiles
-        if 'build_deps' in measure.store:
+        if 'build_deps' in measure.store and 'profiles' in measure.store:
             # Requesting profiles as this is the only missing runtime.
-            profs = measure.store.get('profiles', set())
             core = self.workbench.get_plugin('enaml.workbench.core')
+            profs = measure.store['profiles']
+            if not profs:
+                cmd = u'hqc_meas.dependencies.collect_dependencies'
+                id = 'hqc_meas.instruments.dependencies'
+                res = core.invoke_command(cmd,
+                                          {'obj': measure.root_task,
+                                           'ids': [id],
+                                           'dependencies': ['runtime']},
+                                          self)
 
-            com = u'hqc_meas.instr_manager.profiles_request'
-            profiles, _ = core.invoke_command(com, {'profiles': list(profs)},
-                                              self)
+                profiles = res[1].get('profiles', [])
+                measure.store['profiles'] = profiles.keys()
+
+            else:
+                com = u'hqc_meas.instr_manager.profiles_request'
+                profiles, _ = core.invoke_command(com,
+                                                  {'profiles': list(profs)},
+                                                  self)
 
             instr_use_granted = not bool(profs) or profiles
-            if instr_use_granted:
-                measure.root_task.run_time.update({'profiles': profiles})
+            measure.root_task.run_time.update({'profiles': profiles})
 
         else:
             # Rebuild build and runtime dependencies (profiles automatically)
@@ -195,12 +207,15 @@ class MeasurePlugin(HasPrefPlugin):
                 runtime_deps['profiles']
 
             measure.store['build_deps'] = build_deps
+            if 'profiles' in runtime_deps:
+                measure.store['profiles'] = runtime_deps['profiles']
+            measure.root_task.run_time = runtime_deps
 
         if not instr_use_granted:
             mes = cleandoc('''The instrument profiles requested for the
                            measurement {} are not available, the measurement
                            cannot be performed.'''.format(measure.name))
-            logger.info(mes)
+            logger.info(mes.replace('\n', ' '))
 
             # Simulate a message coming from the engine.
             done = {'value': ('SKIPPED', 'Failed to get requested profiles')}
@@ -211,8 +226,10 @@ class MeasurePlugin(HasPrefPlugin):
             return
 
         else:
-            logger.info(cleandoc('''The use of the instrument profiles has been
-                                granted by the manager.'''))
+            if 'profiles' in measure.store:
+                mess = cleandoc('''The use of the instrument profiles has been
+                                granted by the manager.''')
+                logger.info(mess.replace('\n', ' '))
 
         # Run internal test to check communication.
         res, errors = measure.run_checks(self.workbench, True, True)
@@ -221,7 +238,7 @@ class MeasurePlugin(HasPrefPlugin):
                            this is likely related to a connection error to an
                            instrument.
                            '''.format(measure.name))
-            logger.warn(mes)
+            logger.warn(mes.replace('\n', ' '))
 
             # Simulate a message coming from the engine.
             done = {'value': ('FAILED', 'Failed to pass the built in tests')}

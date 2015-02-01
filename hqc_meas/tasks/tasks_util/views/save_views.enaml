@@ -66,6 +66,8 @@ ARRAY_SIZE_TOOLTIP = cleandoc('''If left empty the file will be closed at the
 
 
 enamldef SaveView(GroupBox):
+    """
+    """
     attr task
     attr mapping
     title << task.task_name
@@ -73,6 +75,7 @@ enamldef SaveView(GroupBox):
                     grid([mode_lab, points_lab],
                         [mode_val, points_val]),
                     file_cont, ed)]
+
     Label: mode_lab:
         text = 'Save to'
     ObjectCombo: mode_val:
@@ -138,6 +141,61 @@ enamldef SaveView(GroupBox):
         ed.model << task
         ed.iterable_name = 'saved_values'
 
+enamldef SaveFileView(GroupBox):
+    """
+    """
+    attr task
+    attr mapping
+    title << task.task_name
+    constraints = [vbox(file_cont, ed)]
+
+    Container: file_cont:
+
+        hug_height = 'strong'
+        enabled = True
+
+        GroupBox: folder:
+
+            title = 'Directory'
+            constraints = [hbox(path, explore),
+                            align('v_center', path, explore)]
+
+            QtLineCompleter: path:
+                text := task.folder
+                entries_updater << task.accessible_database_entries
+                tool_tip = FORMATTER_TOOLTIP
+            PushButton: explore:
+                text = 'E'
+                hug_width = 'strong'
+                clicked ::
+                    path = FileDialog(mode = 'directory',
+                                    title = 'Select a default path',
+                                    ).exec_()
+                    if path:
+                        task.folder = path
+
+        GroupBox: file:
+
+            title = 'File'
+            constraints = [hbox(name, header),
+                            align('v_center', name, header)]
+
+            QtLineCompleter: name:
+                text := task.filename
+                entries_updater << task.accessible_database_entries
+                tool_tip = FORMATTER_TOOLTIP
+            PushButton: header:
+                text = 'Header'
+                hug_width = 'strong'
+                clicked ::
+                    dial = HeaderDialog(header = task.header, model = task)
+                    if dial.exec_():
+                        task.header = dial.header
+
+    PairEditor(SavedValueView): ed:
+        ed.title = 'Label : Value'
+        ed.model << task
+        ed.iterable_name = 'saved_values'
 
 enamldef SaveArrayView(GroupBox):
     attr task

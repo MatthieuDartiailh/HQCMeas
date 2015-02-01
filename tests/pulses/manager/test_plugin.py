@@ -332,7 +332,7 @@ class Test(object):
         assert_true(res)
         assert_in('pulses', build)
         assert_items_equal(['Sequence', 'Pulse', 'RootSequence', 'shapes',
-                            'contexts', 'templates'],
+                            'contexts', 'templates', 'sequences'],
                            build['pulses'].keys())
         assert_equal(['SquareShape'], build['pulses']['shapes'].keys())
         assert_equal(['AWGContext'], build['pulses']['contexts'].keys())
@@ -347,3 +347,10 @@ class Test(object):
         plugin.sequences_loading = []
 
         # TODO rr
+
+    def test_collect_dependencies3(self):
+        # Test collecting_dependencies for a walk containing a sequence path.
+        self.workbench.register(PulsesManagerManifest())
+        plugin = self.workbench.get_plugin(u'hqc_meas.pulses')
+        plugin.contexts_loading = []
+        plugin.sequences_loading = []

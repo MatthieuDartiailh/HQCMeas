@@ -109,7 +109,8 @@ class VisaInstrument(BaseInstrument):
 
     def reopen_connection(self):
         """Reopen the connection with the instrument with the same parameters
-        as previously
+        as previously.
+
         """
         para = {'timeout': self._driver.timeout,
                 'send_end': self._driver.send_end,

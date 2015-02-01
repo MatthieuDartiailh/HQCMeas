@@ -60,7 +60,7 @@ class BaseInstrumentView(GroupBox):
                                                 )
             # Get the drivers defined on the tasks ie using the default
             # interface implemented through i_perform
-            drivers = self.task.driver_list
+            drivers = self.task.driver_list[:]
             interfaces = {driver: type(None) for driver in drivers}
 
             # Map driver to their interface.
@@ -71,6 +71,9 @@ class BaseInstrumentView(GroupBox):
             self._interfaces = interfaces
         else:
             self.drivers = self.task.driver_list
+
+        if getattr(self.task, 'interface', None):
+            self._insert_interface_views(self.task.interface)
 
         self._update_profiles({})
         self._bind_observers()
@@ -109,25 +112,31 @@ class BaseInstrumentView(GroupBox):
             # Otherwise create interface and insert its views.
             self.task.interface = interface()
 
-            cmd = 'hqc_meas.task_manager.interface_views_request'
-            views, _ = self.core.invoke_command(cmd,
-                                                {'interface_classes':
-                                                    [interface.__name__]}
-                                                )
+            self._insert_interface_views(self.task.interface)
 
-            if interface.has_view:
-                i_views = [v(self, interface=self.task.interface)
-                           for v in views[interface.__name__]]
-                # TODO handle more complex insertions.
-                if hasattr(i_views[0], 'index'):
-                    self.insert_children(i_views[0].index, i_views)
-                else:
-                    self.insert_children(None, i_views)
+    def _insert_interface_views(self, interface):
+        """ Insert trhe view associated with an interface instance.
 
-                self.i_views = tuple(i_views)
+        """
+        cmd = 'hqc_meas.task_manager.interface_views_request'
+        i_c_name = type(interface).__name__
+        views, _ = self.core.invoke_command(cmd,
+                                            {'interface_classes': [i_c_name]}
+                                            )
 
+        if interface.has_view:
+            i_views = [v(self, interface=self.task.interface)
+                       for v in views[i_c_name]]
+            # TODO handle more complex insertions.
+            if hasattr(i_views[0], 'index'):
+                self.insert_children(i_views[0].index, i_views)
             else:
-                self.i_views = ()
+                self.insert_children(None, i_views)
+
+            self.i_views = tuple(i_views)
+
+        else:
+            self.i_views = ()
 
     def _update_profiles(self, change):
         """ Update the list of matching profiles for the selected driver.
@@ -149,7 +158,7 @@ class BaseInstrumentView(GroupBox):
             self.task.observe('selected_driver', self._update_interface)
 
     def _unbind_observers(self):
-        """ Undind the observers at widget destruction.
+        """ Unbind the observers at widget destruction.
 
         """
         self.instr_man_state.unobserve('all_profiles', self._update_profiles)

@@ -418,6 +418,14 @@ class SimpleTask(BaseTask):
     #: Class attribute specifying if that task can be used in a loop
     loopable = False
 
+    def check(self, *args, **kwargs):
+        """ Empty check allowing super to call this method and not raise any
+        NotImplementedError.
+
+        """
+
+        return True, {}
+
     def write_in_database(self, name, value):
         """ Write a value to the right database entry.
 
@@ -555,11 +563,8 @@ class ComplexTask(BaseTask):
         """ Run sequentially all child tasks.
 
         """
-        result = True
         for child in self.children_task:
-            result &= child.perform_(child)
-
-        return result
+            child.perform_(child)
 
     def check(self, *args, **kwargs):
         """ Run test of all child tasks.
@@ -706,6 +711,9 @@ class ComplexTask(BaseTask):
     def add_access_exception(self, entry):
         """ Add an access exception for an entry.
 
+        This make a child entry equivalent to a task entry with respact to the
+        database.
+
         This method first look for the location of the entry to determine if it
         exists and whether or not it is itself an access exception. If it is an
         access exception add an observer to the child to be notified when this
@@ -715,7 +723,7 @@ class ComplexTask(BaseTask):
         ----------
         entry : str
             Full name of the entry database for which to add an exception.
-            This entry must be present in the task or in one of its chilren.
+            This entry must be present in one of the task children.
 
         """
         database = self.task_database
@@ -725,14 +733,14 @@ class ComplexTask(BaseTask):
             entries = [child.task_name + '_' + e
                        for e in child.task_database_entries]
             if entry in entries:
-                database.add_access_exception(self.parent_task.task_path,
+                database.add_access_exception(self.task_path,
                                               entry, child.task_path)
                 self.access_exs.append(entry)
                 return
 
             elif hasattr(child, 'access_exs') and entry in child.access_exs:
-                database.add_access_exception(self.parent_task.task_path,
-                                              entry, self.task_path)
+                database.add_access_exception(self.task_path,
+                                              entry, child.task_path)
                 child.observe('access_exs', self._child_access_exs_changed)
                 self.access_exs.append(entry)
                 return
@@ -751,7 +759,7 @@ class ComplexTask(BaseTask):
         """
         # Check that the entry is known.
         if entry not in self.access_exs:
-            raise KeyError('No access exeption for entry {} in {}.'.format(
+            raise KeyError('No access exception for entry {} in {}.'.format(
                            entry, self.task_name))
 
         database = self.task_database
@@ -761,13 +769,13 @@ class ComplexTask(BaseTask):
             entries = [child.task_name + '_' + e
                        for e in child.task_database_entries]
             if entry in entries:
-                database.remove_access_exception(self.parent_task.task_path,
+                database.remove_access_exception(self.task_path,
                                                  entry)
                 self.access_exs.remove(entry)
                 return
 
             elif hasattr(child, 'access_exs') and entry in child.access_exs:
-                database.remove_access_exception(self.parent_task.task_path,
+                database.remove_access_exception(self.task_path,
                                                  entry)
                 child.unobserve('access_exs', self._child_access_exs_changed)
                 self.access_exs.remove(entry)
@@ -1116,10 +1124,11 @@ class ComplexTask(BaseTask):
                         aux.task_database = self.task_database
                         aux.task_path = self.task_path + '/' + self.task_name
 
-                        # Give him its root so that it can proceed to any child
+                        # Give it its root so that it can proceed to any child
                         # registration it needs to.
-                        aux.root_task = self.root_task
                         aux.parent_task = self
+                        aux.root_task = self.root_task
+
                 else:
                     child.task_depth = self.task_depth + 1
                     child.task_database = self.task_database
@@ -1127,8 +1136,8 @@ class ComplexTask(BaseTask):
 
                     # Give him its root so that it can proceed to any child
                     # registration it needs to.
-                    child.root_task = self.root_task
                     child.parent_task = self
+                    child.root_task = self.root_task
 
     def _refresh_access_exceptions(self, added=[], removed=[], child=None,
                                    observer=False):
@@ -1154,7 +1163,7 @@ class ComplexTask(BaseTask):
             added = self.access_exs
 
         database = self.task_database
-        ex_path = self.parent_task.task_path
+        ex_path = self.task_path
         if added:
             for entry in added:
                 # If a child is provided assume it is the one declaring the
@@ -1182,7 +1191,7 @@ class ComplexTask(BaseTask):
                                 entry in child.access_exs:
                             database.add_access_exception(ex_path,
                                                           entry,
-                                                          self.task_path)
+                                                          child.task_path)
                             child.observe('access_exs',
                                           self._child_access_exs_changed)
 
@@ -1226,31 +1235,48 @@ class ComplexTask(BaseTask):
         access_exs.
 
         """
-        if change['type'] != 'new':
-            added = set(change['value']) - set(change['oldvalue'])
-            removed = set(change['oldvalue']) - set(change['value'])
-            if added and self._last_exs == added:
-                self._refresh_access_exceptions(added, child=change['object'],
+        if change['type'] == 'update':
+            added = set(change['value']) - set(change.get('oldvalue', []))
+            removed = set(change.get('oldvalue', [])) - set(change['value'])
+
+        elif change['type'] == 'container':
+            op = change['operation']
+            if op in ('__iadd__', 'append', 'extend', 'insert'):
+                if 'item' in change:
+                    added = set([change['item']])
+                if 'items' in change:
+                    added = set(change['items'])
+                removed = set()
+
+            elif op in ('__delitem__', 'remove', 'pop'):
+                if 'item' in change:
+                    removed = set([change['item']])
+                if 'items' in change:
+                    removed = set(change['items'])
+                added = set()
+
+        if added and self._last_exs == added:
+            self._refresh_access_exceptions(added, child=change['object'],
+                                            observer=False)
+            self.access_exs.extend(added)
+            self._last_exs = []
+
+        if removed:
+            sus_access_exs = [ex for ex in removed
+                              if ex in self.access_exs]
+            if sus_access_exs:
+                self._refresh_access_exceptions(removed=sus_access_exs,
+                                                child=change['object'],
                                                 observer=False)
-                self.access_exs.extend(added)
-                self._last_exs = []
+                access_exs = self.access_exs[:]
+                for ex in sus_access_exs:
+                    access_exs.remove(ex)
+                self.access_exs = access_exs
+                self._last_exs = removed
 
-            elif removed:
-                sus_access_exs = [ex for ex in removed
-                                  if ex in self.access_exs]
-                if sus_access_exs:
-                    self._refresh_access_exceptions(removed=sus_access_exs,
-                                                    child=change['object'],
-                                                    observer=False)
-                    access_exs = self.access_exs
-                    for ex in sus_access_exs:
-                        access_exs.remove(ex)
-                        self.access_exs = access_exs
-                    self._last_exs = removed
-
-            else:
-                change['object'].unobserve('access_exs',
-                                           self._child_access_exs_changed)
+        else:
+            change['object'].unobserve('access_exs',
+                                       self._child_access_exs_changed)
 
 
 from multiprocessing.synchronize import Event
@@ -1422,8 +1448,8 @@ class RootTask(ComplexTask):
 
         # Give him its root so that it can proceed to any child
         # registration it needs to.
-        child.root_task = self.root_task
         child.parent_task = self
+        child.root_task = self.root_task
 
         # Ask the child to register in database
         child.register_in_database()

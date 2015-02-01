@@ -32,7 +32,7 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'frequency': 1.0, 'unit': 'GHz'})
     loopable = True
-    driver_list = ['AgilentE8257D']
+    driver_list = ['AgilentE8257D', 'AnritsuMG3694', 'LabBrickLMS103']
 
     def check(self, *args, **kwargs):
         """
@@ -43,11 +43,11 @@ class SetRFFrequencyTask(InterfaceableTaskMixin, InstrumentTask):
             try:
                 freq = self.format_and_eval_string(self.frequency)
                 self.write_in_database('frequency', freq)
-            except Exception:
+            except Exception as e:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-freq'] = \
                     cleandoc('''Failed to eval the frequency
-                        formula {}'''.format(self.frequency))
+                        formula {}: {}'''.format(self.frequency, e))
 
         self.write_in_database('unit', self.unit)
 
@@ -100,7 +100,7 @@ class SetRFPowerTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'power': -10})
     loopable = True
-    driver_list = ['AgilentE8257D']
+    driver_list = ['AgilentE8257D','AnritsuMG3694','LabBrickLMS103']
 
     def check(self, *args, **kwargs):
         """
@@ -111,10 +111,10 @@ class SetRFPowerTask(InterfaceableTaskMixin, InstrumentTask):
             try:
                 power = self.format_and_eval_string(self.power)
                 self.write_in_database('power', power)
-            except Exception:
+            except Exception as e:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-power'] = \
-                    'Failed to eval the power {}'.format(self.power)
+                    'Failed to eval the power {}: {}'.format(self.power, e)
 
         return test, traceback
 
@@ -143,7 +143,7 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
 
     task_database_entries = set_default({'output': 0})
     loopable = True
-    driver_list = ['AgilentE8257D']
+    driver_list = ['AgilentE8257D','AnritsuMG3694','LabBrickLMS103']
 
     def check(self, *args, **kwargs):
         """
@@ -154,9 +154,10 @@ class SetRFOnOffTask(InterfaceableTaskMixin, InstrumentTask):
             try:
                 switch = self.format_and_eval_string(self.switch)
                 self.write_in_database('output', switch)
-            except Exception:
+            except Exception as e:
+                mess = 'Failed to eval the output state {}: {}'
                 traceback[self.task_path + '/' + self.task_name + '-switch'] =\
-                    'Failed to eval the output state {}'.format(self.switch)
+                    mess.format(self.switch, e)
                 return False, traceback
 
             if switch not in ('Off', 'On', 0, 1):
