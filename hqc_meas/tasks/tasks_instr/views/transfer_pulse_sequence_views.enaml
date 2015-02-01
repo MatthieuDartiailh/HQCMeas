@@ -21,6 +21,7 @@ def fc(txt):
 
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.utils.widgets.dict_editor import DictEditor
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
 from hqc_meas.pulses.sequences_views import instantiate_context_view
 
@@ -29,14 +30,14 @@ enamldef VarEditor(Container):
 
     """
     attr model
-    attr task
+    padding = 0
     constraints = [hbox(lab, val)]
     Field: lab:
         hug_width = 'strong'
         text := model.key
     QtLineCompleter: val:
         text := model.value
-        entries_updater << task.accessible_database_entries
+        entries_updater << model.model.accessible_database_entries
         tool_tip = EVALUATER_TOOLTIP
 
 
@@ -81,13 +82,11 @@ class BaseTransferSequenceView(BaseInstrumentView):
                 self.i_views = ()
 
 
-def load_sequence(view, core, task, mode='reference'):
+def load_sequence(core, task, mode='reference', view=None, path=''):
     """Open a dialog and load a pulse sequence.
 
     Parameters
     ----------
-    view : enaml.Widget
-        Parent for the dialog.
     core : CorePlugin
         Refrence to the core plugin of the application.
     task : TransferPulseSequenceTask
@@ -97,9 +96,14 @@ def load_sequence(view, core, task, mode='reference'):
         is not stored in the task.
         In merge mode, the path to the sequence is not saved and the sequence
         is saved as part of the task.
+    view : enaml.Widget
+        Parent for the dialog.
+    path : unicode
+        Path of the sequence to load.
 
     """
-    path = FileDialogEx.get_open_file_name(view, name_filters=['*.ini'])
+    if not path:
+        path = FileDialogEx.get_open_file_name(view, name_filters=['*.ini'])
     if path:
         cmd = 'hqc_meas.pulses.build_sequence'
         try:
@@ -124,13 +128,13 @@ enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
     title << task.task_name
     constraints << [vbox(hbox(driver_lab, driver_val,
                               profile_lab, profile_val,
-                              seq, spacer),
+                              seq, seq_re, spacer),
                          *cnd.items)]
 
     Label:  driver_lab:
         text = 'Driver'
     ObjectCombo: driver_val:
-        items << sorted(task.driver_list)
+        items << sorted(drivers)
         selected := task.selected_driver
 
     Label:  profile_lab:
@@ -149,14 +153,20 @@ enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
                               so that modifications on the sequence will be
                               reflected on this measure.''')
                 triggered ::
-                    load_sequence(view, core, task)
+                    load_sequence(core, task, view=view)
             Action:
                 text = 'Merge'
                 tool_tip = fc('''The sequence will be merged into the task
                               and further modification to the sequence file
                               won't be reflected on this measure.''')
                 triggered ::
-                    load_sequence(view, core, task, 'merge')
+                    load_sequence(core, task, 'merge', view)
+
+    PushButton: seq_re:
+        enabled << bool(task.sequence_path)
+        text = 'Refresh sequence'
+        clicked ::
+            load_sequence(core, task, path=task.sequence_path)
 
     Conditional: cnd:
         condition << bool(task.sequence)
@@ -164,6 +174,8 @@ enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
             tabs_closable = False
             Page:
                 title = 'Variables'
+                visible ::
+                    ed._default_pairs()
                 DictEditor(VarEditor): ed:
                     ed.title = 'Name : formula'
                     ed.operations = ['move']

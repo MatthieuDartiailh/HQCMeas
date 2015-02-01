@@ -180,7 +180,7 @@ BUILD_CONTEXT_DESCRIPTION = \
 MANAGER_STATE_DESCRIPTION = \
 """ The tasks manager gives access to the known tasks and filters."""
 
-
+# TODO add protection againt recursive ones.
 def collect_pulses_dependecies(workbench, flat_walk):
     """ Collector function for the build-dependencies extensions.
 
@@ -223,21 +223,25 @@ def collect_pulses_dependecies(workbench, flat_walk):
 
     # Collect template dependencies.
     for _, conf, _ in tp_res[0]:
-        t_conf = flatten_config(conf)
+        t_conf = flatten_config(conf, ['item_class', 'context_class',
+                                       'shape_class', 'template_id'])
         t_dep = collect_pulses_dependecies(workbench, t_conf)['pulses']
-        depedencies['shapes'].update(t_dep.pop('shapes'))
-        depedencies['context'].update(t_dep.pop('context'))
-        depedencies['templates'].update(t_dep.pop('templates'))
-        depedencies.update(t_dep)
+        t_dep.pop('sequences')
+        dependencies['shapes'].update(t_dep.pop('shapes'))
+        dependencies['contexts'].update(t_dep.pop('contexts'))
+        dependencies['templates'].update(t_dep.pop('templates'))
+        dependencies.update(t_dep)
 
     # NB : no nesting possible for pulse sequences.
     for conf in sq_res.values():
-        s_conf = flatten_config(conf)
+        s_conf = flatten_config(conf, ['item_class', 'context_class',
+                                       'shape_class', 'template_id'])
         s_dep = collect_pulses_dependecies(workbench, s_conf)['pulses']
-        depedencies['shapes'].update(s_dep.pop('shapes'))
-        depedencies['context'].update(s_dep.pop('context'))
-        depedencies['templates'].update(s_dep.pop('templates'))
-        depedencies.update(t_dep)
+        s_dep.pop('sequences')
+        dependencies['shapes'].update(s_dep.pop('shapes'))
+        dependencies['contexts'].update(s_dep.pop('contexts'))
+        dependencies['templates'].update(s_dep.pop('templates'))
+        dependencies.update(s_dep)
 
     if dependencies:
         return {'pulses': dependencies}
@@ -274,7 +278,8 @@ enamldef PulsesManagerManifest(PluginManifest):
         BuildDependency:
             id = 'hqc_meas.pulses.dependencies'
             walk_members = ['item_class', 'context_class',
-                            'shape_class', 'template_id']
+                            'shape_class', 'template_id',
+                            'sequence_path']
             collect = collect_pulses_dependecies
 
     Extension:

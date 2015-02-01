@@ -7,7 +7,8 @@
 from atom.api import Atom, Dict, Str, Value, Instance, Typed, Callable
 from enaml.workbench.api import Workbench
 from enaml.workbench.core.core_plugin import CorePlugin
-from enaml.widgets.api import Html, Container, GroupBox, ScrollArea, Page
+from enaml.widgets.api import (Html, Container, GroupBox, ScrollArea, Page,
+                               Field)
 from enaml.core.api import Include, Conditional
 from inspect import cleandoc
 
@@ -22,6 +23,15 @@ enamldef ExternalVarsPage(Page):
 
     """
     attr sequence
+    title = 'External variables'
+
+    Container:
+        Field:
+            tool_tip = 'List of external variables used in the sequence (a, b)'
+            text << ', '.join(sequence.external_vars.keys())
+            text ::
+                keys = [k.strip() for k in text.split(',')]
+                sequence.external_vars = dict.fromkeys(keys, '')
 
 
 enamldef PulseEditor(BaseEditor):
@@ -37,8 +47,10 @@ enamldef PulseEditor(BaseEditor):
         if selected_task.sequence:
             old_vars = selected_task.sequence_vars
             new_vars = selected_task.sequence.external_vars
-            selected_task.sequence_vars = {k: old_vars.get(k, '')
-                                           for k in new_vars}
+            for k in old_vars:
+                if k in new_vars:
+                    new_vars[k] = old_vars[k]
+            selected_task.sequence_vars = dict(new_vars)
 
     Container:
         ScrollArea:

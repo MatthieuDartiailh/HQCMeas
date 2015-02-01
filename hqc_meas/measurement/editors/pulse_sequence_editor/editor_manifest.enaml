@@ -25,7 +25,8 @@ def editor_test(workbench, selected_task):
     """ Only allow DatabaseAccessEditor for ComplexTask.
 
     """
-    return hasattr(selected_task, 'sequence')
+    return (hasattr(selected_task, 'sequence')
+            and not selected_task.sequence_path)
 
 
 enamldef PulseEditorManifest(PluginManifest):

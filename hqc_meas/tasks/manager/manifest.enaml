@@ -48,7 +48,7 @@ def show_starting_errors(event):
 
 
 def tasks_request(event):
-    """ Handler for the 'hqc_meas.task_manager.taskss_request' command.
+    """ Handler for the 'hqc_meas.task_manager.tasks_request' command.
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')

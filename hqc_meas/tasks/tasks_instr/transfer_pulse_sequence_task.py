@@ -95,7 +95,6 @@ class TransferPulseSequenceTask(InterfaceableTaskMixin, InstrumentTask):
         """
         builder = cls.mro()[1].build_from_config.__func__
         task = builder(cls, config, dependencies)
-
         if 'sequence_path' in config:
             path = config['sequence_path']
             builder = dependencies['pulses']['RootSequence']
@@ -108,6 +107,8 @@ class TransferPulseSequenceTask(InterfaceableTaskMixin, InstrumentTask):
             conf = config['sequence']
             seq = builder.build_from_config(conf, dependencies)
             task.sequence = seq
+
+        return task
 
 
 KNOWN_PY_TASKS = [TransferPulseSequenceTask]

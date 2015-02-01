@@ -17,7 +17,7 @@ class LogTask(SimpleTask):
 
     """
 
-    #: Message to print in stdout when the task is executed.
+    #: Message to log when the task is executed.
     message = Str().tag(pref=True)
 
     loopable = True
@@ -26,7 +26,7 @@ class LogTask(SimpleTask):
     wait = set_default({'activated': True})  # Wait on all pools by default.
 
     def perform(self, *args, **kwargs):
-        """ Format the message and print it.
+        """ Format the message and log it.
 
         """
         mess = self.format_string(self.message)
