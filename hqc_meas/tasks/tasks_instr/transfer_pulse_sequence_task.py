@@ -148,10 +148,9 @@ class AWGTransferInterface(InstrTaskInterface):
             raise RuntimeError(mess.format(*seqs))
 
         for ch_id in task.driver.defined_channels:
-            ch = task.driver.get_channel(ch_id)
             if ch_id in seqs:
-                ch.to_send(seq_name + 'Ch{}'.format(ch_id),
-                           seqs[ch_id])
+                task.driver.to_send(seq_name + '_Ch{}'.format(ch_id),
+                                    seqs[ch_id])
 
         if self.select_after_transfer:
             for ch_id in task.driver.defined_channels:

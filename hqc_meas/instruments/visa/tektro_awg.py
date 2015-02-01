@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : AWG.py
 # author : Pierre Heidmann
 # license : MIT license
-#==============================================================================
+# =============================================================================
 """ This module defines drivers for AWG using VISA library.
 
 :Contains:
@@ -35,24 +35,15 @@ class AWGChannel(BaseInstrument):
         self._AWG = AWG
         self._channel = channel_num
 
-    @secure_communication()
-    def to_send(self, name, waveform):
-        """Command to send to the instrument. waveform = string of a bytearray
+    @secure_communication
+    def select_sequence(self, name):
+        """Select a sequence to run for the channel.
 
         """
-        numbyte = len(waveform)
-        looplength = numbyte//2
         with self.secure():
-            self._AWG.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
-            self._AWG.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger"
-                            .format(name, looplength))
-            self._AWG.write("SOURCE{}:WAVEFORM '{}'"
-                            .format(self._channel, name))
-            numApresDiese = len('{}'.format(numbyte))
-            header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
-                                                            numApresDiese,
-                                                            numbyte)
-            self._AWG.write('{},{}'.format(header, waveform))
+            self._AWG.write("SOURCE{}:WAVEFORM '{}'".format(self._channel,
+                                                            name)
+                            )
 
     @contextmanager
     def secure(self):
@@ -317,8 +308,8 @@ class AWGChannel(BaseInstrument):
         """offset getter method
         """
         with self.secure():
-            offs = self._AWG.ask_for_values(cleandoc("SOURce{}:VOLTage:LEVel:IMMediate:OFFSet?"
-                                            .format(self._channel)))[0]
+            msg = "SOURce{}:VOLTage:LEVel:IMMediate:OFFSet?"
+            offs = self._AWG.ask_for_values((msg.format(self._channel)))[0]
             if offs is not None:
                 return offs
             else:
@@ -423,6 +414,22 @@ class AWG(VisaInstrument):
             channel = AWGChannel(self, num)
             self.channels[num] = channel
             return channel
+
+    @secure_communication()
+    def to_send(self, name, waveform):
+        """Command to send to the instrument. waveform = string of a bytearray
+
+        """
+        numbyte = len(waveform)
+        looplength = numbyte//2
+        self.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
+        self.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger" .format(name,
+                                                                   looplength))
+        numApresDiese = len('{}'.format(numbyte))
+        header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
+                                                        numApresDiese,
+                                                        numbyte)
+        self.write('{},{}'.format(header, waveform))
 
     @instrument_property
     @secure_communication()

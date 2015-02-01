@@ -174,8 +174,6 @@ enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
             tabs_closable = False
             Page:
                 title = 'Variables'
-                visible ::
-                    ed._default_pairs()
                 DictEditor(VarEditor): ed:
                     ed.title = 'Name : formula'
                     ed.operations = ['move']

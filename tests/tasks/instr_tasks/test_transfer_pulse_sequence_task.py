@@ -136,10 +136,9 @@ class TestAWGTransferInterface(object):
 
         def get_ch(s, ch):
             return InstrHelper(({'output_state': 'OFF'},
-                                {'to_send': lambda s, se: None,
-                                 'select_sequence': lambda s, se: None}))
+                                {'select_sequence': lambda s, se: None}))
         prof = ({'owner': [None], 'defined_channels': ['Ch1']},
-                {'get_channel': get_ch})
+                {'get_channel': get_ch, 'to_send': lambda s, se: None})
         self.root.run_time['profiles'] = {'Test1': prof}
 
     def test_perform(self):
