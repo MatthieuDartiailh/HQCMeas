@@ -219,7 +219,7 @@ def collect_pulses_dependecies(workbench, flat_walk):
     dependencies['contexts'] = c_res[0]
     dependencies['shapes'] = sh_res[0]
     dependencies['templates'] = tp_res[0]
-    dependencies['sequencies'] = sq_res
+    dependencies['sequences'] = sq_res
 
     # Collect template dependencies.
     for _, conf, _ in tp_res[0]:
