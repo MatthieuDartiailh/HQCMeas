@@ -66,7 +66,7 @@ enamldef ModulationView(SplitItem):
 
 
 enamldef SquareShapeView(SplitItem):
-    """ View for the modulation of an analogical pulse.
+    """ View for a square pulse.
 
     """
     attr item
