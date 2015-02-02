@@ -10,6 +10,7 @@ import numpy as np
 from math import pi as Pi
 from inspect import cleandoc
 from textwrap import fill
+from future.utils import exec_
 
 
 EVALUATER_TOOLTIP = '\n'.join([
@@ -30,7 +31,6 @@ def eval_entry(string, seq_locals, missing_locals):
 
     """
     aux_strings = string.split('{')
-    replacement_values = {}
     if len(aux_strings) > 1:
         elements = [el for aux in aux_strings
                     for el in aux.split('}')]
@@ -49,8 +49,11 @@ def eval_entry(string, seq_locals, missing_locals):
         str_to_eval = str_to_eval[:-2]
 
         expr = str_to_eval.format(*replacement_token)
+    else:
+        replacement_values = {}
+        expr = string
 
-    return eval(expr, replacement_values)
+    return eval(expr, globals(), replacement_values)
 
 
 def exec_entry(string, seq_locals, missing_locals):
@@ -80,5 +83,5 @@ def exec_entry(string, seq_locals, missing_locals):
         replacement_values = {}
         expr = string
 
-    exec(expr, globals(), replacement_values)
+    exec_(expr, locs=replacement_values)
     return locals()
