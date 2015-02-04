@@ -10,7 +10,7 @@ from enaml.core.api import Include
 from enaml.layout.api import hbox, spacer, vbox, align, InsertTab
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
                                Label, Field, CheckBox, GroupBox, Notebook,
-                               DockItem, Window)
+                               DockItem, Window, FileDialogEx)
 
 from inspect import cleandoc
 from textwrap import fill
@@ -232,7 +232,6 @@ enamldef MeasEditionView(Container): ed:
 
     """
     attr workspace
-
     attr measure
     measure ::
         _internal.clear_state()
@@ -249,16 +248,43 @@ enamldef MeasEditionView(Container): ed:
                                        selected_task=selected_task)
 
     constraints << [vbox(
-                        hbox(lab, name, edition),
+                        hbox(lab_rootpath, text_rootpath, explore, lab_id,
+                             text_id, lab_descr, text_descr, edition),
                         hbox(tree, editors)
                         ),
-                    align('v_center', lab, name)]
+                    align('v_center', lab_rootpath, text_rootpath, explore,
+                              lab_id, text_id, lab_descr, text_descr)]
 
-    Label: lab:
-        text = 'Name'
-    Field: name:
+    Label: lab_rootpath:
+        text = 'Root path'
+    Field: text_rootpath:
         hug_width = 'ignore'
-        text := measure.name
+        text := measure.root_task.default_path
+    PushButton: explore:
+        text = 'E'
+        hug_width = 'strong'
+        clicked ::
+            curr_path = measure.root_task.default_path
+
+            get_dir = FileDialogEx.get_existing_directory
+            if not curr_path:
+                path = get_dir(title='Select a default path')
+            else:
+                path = get_dir(title='Select a default path',
+                           current_path=curr_path)
+
+            if path:
+                measure.root_task.default_path = path
+    Label: lab_id:
+        text = 'ID'
+    Field: text_id:
+        hug_width = 'ignore'
+        text := measure.root_task.meas_id
+    Label: lab_descr:
+        text = 'Description'
+    Field: text_descr:
+        hug_width = 'ignore'
+        text := measure.root_task.meas_decription
     PushButton: edition:
         text = 'Edit'
         tool_tip = 'Edit monitors, headers, and checks linked to the measure.'

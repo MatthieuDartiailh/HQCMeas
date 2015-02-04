@@ -41,33 +41,6 @@ enamldef RootView(GroupBox): view:
     alias core : editor.core
     alias cache : editor.cache
 
-    constraints = [vbox(path, editor)]
-
-    GroupBox: path:
-
-        title = 'Root path'
-        constraints = [hbox(path_field, explore),
-                       align('v_center', path_field, explore)]
-
-        Field: path_field:
-            text := task.default_path
-        PushButton: explore:
-            text = 'E'
-            hug_width = 'strong'
-            clicked ::
-                plugin = core.workbench.get_plugin('hqc_meas.measure')
-                curr_path = task.default_path
-                if not curr_path:
-                    curr_path = plugin.paths.get('task', '')
-
-                get_dir = FileDialogEx.get_existing_directory
-                path = get_dir(title='Select a default path',
-                               current_path=curr_path)
-
-                if path:
-                    task.default_path = path
-                    plugin.paths['task'] = path
-
     NonFoldingTaskEditor: editor:
         task := view.task
 

@@ -15,6 +15,7 @@ from configobj import Section, ConfigObj
 from inspect import cleandoc
 from copy import deepcopy
 import os
+import datetime
 import logging
 
 from ..utils.atom_util import member_from_str, tagged_members
@@ -1298,6 +1299,15 @@ class RootTask(ComplexTask):
     #: Header assembled just before the measure is run.
     default_header = Str('')
 
+    #: ID of the measurement. This could be a number that will appear in files
+    meas_id = Str('')
+
+    #: Description of the measurement.
+    meas_decription = Str('')
+
+    #: Date at which the measurement occured.
+    meas_date = Str('')
+
     #: Dict storing data needed at execution time (ex: drivers classes)
     run_time = Dict()
 
@@ -1340,7 +1350,9 @@ class RootTask(ComplexTask):
     task_label = set_default('Root')
     task_depth = set_default(0)
     task_path = set_default('root')
-    task_database_entries = set_default({'default_path': ''})
+    task_database_entries = set_default({'default_path': '', 'meas_id': '',
+                                             'meas_decription': '',
+                                             'meas_date': ''})
 
     def __init__(self, *args, **kwargs):
         self.task_preferences = ConfigObj(indent_type='    ')
@@ -1358,6 +1370,7 @@ class RootTask(ComplexTask):
             traceback[self.task_path + '/' + self.task_name] =\
                 'The provided default path is not a valid directory'
         self.task_database.set_value('root', 'default_path', self.default_path)
+        self.meas_date = (str(datetime.datetime.now()).split(' '))[0]
         check = super(RootTask, self).check(*args, **kwargs)
         test = test and check[0]
         traceback.update(check[1])

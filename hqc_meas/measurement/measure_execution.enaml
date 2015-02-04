@@ -64,14 +64,28 @@ enamldef MeasView(GroupBox): widget:
                         meas_editor.exec_()
 
                         task = measure.root_task
-                        path = os.path.join(default_path,
-                                            measure.name + '_last_run.ini')
+                        if measure.root_task.meas_id:
+                            path = os.path.join(default_path,
+                                                measure.name +\
+                                                measure.root_task.meas_id +\
+                                                '.ini')
+                        else:
+                             path = os.path.join(default_path,
+                                                measure.name +\
+                                                '_last_run.ini')
                         if task.default_path == default_path:
                             model.save_measure(path)
                         else:
                             os.remove(path)
-                            path = os.path.join(task.default_path,
-                                                measure.name + '_last_run.ini')
+                            if measure.root_task.meas_id:
+                                path = os.path.join(default_path,
+                                                    measure.name +\
+                                                measure.root_task.meas_id +\
+                                                '.ini')
+                            else:
+                                 path = os.path.join(default_path,
+                                                    measure.name +\
+                                                    '_last_run.ini')
                             model.save_measure(path)
 
                         measure.status = 'READY'
@@ -82,8 +96,15 @@ enamldef MeasView(GroupBox): widget:
                         ToolsEditorDialog(parent=widget,
                                           measure=measure).exec_()
                         default_path = measure.root_task.default_path
-                        path = os.path.join(default_path,
-                                            measure.name + '_last_run.ini')
+                        if measure.root_task.meas_id:
+                            path = os.path.join(default_path,
+                                                measure.name +\
+                                                measure.root_task.meas_id +\
+                                                '.ini')
+                        else:
+                             path = os.path.join(default_path,
+                                                measure.name +\
+                                                '_last_run.ini')
                         measure.save_measure(path)
 
         PushButton: process:

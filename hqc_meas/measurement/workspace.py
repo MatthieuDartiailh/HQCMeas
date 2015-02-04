@@ -255,7 +255,11 @@ class MeasureSpace(Workspace):
                 dial.exec_()
                 if not dial.result:
                     return
-            default_filename = measure.name + '_last_run.ini'
+            if measure.root_task.meas_id:
+                default_filename = measure.name + measure.root_task.meas_id +\
+                    '.ini'
+            else:
+                default_filename = measure.name + '_last_run.ini'
             path = os.path.join(measure.root_task.default_path,
                                 default_filename)
             measure.save_measure(path)
