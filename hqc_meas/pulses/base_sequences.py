@@ -669,7 +669,8 @@ class RootSequence(Sequence):
         """ Access the list of bindable vars for the sequence.
 
         """
-        return self.linkable_vars + self.local_vars.keys()
+        return (self.linkable_vars + self.local_vars.keys() +
+                self.external_vars.keys())
 
     def walk(self, members, callables):
         """ Explore the items hierarchy.

@@ -6,6 +6,7 @@
 # =============================================================================
 """
 """
+import os
 import logging
 import traceback
 from enaml.layout.api import factory, hbox, vbox, spacer
@@ -121,6 +122,8 @@ def load_sequence(core, task, mode='reference', view=None, path=''):
         task.sequence_vars = seq.external_vars.copy()
         if mode == 'reference':
             task.sequence_path = path
+        else:
+            task.sequence_path = ''
 
 
 enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
@@ -128,7 +131,7 @@ enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
     title << task.task_name
     constraints << [vbox(hbox(driver_lab, driver_val,
                               profile_lab, profile_val,
-                              seq, seq_re, spacer),
+                              seq, seq_name, seq_re, spacer),
                          *cnd.items)]
 
     Label:  driver_lab:
@@ -161,6 +164,11 @@ enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
                               won't be reflected on this measure.''')
                 triggered ::
                     load_sequence(core, task, 'merge', view)
+
+    Field: seq_name:
+        visible << bool(task.sequence_path)
+        read_only = True
+        text << os.path.basename(task.sequence_path)
 
     PushButton: seq_re:
         enabled << bool(task.sequence_path)
