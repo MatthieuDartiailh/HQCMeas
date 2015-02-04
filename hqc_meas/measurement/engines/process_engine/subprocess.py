@@ -195,8 +195,12 @@ class TaskProcess(Process):
                     spy.close()
                     del spy
 
+            except IOError:
+                pass
+
             except Exception:
                 logger.exception('Error occured during processing')
+                break
 
         # Clean up before closing.
         logger.info('Process shuting down')
