@@ -8,6 +8,7 @@ from atom.api import (Int, Instance, Str, Dict, Bool, List,
                       ContainerList, set_default)
 from itertools import chain
 from inspect import cleandoc
+from copy import deepcopy
 
 from hqc_meas.utils.atom_util import member_from_str
 from .contexts.base_context import BaseContext
@@ -749,6 +750,7 @@ class RootSequence(Sequence):
             Newly created and initiliazed sequence.
 
         """
+        config = deepcopy(config)
         if 'context' in config:
             context_config = config['context']
             c_class_name = context_config.pop('context_class')
