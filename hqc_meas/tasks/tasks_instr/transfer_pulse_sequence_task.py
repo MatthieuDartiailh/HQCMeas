@@ -71,6 +71,20 @@ class TransferPulseSequenceTask(InterfaceableTaskMixin, InstrumentTask):
             self.sequence.external_vars[k] = self.format_and_eval_string(v)
         return self.sequence.compile_sequence()
 
+    def answer(self, members, callables):
+        """Overriden method to take into account the presence of the sequence.
+
+        """
+        infos = super(TransferPulseSequenceTask, self).answer(members,
+                                                              callables)
+        if not self.sequence_path:
+            if 'sequence_path' in infos:
+                del infos['sequence_path']
+            infos = [infos, self.sequence.walk(members, callables)]
+
+        return infos
+
+
     def register_preferences(self):
         """Handle the sequence specific registering in the preferences.
 

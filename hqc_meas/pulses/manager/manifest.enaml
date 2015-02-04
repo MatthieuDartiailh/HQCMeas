@@ -206,7 +206,8 @@ def collect_pulses_dependecies(workbench, flat_walk):
     tp_res = manager.sequences_request(flat_walk['template_id'])
 
     # Collect the sequences.
-    sq_res = {p: load_sequence_prefs(p)[0] for p in flat_walk['sequence_path']}
+    sq_res = {p: load_sequence_prefs(p)[0] for p in flat_walk['sequence_path']
+              if p}
 
     if s_res[1] or c_res[1] or sh_res[1] or tp_res[1]:
         mess = 'Missing sequences: {}, contexts: {}, shapes: {}, templates: {}'
