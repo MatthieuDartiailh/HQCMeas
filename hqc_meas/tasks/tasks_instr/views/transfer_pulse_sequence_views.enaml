@@ -30,11 +30,11 @@ enamldef VarEditor(Container):
 
     """
     attr model
-    padding = 0
+    padding = 1
     constraints = [hbox(lab, val)]
-    Field: lab:
+    Label: lab:
         hug_width = 'strong'
-        text := model.key
+        text << model.key
     QtLineCompleter: val:
         text := model.value
         entries_updater << model.model.accessible_database_entries
@@ -205,6 +205,7 @@ enamldef AWGTransferPulseSequenceInterfaceView(Page):
             text = 'Sequence name'
 
         Field: fd:
+            placeholder = 'Sequence'
             text := interface.sequence_name
             tool_tip = fc('''If left empty the sequence will be named
                           'Sequence'. In any case the channel name is appended.

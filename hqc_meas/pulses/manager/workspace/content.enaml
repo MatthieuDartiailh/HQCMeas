@@ -42,10 +42,11 @@ enamldef SequenceEditorDockItem(DockItem):
 enamldef _KeyValEditor(Container):
     attr model
     constraints = [hbox(lab, val)]
+    padding = 1
 
     Field: lab:
         hug_width = 'strong'
-        text = model.key
+        text := model.key
     Field: val:
         text << repr(model.value) if model.value else ''
         text :: model.value = literal_eval(text)
