@@ -15,7 +15,7 @@ from configobj import Section, ConfigObj
 from inspect import cleandoc
 from copy import deepcopy
 import os
-import datetime
+from datetime import datetime
 import logging
 
 from ..utils.atom_util import member_from_str, tagged_members
@@ -1300,13 +1300,10 @@ class RootTask(ComplexTask):
     default_header = Str('')
 
     #: ID of the measurement. This could be a number that will appear in files
-    meas_id = Str('')
+    meas_id = Str('').tag(pref=True)
 
-    #: Description of the measurement.
-    meas_decription = Str('')
-
-    #: Date at which the measurement occured.
-    meas_date = Str('')
+    #: Name of the measurement.
+    meas_name = Str('').tag(pref=True)
 
     #: Dict storing data needed at execution time (ex: drivers classes)
     run_time = Dict()
@@ -1351,8 +1348,8 @@ class RootTask(ComplexTask):
     task_depth = set_default(0)
     task_path = set_default('root')
     task_database_entries = set_default({'default_path': '', 'meas_id': '',
-                                             'meas_decription': '',
-                                             'meas_date': ''})
+                                         'meas_name': '',
+                                         'meas_date': ''})
 
     def __init__(self, *args, **kwargs):
         self.task_preferences = ConfigObj(indent_type='    ')
@@ -1370,7 +1367,10 @@ class RootTask(ComplexTask):
             traceback[self.task_path + '/' + self.task_name] =\
                 'The provided default path is not a valid directory'
         self.task_database.set_value('root', 'default_path', self.default_path)
-        self.meas_date = (str(datetime.datetime.now()).split(' '))[0]
+        self.task_database.set_value('root', 'meas_name', self.meas_name)
+        self.task_database.set_value('root', 'meas_id', self.meas_id)
+        self.task_database.set_value('root', 'meas_date',
+                                     str(datetime.now()).split(' ')[0])
         check = super(RootTask, self).check(*args, **kwargs)
         test = test and check[0]
         traceback.update(check[1])

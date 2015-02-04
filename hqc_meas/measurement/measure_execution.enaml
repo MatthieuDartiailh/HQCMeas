@@ -39,7 +39,7 @@ enamldef MeasView(GroupBox): widget:
     """
     attr model >> measure
     attr measure = model
-    title << measure.name
+    title << measure.root_task.meas_name
 
     constraints << [factory(_build_layout)]
     Label: sta_lab:
@@ -66,12 +66,12 @@ enamldef MeasView(GroupBox): widget:
                         task = measure.root_task
                         if measure.root_task.meas_id:
                             path = os.path.join(default_path,
-                                                measure.name +\
+                                                measure.root_task.meas_name +\
                                                 measure.root_task.meas_id +\
                                                 '.ini')
                         else:
                              path = os.path.join(default_path,
-                                                measure.name +\
+                                                measure.root_task.meas_name +\
                                                 '_last_run.ini')
                         if task.default_path == default_path:
                             model.save_measure(path)
@@ -79,13 +79,13 @@ enamldef MeasView(GroupBox): widget:
                             os.remove(path)
                             if measure.root_task.meas_id:
                                 path = os.path.join(default_path,
-                                                    measure.name +\
+                                                measure.root_task.meas_name +\
                                                 measure.root_task.meas_id +\
                                                 '.ini')
                             else:
                                  path = os.path.join(default_path,
-                                                    measure.name +\
-                                                    '_last_run.ini')
+                                                measure.root_task.meas_name +\
+                                                '_last_run.ini')
                             model.save_measure(path)
 
                         measure.status = 'READY'
@@ -98,12 +98,12 @@ enamldef MeasView(GroupBox): widget:
                         default_path = measure.root_task.default_path
                         if measure.root_task.meas_id:
                             path = os.path.join(default_path,
-                                                measure.name +\
+                                                measure.root_task.meas_name +\
                                                 measure.root_task.meas_id +\
                                                 '.ini')
                         else:
                              path = os.path.join(default_path,
-                                                measure.name +\
+                                                measure.root_task.meas_name +\
                                                 '_last_run.ini')
                         measure.save_measure(path)
 

@@ -91,7 +91,8 @@ def save_measure(event):
     if plugin.edited_measure_path:
         plugin.edited_measure.save_measure(plugin.edited_measure_path)
         window = workbench.get_plugin('enaml.workbench.ui').window
-        SaveConfirm(window, measure_name=plugin.edited_measure.name).show()
+        name = plugin.edited_measure.root_task.meas_name
+        SaveConfirm(window, measure_name=name).show()
     else:
         plugin.workspace.save_measure(plugin.edited_measure, 'file')
 

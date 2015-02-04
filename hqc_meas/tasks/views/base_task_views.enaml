@@ -38,7 +38,7 @@ enamldef RootView(GroupBox): view:
 
     """
     attr task
-    alias core : editor.core
+    alias core : editor.core #every task must have a core and cache attribute
     alias cache : editor.cache
 
     NonFoldingTaskEditor: editor:

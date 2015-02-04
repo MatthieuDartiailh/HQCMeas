@@ -26,9 +26,6 @@ class Measure(Atom):
     #: Reference to the measure plugin managing this measure.
     plugin = ForwardTyped(measure_plugin)
 
-    #: Name of the measure.
-    name = Str()
-
     #: Flag indicating the measure status.
     status = Str()
 
@@ -80,7 +77,8 @@ class Measure(Atom):
         config['monitors'] = repr(i)
         config['checks'] = repr(self.checks.keys())
         config['headers'] = repr(self.headers.keys())
-        config['name'] = self.name
+        # Stays here for backwards compatibility
+        config['name'] = self.root_task.meas_name
 
         with open(path, 'w') as f:
             config.write(f)
@@ -103,7 +101,6 @@ class Measure(Atom):
         logger = logging.getLogger(__name__)
         measure = cls()
         config = ConfigObj(path)
-        measure.name = config['name']
         measure.plugin = measure_plugin
         measure.path = path
 
@@ -113,6 +110,7 @@ class Measure(Atom):
         kwarg = {'mode': 'config', 'config': config['root_task'],
                  'build_dep': build_dep}
         measure.root_task = core.invoke_command(cmd, kwarg, measure)
+        measure.root_task.meas_name = config['name']
         database = measure.root_task.task_database
         entries = database.list_all_entries(values=True)
 
@@ -226,7 +224,8 @@ class Measure(Atom):
             logger.warn('Monitor already present : {}'.format(id))
             return
 
-        monitor.measure_name = self.name
+        monitor.measure_name = self.root_task.meas_name +\
+            self.root_task.meas_id
         monitor.measure_status = self.status
 
         database = self.root_task.task_database
@@ -296,9 +295,11 @@ class Measure(Atom):
             old = change['oldvalue']
             # Stop observing the database (remove all handlers)
             old.task_database.unobserve('notifier')
+            old.unobserve('meas_name', self._update_monitor_name)
 
         root = change['value']
         database = root.task_database
+        root.observe('meas_name', self._update_monitor_name)
         for monitor in monitors:
             monitor.clear_state()
             root.task_database.observe('notifier',
@@ -316,7 +317,7 @@ class Measure(Atom):
             for monitor in self.monitors.values():
                 monitor.measure_status = new
 
-    def _observe_name(self, change):
+    def _update_monitor_name(self, change):
         """ Observer ensuring that the monitors know the name of the measure.
 
         """

@@ -214,7 +214,8 @@ class MeasurePlugin(HasPrefPlugin):
         if not instr_use_granted:
             mes = cleandoc('''The instrument profiles requested for the
                            measurement {} are not available, the measurement
-                           cannot be performed.'''.format(measure.name))
+                           cannot be performed.
+                           '''.format(measure.root_task.meas_name))
             logger.info(mes.replace('\n', ' '))
 
             # Simulate a message coming from the engine.
@@ -237,7 +238,7 @@ class MeasurePlugin(HasPrefPlugin):
             mes = cleandoc('''The measure failed to pass the built-in tests,
                            this is likely related to a connection error to an
                            instrument.
-                           '''.format(measure.name))
+                           '''.format(measure.root_task.meas_name))
             logger.warn(mes.replace('\n', ' '))
 
             # Simulate a message coming from the engine.
@@ -267,7 +268,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         # Call engine prepare to run method.
         entries = measure.collect_entries_to_observe()
-        engine.prepare_to_run(measure.name, measure.root_task, entries,
+        engine.prepare_to_run(measure.root_task.meas_name, measure.root_task,
+                              entries,
                               measure.store['build_deps'])
 
         # Get a ref to the main window.
@@ -277,7 +279,8 @@ class MeasurePlugin(HasPrefPlugin):
             engine.observe('news', monitor.process_news)
             monitor.start(ui_plugin.window)
 
-        logger.info('''Starting measure {}.'''.format(measure.name))
+        logger.info('''Starting measure {}.'''.format(
+            measure.root_task.meas_name))
         # Ask the engine to start the measure.
         engine.run()
 
@@ -286,7 +289,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Pausing measure {}.'.format(self.running_measure.name))
+        logger.info('Pausing measure {}.'.format(
+            self.running_measure.root_task.meas_name))
         self.engine_instance.pause()
 
     def resume_measure(self):
@@ -294,7 +298,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Resuming measure {}.'.format(self.running_measure.name))
+        logger.info('Resuming measure {}.'.format(
+            self.running_measure.root_task.meas_name))
         self.engine_instance.resume()
 
     def stop_measure(self):
@@ -302,7 +307,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Stopping measure {}.'.format(self.running_measure.name))
+        logger.info('Stopping measure {}.'.format(
+            self.running_measure.root_task.meas_name))
         self.flags.append('stop_attempt')
         self.engine_instance.stop()
 
@@ -311,7 +317,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Stopping measure {}.'.format(self.running_measure.name))
+        logger.info('Stopping measure {}.'.format(
+            self.running_measure.root_task.meas_name))
         self.flags.append('stop_attempt')
         self.flags.append('stop_processing')
         if 'processing' in self.flags:
@@ -323,7 +330,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Exiting measure {}.'.format(self.running_measure.name))
+        logger.info('Exiting measure {}.'.format(
+            self.running_measure.root_task.meas_name))
         self.engine_instance.force_stop()
 
     def force_stop_processing(self):
@@ -331,7 +339,8 @@ class MeasurePlugin(HasPrefPlugin):
 
         """
         logger = logging.getLogger(__name__)
-        logger.info('Exiting measure {}.'.format(self.running_measure.name))
+        logger.info('Exiting measure {}.'.format(
+            self.running_measure.root_task.meas_name))
         self.flags.append('stop_processing')
         if 'processing' in self.flags:
             self.flags.remove('processing')
@@ -392,7 +401,7 @@ class MeasurePlugin(HasPrefPlugin):
 
         logger = logging.getLogger(__name__)
         mess = 'Measure {} processed, status : {}'.format(
-            self.running_measure.name, status)
+            self.running_measure.root_task.meas_name, status)
         logger.info(mess)
 
         # Releasing instrument profiles.

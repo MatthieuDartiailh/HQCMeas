@@ -248,12 +248,12 @@ enamldef MeasEditionView(Container): ed:
                                        selected_task=selected_task)
 
     constraints << [vbox(
-                        hbox(lab_rootpath, text_rootpath, explore, lab_id,
-                             text_id, lab_descr, text_descr, edition),
+                        hbox(lab_rootpath, text_rootpath, explore, lab_descr,
+                             text_descr, lab_id, text_id, edition),
                         hbox(tree, editors)
                         ),
                     align('v_center', lab_rootpath, text_rootpath, explore,
-                              lab_id, text_id, lab_descr, text_descr)]
+                              lab_descr, text_descr, lab_id, text_id)]
 
     Label: lab_rootpath:
         text = 'Root path'
@@ -275,16 +275,16 @@ enamldef MeasEditionView(Container): ed:
 
             if path:
                 measure.root_task.default_path = path
+    Label: lab_descr:
+        text = 'Name'
+    Field: text_descr:
+        hug_width = 'ignore'
+        text := measure.root_task.meas_name
     Label: lab_id:
         text = 'ID'
     Field: text_id:
         hug_width = 'ignore'
         text := measure.root_task.meas_id
-    Label: lab_descr:
-        text = 'Description'
-    Field: text_descr:
-        hug_width = 'ignore'
-        text := measure.root_task.meas_decription
     PushButton: edition:
         text = 'Edit'
         tool_tip = 'Edit monitors, headers, and checks linked to the measure.'
@@ -427,7 +427,7 @@ enamldef MeasureEditorDialog(Dialog): main:
     """
     attr workspace
     attr measure
-    title = 'Edit measure {}'.format(measure.name)
+    title = 'Edit measure {}'.format(measure.root_task.meas_name)
     closed::
         if 'build_deps' in measure.store:
             del measure.store['build_deps']

@@ -231,7 +231,7 @@ class MeasureSpace(Workspace):
             mes = cleandoc('''The profiles requested for the measurement {} are
                            not available, instr tests will be skipped and
                            performed before actually starting the
-                           measure.'''.format(measure.name))
+                           measure.'''.format(measure.root_task.meas_name))
             logger.info(mes.replace('\n', ' '))
 
         measure.root_task.run_time = runtime_deps.copy()
@@ -256,10 +256,12 @@ class MeasureSpace(Workspace):
                 if not dial.result:
                     return
             if measure.root_task.meas_id:
-                default_filename = measure.name + measure.root_task.meas_id +\
+                default_filename = measure.root_task.meas_name +\
+                    measure.root_task.meas_id +\
                     '.ini'
             else:
-                default_filename = measure.name + '_last_run.ini'
+                default_filename = measure.root_task.meas_name +\
+                    '_last_run.ini'
             path = os.path.join(measure.root_task.default_path,
                                 default_filename)
             measure.save_measure(path)

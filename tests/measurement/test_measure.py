@@ -141,7 +141,7 @@ class TestPluginCoreFunctionalities(object):
 
         # Check that all values have been correctly updated.
         monitor = measure.monitors[u'monitor1']
-        assert_equal(monitor.measure_name, measure.name)
+        assert_equal(monitor.measure_name, measure.root_task.meas_name)
         assert_equal(monitor.measure_status, measure.status)
         assert_equal(monitor.updated, {'root/default_path': 1})
         assert_equal(measure.collect_entries_to_observe(),
@@ -330,7 +330,7 @@ class TestPluginCoreFunctionalities(object):
 
         # Check that all values have been correctly updated.
         monitor = measure.monitors[u'monitor1']
-        assert_equal(monitor.measure_name, measure.name)
+        assert_equal(monitor.measure_name, measure.root_task.meas_name)
         assert_equal(monitor.measure_status, measure.status)
         assert_equal(monitor.updated, {'root/default_path': 1})
         assert_equal(measure.collect_entries_to_observe(),
@@ -458,7 +458,7 @@ class TestPluginCoreFunctionalities(object):
                             monitor_decl.factory(monitor_decl,
                                                  self.workbench))
 
-        measure.name = 'Test2'
+        measure.root_task.meas_name = 'Test2'
 
         assert_equal(measure.monitors[u'monitor1'].measure_name, 'Test2')
 
