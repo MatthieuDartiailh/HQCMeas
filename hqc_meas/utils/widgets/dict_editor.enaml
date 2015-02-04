@@ -6,7 +6,8 @@
 #==============================================================================
 """
 """
-from atom.api import Atom, Str, Value, Callable, ContainerList, observe, Typed
+from atom.api import (Atom, Str, Value, Callable, ContainerList, Typed, Bool,
+                      observe)
 from enaml.widgets.api import Container
 from .list_editor import ListEditor
 
@@ -34,18 +35,33 @@ class _DictEditorModel(Atom):
 
     pairs = ContainerList(Typed(Pair))
 
+    _no_notif = Bool()
+
     @observe('pairs')
     def refresh(self, change):
         """ Synchronise pairs and the underlying model.
 
         """
+        self._no_notif = True
         setattr(self.model, self.iterable_name,
                 {p.key: p.value for p in self.pairs})
+        self._no_notif = False
 
     def _observe_model(self, change):
         self.pairs = self._default_pairs()
+        if 'oldvalue' in change:
+            old = change['oldvalue']
+            old.unobserve(self.iterable_name, self._update_pairs)
+        self.model.observe(self.iterable_name, self._update_pairs)
+
+    def _update_pairs(self, change):
+        if not self._no_notif:
+            self.pairs = self._make_pairs()
 
     def _default_pairs(self):
+        return self._make_pairs()
+
+    def _make_pairs(self):
         return [Pair(key=p[0], value=p[1], refresh_method=self.refresh,
                      model=self.model)
                 for p in getattr(self.model, self.iterable_name).items()]
