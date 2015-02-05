@@ -13,6 +13,7 @@ This module defines drivers for agilent PNA.
     AgilentPNA
 
 """
+import logging
 from inspect import cleandoc
 import numpy as np
 
@@ -23,11 +24,10 @@ except ImportError:
     single = 1
     double = 3
 
-from ..driver_tools import (BaseInstrument, InstrIOError,
+from ..driver_tools import (BaseInstrument, InstrIOError, InstrError,
                             secure_communication, instrument_property)
 from ..visa_tools import VisaInstrument
 
-from time import sleep
 
 FORMATTING_DICT = {'PHAS': lambda x: np.angle(x, deg=True),
                    'MLIN': np.abs,
@@ -164,10 +164,9 @@ class AgilentPNAChannel(BaseInstrument):
         aver_count : str, optional
             Number of averages to perform. Default value is the current one
         """
-
-        self._pna.write('sense{}:sweep:mode hold'.format(self._channel))
-        self._pna.write('Trig:sour imm')
-        self._pna.write('SENS:AVER:CLE')
+        self._pna.trigger_source = 'Immediate'
+        self.sweep_mode = 'Hold'
+        self._pna.clear_averaging()
         self._pna.timeout = 10
 
         if aver_count:
@@ -180,27 +179,18 @@ class AgilentPNAChannel(BaseInstrument):
 
             while True:
                 try:
-                    toto = self._pna.ask_for_values('*OPC?')[0]
+                    done = self._pna.ask_for_values('*OPC?')[0]
                     break
-                except:
+                except Exception:
                     self._pna.timeout = self._pna.timeout*2
-                    print('PNA timeout increased to {} s'.format(
-                        self._pna.timeout))
-                    print('This will make the PNA diplay 420 error w/o issue')
+                    logger = logging.getLogger(__name__)
+                    msg = cleandoc('''PNA timeout increased to {} s
+                        This will make the PNA diplay 420 error w/o issue''')
+                    logger.info(msg.format(self._pna.timeout))
 
-            if toto != 1:
-                raise InstrIOError(cleandoc('''Agilent PNA did could  not perform
+            if done != 1:
+                raise InstrError(cleandoc('''Agilent PNA did could  not perform
                 the average on channel {} '''.format(self._channel)))
-
-        return 1
-#        if self.average_mode == 'POIN' or self.average_count == 1:
-#            self._pna.write('sense{}:sweep:mode single'.format(self._channel))
-#        elif self.average_mode == 'SWE':
-#            self._pna.write('sense{}:sweep:mode on'.format(self._channel))
-#            self._pna.write('SENS{}:aver:cle'.format(self._channel))
-#            estimated_waiting_time = self.average_count * self.sweep_time
-#            sleep(estimated_waiting_time)
-#            self._pna.write('sense{}:sweep:mode hold'.format(self._channel))
 
     @secure_communication()
     def list_existing_measures(self):
@@ -805,6 +795,13 @@ class AgilentPNA(VisaInstrument):
                 raise InstrIOError(cleandoc('''PNA did not set correctly the
                     channel {} sweep mode while setting all defined channels
                     to HOLD'''.format(channel)))
+
+    @secure_communication()
+    def clear_averaging(self):
+        """Clear and restart averaging of the measurement data.
+
+        """
+        self.write('SENS:AVER:CLE')
 
     @instrument_property
     @secure_communication()
