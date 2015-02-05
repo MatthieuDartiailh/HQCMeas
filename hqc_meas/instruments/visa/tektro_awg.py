@@ -35,13 +35,13 @@ class AWGChannel(BaseInstrument):
         self._AWG = AWG
         self._channel = channel_num
 
-    @secure_communication
+    @secure_communication()
     def select_sequence(self, name):
         """Select a sequence to run for the channel.
 
         """
         with self.secure():
-            self._AWG.write("SOURCE{}:WAVEFORM '{}'".format(self._channel,
+            self._AWG.write('SOURCE{}:WAVEFORM "{}"'.format(self._channel,
                                                             name)
                             )
 
