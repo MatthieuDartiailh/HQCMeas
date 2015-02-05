@@ -147,7 +147,8 @@ class Pulse(Item):
             answers.append(self.modulation._answer(members, callables))
 
             # Accessing shape members.
-            answers.append(self.shape._answer(members, callables))
+            if self.shape:
+                answers.append(self.shape._answer(members, callables))
 
         return answers
 
