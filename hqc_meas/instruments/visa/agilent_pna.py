@@ -168,6 +168,7 @@ class AgilentPNAChannel(BaseInstrument):
         self._pna.write('sense{}:sweep:mode hold'.format(self._channel))
         self._pna.write('Trig:sour imm')
         self._pna.write('SENS:AVER:CLE')
+        self._pna.timeout = 10
 
         if aver_count:
             self.average_count = aver_count
@@ -177,7 +178,17 @@ class AgilentPNAChannel(BaseInstrument):
         for i in range(0,int(self.average_count)):
             self._pna.write('sense{}:sweep:mode gro'.format(self._channel))
 
-            if self._pna.ask_for_values('*OPC?')[0] != 1:
+            while True:
+                try:
+                    toto = self._pna.ask_for_values('*OPC?')[0]
+                    break
+                except:
+                    self._pna.timeout = self._pna.timeout*2
+                    print('PNA timeout increased to {} s'.format(
+                        self._pna.timeout))
+                    print('This will make the PNA diplay 420 error w/o issue')
+
+            if toto != 1:
                 raise InstrIOError(cleandoc('''Agilent PNA did could  not perform
                 the average on channel {} '''.format(self._channel)))
 
