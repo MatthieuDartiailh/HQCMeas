@@ -33,14 +33,14 @@ class TestAWGContext(object):
 
         res, arrays = self.root.compile_sequence()
         assert_true(res)
-        assert_in('Ch1', arrays)
+        assert_in(1, arrays)
         assert_equal(len(arrays), 1)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[1::2] = 2**7 + 2**5
-        sequence[201:1001:2] += 2**4 + 2**3 + 4 + 2 + 1
-        sequence[200:1000:2] += 255
-        assert_sequence_equal(arrays['Ch1'],
+        sequence[0::2] = 2**5
+        sequence[200:1000:2] += 2**4 + 2**3 + 4 + 2 + 1
+        sequence[201:1001:2] += 255
+        assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
     def test_compiling_M1_pulse(self):
@@ -52,12 +52,12 @@ class TestAWGContext(object):
 
         res, arrays = self.root.compile_sequence()
         assert_true(res)
-        assert_in('Ch1', arrays)
+        assert_in(1, arrays)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[1::2] = 2**7 + 2**5
-        sequence[201:1001:2] += 2**6
-        assert_sequence_equal(arrays['Ch1'],
+        sequence[0::2] = 2**5
+        sequence[200:1000:2] += 2**6
+        assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
     def test_compiling_M2_pulse(self):
@@ -69,27 +69,40 @@ class TestAWGContext(object):
 
         res, arrays = self.root.compile_sequence()
         assert_true(res)
-        assert_in('Ch1', arrays)
+        assert_in(1, arrays)
+
+    def test_compiling_inverted_logical_pulses(self):
+        self.root.time_constrained = True
+        self.root.sequence_duration = '1'
+        pulse = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
+                      channel='Ch1_M2')
+        self.root.items = [pulse]
+        self.context.inverted_log_channels = ['Ch1_M1', 'Ch1_M2']
+
+        res, arrays = self.root.compile_sequence()
+        assert_true(res)
+        assert_in(1, arrays)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[1::2] = 2**7 + 2**5
-        sequence[201:1001:2] -= 2**7
-        assert_sequence_equal(arrays['Ch1'],
+        sequence[0::2] = 2**7 + 2**6 + 2**5
+        sequence[200:1000:2] -= 2**7
+        assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
     def test_compiling_variable_length(self):
         pulse = Pulse(kind='Logical', def_1='0.1', def_2='0.5',
                       channel='Ch1_M1')
         self.root.items = [pulse]
+        self.context.sampling_frequency = 1e8
 
         res, arrays = self.root.compile_sequence()
         assert_true(res)
-        assert_in('Ch1', arrays)
+        assert_in(1, arrays)
 
-        sequence = np.zeros(1000, dtype=np.uint8)
-        sequence[1::2] = 2**7 + 2**5
-        sequence[201:1001:2] += 2**6
-        assert_sequence_equal(arrays['Ch1'],
+        sequence = np.zeros(100, dtype=np.uint8)
+        sequence[::2] = 2**5
+        sequence[20:100:2] += 2**6
+        assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
     def test_too_short_fixed_length(self):
@@ -127,7 +140,7 @@ class TestAWGContext(object):
 
         res, arrays = self.root.compile_sequence()
         assert_true(res)
-        assert_in('Ch1', arrays)
+        assert_in(1, arrays)
 
     def test_nearly_overlapping_M2(self):
         self.root.time_constrained = True
@@ -140,12 +153,12 @@ class TestAWGContext(object):
 
         res, arrays = self.root.compile_sequence()
         assert_true(res)
-        assert_in('Ch1', arrays)
+        assert_in(1, arrays)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[1::2] = 2**7 + 2**5
-        sequence[201:1201:2] -= 2**7
-        assert_sequence_equal(arrays['Ch1'],
+        sequence[0::2] = 2**5
+        sequence[200:1200:2] += 2**7
+        assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
     def test_overflow_check_A(self):
@@ -211,4 +224,4 @@ class TestAWGContext(object):
         res, arrays = self.root.compile_sequence()
         assert_true(res)
         assert_equal(len(arrays), 3)
-        assert_equal(sorted(arrays.keys()), sorted(['Ch1', 'Ch2', 'Ch3']))
+        assert_equal(sorted(arrays.keys()), sorted([1, 2, 3]))

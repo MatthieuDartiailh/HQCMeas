@@ -77,10 +77,10 @@ class AWGContext(BaseContext):
             # numpy array for analog channels int16 init 2**13
             array_analog[channel] = np.ones(sequence_length,
                                             dtype=np.uint16)*(2**13)
-            # numpy array for marker1 int8 init 0. For AWG M1 = 0 = off
+            # numpy array for marker1 init False. For AWG M1 = 0 = off
             array_M1[channel] = np.zeros(sequence_length, dtype=np.int8)
-            # numpy array for marker2 int8 init 0. For AWG M2 = 0 = off
-            array_M2[channel] = np.ones(sequence_length, dtype=np.int8)
+            # numpy array for marker2 init False. For AWG M2 = 0 = off
+            array_M2[channel] = np.zeros(sequence_length, dtype=np.int8)
 
         for pulse in pulses:
 
@@ -97,7 +97,7 @@ class AWGContext(BaseContext):
             elif channeltype == 'M1' and pulse.kind == 'Logical':
                 array_M1[channel][start_index:stop_index] += waveform
             elif channeltype == 'M2' and pulse.kind == 'Logical':
-                array_M2[channel][start_index:stop_index] -= waveform
+                array_M2[channel][start_index:stop_index] += waveform
             else:
                 msg = 'Selected channel does not match kind for pulse {} ({}).'
                 return False, {'Kind issue':
@@ -123,6 +123,14 @@ class AWGContext(BaseContext):
         if traceback:
             return False, traceback
 
+        # Invert marked logical channels.
+        for i_ch in self.inverted_log_channels:
+            ch, m = i_ch.split('_')
+            if m == 'M1':
+                np.logical_not(array_M1[ch], array_M1[ch])
+            else:
+                np.logical_not(array_M2[ch], array_M2[ch])
+
         # Byte arrays to send to the AWG
         to_send = {}
         for channel in used_channels:
@@ -131,10 +139,10 @@ class AWGContext(BaseContext):
                 array_M1[channel]*(2**14) + array_M2[channel]*(2**15)
             # Creating and filling a byte array for each channel.
             aux = np.empty(2*sequence_length, dtype=np.uint8)
-            aux[::2] = array % 2**8
-            aux[1::2] = array // 2**8
+            aux[1::2] = array % 2**8
+            aux[::2] = array // 2**8
 
-            to_send[channel] = bytearray(aux)
+            to_send[int(channel[-1])] = bytearray(aux)
 
         return True, to_send
 

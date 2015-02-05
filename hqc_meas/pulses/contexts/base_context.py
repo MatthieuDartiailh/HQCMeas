@@ -4,7 +4,7 @@
 # author : Matthieu Dartiailh
 # license : MIT license
 # =============================================================================
-from atom.api import Enum, Str, Bool, Float, Property, Tuple
+from atom.api import Enum, Str, Bool, Float, Property, Tuple, List
 from inspect import cleandoc
 
 from hqc_meas.utils.atom_util import HasPrefAtom
@@ -33,6 +33,9 @@ class BaseContext(HasPrefAtom):
 
     #: List of logical channels defined by this context
     logical_channels = Tuple()
+
+    #: List of logical channels whose meaning should be inverted.
+    inverted_log_channels = List().tag(pref=True)
 
     #: Whether or not to round times to the nearest multiple of sampling time
     #: when checking.
