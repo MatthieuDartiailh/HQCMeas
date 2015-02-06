@@ -84,7 +84,6 @@ class TransferPulseSequenceTask(InterfaceableTaskMixin, InstrumentTask):
 
         return infos
 
-
     def register_preferences(self):
         """Handle the sequence specific registering in the preferences.
 
