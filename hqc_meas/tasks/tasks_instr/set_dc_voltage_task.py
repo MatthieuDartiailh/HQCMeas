@@ -15,6 +15,7 @@ from inspect import cleandoc
 from hqc_meas.tasks.api import (InstrumentTask, InstrTaskInterface,
                                 InterfaceableTaskMixin)
 
+
 class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     """Set a DC voltage to the specified value.
 
@@ -29,7 +30,7 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
     back_step = Float().tag(pref=True)
 
     #: Largest allowed voltage
-    safe_max = Float(1.0).tag(pref=True)
+    safe_max = Float(0.0).tag(pref=True)
 
     #: Time to wait between changes of the output of the instr.
     delay = Float(0.01).tag(pref=True)
@@ -93,7 +94,7 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
         else:
             value = self.format_and_eval_string(self.target_value)
 
-        if self.safe_max < abs(value):
+        if self.safe_max and self.safe_max < abs(value):
             raise ValueError(cleandoc('''Requested voltage {} exceeds safe max
                                       : '''.format(value)))
 
