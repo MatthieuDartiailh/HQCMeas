@@ -35,6 +35,9 @@ class AWGChannel(BaseInstrument):
         self._AWG = AWG
         self._channel = channel_num
 
+    def reopen_connection(self):
+        self._AWG.reopen_connection()
+
     @secure_communication()
     def select_sequence(self, name):
         """Select a sequence to run for the channel.
