@@ -469,9 +469,7 @@ class PNAGetTraces(InstrumentTask):
 
         """
         channel_driver = self.driver.get_channel(channelnb)
-        if channel_driver.run_averaging() != 1:
-            raise ValueError(cleandoc('''Averaging of PNA channel {} failed
-                                      : '''.format(channelnb)))
+        channel_driver.run_averaging()
 
     def get_trace(self, channelnb, tracenb):
         """ Get the trace that is displayed right now (no new acquisition)
@@ -486,8 +484,6 @@ class PNAGetTraces(InstrumentTask):
         except:
             raise ValueError(cleandoc('''The trace {} does not exist on channel
                                       {}: '''.format(tracenb, channelnb)))
-
-# je ne sais pas comment gérer  le cas où la trace n'existe pas
 
         measname = channel_driver.selected_measure
         data = channel_driver.sweep_x_axis
