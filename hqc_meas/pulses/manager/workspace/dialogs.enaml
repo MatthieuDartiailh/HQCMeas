@@ -65,6 +65,13 @@ enamldef CompilationWidget(Container): main:
 
     Notebook: nb:
         tabs_closable = False
+
+        Page:
+            title = 'Errors'
+            enabled << bool(errors)
+            ErrorsDisplayContainer:
+                errors << main.errors
+                errors_type = 'Compilation errors'
         Page:
             title = 'Variables'
             DictEditor(_ValEditor): ed:
@@ -73,15 +80,8 @@ enamldef CompilationWidget(Container): main:
                 ed.title = 'Variables'
                 ed.operations = ['move']
 
-        Page:
-            title = 'Errors'
-            enabled << bool(errors)
-            ErrorsDisplayContainer:
-                errors << main.errors
-                errors_type = 'Compilation errors'
-
     Label: dur_lab:
-        text = 'Compilation duration'
+        text = 'Compilation duration (µs)'
 
     Field: dur_val:
         read_only = True
@@ -91,19 +91,20 @@ enamldef CompilationWidget(Container): main:
         text = 'Compile'
         clicked ::
             seq = workspace.state.sequence
-            seq.external_vars = workspace.state.ext_vars
             start = time()
             res, report = seq.compile_sequence(use_context=use_context)
             stop = time()
-            seq.external_vars = {}
-            elapsed_time = stop - start
+            main.elapsed_time = (stop - start)*1e6
             if not res:
+                dur_val.background = 'red'
                 miss, err = report
-                mess = 'The values of those variables were never coputed : {}'
-                err['Undefined variables'] = mess.format(miss)
+                mess = 'The values of those variables were never computed : {}'
+                if miss:
+                    err['Undefined variables'] = mess.format(miss)
                 main.errors = err
                 outcome(False)
             else:
+                dur_val.background = 'green'
                 outcome(True)
 
 
