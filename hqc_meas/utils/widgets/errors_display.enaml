@@ -40,8 +40,12 @@ enamldef ErrorsDisplayContainer(Container):
 
     """
     attr errors
-    attr model = _ErrorsDisplayModel(errors)
+    attr model << _ErrorsDisplayModel(errors)
     alias errors_type : lis_lab.text
+
+    model ::
+        lis.items = sorted(model.errors.keys())
+        lis.refresh_items()
 
     constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che)),
                    align('left', lis_lab, lis),
@@ -51,7 +55,6 @@ enamldef ErrorsDisplayContainer(Container):
         pass
     QtListStrWidget: lis:
         hug_height = 'ignore'
-        items << model.errors.keys()
         selected_item >> model.selected_error
 
     Label: che_lab:
