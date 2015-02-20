@@ -432,7 +432,8 @@ class AWG(VisaInstrument):
         header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
                                                         numApresDiese,
                                                         numbyte)
-        self.write('{},{}'.format(header, waveform))
+        self.write('{}{}'.format(header, waveform))
+        self.write('*WAI')
 
     @instrument_property
     @secure_communication()
