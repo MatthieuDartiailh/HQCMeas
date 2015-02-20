@@ -37,9 +37,9 @@ class TestAWGContext(object):
         assert_equal(len(arrays), 1)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[0::2] = 2**5
-        sequence[200:1000:2] += 2**4 + 2**3 + 4 + 2 + 1
-        sequence[201:1001:2] += 255
+        sequence[1::2] = 2**5
+        sequence[201:1001:2] += 2**4 + 2**3 + 4 + 2 + 1
+        sequence[200:1000:2] += 255
         assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
@@ -55,8 +55,8 @@ class TestAWGContext(object):
         assert_in(1, arrays)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[0::2] = 2**5
-        sequence[200:1000:2] += 2**6
+        sequence[1::2] = 2**5
+        sequence[201:1001:2] += 2**6
         assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
@@ -84,8 +84,8 @@ class TestAWGContext(object):
         assert_in(1, arrays)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[0::2] = 2**7 + 2**6 + 2**5
-        sequence[200:1000:2] -= 2**7
+        sequence[1::2] = 2**7 + 2**6 + 2**5
+        sequence[201:1001:2] -= 2**7
         assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
@@ -100,8 +100,8 @@ class TestAWGContext(object):
         assert_in(1, arrays)
 
         sequence = np.zeros(100, dtype=np.uint8)
-        sequence[::2] = 2**5
-        sequence[20:100:2] += 2**6
+        sequence[1::2] = 2**5
+        sequence[21:101:2] += 2**6
         assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
@@ -156,8 +156,8 @@ class TestAWGContext(object):
         assert_in(1, arrays)
 
         sequence = np.zeros(2000, dtype=np.uint8)
-        sequence[0::2] = 2**5
-        sequence[200:1200:2] += 2**7
+        sequence[1::2] = 2**5
+        sequence[201:1201:2] += 2**7
         assert_sequence_equal(arrays[1],
                               bytearray(sequence))
 
