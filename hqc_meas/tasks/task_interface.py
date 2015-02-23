@@ -162,21 +162,21 @@ class InterfaceableTaskMixin(Atom):
 
         return task
 
-    def _observe_interface(self, change):
+    def _post_setattr_interface(self, old, new):
         """ Observer ensuring the interface always has a valid ref to the task
         and that the interface database entries are added to the task one.
 
         """
         # XXXX Workaround Atom _DictProxy issue.
         new_entries = dict(self.task_database_entries)
-        if 'oldvalue' in change and change['oldvalue']:
-            inter = change['oldvalue']
+        if old:
+            inter = old
             inter.task = None
             for entry in inter.interface_database_entries:
                 new_entries.pop(entry, None)
 
-        if change['value']:
-            inter = change['value']
+        if new:
+            inter = new
             inter.task = self
             for entry, value in inter.interface_database_entries.iteritems():
                 new_entries[entry] = value
