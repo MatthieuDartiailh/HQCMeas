@@ -7,37 +7,38 @@
 """
 """
 from traceback import format_exc
+from ast import literal_eval
 from itertools import chain
 from atom.api import (Str, Int, List, Dict)
 
-from hqc_meas.utils.atom_util import HasPreferencesAtom, tagged_members
+from hqc_meas.utils.atom_util import HasPrefAtom, tagged_members
 from hqc_meas.tasks.api import (InstrumentTask, InterfaceableTaskMixin,
                                 InstrTaskInterface)
 
 
-class AnalogicalParameters(HasPreferencesAtom):
+class AnalogicalParameters(HasPrefAtom):
     """Parameters for one analogical port of the channel.
 
     """
-    amplitude = Str().tag(pref=True, check=True)
+    parameter1 = Str().tag(pref=True, check=True)
 
-    offset = Str().tag(pref=True, check=True)
+    parameter2 = Str().tag(pref=True, check=True)
 
-    phase = Str().tag(pref=True, check=True)
+    parameter3 = Str().tag(pref=True, check=True)
 
 
-class LogicalParameters(HasPreferencesAtom):
+class LogicalParameters(HasPrefAtom):
     """Parameters for one logical port of the channel.
 
     """
-    low = Str().tag(pref=True, check=True)
+    parameter1 = Str().tag(pref=True, check=True)
 
-    high = Str().tag(pref=True, check=True)
+    parameter2 = Str().tag(pref=True, check=True)
 
-    delay = Str().tag(pref=True, check=True)
+    parameter3 = Str().tag(pref=True, check=True)
 
 
-class AWGChannelParameters(HasPreferencesAtom):
+class AWGChannelParameters(HasPrefAtom):
     """Parameters for one channel of the AWG.
 
     """
@@ -58,7 +59,7 @@ class AWGChannelParameters(HasPreferencesAtom):
         self.analogicals = [AnalogicalParameters()
                             for i in range(self.analogical)]
         self.logicals = [LogicalParameters()
-                         for i in range(self.analogical)]
+                         for i in range(self.logical)]
 
     def checks(self, task):
         """Test all parameters evaluation.
@@ -87,6 +88,7 @@ class AWGChannelParameters(HasPreferencesAtom):
             pref['logical_{}'.format(i)] = para.preferences_from_members()
         for i, para in enumerate(self.analogicals):
             pref['analogical_{}'.format(i)] = para.preferences_from_members()
+        return pref
 
     @classmethod
     def build_from_config(cls, config):
@@ -97,11 +99,11 @@ class AWGChannelParameters(HasPreferencesAtom):
                   logical=int(config['logical']))
 
         s = 'logical_{}'
-        new.logicals = [LogicalParameters(config[s.format(i)])
+        new.logicals = [LogicalParameters(**config[s.format(i)])
                         for i in range(new.logical)]
 
         s = 'analogical_{}'
-        new.analogicals = [AnalogicalParameters(config[s.format(i)])
+        new.analogicals = [AnalogicalParameters(**config[s.format(i)])
                            for i in range(new.analogical)]
 
         return new
@@ -134,7 +136,7 @@ class SetAWGParametersTask(InterfaceableTaskMixin, InstrumentTask):
         super(SetAWGParametersTask, self).register_preferences()
         for id, ch in self._channels.items():
             prefs = ch.preferences_from_members()
-            self.task_preferences['channel_{}'.format(id)] = prefs
+            self.task_preferences['channel_{}'.format(repr(id))] = prefs
 
     update_preferences_from_members = register_preferences
 
@@ -145,10 +147,14 @@ class SetAWGParametersTask(InterfaceableTaskMixin, InstrumentTask):
         """
         new = super(SetAWGParametersTask, cls).build_from_config(config,
                                                                  dependencies)
-        chs = {k: k[8:] for k in config if k.startswith('channel_')}
+        channels = {}
+        chs = {k: literal_eval(k[8:])
+               for k in config if k.startswith('channel_')}
         for ch in chs:
             ch_obj = AWGChannelParameters.build_from_config(config[ch])
-            new._channels[chs[ch]] = ch_obj
+            channels[chs[ch]] = ch_obj
+
+        new._channels = channels
 
         return new
 
@@ -159,10 +165,10 @@ class SetAWGParametersTask(InterfaceableTaskMixin, InstrumentTask):
         super(SetAWGParametersTask, self)._post_setattr_interface(old, new)
         if new:
             channels = {}
-            specs = new.channel_specs
-            for i in new.channel_ids:
-                channels[i] = AWGChannelParameters(logical=specs[0],
-                                                   analogical=specs[1])
+            specs = new.channels_specs
+            for i in new.channels_ids:
+                channels[i] = AWGChannelParameters(logical=specs[i][0],
+                                                   analogical=specs[i][1])
                 channels[i].init_parameters()
 
             self._channels = channels
@@ -174,11 +180,11 @@ class AWGParasInterface(InstrTaskInterface):
     """
     """
     #: List of channel ids for this interface.
-    channel_ids = []
+    channels_ids = []
 
     #: Specification for each id (number of logical ports,
     #: number of analogical ports)
-    channel_specs = {}
+    channels_specs = {}
 
 
 class TektroAWGParasInterface(AWGParasInterface):
@@ -186,7 +192,7 @@ class TektroAWGParasInterface(AWGParasInterface):
     selecting it.
 
     """
-    channel_ids = [1, 2, 3, 4]
+    channels_ids = [1, 2, 3, 4]
 
     channels_specs = {1: (2, 1), 2: (2, 1), 3: (2, 1), 4: (2, 1)}
 
@@ -205,44 +211,44 @@ class TektroAWGParasInterface(AWGParasInterface):
         if task.driver.owner != task.task_name:
             task.driver.owner = task.task_name
 
-        for ch_id in self.channel_ids:
+        for ch_id in self.channels_ids:
             ch_dr = task.driver.get_channel(ch_id)
             ch = task._channels[ch_id]
             if ch.active:
                 state = task.format_and_eval_string(ch.active)
                 ch_dr.output_state = state
 
-            analogic = ch.analogical[0]
-            if analogic.amplitude:
-                amp = task.format_and_eval_string(analogic.amplitude)
+            analogic = ch.analogicals[0]
+            if analogic.parameter1:
+                amp = task.format_and_eval_string(analogic.parameter1)
                 ch_dr.vpp = amp
-            if analogic.offset:
-                off = task.format_and_eval_string(analogic.offset)
+            if analogic.parameter2:
+                off = task.format_and_eval_string(analogic.parameter2)
                 ch_dr.offset = off
-            if analogic.phase:
-                ph = task.format_and_eval_string(analogic.phase)
+            if analogic.parameter3:
+                ph = task.format_and_eval_string(analogic.parameter3)
                 ch_dr.phase = ph
 
-            logical1 = ch.logical[0]
-            if logical1.low:
-                low = task.format_and_eval_string(logical1.low)
+            logical1 = ch.logicals[0]
+            if logical1.parameter1:
+                low = task.format_and_eval_string(logical1.parameter1)
                 ch_dr.marker1_low_voltage = low
-            if logical1.high:
-                high = task.format_and_eval_string(logical1.high)
+            if logical1.parameter2:
+                high = task.format_and_eval_string(logical1.parameter2)
                 ch_dr.marker1_high_voltage = high
-            if logical1.delay:
-                de = task.format_and_eval_string(logical1.delay)
+            if logical1.parameter3:
+                de = task.format_and_eval_string(logical1.parameter3)
                 ch_dr.marker1_delay = de
 
-            logical2 = ch.logical[1]
-            if logical1.low:
-                low = task.format_and_eval_string(logical2.low)
+            logical2 = ch.logicals[1]
+            if logical1.parameter1:
+                low = task.format_and_eval_string(logical2.parameter1)
                 ch_dr.marker2_low_voltage = low
-            if logical1.high:
-                high = task.format_and_eval_string(logical2.high)
+            if logical1.parameter2:
+                high = task.format_and_eval_string(logical2.parameter2)
                 ch_dr.marker2_high_voltage = high
-            if logical1.delay:
-                de = task.format_and_eval_string(logical2.delay)
+            if logical1.parameter3:
+                de = task.format_and_eval_string(logical2.parameter3)
                 ch_dr.marker2_delay = de
 
 INTERFACES = {'SetAWGParametersTask': [TektroAWGParasInterface]}
