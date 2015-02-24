@@ -1,6 +1,7 @@
 from inspect import cleandoc
 from time import sleep
-from ..driver_tools import (secure_communication, instrument_property)
+from ..driver_tools import (InstrIOError, secure_communication, 
+                            instrument_property)
 from ..visa_tools import VisaInstrument
 
 
@@ -11,7 +12,7 @@ _ACTIVITY_DICT = {'To zero': 'SWEEP ZERO'}
 
 FIELD_CURRENT_RATIO = 0.043963
 OUT_FLUC = 3e-4
-
+MAXITER = 10
 
 class CS4(VisaInstrument):
 
@@ -43,8 +44,14 @@ class CS4(VisaInstrument):
             sleep(post_switch_wait)
             self.activity = 'To zero'
             sleep(1)
-            while self.target_field >= OUT_FLUC:
+            niter = 0
+            while abs(self.target_field) >= OUT_FLUC:
                 sleep(1)
+                niter += 1
+                if niter > MAXITER:
+                    raise InstrIOError(cleandoc('''CS4 didn't set the field 
+                        to zero'''))
+            
 
     @instrument_property
     def heater_state(self):
@@ -81,7 +88,7 @@ class CS4(VisaInstrument):
     def target_field(self):
         """
         """
-        return float(self.ask('IOUT?'))
+        return float(self.ask('IOUT?').strip(' T'))
 
     @target_field.setter
     @secure_communication()
@@ -90,18 +97,24 @@ class CS4(VisaInstrument):
         sweep the output intensity to reach the specified ULIM (in A)
         at a rate depending on the intensity, as defined in the range(s)
         """
-        wait = abs(self.target_field - target) * 60 / self.field_sweep_rate
+        wait = abs(self.target_field - target) / self.field_sweep_rate
         self.write("ULIM {}".format(target))
-        self.write("SWEEP UP")
+        self.write('SWEEP UP')
         sleep(wait)
+        niter = 0
         while abs(self.target_field - target) <= OUT_FLUC:
             sleep(1)
+            niter += 1
+            if niter > MAXITER:
+                raise InstrIOError(cleandoc('''CS4 didn't set the field 
+                    to {}'''.format(target)))
+            
 
     @instrument_property
     def persistent_field(self):
         """
         """
-        return float(self.ask('IMAG?'))
+        return float(self.ask('IMAG?').strip(' T'))
 
     @instrument_property
     def activity(self):
@@ -119,4 +132,6 @@ class CS4(VisaInstrument):
             self.write(par)
         else:
             raise ValueError(cleandoc(''' Invalid parameter {} sent to
-                IPS120-10 set_activity method'''.format(value)))
+                CS4 set_activity method'''.format(value)))
+
+DRIVERS = {'CryomagCS4' : CS4}
