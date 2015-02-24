@@ -61,12 +61,16 @@ class AWGChannelParameters(HasPrefAtom):
         self.logicals = [LogicalParameters()
                          for i in range(self.logical)]
 
-    def checks(self, task):
+    def check(self, task):
         """Test all parameters evaluation.
 
         """
         traceback = {}
-        for k, p in chain(self.analogicals.items(), self.logicals.items()):
+        i = 0
+        kind = 'Analogical{}_'
+        for p in chain(self.analogicals, self.logicals):
+            if i == self.analogical:
+                kind = 'Logical{}_'
             for n in tagged_members(p, 'check'):
                 val = getattr(p, n)
                 if not val:
@@ -75,7 +79,10 @@ class AWGChannelParameters(HasPrefAtom):
                     task.format_and_eval_string(val)
                 except Exception:
                     mess = 'Failed to eval {} : {}'
-                    traceback[k + '_' + n] = mess.format(val, format_exc())
+                    traceback[kind.format(i) + n] = mess.format(val,
+                                                                format_exc())
+
+            i += 1
 
         return not bool(traceback), traceback
 
@@ -115,14 +122,14 @@ class SetAWGParametersTask(InterfaceableTaskMixin, InstrumentTask):
 
     _channels = Dict()
 
-    def checks(self, *args, **kwargs):
+    def check(self, *args, **kwargs):
         """Automatically test all parameters evaluation.
 
         """
         test, traceback = super(SetAWGParametersTask,
-                                self).checks(*args, **kwargs)
+                                self).check(*args, **kwargs)
         for id, ch in self._channels.items():
-            res, tr = ch.checks(self)
+            res, tr = ch.check(self)
             aux = {'Ch{}_{}'.format(id, err): val for err, val in tr.items()}
             traceback.update(aux)
             test &= res
