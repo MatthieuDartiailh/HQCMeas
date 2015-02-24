@@ -42,6 +42,7 @@ enamldef RootView(GroupBox): view:
     alias cache : editor.cache
 
     constraints = [vbox(path, editor)]
+    padding = 1
 
     GroupBox: path:
 
