@@ -124,6 +124,19 @@ class TestSetDCVoltageTask(object):
         assert_false(test)
         assert_equal(len(traceback), 1)
 
+    def test_smooth_set_stopping(self):
+        self.root.run_time['profiles'] = {'Test1': ({'voltage': [0.0],
+                                                     'funtion': ['VOLT'],
+                                                     'owner': [None]}, {})}
+
+        self.root.task_database.prepare_for_running()
+        self.root.should_stop.set()
+
+        setter = lambda value: setattr(self.driver, 'voltage', value)
+
+        self.task.smooth_set(1.0, setter, 0.0)
+        assert_equal(self.root.get_from_database('Test_voltage'), 0.0)
+
     def test_perform_base_interface(self):
         self.task.target_value = '1.0'
 

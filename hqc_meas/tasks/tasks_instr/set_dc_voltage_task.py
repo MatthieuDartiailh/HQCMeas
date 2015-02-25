@@ -123,10 +123,12 @@ class SetDCVoltageTask(InterfaceableTaskMixin, InstrumentTask):
                 if abs(value-last_value) > abs(step):
                     time.sleep(self.delay)
                 else:
-                    break
+                    setter(value)
+                    self.write_in_database('voltage', value)
+                    return
 
-        setter(value)
-        self.write_in_database('voltage', value)
+        self.write_in_database('voltage', last_value)
+
 
 KNOWN_PY_TASKS = [SetDCVoltageTask]
 
