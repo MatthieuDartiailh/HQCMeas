@@ -138,7 +138,7 @@ class AWGTransferInterface(InstrTaskInterface):
 
     #: Flag indicating whether the transfered sequence should be selected for
     #: execution after transfert.
-    select_after_transfer = Bool().tag(pref=True)
+    select_after_transfer = Bool(True).tag(pref=True)
 
     driver_list = ['AWG5014B']
 
