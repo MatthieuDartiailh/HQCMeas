@@ -138,7 +138,9 @@ class TestSetDCVoltageTask(object):
         assert_equal(self.root.get_from_database('Test_voltage'), 0.0)
 
     def test_perform_base_interface(self):
-        self.task.target_value = '1.0'
+        # Test also that a target which is not a multiple of the back step
+        # is correctly handled.
+        self.task.target_value = '0.05'
 
         self.root.run_time['profiles'] = {'Test1': ({'voltage': [0.0],
                                                      'funtion': ['VOLT'],
@@ -147,7 +149,10 @@ class TestSetDCVoltageTask(object):
         self.root.task_database.prepare_for_running()
 
         self.task.perform()
-        assert_equal(self.root.get_from_database('Test_voltage'), 1.0)
+        assert_equal(self.root.get_from_database('Test_voltage'), 0.05)
+        self.task.target_value = '1.06'
+        self.task.perform()
+        assert_equal(self.root.get_from_database('Test_voltage'), 1.06)
 
     def test_perform_multichannel_interface(self):
         interface = MultiChannelVoltageSourceInterface(task=self.task)
