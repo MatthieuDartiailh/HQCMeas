@@ -34,9 +34,12 @@ class InstrHelper(object):
 
     def __init__(self, (attrs, callables)):
         _attrs = {}
-        for entry in attrs:
-            # Storing value in reverse order to use pop on retrieving.
-            _attrs[entry] = attrs[entry][::-1]
+        for entry, val in attrs.items():
+            if isinstance(val, list):
+                # Storing value in reverse order to use pop on retrieving.
+                _attrs[entry] = val[::-1]
+            else:
+                _attrs[entry] = val
         object.__setattr__(self, '_attrs', _attrs)
 
         # Dynamical method binding to instance.
@@ -52,7 +55,10 @@ class InstrHelper(object):
     def __getattr__(self, name):
         _attrs = self._attrs
         if name in _attrs:
-            attr = _attrs[name].pop()
+            if isinstance(_attrs[name], list):
+                attr = _attrs[name].pop()
+            else:
+                attr = _attrs[name]
             if isinstance(attr, Exception):
                 raise attr
             else:
@@ -64,7 +70,10 @@ class InstrHelper(object):
     def __setattr__(self, name, value):
         _attrs = self._attrs
         if name in _attrs:
-            _attrs[name].insert(0, value)
+            if isinstance(_attrs[name], list):
+                _attrs[name].insert(0, value)
+            else:
+                _attrs[name] = value
 
         else:
             raise AttributeError('{} has no attr {}'.format(self, name))
