@@ -39,7 +39,7 @@ class BaseInstrumentView(GroupBox):
     #: References to the currently instantiated interface views.
     i_views = Tuple(default=())
 
-    padding = set_default((0, 0, 5, 5))
+    padding = set_default((0, 2, 2, 2))
 
     def initialize(self):
         """ Overrridden initializer to get a ref to the instr manager state on

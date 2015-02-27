@@ -258,4 +258,5 @@ enamldef SaveArrayView(GroupBox):
         tool_tip = EVALUATER_TOOLTIP
 
 TASK_VIEW_MAPPING = {'SaveTask' : SaveView,
+                     'SaveFileTask' : SaveFileView,
                      'SaveArrayTask' : SaveArrayView}
