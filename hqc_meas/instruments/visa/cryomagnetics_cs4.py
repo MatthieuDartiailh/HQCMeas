@@ -102,7 +102,7 @@ class CS4(VisaInstrument):
         self.write('SWEEP UP')
         sleep(wait)
         niter = 0
-        while abs(self.target_field - target) <= OUT_FLUC:
+        while abs(self.target_field - target) >= OUT_FLUC:
             sleep(1)
             niter += 1
             if niter > MAXITER:
