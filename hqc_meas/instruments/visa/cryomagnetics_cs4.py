@@ -50,8 +50,10 @@ class CS4(VisaInstrument):
                 niter += 1
                 if niter > MAXITER:
                     raise InstrIOError(cleandoc('''CS4 didn't set the field 
-                        to zero'''))
-            
+                        to zero'''))   
+        
+    def check_connection(self):
+        pass
 
     @instrument_property
     def heater_state(self):
@@ -98,6 +100,7 @@ class CS4(VisaInstrument):
         at a rate depending on the intensity, as defined in the range(s)
         """
         wait = abs(self.target_field - target) / self.field_sweep_rate
+        wait /= FIELD_CURRENT_RATIO
         self.write("ULIM {}".format(target))
         self.write('SWEEP UP')
         sleep(wait)
