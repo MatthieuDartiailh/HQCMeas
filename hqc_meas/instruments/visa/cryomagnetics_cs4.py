@@ -1,6 +1,6 @@
 from inspect import cleandoc
 from time import sleep
-from ..driver_tools import (InstrIOError, secure_communication, 
+from ..driver_tools import (InstrIOError, secure_communication,
                             instrument_property)
 from ..visa_tools import VisaInstrument
 
@@ -11,8 +11,8 @@ _GET_HEATER_DICT = {'0': 'Off',
 _ACTIVITY_DICT = {'To zero': 'SWEEP ZERO'}
 
 FIELD_CURRENT_RATIO = 0.043963
-OUT_FLUC = 3e-4
-MAXITER = 10
+OUT_FLUC = 2e-4
+MAXITER = 20
 
 class CS4(VisaInstrument):
 
@@ -43,15 +43,17 @@ class CS4(VisaInstrument):
             self.heater_state = 'Off'
             sleep(post_switch_wait)
             self.activity = 'To zero'
-            sleep(1)
+            wait = abs(self.target_field) / self.field_sweep_rate
+            wait /= FIELD_CURRENT_RATIO
+            sleep(wait)
             niter = 0
             while abs(self.target_field) >= OUT_FLUC:
                 sleep(1)
                 niter += 1
                 if niter > MAXITER:
-                    raise InstrIOError(cleandoc('''CS4 didn't set the field 
-                        to zero'''))   
-        
+                    raise InstrIOError(cleandoc('''CS4 didn't set the field
+                        to zero after {} sec'''.format(MAXITER)))
+
     def check_connection(self):
         pass
 
@@ -109,9 +111,9 @@ class CS4(VisaInstrument):
             sleep(1)
             niter += 1
             if niter > MAXITER:
-                raise InstrIOError(cleandoc('''CS4 didn't set the field 
+                raise InstrIOError(cleandoc('''CS4 didn't set the field
                     to {}'''.format(target)))
-            
+
 
     @instrument_property
     def persistent_field(self):
