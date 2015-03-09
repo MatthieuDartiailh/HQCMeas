@@ -179,11 +179,29 @@ class TestSaveTask(object):
         # Test check issues in file mode : array_size.
         task = self.task
         task.saving_target = 'File'
-        task.folder = self.test_dir + '{tt}'
+        task.folder = self.test_dir
         task.filename = 'test.txt'
         task.file_mode = 'New'
         task.header = 'test'
         task.array_size = '1000*'
+        task.saved_values = [('toto', '{Root_str}'), ('tata', '{Root_float}')]
+        file_path = os.path.join(self.test_dir, 'test.txt')
+
+        test, traceback = task.check()
+        assert_false(test)
+        assert_true(traceback)
+        assert_equal(len(traceback), 1)
+        assert_false(os.path.isfile(file_path))
+
+    def test_check6bis(self):
+        # Test check issues in file mode : header formatting.
+        task = self.task
+        task.saving_target = 'File'
+        task.folder = self.test_dir
+        task.filename = 'test.txt'
+        task.file_mode = 'New'
+        task.header = 'test {*}'
+        task.array_size = '1000'
         task.saved_values = [('toto', '{Root_str}'), ('tata', '{Root_float}')]
         file_path = os.path.join(self.test_dir, 'test.txt')
 
@@ -261,7 +279,7 @@ class TestSaveTask(object):
         task.folder = self.test_dir
         task.filename = 'test_perform{Root_int}.txt'
         task.file_mode = 'Add'
-        task.header = 'test'
+        task.header = 'test {Root_str}'
         task.array_size = '3'
         task.saved_values = [('toto', '{Root_str}'), ('tata', '{Root_float}')]
         file_path = os.path.join(self.test_dir, 'test_perform1.txt')
@@ -276,7 +294,8 @@ class TestSaveTask(object):
         assert_equal(task.line_index, 1)
         with open(file_path) as f:
             a = f.readlines()
-            assert_equal(a, ['test\n', '# test\n', 'toto\ttata\n', 'a\t2.0\n'])
+            assert_equal(a,
+                         ['test\n', '# test a\n', 'toto\ttata\n', 'a\t2.0\n'])
 
         task.perform()
 
@@ -284,8 +303,8 @@ class TestSaveTask(object):
         assert_equal(task.line_index, 2)
         with open(file_path) as f:
             a = f.readlines()
-            assert_equal(a, ['test\n', '# test\n', 'toto\ttata\n', 'a\t2.0\n',
-                             'a\t2.0\n'])
+            assert_equal(a, ['test\n', '# test a\n', 'toto\ttata\n',
+                             'a\t2.0\n', 'a\t2.0\n'])
 
         task.perform()
 
@@ -293,8 +312,8 @@ class TestSaveTask(object):
         assert_equal(task.line_index, 3)
         with open(file_path) as f:
             a = f.readlines()
-            assert_equal(a, ['test\n', '# test\n', 'toto\ttata\n', 'a\t2.0\n',
-                             'a\t2.0\n', 'a\t2.0\n'])
+            assert_equal(a, ['test\n', '# test a\n', 'toto\ttata\n',
+                             'a\t2.0\n', 'a\t2.0\n', 'a\t2.0\n'])
 
     def test_perform2(self):
         # Test performing in array mode. (Call three times perform)
@@ -405,6 +424,18 @@ class TestSaveFileTask(object):
         assert_true(traceback)
         assert_equal(len(traceback), 1)
 
+    def test_check6(self):
+        # Test check issues in file mode : header formatting.
+        task = self.task
+        task.folder = self.test_dir
+        task.filename = 'test.txt'
+        task.header = 'test {*}'
+
+        test, traceback = task.check()
+        assert_false(test)
+        assert_true(traceback)
+        assert_equal(len(traceback), 1)
+
     def test_check9(self):
         # Test check issues in entries.
         task = self.task
@@ -415,7 +446,6 @@ class TestSaveFileTask(object):
                              ('tata', '{Root_float*}')]
 
         test, traceback = task.check()
-        print traceback
         assert_false(test)
         assert_true(traceback)
         assert_equal(len(traceback), 2)
@@ -443,7 +473,7 @@ class TestSaveFileTask(object):
         task = self.task
         task.folder = self.test_dir
         task.filename = 'test_perform{Root_int}.txt'
-        task.header = 'test'
+        task.header = 'test {Root_float}'
         task.saved_values = [('toto', '{Root_float}'),
                              ('tata', '{Root_array}')]
         file_path = os.path.join(self.test_dir, 'test_perform1.txt')
@@ -459,7 +489,7 @@ class TestSaveFileTask(object):
             with open(file_path) as f:
                 a = f.readlines()
 
-            assert_equal(a[:2], ['# test\n',
+            assert_equal(a[:2], ['# test 2.0\n',
                                  'toto\ttata\n'])
             for i in range(10):
                 assert_equal(float(a[2+i].split('\t')[0]), 2.0)

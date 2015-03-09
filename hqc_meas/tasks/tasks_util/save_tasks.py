@@ -102,7 +102,8 @@ class SaveTask(SimpleTask):
 
                 self.root_task.files[full_path] = self.file_object
                 if self.header:
-                    for line in self.header.split('\n'):
+                    h = self.format_string(self.header)
+                    for line in h.split('\n'):
                         self.file_object.write('# ' + line + '\n')
                 labels = [s[0] for s in self.saved_values]
                 self.file_object.write('\t'.join(labels) + '\n')
@@ -175,6 +176,13 @@ class SaveTask(SimpleTask):
                 traceback[err_path] = mess.format(e)
                 return False, traceback
 
+            try:
+                self.format_string(self.header)
+            except Exception as e:
+                mess = 'Failed to format the header: {}'
+                traceback[err_path] = mess.format(e)
+                return False, traceback
+
         if self.array_size:
             try:
                 self.format_and_eval_string(self.array_size)
@@ -217,7 +225,7 @@ class SaveTask(SimpleTask):
 
 
 class SaveFileTask(SimpleTask):
-    """ Save the specified entries in a CSV file. 
+    """ Save the specified entries in a CSV file.
 
     Wait for any parallel operation before execution.
 
@@ -274,7 +282,8 @@ class SaveFileTask(SimpleTask):
             self.root_task.files[full_path] = self.file_object
 
             if self.header:
-                for line in self.header.split('\n'):
+                h = self.format_string(self.header)
+                for line in h.split('\n'):
                     self.file_object.write('# ' + line + '\n')
 
             labels = []
@@ -370,6 +379,13 @@ class SaveFileTask(SimpleTask):
             traceback[err_path] = mess.format(e)
             return False, traceback
 
+        try:
+            self.format_string(self.header)
+        except Exception as e:
+            mess = 'Failed to format the header: {}'
+            traceback[err_path] = mess.format(e)
+            return False, traceback
+
         test = True
         for i, s in enumerate(self.saved_values):
             try:
@@ -438,7 +454,8 @@ class SaveArrayTask(SimpleTask):
                 raise
 
             if self.header:
-                for line in self.header.split('\n'):
+                h = self.format_string(self.header)
+                for line in h.split('\n'):
                     file_object.write('# ' + line + '\n')
 
             if array_to_save.dtype.names:
@@ -511,6 +528,13 @@ class SaveArrayTask(SimpleTask):
                 os.remove(full_path)
         except Exception as e:
             mess = 'Failed to open the specified file: {}'
+            traceback[err_path] = mess.format(e)
+            return False, traceback
+
+        try:
+            self.format_string(self.header)
+        except Exception as e:
+            mess = 'Failed to format the header: {}'
             traceback[err_path] = mess.format(e)
             return False, traceback
 
