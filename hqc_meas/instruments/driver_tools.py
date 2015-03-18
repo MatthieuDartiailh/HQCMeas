@@ -100,7 +100,7 @@ class instrument_property(property):
             super(instrument_property, self).__set__(obj, value)
 
 
-def secure_communication(max_iter=10):
+def secure_communication(max_iter=2):
     """Decorator making sure that a communication error cannot simply be
     resolved by attempting again to send a message.
 
