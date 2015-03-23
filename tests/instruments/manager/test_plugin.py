@@ -86,13 +86,13 @@ class Test_DriverManagement(BaseClass):
         prof.write()
         try:
             from time import sleep
-            sleep(0.5)
+            sleep(1.5)
             process_app_events()
             assert_in(u'Test', plugin.all_profiles)
             assert_in(u'Test', plugin.available_profiles)
         finally:
             os.remove(os.path.join(profile_path, 'test.ini'))
-        sleep(0.5)
+        sleep(1.5)
         process_app_events()
         assert_not_in(u'Test', plugin.all_profiles)
         assert_not_in(u'Test', plugin.available_profiles)

@@ -93,7 +93,7 @@ class TestMeasureSpace(object):
                             self)
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
 
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask()
         measure.store['build_deps'] = 25
 
@@ -113,7 +113,7 @@ class TestMeasureSpace(object):
                             self)
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
 
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask()
 
         ed = MeasureEditorDialog(measure=measure, workspace=plugin.workspace)

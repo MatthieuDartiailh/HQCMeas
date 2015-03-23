@@ -234,7 +234,7 @@ class TestMeasureSpace(object):
 
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
 
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask(default_path=self.test_dir)
         plugin.edited_measure = measure
 
@@ -261,7 +261,7 @@ class TestMeasureSpace(object):
 
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
 
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask()
         plugin.edited_measure = measure
 
@@ -284,7 +284,7 @@ class TestMeasureSpace(object):
 
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
 
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask()
         plugin.edited_measure = measure
 
@@ -308,7 +308,7 @@ class TestMeasureSpace(object):
 
         false_instr_user = FalseInstrTask(selected_profile='  dummy  ',
                                           selected_driver='PanelTestDummy')
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask(default_path=self.test_dir)
         measure.root_task.children_task = [false_instr_user]
         plugin.edited_measure = measure
@@ -340,7 +340,7 @@ class TestMeasureSpace(object):
 
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
 
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask()
         plugin.edited_measure = measure
 
@@ -380,7 +380,7 @@ class TestMeasureSpace(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask()
         plugin.enqueued_measures.append(measure)
 
@@ -392,17 +392,17 @@ class TestMeasureSpace(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure1 = Measure(plugin=plugin, name='Test1')
+        measure1 = Measure(plugin=plugin)
         measure1.root_task = RootTask()
         measure1.status = 'SKIPPED'
         plugin.enqueued_measures.append(measure1)
 
-        measure2 = Measure(plugin=plugin, name='Test2')
+        measure2 = Measure(plugin=plugin)
         measure2.root_task = RootTask()
         measure2.status = 'EDITING'
         plugin.enqueued_measures.append(measure2)
 
-        measure3 = Measure(plugin=plugin, name='Test3')
+        measure3 = Measure(plugin=plugin)
         measure3.root_task = RootTask()
         measure3.status = 'READY'
         plugin.enqueued_measures.append(measure3)
@@ -415,12 +415,12 @@ class TestMeasureSpace(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure1 = Measure(plugin=plugin, name='Test1')
+        measure1 = Measure(plugin=plugin)
         measure1.root_task = RootTask()
         measure1.status = 'SKIPPED'
         plugin.enqueued_measures.append(measure1)
 
-        measure2 = Measure(plugin=plugin, name='Test2')
+        measure2 = Measure(plugin=plugin)
         measure2.root_task = RootTask()
         measure2.status = 'EDITING'
         plugin.enqueued_measures.append(measure2)
@@ -1073,7 +1073,7 @@ class TestMeasureSpace(object):
         """ Create a measure.
 
         """
-        measure = Measure(plugin=plugin, name='Test1')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask(default_path=self.test_dir)
         if instr:
             false_instr_user = FalseInstrTask(selected_profile='  dummy  ',

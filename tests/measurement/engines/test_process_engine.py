@@ -589,7 +589,7 @@ class TestProcessEngine(object):
         """ Create a measure.
 
         """
-        measure = Measure(plugin=plugin, name='Test1')
+        measure = Measure(plugin=plugin)
         measure.root_task = RootTask(default_path=self.test_dir)
         children = [SleepTask(task_name='sleep1', time=1),
                     LogTask(task_name='print', message='test'),

@@ -107,8 +107,9 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
-        measure.root_task = RootTask(default_path=self.test_dir)
+        measure = Measure(plugin=plugin, status='Under test')
+        measure.root_task = RootTask(default_path=self.test_dir,
+                                     meas_name='Test')
 
         # Needed because of Atom returning a _DictProxy
         measure.checks = dict(plugin.checks)
@@ -130,7 +131,7 @@ class TestPluginCoreFunctionalities(object):
         # Load measure.
         loaded = Measure.load_measure(plugin, path)
 
-        assert_equal(loaded.name, 'Test')
+        assert_equal(loaded.root_task.meas_name, 'Test')
         assert_equal(loaded.root_task.default_path, self.test_dir)
         assert_equal(loaded.checks, dict(plugin.checks))
         assert_equal(loaded.headers, dict(plugin.headers))
@@ -143,9 +144,13 @@ class TestPluginCoreFunctionalities(object):
         monitor = measure.monitors[u'monitor1']
         assert_equal(monitor.measure_name, measure.root_task.meas_name)
         assert_equal(monitor.measure_status, measure.status)
-        assert_equal(monitor.updated, {'root/default_path': 1})
+        assert_equal(monitor.updated, {'root/meas_name': 1,
+                                       'root/default_path': 1,
+                                       'root/meas_date': 1,
+                                       'root/meas_id': 1})
         assert_equal(measure.collect_entries_to_observe(),
-                     ['root/default_path'])
+                     ['root/meas_name', 'root/default_path', 'root/meas_date',
+                      'root/meas_id'])
 
         # Check that the notifier is correctly observed.
         assert_true(measure.root_task.task_database.has_observers('notifier'))
@@ -155,7 +160,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask(default_path=self.test_dir)
 
         # Needed because of Atom returning a _DictProxy
@@ -181,7 +186,6 @@ class TestPluginCoreFunctionalities(object):
         # Load measure.
         loaded = Measure.load_measure(plugin, path)
 
-        assert_equal(loaded.name, 'Test')
         assert_equal(loaded.root_task.default_path, self.test_dir)
         assert_equal(loaded.checks, {})
         assert_equal(loaded.headers, {})
@@ -194,7 +198,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask(default_path=self.test_dir)
 
         # Needed because of Atom returning a _DictProxy
@@ -215,7 +219,7 @@ class TestPluginCoreFunctionalities(object):
         # Create a new measure without headers and checks and test that the old
         # values are not in the config file.
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask(default_path=self.test_dir)
 
         measure.save_measure(path)
@@ -314,7 +318,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask()
 
         # Be sure that there is no observers for the database
@@ -332,9 +336,13 @@ class TestPluginCoreFunctionalities(object):
         monitor = measure.monitors[u'monitor1']
         assert_equal(monitor.measure_name, measure.root_task.meas_name)
         assert_equal(monitor.measure_status, measure.status)
-        assert_equal(monitor.updated, {'root/default_path': 1})
+        assert_equal(monitor.updated,  {'root/meas_name': 1,
+                                        'root/default_path': 1,
+                                        'root/meas_date': 1,
+                                        'root/meas_id': 1})
         assert_equal(measure.collect_entries_to_observe(),
-                     ['root/default_path'])
+                     ['root/meas_name', 'root/default_path', 'root/meas_date',
+                      'root/meas_id'])
 
         # Check that the notifier is correctly observed.
         assert_true(measure.root_task.task_database.has_observers('notifier'))
@@ -344,7 +352,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask()
 
         # Be sure that there is no observers for the database
@@ -364,7 +372,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask()
 
         test_obs = lambda change: False
@@ -389,7 +397,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask()
 
         measure.remove_monitor(u'monitor1')
@@ -399,7 +407,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask()
 
         # Be sure that there is no observers for the database
@@ -425,7 +433,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         root_task1 = RootTask()
         root_task2 = RootTask()
 
@@ -439,9 +447,13 @@ class TestPluginCoreFunctionalities(object):
         measure.root_task = root_task2
 
         assert_equal(measure.monitors[u'monitor1'].updated,
-                     {'root/default_path': 1})
+                     {'root/meas_name': 1,
+                      'root/default_path': 1,
+                      'root/meas_date': 1,
+                      'root/meas_id': 1})
         assert_equal(measure.collect_entries_to_observe(),
-                     ['root/default_path'])
+                     ['root/meas_name', 'root/default_path', 'root/meas_date',
+                     'root/meas_id'])
         assert_false(root_task1.task_database.has_observers('notifier'))
         assert_true(root_task2.task_database.has_observers('notifier'))
 
@@ -450,7 +462,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask()
 
         monitor_decl = plugin.monitors[u'monitor1']
@@ -467,7 +479,7 @@ class TestPluginCoreFunctionalities(object):
 
         """
         plugin = self.workbench.get_plugin(u'hqc_meas.measure')
-        measure = Measure(plugin=plugin, name='Test', status='Under test')
+        measure = Measure(plugin=plugin, status='Under test')
         measure.root_task = RootTask()
 
         monitor_decl = plugin.monitors[u'monitor1']

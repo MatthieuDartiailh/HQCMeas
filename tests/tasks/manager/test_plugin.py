@@ -159,13 +159,13 @@ class Test(object):
         prof = ConfigObj(os.path.join(template_path, 'test.ini'))
         prof.write()
         from time import sleep
-        sleep(0.5)
+        sleep(1.5)
         try:
             assert_in('Test',  plugin.tasks)
             assert_in('Template',  plugin.tasks)
         finally:
             os.remove(os.path.join(template_path, 'test.ini'))
-        sleep(0.5)
+        sleep(1.5)
         assert_not_in('Test',  plugin.tasks)
         assert_in('Template',  plugin.tasks)
 
