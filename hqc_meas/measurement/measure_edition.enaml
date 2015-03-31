@@ -10,7 +10,7 @@ from enaml.core.api import Include
 from enaml.layout.api import hbox, spacer, vbox, align, InsertTab
 from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
                                Label, Field, CheckBox, GroupBox, Notebook,
-                               DockItem, Window, FileDialogEx)
+                               DockItem, Window, FileDialogEx, ToolButton)
 
 from inspect import cleandoc
 from textwrap import fill
@@ -248,33 +248,14 @@ enamldef MeasEditionView(Container): ed:
                                        selected_task=selected_task)
 
     constraints << [vbox(
-                        hbox(lab_rootpath, text_rootpath, explore, lab_descr,
-                             text_descr, lab_id, text_id, edition),
+                        hbox(lab_descr, text_descr, lab_id, text_id, edition),
+                        hbox(lab_rootpath, text_rootpath, explore),
                         hbox(tree, editors)
                         ),
-                    align('v_center', lab_rootpath, text_rootpath, explore,
-                              lab_descr, text_descr, lab_id, text_id)]
+                    align('v_center', lab_rootpath, text_rootpath, explore),
+                    align('v_center', lab_descr, text_descr, lab_id, text_id)]
 
-    Label: lab_rootpath:
-        text = 'Root path'
-    Field: text_rootpath:
-        hug_width = 'ignore'
-        text := measure.root_task.default_path
-    PushButton: explore:
-        text = 'E'
-        hug_width = 'strong'
-        clicked ::
-            curr_path = measure.root_task.default_path
 
-            get_dir = FileDialogEx.get_existing_directory
-            if not curr_path:
-                path = get_dir(title='Select a default path')
-            else:
-                path = get_dir(title='Select a default path',
-                           current_path=curr_path)
-
-            if path:
-                measure.root_task.default_path = path
     Label: lab_descr:
         text = 'Name'
     Field: text_descr:
@@ -307,6 +288,28 @@ enamldef MeasEditionView(Container): ed:
             else:
                 ToolsEditorDialog(parent=edition,
                                   measure=measure).exec_()
+
+    Label: lab_rootpath:
+        text = 'Root path'
+    Field: text_rootpath:
+        hug_width = 'ignore'
+        text := measure.root_task.default_path
+    ToolButton: explore:
+        button_style = 'text_only'
+        text = 'E'
+        hug_width = 'strong'
+        clicked ::
+            curr_path = measure.root_task.default_path
+
+            get_dir = FileDialogEx.get_existing_directory
+            if not curr_path:
+                path = get_dir(title='Select a default path')
+            else:
+                path = get_dir(title='Select a default path',
+                           current_path=curr_path)
+
+            if path:
+                measure.root_task.default_path = path
 
     QtTreeWidget: tree:
         hug_height = 'ignore'
