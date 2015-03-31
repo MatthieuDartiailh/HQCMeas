@@ -30,7 +30,7 @@ class CS4(VisaInstrument):
         # sweeping rate is converted from T/min to A/sec
         self.field_sweep_rate = rate / (60 * FIELD_CURRENT_RATIO)
 
-        if self.target_field != value:
+        if abs(self.persistent_field - value) >= OUT_FLUC:
 
             if self.heater_state == 'Off':
                 self.target_field = self.persistent_field
