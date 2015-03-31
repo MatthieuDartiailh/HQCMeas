@@ -88,6 +88,7 @@ enamldef MeasView(GroupBox): widget:
 
         PushButton: process:
             text = 'Process'
+            enabled << 'processing' not in workspace.plugin.flags
             clicked ::
                 measure.plugin.workspace.process_single_measure(measure)
 
