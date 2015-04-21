@@ -214,4 +214,60 @@ class MultiChannelVoltageSourceInterface(InstrTaskInterface):
         else:
             return True, {}
 
-INTERFACES = {'SetDCVoltageTask': [MultiChannelVoltageSourceInterface]}
+class DACInterface(InstrTaskInterface):
+    """
+    """
+    has_view = True
+
+    driver_list = ['SR7270-LI']
+
+    #: Id of the channel to use.
+    channel = Int(1).tag(pref=True)
+
+    def perform(self, value=None):
+        """
+        """
+        task = self.task
+        if not task.driver:
+            task.start_driver()
+
+        def setter(value):
+            setattr(task.driver, 'dac{}_voltage'.format(self.channel), value)
+        current_value = getattr(task.driver,
+                                'dac{}_voltage'.format(self.channel))
+
+        task.smooth_set(value, setter, current_value)
+
+    def check(self, *args, **kwargs):
+        if kwargs.get('test_instr'):
+            task = self.task
+            run_time = task.root_task.run_time
+            traceback = {}
+            config = None
+
+            if task.selected_profile:
+                if 'profiles' in run_time:
+                    # Here use get to avoid errors if we were not granted the
+                    # use of the profile. In that case config won't be used.
+                    config = run_time['profiles'].get(task.selected_profile)
+            else:
+                return False, traceback
+
+            if run_time and task.selected_driver in run_time['drivers']:
+                run_time['drivers'][task.selected_driver]
+            else:
+                return False, traceback
+
+            if not config:
+                return True, traceback
+
+            if traceback:
+                return False, traceback
+            else:
+                return True, traceback
+
+        else:
+            return True, {}
+
+INTERFACES = {'SetDCVoltageTask': [MultiChannelVoltageSourceInterface,
+                                   DACInterface]}

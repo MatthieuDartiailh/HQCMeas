@@ -75,6 +75,23 @@ enamldef MultiChannelVoltageSourceIChannel(IntField):
     attr interface
     value := interface.channel
 
+enamldef DACSourceILabel(Label):
+
+    attr interface
+    attr index = 4
+    text = 'DAC'
+
+enamldef DACSourceIChannel(IntField):
+
+    attr interface
+    value := interface.channel
+    hug_width = 'strong'
+    minimum = 1
+    maximum = 2
+
 INTERFACE_VIEW_MAPPING = {'MultiChannelVoltageSourceInterface':
                           [MultiChannelVoltageSourceILabel,
-                           MultiChannelVoltageSourceIChannel]}
+                           MultiChannelVoltageSourceIChannel],
+                          'DACInterface':
+                          [DACSourceILabel,
+                           DACSourceIChannel]}

@@ -13,7 +13,8 @@ This module defines drivers for lock-in from Signal Recoveries
 
 """
 
-from ..driver_tools import (InstrIOError, secure_communication)
+from ..driver_tools import (InstrIOError, secure_communication,
+                            instrument_property)
 from ..visa_tools import VisaInstrument
 
 
@@ -49,6 +50,47 @@ class LockInSR7265(VisaInstrument):
     `_check_completion` method)
 
     """
+    @instrument_property
+    def dac1_voltage(self):
+        """
+        """
+        value = self.ask('DAC. 1')
+        status = self._check_status()
+        if status != 'OK' or not value:
+            raise InstrIOError('The command did not complete correctly')
+        else:
+            return float(value)
+
+    @dac1_voltage.setter
+    @secure_communication()
+    def dac1_voltage(self, value):
+        """
+        """
+        self.ask("DAC. 1 {}".format(value))
+        status = self._check_status()
+        if status != 'OK':
+            raise InstrIOError('The command did not complete correctly')
+
+    @instrument_property
+    def dac2_voltage(self):
+        """
+        """
+        value = self.ask('DAC. 2')
+        status = self._check_status()
+        if status != 'OK' or not value:
+            raise InstrIOError('The command did not complete correctly')
+        else:
+            return float(value)
+
+    @dac2_voltage.setter
+    @secure_communication()
+    def dac2_voltage(self, value):
+        """
+        """
+        self.ask("DAC. 2 {}".format(value))
+        status = self._check_status()
+        if status != 'OK':
+            raise InstrIOError('The command did not complete correctly')
 
     @secure_communication()
     def read_x(self):
@@ -100,7 +142,7 @@ class LockInSR7265(VisaInstrument):
 
     @secure_communication()
     def read_amplitude(self):
-        """
+        """50000::SOCKET
         Return the amplitude of the signal measured by the instrument
 
         Perform a direct reading without any waiting. Can return non
