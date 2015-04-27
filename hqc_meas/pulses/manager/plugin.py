@@ -423,11 +423,11 @@ class PulsesManagerPlugin(HasPrefPlugin):
         views = {}
         self._explore_modules(modules, contexts, 'CONTEXTS', failed)
         self._explore_views(v_modules, views, 'CONTEXTS_VIEWS', failed)
-
+        print contexts, views
         valid_contexts = {k: (v, views[v.__name__])
                           for k, v in contexts.iteritems()
                           if v.__name__ in views}
-
+        print valid_contexts
         self._contexts = valid_contexts
         self.contexts = list(valid_contexts.keys())
 

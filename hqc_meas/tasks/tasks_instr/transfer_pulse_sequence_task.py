@@ -183,6 +183,7 @@ class AWGTransferInterface(InstrTaskInterface):
 
         """
         return context.__class__.__name__ == 'AWGContext'
+ 
 
 
 INTERFACES = {'TransferPulseSequenceTask': [AWGTransferInterface]}

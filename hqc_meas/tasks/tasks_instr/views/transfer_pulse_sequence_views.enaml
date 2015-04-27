@@ -208,3 +208,4 @@ enamldef AWGTransferPulseSequenceInterfaceView(Page):
 
 INTERFACE_VIEW_MAPPING = {'AWGTransferInterface':
                           [AWGTransferPulseSequenceInterfaceView]}
+                          
