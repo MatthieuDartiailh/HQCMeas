@@ -699,6 +699,29 @@ class TestCompilation(object):
         assert_equal(pulses[2].stop, 10.0)
         assert_equal(pulses[2].duration, 6.5)
 
+    def test_sequence_compilation1bis(self):
+        # Compiles two times a sequence while changing a parameter to make
+        # sure the cache is cleaned in between
+        self.root.external_vars = {'a': 1.5}
+
+        pulse1 = Pulse(def_1='1.0', def_2='{a}')
+        pulse2 = Pulse(def_1='{a} + 1.0', def_2='4.0')
+        pulse3 = Pulse(def_1='{2_stop} + 0.5', def_2='10')
+        self.root.items.extend([pulse1, pulse2, pulse3])
+
+        res, pulses = self.root.compile_sequence(False)
+        assert_true(res)
+        assert_equal(len(pulses), 3)
+        assert_equal(pulses[0].stop, 1.5)
+
+        self.root.external_vars = {'a': 2.}
+        res, pulses = self.root.compile_sequence(False)
+        print res, pulses, pulse1.stop
+        assert_true(res)
+        assert_equal(len(pulses), 3)
+        assert_equal(pulses[0].stop, 2.)
+
+
     def test_sequence_compilation2(self):
         # Test compiling a flat sequence of fixed duration.
         self.root.external_vars = {'a': 1.5}

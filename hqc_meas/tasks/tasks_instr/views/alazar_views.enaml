@@ -23,8 +23,8 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
     attr in_loop : bool = False
     title << task.task_name
     constraints = [factory(auto_grid_layout),
-                   dfreq_val.width == before_val.width,
-                   before_val.width == after_val.width]
+                   dfreq_val.width == after_val.width,
+                   after_val.width == buffer_val.width]
 
 
     Label: sel_driv:
@@ -40,19 +40,29 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         selected := task.selected_profile
         
     Label: dfreq:
-        text = 'Demodulation frequency'
+        text = 'Demodulation frequency (MHz)'
     Field: dfreq_val:
         text := task.freq
 
-    Label: before:
-        text = 'Time before trigger (s)'
-    Field: before_val:
-        text := task.timebeforetrig
-
     Label: after:
-        text = 'Time after trigger (s)'
+        text = 'Time after trigger (mus)'
     Field: after_val:
         text := task.timeaftertrig
+        
+    Label: average:
+        text = 'Average number'
+    Field: traces_val:
+        text := task.averagenumber
+        
+    Label: buffer:
+        text = 'Traces per Buffer'
+    Field: buffer_val:
+        text := task.tracesbuffer
+        
+    Label: average:
+        text = 'Average'
+    CheckBox: average_val:
+        checked := task.average
 
 
 enamldef TracesAlazarView(BaseInstrumentView): view:
@@ -60,7 +70,8 @@ enamldef TracesAlazarView(BaseInstrumentView): view:
     attr in_loop : bool = False
     title << task.task_name
     constraints = [factory(auto_grid_layout),
-                   before_val.width == after_val.width]
+                           traces_val.width == after_val.width,
+                           traces_val.width == buffer_val.width]
 
 
     Label: sel_driv:
@@ -75,16 +86,25 @@ enamldef TracesAlazarView(BaseInstrumentView): view:
         items << sorted(profiles)
         selected := task.selected_profile
 
-    Label: before:
-        text = 'Time before trigger (s)'
-    Field: before_val:
-        text := task.timebeforetrig
-
     Label: after:
-        text = 'Time after trigger (s)'
+        text = 'Time after trigger (mus)'
     Field: after_val:
         text := task.timeaftertrig
 
+    Label: traces:
+        text = 'Number of traces'
+    Field: traces_val:
+        text := task.tracesnumber
+        
+    Label: buffer:
+        text = 'Traces per Buffer'
+    Field: buffer_val:
+        text := task.tracesbuffer
+        
+    Label: average:
+        text = 'Average'
+    CheckBox: average_val:
+        checked := task.average
 
 
 TASK_VIEW_MAPPING = {'DemodAlazarTask': DemodAlazarView,

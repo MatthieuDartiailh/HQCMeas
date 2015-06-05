@@ -7,31 +7,52 @@
 """
 
 """
-from atom.api import (Str, Bool, set_default, Enum)
+from atom.api import (Str, Bool, set_default)
 from inspect import cleandoc
 import numpy as np
 
 from hqc_meas.tasks.api import InstrumentTask
 
 
-class Demod_CHA_Alazar(InstrumentTask):
-    """ Get the average quadratures of the signal on CHA.
+class DemodAlazarTask(InstrumentTask):
+    """ Get the raw or averaged quadratures of the signal.
 
     """
-
-    average_nb = Str().tag(pref=True)
-
     freq = Str().tag(pref=True)
 
-    timebeforetrig = Str().tag(pref=True)
-
     timeaftertrig = Str().tag(pref=True)
-    
-    separateoddeventrigs = Bool(False).tag(pref=True)
+
+    tracesbuffer = Str().tag(pref=True)
+
+    averagenumber = Str().tag(pref=True)
+
+    average = Bool(True).tag(pref=True)
 
     driver_list = ['Alazar935x']
-    
-    task_database_entries = set_default({'trace_data': np.array([1.0])})
+
+    task_database_entries = set_default({'AI': {}, 'AQ': {},
+                                         'BI': {}, 'BQ': {}})
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        test, traceback = super(DemodAlazarTask, self).check(*args,
+                                                             **kwargs)
+
+        if (self.format_and_eval_string(self.averagenumber) %
+                self.format_and_eval_string(self.tracesbuffer)) != 0:
+            test = False
+            traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''The number of buffers used must be an integer.''')
+
+        if int(self.format_and_eval_string(self.freq) *
+               self.format_and_eval_string(self.timeaftertrig)) == 0:
+            test = False
+            traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''Cannot acquire for an integer
+                            number of periods. Use longer times.''')
+
+        return test, traceback
 
     def perform(self):
         """
@@ -42,143 +63,80 @@ class Demod_CHA_Alazar(InstrumentTask):
         if self.driver.owner != self.task_name:
             self.driver.owner = self.task_name
 
+        self.driver.configure_board()
 
-        avg = self.average_nb
+        average = self.format_and_eval_string(self.averagenumber)
+        recordsPerCapture = int(max(1000, average))
 
-        avgA_even = 0
-        avgA_odd = 0
-        avgB_even = 0
-        avgB_odd = 0
-        recordnb = 0
-        if self.separateoddeventrigs:
-            while avg > 0:
-                answer = self.driver.getAIQ(timebeforetrig / 2, freq, timeaftertrig / 2, Math.Min(average_nb, 1000))
-                for iter = 0 To answer.record_nb / 2 - 1
-                    avgA_even = avgA_even + answer.averageA(2 * iter)
-                    avgB_even = avgB_even + answer.averageB(2 * iter)
-                    avgA_odd = avgA_odd + answer.averageA(2 * iter + 1)
-                    avgB_odd = avgB_odd + answer.averageB(2 * iter + 1)
-                Next
-                recordnb += answer.record_nb / 2
-                avg = avg - 1000
-            End While
-            data_file.WriteLine(currentline & avgA_even / recordnb & vbTab & avgB_even / recordnb & vbTab & avgA_odd / recordnb & vbTab & avgB_odd / recordnb)
-        else:
-            While avg > 0
-                answer = Alazar.getAIQ(timebeforetrig / 2, freq, timeaftertrig / 2, Math.Min(average_nb, 1000))
-                For iter As Integer = 0 To answer.record_nb - 1
-                    avgA_even = avgA_even + answer.averageA(iter)
-                    avgB_even = avgB_even + answer.averageB(iter)
+        recordsPerBuffer = int(self.format_and_eval_string(self.tracesbuffer))
+        answer = self.driver.get_demod(
+            self.format_and_eval_string(self.timeaftertrig)*10**-6,
+            recordsPerCapture, recordsPerBuffer,
+            self.format_and_eval_string(self.freq)*10**6, self.average
+            )
+        AI, AQ, BI, BQ = answer
 
-                    'avgA_even = avgA_even + Math.Sqrt(answer.averageA(iter) ^ 2 + answer.averageB(iter) ^ 2)
-                    'avgB_even = avgB_even + answer.averageB(iter)
-                Next
-                recordnb += answer.record_nb
-                avg = avg - 1000
-            End While
-            data_file.WriteLine(currentline & avgA_even / recordnb & vbTab & avgB_even / recordnb)
-        End If
+        self.write_in_database('AI', AI)
+        self.write_in_database('AQ', AQ)
+        self.write_in_database('BI', BI)
+        self.write_in_database('BQ', BQ)
 
 
+class TracesAlazarTask(InstrumentTask):
+    """ Get the raw or averaged traces of the signal.
 
+    """
 
+    timeaftertrig = Str().tag(pref=True)
 
+    tracesnumber = Str().tag(pref=True)
 
+    tracesbuffer = Str().tag(pref=True)
 
+    average = Bool(True).tag(pref=True)
 
+    driver_list = ['Alazar935x']
 
-
-
-        # if the TrigArray lentgh is null, it's a simple single sweep waveform
-        if data['TRIGTIME_ARRAY'][0] == 0:
-            arr = np.rec.fromarrays([data['SingleSweepTimesValuesArray'],
-                                     data['Volt_Value_array']],
-                                    names=['Time (s)', 'Voltage (V)'])
-            self.write_in_database('trace_data', arr)
-        else:
-            arr = np.rec.fromarrays([data['SEQNCEWaveformTimesValuesArray'],
-                                     data['Volt_Value_array']],
-                                    names=['Time (s)', 'Voltage (V)'])
-            self.write_in_database('trace_data', )
+    task_database_entries = set_default({'traceA': np.zeros((1, 1)),
+                                         'traceB': np.zeros((1, 1))})
 
     def check(self, *args, **kwargs):
         """
         """
-        test, traceback = super(OscilloGetTraceTask, self).check(*args,
-                                                                 **kwargs)
-        if self.average_nb:
-            try:
-                val = self.format_and_eval_string(self.average_nb)
-                self.write_in_database('Average number', val)
-            except Exception as e:
-                test = False
-                traceback[self.task_path + '/' + self.task_name + '-average_nb'] = \
-                    cleandoc('''Failed to eval the avg nb field formula
-                        {}: {}'''.format(self.average_nb, e))
+        test, traceback = super(TracesAlazarTask, self).check(*args,
+                                                              **kwargs)
+
+        if (self.format_and_eval_string(self.tracesnumber) %
+                self.format_and_eval_string(self.tracesbuffer)) != 0:
+            test = False
+            traceback[self.task_path + '/' + self.task_name + '-get_traces'] =\
+                cleandoc('''The number of buffers used must be an integer.''')
 
         return test, traceback
 
-KNOWN_PY_TASKS = [OscilloGetTraceTask]
+    def perform(self):
+        """
+        """
+        if not self.driver:
+            self.start_driver()
 
+        if self.driver.owner != self.task_name:
+            self.driver.owner = self.task_name
 
+        self.driver.configure_board()
 
+        recordsPerCapture = int(max(1000,
+                            self.format_and_eval_string(self.tracesnumber)))
 
+        recordsPerBuffer = int(self.format_and_eval_string(self.tracesbuffer))
 
-  Public Sub get_traces_Alazar(ByVal average_nb As Integer, ByVal timebeforetrig As Double, ByVal timeaftertrig As Double)
-        currentline = ""
-        Try
-            For Each param In param_table
-                currentline = currentline & param.current & vbTab
-            Next
-        Catch ex As Exception
-        End Try
+        answer = self.driver.get_traces(
+            self.format_and_eval_string(self.timeaftertrig)*10**-6,
+            recordsPerCapture, recordsPerBuffer, self.average
+            )
 
-        Dim avg As Integer = average_nb
+        traceA, traceB = answer
+        self.write_in_database('traceA', traceA)
+        self.write_in_database('traceB', traceB)
 
-        Dim recordnb As Integer = 0
-
-        Dim answer As Stats_to_VB = Alazar.getsumtraces(timebeforetrig / 2, timeaftertrig / 2, Math.Min(average_nb, 1000))
-        Dim tracelength As Integer = answer.averageA.Length
-        Dim recordsnb As Integer = answer.record_nb
-
-        Dim avgA(tracelength) As Double
-        Dim avgB(tracelength) As Double
-
-
-        While avg > 0
-
-
-            For i As Integer = 0 To tracelength - 1
-
-                avgA(i) = avgA(i) + answer.averageA(i)
-                avgB(i) = avgB(i) + answer.averageB(i)
-
-
-
-            Next
-            recordnb += answer.record_nb
-            avg = avg - 1000
-
-            If avg > 0 Then
-                answer = Alazar.getsumtraces(timebeforetrig / 2, timeaftertrig / 2, Math.Min(average_nb, 1000))
-            End If
-        End While
-
-
-        For i As Integer = 0 To tracelength - 1
-            avgA(i) = avgA(i) / recordnb
-            avgB(i) = avgB(i) / recordnb
-            data_file.WriteLine(currentline & i & vbTab & avgA(i) & vbTab & avgB(i))
-
-        Next
-       
-        'For iter As Integer = 0 To recordsnb - 1
-        '    For i As Integer = 0 To tracelength - 1
-
-
-        '        data_file.WriteLine(currentline & i & vbTab & answer.traceCHA(iter, i) & vbTab & answer.traceCHB(iter, i))
-        '    Next
-
-        'Next
-
-    End Sub
+KNOWN_PY_TASKS = [DemodAlazarTask, TracesAlazarTask]

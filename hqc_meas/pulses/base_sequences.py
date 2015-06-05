@@ -37,15 +37,15 @@ class BaseSequence(Item):
     #: pair represents the name and definition of the variable.
     local_vars = Dict(Str()).tag(pref=True)
 
-    def prepare_compilation(self):
-        """ Clear all internal caches before compiling anew the sequence.
+    def cleanup_cache(self):
+        """ Clear all internal caches after successfully compiling the sequence
 
         """
         self._evaluated_vars = {}
         self._compiled = []
         for i in self.items:
-            if isinstance(i, Sequence):
-                i.prepare_compilation()
+            if isinstance(i, BaseSequence):
+                i.cleanup_cache()
 
     def compile_sequence(self, root_vars, sequence_locals, missings, errors):
         """ Evaluate the sequence vars and compile the list of pulses.
@@ -203,6 +203,8 @@ class BaseSequence(Item):
             List of pulses in which all the string entries have been evaluated.
 
         """
+
+        
         # Inplace modification of compile will update self._compiled.
         if not self._compiled:
             self._compiled = [None for i in self.items if i.enabled]
@@ -241,7 +243,7 @@ class BaseSequence(Item):
                                                            miss, errors)
                     if success:
                         compiled[index] = items
-
+            
             known_locals = set(sequence_locals.keys())
             # If none of the variables found missing during last pass is now
             # known stop compilation as we now reached a dead end. Same if an
@@ -256,8 +258,11 @@ class BaseSequence(Item):
             # occured) it means the compilation succeeded.
             elif not miss:
                 pulses = list(chain.from_iterable(compiled))
+                # Clean the compiled items once the pulse is transfered
+                self.cleanup_cache()
                 return True, pulses
-
+            
+            
     def _answer(self, members, callables):
         """ Collect answers for the walk method.
 
@@ -330,7 +335,7 @@ class Sequence(BaseSequence):
 
         res, pulses = self._compile_items(root_vars, local_namespace,
                                           missings, errors)
-
+                                          
         if res:
             if self.time_constrained:
                 # Check if start, stop and duration of sequence are compatible.
