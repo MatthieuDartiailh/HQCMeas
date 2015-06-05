@@ -32,7 +32,7 @@ def manager_plugin_factory():
 #    """ Handler for the 'hqc_meas.instr_manager.show_manager' command
 #
 #    """
-#    manager = event.workbench.get_plugin('hqc_meas.instr_manager')
+#    manager = event.workbench.get_plugin('hqc_meas.')
 #    from .manager_view import TaskManagerView
 #    TaskManagerView(manager=manager).show()
 
@@ -43,11 +43,12 @@ def show_starting_errors(event):
     manager = event.workbench.get_plugin('hqc_meas.task_manager')
     ui = event.workbench.get_plugin('enaml.workbench.ui')
     ErrorsDisplay(ui.window, title='Task manager start up errors',
-                  errors=manager.report()).exec_()
+                  errors=manager.report(),
+                  errors_type='Import failures').exec_()
 
 
 def tasks_request(event):
-    """ Handler for the 'hqc_meas.task_manager.taskss_request' command.
+    """ Handler for the 'hqc_meas.task_manager.tasks_request' command.
 
     """
     manager = event.workbench.get_plugin('hqc_meas.task_manager')

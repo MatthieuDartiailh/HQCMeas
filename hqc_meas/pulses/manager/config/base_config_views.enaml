@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : hqc_meas/pulses/manager/config/base_config_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
+                               Form, Label)
+
+
+enamldef NoneView(Container):
+    attr model
+
+
+enamldef SimpleView(Form): main:
+    """
+    """
+    attr model
+
+    Label:
+        text = 'Sequence name'
+    Field:
+        text >> model.sequence_name
+        submit_triggers = ['lost_focus', 'return_pressed', 'auto_sync']
+
+    GroupBox:
+        title = 'Description'
+        MultilineField:
+            hug_height = 'weak'
+            read_only = True
+            text << model.sequence_doc

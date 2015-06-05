@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
-# module : base_views.py
+# =============================================================================
+# module : hqc_meas/tasks/manager/config/base_views.enaml
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 from enaml.core.api import Conditional
 from enaml.widgets.api import (Container, MultilineField, Field, GroupBox,
                                Form, Label)

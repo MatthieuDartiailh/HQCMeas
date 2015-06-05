@@ -7,8 +7,8 @@
 """ This module gather routines linked to building tasks.
 
 Save for build_task_from_config, all this function are rather method of the
-TaskManager and should be called on their own. There are implemented here only
-to simplify the manager.
+TaskManager and should not be called on their own. There are implemented here
+only to simplify the manager.
 
 """
 from enaml.widgets.api import FileDialogEx
@@ -70,7 +70,7 @@ def build_task_from_config(config, dep_source, root=False):
         core = dep_source.workbench.get_plugin('enaml.workbench.core')
         cmd = 'hqc_meas.dependencies.collect_build_dep_from_config'
         dep_source = core.invoke_command(cmd, {'config': config})
-        if dep_source is None:
+        if isinstance(dep_source, Exception):
             return None
 
     if root:
@@ -126,7 +126,7 @@ def build_root(manager, mode, config=None, parent_ui=None, build_dep=None):
             core = manager.workbench.get_plugin('enaml.workbench.core')
             cmd = 'hqc_meas.dependencies.collect_build_dep_from_config'
             build_dep = core.invoke_command(cmd, {'config': config})
-        if build_dep is None:
+        if isinstance(build_dep, Exception):
             return None
 
         config.pop('task_class')

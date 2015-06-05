@@ -1,0 +1,187 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : hqc_meas/pulses/manager/workspace/w_manifest.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from enaml.widgets.api import (Container, DockArea, DockItem, Menu, Action,
+                               PopupView, Label)
+from enaml.layout.api import HSplitLayout, VSplitLayout
+from enaml.workbench.api import PluginManifest, Extension
+from enaml.workbench.core.api import Command
+from enaml.workbench.ui.api import ActionItem, MenuItem
+from enaml.styling import StyleSheet, Style, Setter
+
+# --- Command handlers --------------------------------------------------------
+
+# Sequence creation
+# =================
+
+def new_sequence(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.pulses')
+    plugin.workspace.new_sequence()
+
+
+NEW_DESCRIPTION =\
+'''Create a new sequence.'''
+
+# Sequence saving
+# ===============
+
+enamldef MoreVisibleLabel(StyleSheet):
+    Style:
+        style_class = 'large-font'
+        Setter:
+            field = 'font'
+            value = '20pt bold Verdana'
+
+
+enamldef SaveConfirm(PopupView):
+    parent_anchor = (0.5, 0.0)
+    timeout = 2
+    MoreVisibleLabel:
+        pass
+    Container:
+        Label:
+            text = 'Sequence was correctly saved'
+            style_class = 'large-font'
+
+
+def save_sequence(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.pulses')
+    if plugin.workspace_state.sequence_type != 'Unknown':
+        plugin.workspace.save_sequence()
+        window = workbench.get_plugin('enaml.workbench.ui').window
+        SaveConfirm(window).show()
+    else:
+        plugin.workspace.save_sequence()
+
+
+SAVE_DESCRIPTION =\
+'''Save the currently edited sequence to a file. If this sequence has already
+been saved to a file then simply override it.'''
+
+
+def save_sequence_as(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.pulses')
+    plugin.workspace.save_sequence('file')
+
+
+SAVE_AS_DESCRIPTION =\
+'''Save the currently edited sequence to a file. The user will always be asked
+to choose a file to which the sequence should be saved.'''
+
+
+def save_sequence_as_template(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.pulses')
+    plugin.workspace.save_sequence('template')
+
+
+SAVE_AS_TEMPLATE_DESCRIPTION =\
+'''Save the currently edited sequence as template.'''
+
+# Sequence loading
+# ================
+
+def load_sequence(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.pulses')
+    plugin.workspace.load_sequence('file')
+
+
+LOAD_DESCRIPTION =\
+'''Load a measure from a file.'''
+
+
+def load_template(event):
+    workbench = event.workbench
+    plugin = workbench.get_plugin('hqc_meas.pulses')
+    plugin.workspace.load_sequence('template')
+
+
+LOAD_DESCRIPTION =\
+'''Create a measure from a template.'''
+
+
+# --- Menu contribution manifest ----------------------------------------------
+
+enamldef SequenceSpaceMenu(PluginManifest):
+    """ Contribution to the main window of the SequenceSpace.
+
+    """
+    id = u'hqc_meas.pulses.workspace.menus'
+
+    Extension:
+        id = 'commands'
+        point = 'enaml.workbench.core.commands'
+        Command:
+            id = 'hqc_meas.pulses.workspace.new'
+            description = NEW_DESCRIPTION
+            handler = new_sequence
+        Command:
+            id = 'hqc_meas.pulses.workspace.save'
+            description = SAVE_DESCRIPTION
+            handler = save_sequence
+        Command:
+            id = 'hqc_meas.pulses.workspace.save_as'
+            description = SAVE_AS_DESCRIPTION
+            handler = save_sequence_as
+        Command:
+            id = 'hqc_meas.pulses.workspace.save_as_template'
+            description = SAVE_AS_TEMPLATE_DESCRIPTION
+            handler = save_sequence_as_template
+        Command:
+            id = 'hqc_meas.pulses.workspace.load'
+            description = LOAD_DESCRIPTION
+            handler = load_sequence
+        Command:
+            id = 'hqc_meas.pulses.workspace.load_template'
+            description = LOAD_TEMPLATE_DESCRIPTION
+            handler = load_template
+
+    Extension:
+        id = 'action'
+        point = 'enaml.workbench.ui.actions'
+        # File contributions.
+        ActionItem:
+            path = '/file/new'
+            label = 'New sequence'
+            command = 'hqc_meas.pulses.workspace.new'
+            group = 'user'
+            before = 'save'
+        ActionItem:
+            path = '/file/save'
+            label = 'Save sequence'
+            shortcut = 'Ctrl+S'
+            command = 'hqc_meas.pulses.workspace.save'
+            group = 'user'
+            before = 'save_as'
+        ActionItem:
+            path = '/file/save_as'
+            label = 'Save sequence as'
+            command = 'hqc_meas.pulses.workspace.save_as'
+            group = 'user'
+            before = 'save_as_template'
+        ActionItem:
+            path = '/file/save_as_template'
+            label = 'Save sequence as template'
+            command = 'hqc_meas.pulses.workspace.save_as_template'
+            group = 'user'
+            before = 'load'
+        ActionItem:
+            path = '/file/load'
+            label = 'Load sequence'
+            command = 'hqc_meas.pulses.workspace.load'
+            group = 'user'
+            before = 'load_template'
+        ActionItem:
+            path = '/file/load_template'
+            label = 'Load template sequence'
+            command = 'hqc_meas.pulses.workspace.load_template'
+            group = 'user'

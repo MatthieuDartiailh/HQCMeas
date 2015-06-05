@@ -1,0 +1,63 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : editor.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from atom.api import Atom, Dict, Str, Value, Instance, Typed, Callable
+from enaml.workbench.api import Workbench
+from enaml.workbench.core.core_plugin import CorePlugin
+from enaml.widgets.api import (Html, Container, GroupBox, ScrollArea, Page,
+                               Field)
+from enaml.core.api import Include, Conditional
+from inspect import cleandoc
+
+from hqc_meas.tasks.api import BaseTask
+from hqc_meas.tasks.tools.task_editor import TaskViewManager
+from ..base_editor import BaseEditor
+from hqc_meas.pulses.sequences_views import RootSequenceView
+
+
+enamldef ExternalVarsPage(Page):
+    """Notebook page to edit the list of external variables.
+
+    """
+    attr sequence
+    title = 'External variables'
+
+    Container:
+        Field:
+            tool_tip = 'List of external variables used in the sequence (a, b)'
+            text << ', '.join(sequence.external_vars.keys())
+            text ::
+                keys = [k.strip() for k in text.split(',')]
+                sequence.external_vars = dict.fromkeys(keys, '')
+
+
+enamldef PulseEditor(BaseEditor):
+    """ Standard editor displaying the selected task using the task view.
+
+    """
+    attr workbench
+
+    title = 'Pulse editor'
+    name = 'pulse_editor'
+    tree_visible = False
+    unselected ::
+        if selected_task.sequence:
+            old_vars = selected_task.sequence_vars
+            new_vars = selected_task.sequence.external_vars
+            for k in old_vars:
+                if k in new_vars:
+                    new_vars[k] = old_vars[k]
+            selected_task.sequence_vars = dict(new_vars)
+
+    Container:
+        ScrollArea:
+            Container:
+                Conditional:
+                    condition << bool(selected_task and selected_task.sequence)
+                    RootSequenceView:
+                        core = workbench.get_plugin('enaml.workbench.core')
+                        item = selected_task.sequence
+                        additional_pages = [ExternalVarsPage(sequence=item)]

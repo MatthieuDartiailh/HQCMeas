@@ -1,0 +1,330 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : hqc_meas/pulses/manager/workspace/dialogs.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+import os
+from ast import literal_eval
+from time import time
+from enaml.core.api import Conditional
+from enaml.layout.api import hbox, vbox, spacer
+from enaml.validator import Validator
+from enaml.widgets.api import (Dialog, Container, Stack, StackItem,
+                               MultilineField, PushButton, ObjectCombo,
+                               Field, GroupBox, CheckBox, Label, Notebook,
+                               Page)
+
+from hqc_meas.utils.widgets.dict_editor import DictEditor
+from hqc_meas.utils.widgets.errors_display import ErrorsDisplayContainer
+from ..browsing import SequenceSelector
+
+
+class _VarValidator(Validator):
+
+    def validate(self, text):
+        try:
+            new = literal_eval(text)
+            return True
+        except Exception:
+            return False
+
+enamldef _ValEditor(Container):
+    attr model
+    constraints = [hbox(lab, val)]
+
+    Label: lab:
+        text = model.key
+    Field: val:
+        text << repr(model.value)
+        text :: model.value = literal_eval(text)
+        validator = _VarValidator()
+
+
+enamldef CompilationWidget(Container): main:
+    """ Widget allowing to compile the currently edited sequence.
+
+    The compilation of the sequence is timed and any error occuring is
+    reported. The external variables values can be edited to fix compilation
+    errors.
+
+    """
+    attr workspace
+    attr elapsed_time
+    attr use_context : bool = False
+    attr errors = {}
+    event outcome
+
+    constraints = [vbox(cont, nb, hbox(dur_lab, dur_val, comp))]
+
+    CheckBox: cont:
+        text = 'Use context compilation'
+        checked := use_context
+
+    Notebook: nb:
+        tabs_closable = False
+
+        Page:
+            title = 'Errors'
+            enabled << bool(errors)
+            ErrorsDisplayContainer:
+                errors << main.errors
+                errors_type = 'Compilation errors'
+        Page:
+            title = 'Variables'
+            DictEditor(_ValEditor): ed:
+                ed.model = workspace.state.sequence
+                ed.iterable_name = 'external_vars'
+                ed.title = 'Variables'
+                ed.operations = ['move']
+
+    Label: dur_lab:
+        text = 'Compilation duration (µs)'
+
+    Field: dur_val:
+        read_only = True
+        text << unicode(elapsed_time)
+
+    PushButton: comp:
+        text = 'Compile'
+        clicked ::
+            seq = workspace.state.sequence
+            start = time()
+            res, report = seq.compile_sequence(use_context=use_context)
+            stop = time()
+            main.elapsed_time = (stop - start)*1e6
+            if not res:
+                dur_val.background = 'red'
+                miss, err = report
+                mess = 'The values of those variables were never computed : {}'
+                if miss:
+                    err['Undefined variables'] = mess.format(miss)
+                main.errors = err
+                outcome(False)
+            else:
+                dur_val.background = 'green'
+                outcome(True)
+
+
+TYPE_EXPLANATION = \
+'''Standard mode :
+- the sequence is saved as is and can be used in the measurement program
+directly. It should have a valid context (matching the instrument to be used).
+The value of the external vars are specified in the measurement program.
+Template mode :
+- the sequence is a model that can be reused in other sequences, to make
+sequence development easier and avoid duplicating standard sequences. The only
+accessible part of a template sequence are the template vars and the
+TemplateContext which specifies how to map the real channels to the one defined
+in the template.'''
+
+enamldef TypeSelectionDialog(Dialog): dial:
+    """ Dialog allowing to choose how to save the edited sequence.
+
+    """
+    attr type
+    title = 'How to save sequence ?'
+    initial_size = (700, 250)
+
+    Container:
+        padding = 2
+        constraints = [vbox(doc, hbox(canc, spacer, temp, std))]
+
+        MultilineField: doc:
+            read_only = True
+            text = TYPE_EXPLANATION
+        PushButton: canc:
+            text = 'Cancel'
+            clicked :: dial.reject()
+        PushButton: temp:
+            text = 'Template'
+            clicked ::
+                dial.type = 'template'
+                dial.accept()
+        PushButton: std:
+            text = 'Standard'
+            clicked ::
+                dial.type = 'file'
+                dial.accept()
+
+
+enamldef TemplateLoadDialog(Dialog): dial:
+    """ Dialog used to load a template sequence for edition.
+
+    """
+    attr workspace
+    attr doc = ''
+    attr prefs
+
+    title = 'Load template.'
+
+    Container:
+        padding = 2
+        constraints = [vbox(hbox(sel, fie), hbox(spacer, canc, load))]
+
+        SequenceSelector: sel:
+            manager = workspace.plugin
+            display_filters = False
+            selected_filter = 'Template'
+            selected_sequence ::
+                name = change['value']
+                t_, _ = workspace.plugin.sequences_request([name],
+                                                           views=False)
+                dial.doc = t_[name][2]
+                dial.prefs = t_[name][1]
+
+        MultilineField: fie:
+            read_only = True
+            text << dial.doc
+
+        PushButton: canc:
+            text = 'Cancel'
+            clicked :: dial.reject()
+
+        PushButton: load:
+            text = 'Load'
+            enabled << prefs is not None
+            clicked :: dial.accept()
+
+
+def _format_path(folder, filename):
+    """ Simple formatter for template saving path.
+
+    """
+    if not filename.endswith('.ini'):
+        filename += '.ini'
+    return os.path.join(folder, filename)
+
+
+WRONG_CONTEXT = \
+''' To save a sequence as a template, its context must be a TemplateContext.
+Please change this and try again.'''
+
+
+RIGHT_CONTEXT = \
+''' Right type of context found, you can continue.'''
+
+
+def _validate_context(workspace):
+    context = workspace.state.sequence.context
+    test = context is not None and context.context_class != 'TemplateContext'
+    return WRONG_CONTEXT if not test else RIGHT_CONTEXT
+
+
+enamldef TemplateSaveDialog(Dialog): dial:
+    """
+    """
+    attr workspace
+    attr path
+    attr doc = ''
+    attr can_proceed : bool = False
+    event stack_changed
+    stack_changed ::
+        self.can_proceed = sta.stack_items[self.step].valid
+
+    alias step : sta.index
+
+    title = 'Save sequence as template.'
+
+    Container:
+        constraints << [vbox(sta, hbox(canc, spacer,
+                                       *prev.items + nex.items + sav.items))]
+        Stack: sta:
+
+            StackItem: c_type:
+                attr valid : bool << typ.text == RIGHT_CONTEXT
+                Container:
+                    MultilineField: typ:
+                        text = _validate_context(workspace)
+
+            StackItem: f_sel:
+                attr valid : bool = False
+                Container:
+                    padding = 2
+
+                    ObjectCombo: fol:
+                        items = workspace.plugin.templates_folders
+                        selected = (os.path.dirname(dial.path)
+                                    if dial.path else '')
+                        selected ::
+                            dial.path = _format_path(selected, fil.text)
+                            if dial.path and dial.doc:
+                                f_sel.valid = True
+                            else:
+                                f_sel.valid = False
+                    Field: fil:
+                        submit_triggers = ['lost_focus', 'return_pressed',
+                                           'auto_sync']
+                        text = (os.path.split(dial.path)[1]
+                                if dial.path else '')
+                        text ::
+                            dial.path = _format_path(fol.selected, text)
+                            if dial.path and dial.doc:
+                                f_sel.valid = True
+                            else:
+                                f_sel.valid = False
+                    GroupBox:
+                        title = 'Description'
+                        padding = 2
+                        MultilineField:
+                            text := dial.doc
+                            text ::
+                                if dial.path and dial.doc:
+                                    f_sel.valid = True
+                                else:
+                                    f_sel.valid = False
+
+            StackItem: comp:
+                attr valid : bool = False
+                CompilationWidget:
+                    workspace = dial.workspace
+                    outcome ::
+                        comp.valid = change['value']
+
+        PushButton: canc:
+            text = 'Cancel'
+            clicked :: dial.reject()
+
+        Conditional: prev:
+            condition << step != 0
+            PushButton:
+                text = 'Previous'
+                clicked ::
+                    dial.step -= 1
+                    dial.stack_changed()
+
+        Conditional: nex:
+            condition << step < len(sta.stack_items())-1
+            PushButton:
+                text = 'Next'
+                enabled << can_proceed
+                clicked ::
+                    dial.step += 1
+                    dial.stack_changed()
+
+        Conditional: sav:
+            condition << step == len(sta.stack_items())-1
+            PushButton:
+                text = 'Save'
+                enabled << can_proceed
+                clicked ::
+                    dial.accept()
+
+
+enamldef CompileDialog(Dialog): dial:
+    """ Simple dialog use to compile the edited sequence without saving.
+
+    """
+    alias workspace : comp.workspace
+
+    title = 'Test sequence compilation'
+
+    Container:
+        constraints = [vbox(comp, cl), contents_right == cl.right]
+        CompilationWidget: comp:
+            pass
+        PushButton: cl:
+            text = 'Close'
+            clicked :: dial.accept()

@@ -1,0 +1,132 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : hqc_meas/pulses/manager/building.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+"""
+"""
+from inspect import getdoc
+from atom.api import (Atom, Instance, Str, observe, ForwardTyped, Bool,
+                      Value)
+from enaml.core.api import Include
+from enaml.core.object import Object
+from enaml.layout.api import hbox, spacer, vbox
+from enaml.widgets.api import (PushButton, Menu, Action, Container, Dialog,
+                               Label, MultilineField)
+
+from hqc_meas.utils.widgets.qt_list_str_widget import QtListStrWidget
+from .browsing import SequenceSelector
+
+
+# Circular import protections
+def pulse_manager():
+    from .plugin import PulsesManagerPlugin
+    return PulsesManagerPlugin
+
+
+def abstract_config():
+    from .config.base_config import AbstractConfig
+    return AbstractConfig
+
+
+class _PulseBuilderModel(Atom):
+    """ Simple model for the PulseBuilder dialog.
+
+    """
+    # Pulses manager.
+    manager = ForwardTyped(pulse_manager)
+
+    # Reference to the root sequence to which a sequence should be added.
+    root = Value()
+
+    # Name of the currently selected sequence.
+    sequence_name = Str()
+
+    # Currently in use sequence config.
+    sequence_config = ForwardTyped(abstract_config)
+    config_view = Instance(Object)
+
+    # Bool indicating whether or not the sequence can be built.
+    ok_ready = Bool()
+
+    def _observe_sequence_name(self, change):
+        """ Observer requesting the appropriate config for a task.
+
+        """
+        self.ok_ready = False
+        config, view = self.manager.config_request(change['value'])
+        self.sequence_config = config
+        self.config_view = view(model=config)
+        self.ok_ready = config.config_ready
+
+    @observe('sequence_config.config_ready')
+    def _config_complete(self, change):
+        """ Observe the config to notify the ui that config is ready.
+
+        """
+        self.ok_ready = change['value']
+
+enamldef BuilderView(Dialog): dial:
+    """ Simple Dialog to add a sequence to an existing sequence.
+
+    """
+    attr manager
+    attr root
+    attr model = _PulseBuilderModel(manager=manager, root=root)
+    title = 'Select the sequence you want to add'
+
+    Container:
+        constraints << [hbox(selector,
+                             *tuple(list(conf.objects) + [vbox(ok,
+                                                            cancel,
+                                                            spacer)]))]
+        SequenceSelector: selector:
+            hug_width = 'strong'
+            manager << dial.manager
+            selected_sequence >> model.sequence_name
+        Include: conf:
+            objects  << [model.config_view] if model.config_view else []
+        PushButton: ok:
+            text = 'Ok'
+            enabled << model.ok_ready
+            clicked ::
+                dial.accept()
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()
+
+enamldef ContextBuilderView(Dialog): dial:
+    """ Simple dialog to choose the context to add to a sequence.
+
+    """
+    attr manager
+    attr context
+    title = 'Select the context you want to use.'
+
+    Container:
+        constraints << [hbox(selector, doc, vbox(ok, cancel, spacer))]
+        QtListStrWidget: selector:
+            items << sorted(manager.contexts)
+            selected_item = ''
+            items ::
+                selected_item = items[0]
+            selected_item ::
+                c_s, _ = manager.contexts_request([selected_item], views=False)
+                dial.context = c_s[selected_item]
+
+        MultilineField: doc:
+            text << getdoc(context) if context else ''
+
+        PushButton: ok:
+            text = 'Ok'
+            enabled << bool(context)
+            clicked ::
+                dial.accept()
+
+        PushButton: cancel:
+            text = 'Cancel'
+            clicked ::
+                dial.reject()
+

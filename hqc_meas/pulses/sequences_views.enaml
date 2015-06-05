@@ -1,0 +1,451 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : pulses/sequences_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from atom.api import Atom, Dict, Value
+from enaml.layout.api import hbox, align, spacer, vbox
+from enaml.widgets.api import (PushButton, Container, Label, Field,
+                               GroupBox, ScrollArea, Menu, Action, Stack,
+                               StackItem, Form, Notebook, Page, CheckBox,
+                               ObjectCombo, Splitter, SplitItem, HGroup)
+from enaml.core.api import Looper, Conditional, Include
+from enaml.workbench.core.core_plugin import CorePlugin
+
+from hqc_meas.utils.widgets.dict_editor import DictEditor
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from .entry_eval import EVALUATER_TOOLTIP
+from .pulse import Pulse
+
+# Reimplemented here to accomodate the use of a menu to either insert Pulse
+# or sequence.
+enamldef PulsesPopupListMenu(Menu):
+    attr model
+    attr index
+    attr operations
+    attr factory
+    attr args = ()
+    attr kwargs = {}
+    Conditional:
+        condition = bool('add' in operations)
+        Menu:
+            title = 'Add before'
+            Action:
+                text = 'Pulse'
+                triggered ::
+                    obj = Pulse()
+                    model.insert(index, obj)
+            Action:
+                text = 'Sequence'
+                triggered ::
+                    obj = factory(*args, **kwargs)
+                    if obj is not None:
+                        model.insert(index, obj)
+        Menu:
+            title = 'Add after'
+            Action:
+                text = 'Pulse'
+                triggered ::
+                    obj = Pulse()
+                    model.insert(index + 1, obj)
+            Action:
+                text = 'Sequence'
+                triggered ::
+                    obj = factory(*args, **kwargs)
+                    if obj is not None:
+                        model.insert(index + 1, obj)
+        Action:
+            separator = True
+    Conditional:
+        condition = bool('remove' in operations)
+        Action:
+            text = 'Delete'
+            triggered :: del model[index]
+        Action:
+            separator = True
+    Conditional:
+        condition = bool('move' in operations)
+        Conditional:
+            condition = bool(index not in (0,1))
+            Action:
+                text = 'Move to top'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(0, obj)
+        Conditional:
+            condition = bool(index != 0)
+            Action:
+                text = 'Move up'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(index - 1, obj)
+        Conditional:
+            condition = bool(index != len(model)-1)
+            Action:
+                text = 'Move down'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(index + 1, obj)
+        Conditional:
+            condition = bool(index != len(model)-1)
+            Action:
+                text = 'Move to bottom'
+                triggered ::
+                    obj = model.pop(index)
+                    model.insert(len(model), obj)
+
+
+class ViewsManager(Atom):
+    """ Class responsible for instantiating the item view for _ItmeListView.
+
+    Using this class allow to request all the views in one pass when
+    instantiating a new editor.
+
+    """
+    #: Reference to the core plugin of the app.
+    core = Value()
+
+    #: Dict mapping Task names to their view.
+    views = Dict()
+
+    def __init__(self, children, **kwargs):
+        super(ViewsManager, self).__init__(**kwargs)
+        t_classes = set([type(item).__name__ for item in children])
+        self.get_views(t_classes)
+
+    def instantiate_view(self, item, attrs):
+        """ A helper function instantiating a task view.
+
+        Parameters
+        ----------
+        item : Item
+            Item instance for which to create a view.
+
+        attrs : dict
+            Dict of additional object which should be passed to the view if it
+            defines the attribute.
+
+        Returns
+        -------
+        view :
+            Created item view.
+
+        """
+        name = type(item).__name__
+        views = self.views
+        if name not in views:
+            self.get_views([name])
+        view = views[name]
+        kwargs = {'item': item}
+        for key in attrs:
+            if hasattr(view, key):
+                kwargs[key] = attrs[key]
+        return view(**kwargs)
+
+    def get_views(self, class_names):
+        """ Helper method updating the known views with the ones associated
+        with the given names.
+
+        """
+        cmd = 'hqc_meas.pulses.sequences_request'
+        items, _ = self.core.invoke_command(cmd,
+                                            {'sequences': class_names,
+                                             'use_class_names': True})
+        self.views.update({k: v[1] for k, v in items.iteritems()})
+
+
+enamldef _SequenceListView(Container): list_view:
+    """ A base custom container to edit the items of a sequence.
+
+    """
+    attr sequence
+    attr core
+    attr cache
+    attr operations = ['add', 'remove', 'move']
+    attr model = ViewsManager(sequence.items, core=core)
+
+    hug_height = 'strong'
+    padding = 0
+
+    Looper:
+        #: Better refreshing of the system
+        iterable << sequence.items[:]
+        Container:
+            padding = 0
+            constraints = [hbox(button, *view.objects),
+                           align('top', button, *view.objects)]
+            PushButton: button:
+                constraints = [width == 15,
+                                height == 20]
+                font = 'bold 12pt Consolas'
+                text = '>'
+                clicked ::
+                    edited_list = sequence.items
+                    menu = PulsesPopupListMenu(
+                      model = edited_list,
+                      index = edited_list.index(loop_item),
+                      factory = core.invoke_command,
+                      operations = operations,
+                      args = ('hqc_meas.pulses.build_sequence',),
+                      kwargs = {'parameters': {'parent_ui': button,
+                                               'root': sequence.root,
+                                               'mode': 'ui'},
+                                'trigger': button})
+                    menu.popup()
+            Include: view:
+                objects << [model.instantiate_view(loop_item,
+                                                   {'core': core,
+                                                    'cache': cache})]
+
+
+enamldef SequenceEditor(Container): view:
+    """ A custom container to edit the items of a sequence. Support folding.
+
+    """
+
+    attr sequence
+    attr core
+    attr cache
+
+    padding = 0
+    Conditional:
+        condition << not bool(sequence.items)
+        Container:
+            constraints = [hbox(pul, seq), pul.width == seq.width]
+            PushButton: pul:
+                text = 'Add pulse'
+                clicked ::  sequence.items.append(Pulse())
+            PushButton: seq:
+                text = 'Add sequence'
+                clicked ::
+                    obj = core.invoke_command('hqc_meas.pulses.build_sequence',
+                                              {'parent_ui': view,
+                                               'mode': 'ui',
+                                               'root': sequence.root}, view)
+                    if obj:
+                        sequence.items.append(obj)
+    Conditional:
+        condition << bool(sequence.items)
+        Container: box:
+            attr stack_index = cache.get(sequence.index, 1)
+            constraints = [vbox(hbox(folding, foldable_content),spacer),
+                           align('top', folding, foldable_content)]
+            padding = (0,5,2,2)
+            PushButton: folding:
+                text = '-' if stack_index == 1 else '+'
+                constraints = [width == 15, height == 20]
+                clicked ::
+                    if folding.text == '-':
+                        box.stack_index = 0
+                        cache[sequence.index] = 0
+                        folding.text = '+'
+                    else:
+                       box.stack_index = 1
+                       cache[sequence.index] = 1
+                       folding.text = '-'
+            Container: foldable_content:
+                padding = 0
+                Stack:
+                    size_hint_mode = 'current'
+                    hug_width = 'ignore'
+                    index << stack_index
+                    StackItem:
+                        Container:
+                            hug_height = 'strong'
+                            padding = 0
+                            Label:
+                                text = 'FOLDED ITEMS'
+                    StackItem:
+                        _SequenceListView:
+                            sequence << view.sequence
+                            core = view.core
+                            cache = view.cache
+
+
+enamldef NonFoldingSequenceEditor(Container): view:
+    """ A custom container to edit the items of a sequence.
+
+    """
+    attr sequence
+    attr core
+    attr cache
+
+    Conditional:
+        condition << not bool(sequence.items)
+        Container:
+            constraints = [hbox(pul, seq), pul.width == seq.width]
+            PushButton: pul:
+                text = 'Add pulse'
+                clicked ::  sequence.items.append(Pulse())
+            PushButton: seq:
+                text = 'Add sequence'
+                clicked ::
+                    obj = core.invoke_command('hqc_meas.pulses.build_sequence',
+                                              {'parent_ui': view,
+                                               'mode': 'ui',
+                                               'root': sequence.root}, view)
+                    if obj:
+                        sequence.items.append(obj)
+    Conditional:
+        condition << bool(sequence.items)
+        Container:
+            _SequenceListView:
+                sequence << view.sequence
+                core = view.core
+                cache = view.cache
+
+enamldef VarEditor(Container):
+    """ Fields allowing top edit the local variables of a sequence.
+
+    """
+    attr model
+    constraints = [hbox(lab, val)]
+    Field: lab:
+        hug_width = 'strong'
+        text := model.key
+    QtLineCompleter: val:
+        text := model.value
+        entries_updater << model.model.parent.get_bindable_vars
+        tool_tip = EVALUATER_TOOLTIP
+
+
+enamldef SequenceView(GroupBox): view:
+    """ View for Sequence.
+
+    """
+    attr item
+    alias core : editor.core
+    alias cache : editor.cache
+
+    title << '{} {}'.format(item.index, item.name)
+    padding = 2
+    constraints << [vbox(hbox(t_bool, *t_def.items), nb),
+                    align('v_center', t_def.items[0], t_def.items[1])]\
+                    if t_def.condition else [vbox(t_bool, nb)]
+
+    CheckBox: t_bool:
+        text = 'Time'
+        checked := item.time_constrained
+        tool_tip = 'Whether to define the start and stop of the sequence.'
+
+    Conditional: t_def:
+        condition << item.time_constrained
+
+        Label: def_lab:
+            text = 'Mode'
+        ObjectCombo: def_val:
+            items << list(item.get_member('def_mode').items)
+            selected := item.def_mode
+
+        Splitter: defs:
+            hug_width = 'ignore'
+            SplitItem:
+                Container:
+                    constraints = [hbox(lab_1, val_1),
+                                   align('v_center', lab_1, val_1)]
+                    padding = 0
+                    Label: lab_1:
+                        text << item.def_mode.split('/')[0]
+                    QtLineCompleter: val_1:
+                        hug_width = 'ignore'
+                        text := item.def_1
+                        entries_updater << item.parent.get_bindable_vars
+                        tool_tip = EVALUATER_TOOLTIP
+            SplitItem:
+                Container:
+                    constraints = [hbox(lab_2, val_2),
+                                   align('v_center', lab_2, val_2)]
+                    padding = 0
+                    Label: lab_2:
+                        text << item.def_mode.split('/')[1]
+                    QtLineCompleter: val_2:
+                        hug_width = 'ignore'
+                        text := item.def_2
+                        entries_updater << item.parent.get_bindable_vars
+                        tool_tip = EVALUATER_TOOLTIP
+
+    Notebook: nb:
+        tabs_closable = False
+        Page:
+            title = 'Sequence'
+            SequenceEditor: editor:
+                sequence := view.item
+
+        Page:
+            title = 'Local vars'
+            DictEditor(VarEditor): ed:
+                ed.title = 'Name : formula'
+                ed.model = item
+                ed.iterable_name = 'local_vars'
+
+
+def instantiate_context_view(core, context, cache):
+    """ Instantiate the appropriate view for the given context.
+
+    """
+    if context:
+        cmd = 'hqc_meas.pulses.contexts_request'
+        contexts, _ = core.invoke_command(cmd,
+                                          {'contexts': context.context_class,
+                                           'use_class_names': True})
+        view = contexts[context.context_class][1]
+        kwargs = {'context': context}
+        if hasattr(view, 'edition_mode'):
+            kwargs['edition_mode'] = cache.get('edition_mode', False)
+        return view(**kwargs)
+
+
+enamldef RootSequenceView(GroupBox): view:
+    """ View for root sequence.
+
+    """
+    attr item
+    alias core : editor.core
+    alias cache : editor.cache
+    alias additional_pages : include.objects
+
+    constraints << [vbox(hbox(dur, *val.items), nb),
+                    align('v_center', val.items[0], val.items[1])] \
+                   if val.items else \
+                   [vbox(dur, nb)]
+
+    CheckBox: dur:
+        text = 'Fix duration'
+        checked := item.time_constrained
+
+    Conditional: val:
+        condition << item.time_constrained
+        Label:
+            text = 'Duration'
+        QtLineCompleter:
+            hug_width = 'ignore'
+            text := item.sequence_duration
+            entries_updater << item.get_bindable_vars
+            tool_tip = EVALUATER_TOOLTIP
+
+    Notebook: nb:
+        tabs_closable = False
+        Page:
+            title = 'Sequence'
+            NonFoldingSequenceEditor: editor:
+                sequence << view.item
+
+        Page:
+            title = 'Context'
+            Container:
+                PushButton:
+                    text = 'Change context' if item.context else 'Choose context'
+                    clicked ::
+                        cmd = 'hqc_meas.pulses.build_context'
+                        view.core.invoke_command(cmd, {'root': item,
+                                                       'parent_ui': self})
+                Include:
+                    objects << [instantiate_context_view(core, item.context,
+                                                         cache)]\
+                        if getattr(item, 'context') else []
+
+        Include: include:
+            pass

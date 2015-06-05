@@ -1,0 +1,87 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : base_shapes_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox, vbox, align
+from enaml.widgets.api import (Container, Label, GroupBox, CheckBox,
+                               SplitItem, ObjectCombo, Splitter)
+from enaml.core.api import Conditional, Include
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from ...entry_eval import EVALUATER_TOOLTIP
+
+enamldef ModulationView(SplitItem):
+    """ View for the modulation of an analogical pulse.
+
+    """
+    attr item
+    attr modulation
+
+    GroupBox:
+        title = 'Modulation'
+        padding = 0
+        constraints << [hbox(*self.widgets()),
+                        align('v_center', kind_lab, kind_val),
+                        align('v_center', kind_lab, spl)]
+
+        Label: kind_lab:
+            text = 'Kind'
+        ObjectCombo: kind_val:
+            items = list(modulation.get_member('kind').items)
+            selected := modulation.kind
+
+        Splitter: spl:
+            SplitItem:
+                Container:
+                    constraints << [hbox(freq_lab, freq_val, freq_un),
+                                    align('v_center', freq_lab, freq_val)]
+                    Label: freq_lab:
+                        text = 'Frequency'
+                    QtLineCompleter: freq_val:
+                        hug_width = 'ignore'
+                        text := modulation.frequency
+                        entries_updater << item.parent.get_bindable_vars
+                        tool_tip = EVALUATER_TOOLTIP
+                    ObjectCombo: freq_un:
+                        items = list(modulation.get_member('frequency_unit').items)
+                        selected := modulation.frequency_unit
+            SplitItem:
+                Container:
+                    constraints << [hbox(phase_lab, phase_val, phase_un),
+                                    align('v_center', phase_lab, phase_val)]
+                    Label: phase_lab:
+                        text = 'Phase'
+                    QtLineCompleter: phase_val:
+                        hug_width = 'ignore'
+                        text := modulation.phase
+                        entries_updater << item.parent.get_bindable_vars
+                        tool_tip = EVALUATER_TOOLTIP
+                    ObjectCombo: phase_un:
+                        items = list(modulation.get_member('phase_unit').items)
+                        selected := modulation.phase_unit
+
+
+enamldef SquareShapeView(SplitItem):
+    """ View for a square pulse.
+
+    """
+    attr item
+    attr shape
+
+    GroupBox:
+        title = 'Square'
+        constraints = [hbox(amp_lab, amp_val),
+                       align('v_center', amp_lab, amp_val)]
+
+        Label: amp_lab:
+            text = 'Amplitude'
+        QtLineCompleter: amp_val:
+            text := shape.amplitude
+            tool_tip = 'Relative amplitude of the pulse (should be between -1.0 and 1.0)'
+
+
+SHAPES_VIEWS = {'SquareShape': SquareShapeView}

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from nose.tools import assert_equal
-from hqc_meas.tasks.tools.walks import flatten_walk
+from hqc_meas.utils.walks import flatten_walk
 
 
 def test_flatten_walk():

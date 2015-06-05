@@ -1,0 +1,106 @@
+# -*- coding: utf-8 -*-
+#==============================================================================
+# module : hqc_meas/pulses/manager/edition.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+#==============================================================================
+from ast import literal_eval
+from enaml.widgets.api import (Container, DockArea, DockItem, Field,
+                               PushButton, Menu, Action)
+from enaml.layout.api import TabLayout, VSplitLayout, hbox, vbox, spacer
+
+from hqc_meas.utils.widgets.qt_autoscroll_html import QtAutoscrollHtml
+from hqc_meas.utils.widgets.dict_editor import DictEditor
+from ...sequences_views import RootSequenceView
+from .dialogs import CompileDialog, _VarValidator
+
+enamldef SequenceEditorDockItem(DockItem):
+    """ Panel used to edit the workspace sequence.
+
+    """
+    attr workspace
+    name = 'sequence_editor'
+    title = 'Sequence'
+    closable = False
+
+    Container:
+        constraints = [vbox(roo, hbox(spacer, com))]
+
+        RootSequenceView: roo:
+            item << workspace.state.sequence
+            item ::
+                self.cache = {'edition_mode': True}
+            core = workspace.workbench.get_plugin('enaml.workbench.core')
+            cache = {'edition_mode': True}
+
+        PushButton: com:
+            text = 'Compile'
+            clicked ::
+                CompileDialog(workspace=workspace).exec_()
+
+
+enamldef _KeyValEditor(Container):
+    attr model
+    constraints = [hbox(lab, val)]
+    padding = 1
+
+    Field: lab:
+        hug_width = 'strong'
+        text := model.key
+    Field: val:
+        text << repr(model.value) if model.value else ''
+        text :: model.value = literal_eval(text)
+        validator = _VarValidator()
+
+enamldef VarEditorDockItem(DockItem):
+    """ Panel used to edit the sequence external variables.
+
+    """
+    attr workspace
+    name = 'vars_editor'
+    title = 'External variables'
+    closable = False
+
+    Container:
+        DictEditor(_KeyValEditor): ed:
+            ed.title = 'Name : value'
+            ed.model << workspace.state.sequence
+            ed.iterable_name = 'external_vars'
+
+
+enamldef SequenceSpaceContent(Container): main:
+    """ Content for the sequence edition workspace.
+
+    """
+    attr workspace
+
+    DockArea:
+        # Sizes are exppressed in pixels
+        layout = VSplitLayout(TabLayout('sequence_editor',
+                                        'vars_editor'),
+                              'main_log', sizes=[5000,10])
+
+        SequenceEditorDockItem:
+            stretch = 10
+            workspace = main.workspace
+
+        VarEditorDockItem:
+            workspace = main.workspace
+
+
+        DockItem:
+            name = 'main_log'
+            title = 'Main logger'
+            closable = False
+            stretch = 1
+
+            Container:
+                hug_height = 'strong'
+                QtAutoscrollHtml:
+                    text << workspace.log_model.text
+                    Menu:
+                        context_menu = True
+                        Action:
+                            text = 'Clear'
+                            triggered ::
+                                workspace.log_model.text = ''

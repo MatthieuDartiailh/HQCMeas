@@ -1,0 +1,111 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : template_context_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox, vbox
+from enaml.widgets.api import (Label, Field, Container, ObjectCombo, FlowArea,
+                               FlowItem, GroupBox)
+from enaml.core.api import Conditional, Looper
+from enaml.validator import RegexValidator
+from inspect import cleandoc
+from textwrap import fill
+
+
+enamldef Mapping(FlowItem):
+    attr values
+    attr mapping
+    attr key
+    Container:
+        Label:
+            text = loop_item
+        ObjectCombo:
+            items << list(values)
+            selected << mapping[key]
+            selected ::
+                mapping[key] = change['value']
+
+
+enamldef MappingEditor(Container):
+    """
+    """
+    attr context
+    attr root
+    padding = 0
+
+    GroupBox:
+        title = 'Logical'
+        padding = 2
+        FlowArea:
+            horizontal_spacing = 2
+            vertical_spacing = 2
+            Looper:
+                iterable << context.logical_channels
+                Mapping:
+                    values = root.context.logical_channels
+                    mapping << context.channel_mapping
+                    key = loop_item
+
+    GroupBox:
+        title = 'Analogical'
+        padding = 2
+        FlowArea:
+            horizontal_spacing = 2
+            vertical_spacing = 2
+            Looper:
+                iterable << context.analogical_channels
+                Mapping:
+                    values = root.context.analogical_channels
+                    mapping << context.channel_mapping
+                    key = loop_item
+
+
+# TODO fix validators
+enamldef TemplateContextView(Container): view:
+    """ View for a pulse item.
+
+    """
+    attr context
+    attr core
+    attr edition_mode : bool = False
+
+    hug_height = 'strong'
+    constraints = [] if edition_mode else []
+
+    Conditional: ed:
+        condition = edition_mode
+        Label:
+            text = 'Logical channels'
+        Field:
+            text << ', '.join(context.logical_channels)
+            text ::
+                context.logical_channels = text.split(', ')
+                aux = context.logical_channels + context.analogical_channels
+                context.channel_mapping = {c: '' for c in aux}
+#            validator = RegexValidator(regex='([a-zA-Z0-9])(, [a-zA-Z0-9])*')
+            tool_tip = fill(cleandoc('''Enter the list of logical channels as
+                            a comma separated list. ex : Ch1, Ch2'''))
+        Label:
+            text = 'Analogical channels'
+        Field:
+            text << ', '.join(context.analogical_channels)
+            text ::
+                context.analogical_channels = text.split(', ')
+                aux = context.logical_channels + context.analogical_channels
+                context.channel_mapping = {c: '' for c in aux}
+#            validator = RegexValidator(regex='([a-zA-Z0-9])(, [a-zA-Z0-9])*')
+            tool_tip = fill(cleandoc('''Enter the list of analogical channels
+                            as a comma separated list. ex : Ch1, Ch2'''))
+
+    Conditional:
+        condition =  not edition_mode
+        MappingEditor:
+            context = view.context
+            root = view.context.sequence.root
+
+
+CONTEXTS_VIEWS = {'TemplateContext': TemplateContextView}
+

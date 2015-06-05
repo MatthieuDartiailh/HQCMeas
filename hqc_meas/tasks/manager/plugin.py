@@ -266,7 +266,7 @@ class TaskManagerPlugin(HasPrefPlugin):
             return IniConfigTask(manager=self,
                                  template_path=templates[task]), IniView
 
-        else:
+        elif task in self._py_tasks:
             configs = self._configs
             # Look up the hierarchy of the selected task to get the appropriate
             # TaskConfig

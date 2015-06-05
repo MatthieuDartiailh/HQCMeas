@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : atom_util.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
+from collections import OrderedDict
 from atom.api import Str, Unicode, Enum, Atom, Member, Validate
 from ast import literal_eval
 
@@ -92,7 +93,7 @@ def member_from_str(member, value):
         The converted value
 
     """
-    #if we get a container must check each member
+    # if we get a container must check each member
     if isinstance(value, list):
         validation_mode = member.validate_mode
         if len(validation_mode) > 1:
@@ -133,7 +134,7 @@ def preferences_from_members(self):
         """ Get the members values as string to store them in .ini files.
 
         """
-        pref = {}
+        pref = OrderedDict()
         for name in tagged_members(self, 'pref'):
             old_val = getattr(self, name)
             if issubclass(type(old_val), HasPrefAtom):
@@ -154,7 +155,7 @@ def update_members_from_preferences(self, **parameters):
     """
     for name, member in tagged_members(self, 'pref').iteritems():
 
-        if not name in parameters:
+        if name not in parameters:
             continue
 
         old_val = getattr(self, name)

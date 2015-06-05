@@ -1,9 +1,8 @@
 """ Enaml widget for editing a list of string
 """
-
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 #  Imports:
-#-------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 from atom.api import (Bool, List, observe, set_default, Unicode, Enum, Int)
 
 from enaml.widgets.api import RawWidget
@@ -12,6 +11,7 @@ from enaml.qt.QtGui import QListWidget, QAbstractItemView
 
 # cyclic notification guard flags
 INDEX_GUARD = 0x1
+
 
 class QtListStrWidget(RawWidget):
     """ A Qt4 implementation of an Enaml ProxyListStrView.
@@ -22,31 +22,31 @@ class QtListStrWidget(RawWidget):
 
     #: The list of index of the currently selected str
     selected_index = d_(Int(-1))
-    selected_indexes = d_(List(Int(),[-1]))
+    selected_indexes = d_(List(Int(), [-1]))
 
     #: The list of the currently selected str
     selected_item = d_(Unicode(''))
-    selected_items = d_(List(Unicode(),['']))
+    selected_items = d_(List(Unicode(), ['']))
 
     #: Whether or not the user can select multiple lines
     multiselect = d_(Bool(False))
 
     #: List of operations the user can perform
-    operations = d_(List(Enum( 'delete', 'insert', 'append', 'edit', 'move' ),
-                       [ 'delete', 'insert', 'append', 'edit', 'move' ] ))
+    operations = d_(List(Enum('delete', 'insert', 'append', 'edit', 'move'),
+                         ['delete', 'insert', 'append', 'edit', 'move']))
 
     #: .
     hug_width = set_default('strong')
     hug_height = set_default('ignore')
 
-     #: Cyclic notification guard. This a bitfield of multiple guards.
+    #: Cyclic notification guard. This a bitfield of multiple guards.
     _guard = Int(0)
 
     __slots__ = ['__weakref__']
 
     #--------------------------------------------------------------------------
     # Initialization API
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def create_widget(self, parent):
         """ Create the QListView widget.
 
@@ -67,9 +67,9 @@ class QtListStrWidget(RawWidget):
         widget.itemSelectionChanged.connect(self.on_selection)
         return widget
 
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # Signal Handlers
-    #--------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def on_selection(self):
         """ The signal handler for the index changed signal.
 
@@ -77,7 +77,7 @@ class QtListStrWidget(RawWidget):
         widget = self.get_widget()
         items = self.items
         if not self._guard & INDEX_GUARD:
-            indexes = [ index.row() for index in widget.selectedIndexes()]
+            indexes = [index.row() for index in widget.selectedIndexes()]
             if indexes:
                 if self.multiselect:
                     self.selected_items = [items[i] for i in indexes]
@@ -92,7 +92,7 @@ class QtListStrWidget(RawWidget):
             the end of the list.
         """
         return (self.declarations.auto_add
-                                and (index >= self.widget._model.count()))
+                and (index >= self.widget._model.count()))
 
     #--------------------------------------------------------------------------
     # ProxyListStrView API
@@ -107,7 +107,7 @@ class QtListStrWidget(RawWidget):
         for item in items:
             widget.addItem(item)
 
-    def set_multiselect(self, multiselect, widget = None):
+    def set_multiselect(self, multiselect, widget=None):
         """
         """
         widget = self.get_widget()

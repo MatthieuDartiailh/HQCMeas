@@ -179,6 +179,7 @@ enamldef NonFoldingTaskEditor(Container): view:
     attr task
     attr core
     attr cache
+    padding = 1
 
     Conditional:
         condition << not bool(task.children_task)

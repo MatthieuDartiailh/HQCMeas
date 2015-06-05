@@ -24,31 +24,37 @@ class _ErrorsDisplayModel(Atom):
     def __init__(self, errors):
         super(_ErrorsDisplayModel, self).__init__()
         self.errors = errors
-        self.selected_error= errors.keys()[0]
+        if errors:
+            self.selected_error= errors.keys()[0]
 
     def _observe_selected_error(self, change):
         """ Set the `full_path` and `message` attrs when a check is selected.
 
         """
-        new = change['value']
-        self.message = self.errors[new]
+        if change['value']:
+            new = change['value']
+            self.message = self.errors[new]
 
 enamldef ErrorsDisplayContainer(Container):
     """
 
     """
     attr errors
-    attr model = _ErrorsDisplayModel(errors)
+    attr model << _ErrorsDisplayModel(errors)
+    alias errors_type : lis_lab.text
+
+    model ::
+        lis.items = sorted(model.errors.keys())
+        lis.refresh_items()
 
     constraints = [vbox(hbox(lis_lab, che_lab), hbox(lis, che)),
                    align('left', lis_lab, lis),
                    align('left', che_lab, che)]
 
     Label: lis_lab:
-        text = 'Import failures'
+        pass
     QtListStrWidget: lis:
         hug_height = 'ignore'
-        items << model.errors.keys()
         selected_item >> model.selected_error
 
     Label: che_lab:
@@ -62,6 +68,7 @@ enamldef ErrorsDisplay(Dialog): dial:
     """
     """
     attr errors
+    attr errors_type
 
     Conditional:
         condition = bool(errors)
@@ -70,6 +77,7 @@ enamldef ErrorsDisplay(Dialog): dial:
                            contents_right == ex.right]
             ErrorsDisplayContainer: cont:
                 errors << dial.errors
+                errors_type = dial.errors_type
             PushButton: ex:
                 text = 'Close'
                 clicked :: dial.accept()

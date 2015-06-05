@@ -1,0 +1,210 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : transfer_pulse_sequence_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+import os
+import logging
+import traceback
+from enaml.layout.api import factory, hbox, vbox, spacer
+from enaml.core.api import Conditional, Include
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox,
+                               Notebook, Page, PushButton, Menu, Action,
+                               FileDialogEx, Container)
+
+from inspect import cleandoc
+from textwrap import fill
+def fc(txt):
+    return fill(cleandoc(txt))
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.widgets.dict_editor import DictEditor
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+from hqc_meas.pulses.sequences_views import instantiate_context_view
+
+enamldef VarEditor(Container):
+    """ Fields allowing top edit the local variables of a sequence.
+
+    """
+    attr model
+    padding = 1
+    constraints = [hbox(lab, val)]
+    Label: lab:
+        hug_width = 'strong'
+        text << model.key
+    QtLineCompleter: val:
+        text := model.value
+        entries_updater << model.model.accessible_database_entries
+        tool_tip = EVALUATER_TOOLTIP
+
+
+class BaseTransferSequenceView(BaseInstrumentView):
+    """Base view not including the interface view in the hierarchy.
+
+    """
+    def _insert_interface_views(self, interface):
+        """ Update the interface when the selected driver change.
+
+        """
+        cmd = 'hqc_meas.task_manager.interface_views_request'
+        views, _ = self.core.invoke_command(cmd,
+                                            {'interface_classes':
+                                                [interface.__class__.__name__]}
+                                            )
+
+        if interface.has_view:
+            i_views = [v(self, interface=self.task.interface)
+                       for v in views[interface.__class__.__name__]]
+            self.i_views = tuple(i_views)
+
+        else:
+            self.i_views = ()
+
+
+def load_sequence(core, task, mode='reference', view=None, path=''):
+    """Open a dialog and load a pulse sequence.
+
+    Parameters
+    ----------
+    core : CorePlugin
+        Refrence to the core plugin of the application.
+    task : TransferPulseSequenceTask
+        Task for which to load the sequence.
+    mode : {'reference', 'merge'}
+        In referencve mode, the path to the sequence is saved and the sequence
+        is not stored in the task.
+        In merge mode, the path to the sequence is not saved and the sequence
+        is saved as part of the task.
+    view : enaml.Widget
+        Parent for the dialog.
+    path : unicode
+        Path of the sequence to load.
+
+    """
+    if not path:
+        path = FileDialogEx.get_open_file_name(view, name_filters=['*.ini'])
+    if path:
+        cmd = 'hqc_meas.pulses.build_sequence'
+        try:
+            seq = core.invoke_command(cmd, {'mode': 'file', 'path': path})
+        except Exception:
+            mess = 'Failed to load sequence {}: {}'
+            logging.warning(mess.format(path, traceback.format_exc()))
+
+        if not task.interface.validate_context(seq.context):
+            logging.warning('Invalid context driver combination.')
+            return
+
+        task.sequence = seq
+        # This makes sure the editor is kept in sync.
+        task.sequence_vars = seq.external_vars.copy()
+        if mode == 'reference':
+            task.sequence_path = path
+        else:
+            task.sequence_path = ''
+
+
+enamldef TransferPulseSequenceView(BaseTransferSequenceView): view:
+
+    title << task.task_name
+    constraints << [vbox(hbox(driver_lab, driver_val,
+                              profile_lab, profile_val,
+                              seq, seq_name, seq_re, spacer),
+                         *cnd.items)]
+
+    Label:  driver_lab:
+        text = 'Driver'
+    ObjectCombo: driver_val:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:  profile_lab:
+        text = 'Instr'
+    ObjectCombo: profile_val:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    PushButton: seq:
+        enabled << bool(task.selected_driver)
+        text = 'Select sequence'
+        Menu:
+            Action:
+                text = 'Reference'
+                tool_tip = fc('''A refernce to the sequence will be kept
+                              so that modifications on the sequence will be
+                              reflected on this measure.''')
+                triggered ::
+                    load_sequence(core, task, view=view)
+            Action:
+                text = 'Merge'
+                tool_tip = fc('''The sequence will be merged into the task
+                              and further modification to the sequence file
+                              won't be reflected on this measure.''')
+                triggered ::
+                    load_sequence(core, task, 'merge', view)
+
+    Field: seq_name:
+        visible << bool(task.sequence_path)
+        read_only = True
+        text << os.path.basename(task.sequence_path)
+
+    PushButton: seq_re:
+        enabled << bool(task.sequence_path)
+        text = 'Refresh sequence'
+        clicked ::
+            load_sequence(core, task, path=task.sequence_path)
+
+    Conditional: cnd:
+        condition << bool(task.sequence)
+        Notebook:
+            tabs_closable = False
+            Page:
+                title = 'Variables'
+                DictEditor(VarEditor): ed:
+                    ed.title = 'Name : formula'
+                    ed.operations = ['move']
+                    ed.model = task
+                    ed.iterable_name = 'sequence_vars'
+            Page:
+                title = 'Context'
+                Include:
+                    objects << ([instantiate_context_view(core,
+                                                         task.sequence.context,
+                                                         {})]
+                                if getattr(task.sequence, 'context') else [])
+            Include:
+                objects << list(i_views)
+
+
+TASK_VIEW_MAPPING = {'TransferPulseSequenceTask' : TransferPulseSequenceView}
+
+
+enamldef AWGTransferPulseSequenceInterfaceView(Page):
+    """
+    """
+    attr interface
+    title = 'AWG specials'
+
+    Container:
+        constraints = [hbox(lb, fd, cb)]
+        Label: lb:
+            text = 'Sequence name'
+
+        Field: fd:
+            placeholder = 'Sequence'
+            text := interface.sequence_name
+            tool_tip = fc('''If left empty the sequence will be named
+                          'Sequence'. In any case the channel name is appended.
+                          ex : Sequence_Ch1''')
+
+        CheckBox: cb:
+            text = 'Select after transfert'
+            checked := interface.select_after_transfer
+
+
+INTERFACE_VIEW_MAPPING = {'AWGTransferInterface':
+                          [AWGTransferPulseSequenceInterfaceView]}

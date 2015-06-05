@@ -1,0 +1,200 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : set_awg_parameters_views.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+import os
+import logging
+import traceback
+from enaml.layout.api import hbox, vbox, spacer, align
+from enaml.core.api import Include, Looper
+from enaml.widgets.api import (Label, ObjectCombo, Notebook, Page, Container,
+                               Splitter, SplitItem, HGroup)
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
+
+
+class BaseSetAWGParametersView(BaseInstrumentView):
+    """Base view not including the interface view in the hierarchy.
+
+    """
+    def _insert_interface_views(self, interface):
+        """ Update the interface when the selected driver change.
+
+        """
+        cmd = 'hqc_meas.task_manager.interface_views_request'
+        views, _ = self.core.invoke_command(cmd,
+                                            {'interface_classes':
+                                                [interface.__class__.__name__]}
+                                            )
+
+        if interface.has_view:
+            i_views = [v(self, interface=self.task.interface)
+                       for v in views[interface.__class__.__name__]]
+            self.i_views = tuple(i_views)
+
+        else:
+            self.i_views = ()
+
+
+enamldef SetAWGParametersView(BaseSetAWGParametersView): view:
+
+    title << task.task_name
+    constraints << [vbox(hbox(driver_lab, driver_val,
+                              profile_lab, profile_val, spacer),
+                         *inc.objects)]
+
+    Label:  driver_lab:
+        text = 'Driver'
+    ObjectCombo: driver_val:
+        items << sorted(drivers)
+        selected := task.selected_driver
+
+    Label:  profile_lab:
+        text = 'Instr'
+    ObjectCombo: profile_val:
+        items << sorted(profiles)
+        selected := task.selected_profile
+
+    Include: inc:
+        objects << list(i_views)
+
+
+TASK_VIEW_MAPPING = {'SetAWGParametersTask' : SetAWGParametersView}
+
+
+enamldef TektroAWGSetParametersView(Notebook):
+    """
+    """
+    attr interface
+    tabs_closable = False
+
+    Looper:
+        iterable << task._channels.items()
+        Page:
+            title = 'Channel {}'.format(loop_item[0])
+            attr channel = loop_item[1]
+            Container:
+                padding = 1
+                constraints << [vbox(hbox(o_lab, o_val),
+                                     hbox(a, cha_sp),
+                                     hbox(m1, chm1_sp),
+                                     hbox(m2, chm2_sp)
+                                     ),
+                                align('v_center', a, cha_sp),
+                                align('v_center', m1, chm1_sp),
+                                align('v_center', m2, chm2_sp),
+                                ]
+                Label: o_lab:
+                    text = 'Output'
+                QtLineCompleter: o_val:
+                    text := channel.active
+                    tool_tip = EVALUATER_TOOLTIP
+
+                Label: a:
+                    text = 'Analogical'
+                Splitter: cha_sp:
+                    attr ch_a << channel.analogicals[0]
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'Vpp (V)'
+                            QtLineCompleter:
+                                text := ch_a.parameter1
+                                tool_tip = EVALUATER_TOOLTIP
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'Offset (V)'
+                            QtLineCompleter:
+                                text := ch_a.parameter2
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'Rotation (°)'
+                            QtLineCompleter:
+                                text := ch_a.parameter3
+
+                Label: m1:
+                    text = 'Marker 1'
+                Splitter: chm1_sp:
+                    attr ch_m1 << channel.logicals[0]
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'Low (V)'
+                            QtLineCompleter:
+                                text := ch_m1.parameter1
+                                tool_tip = EVALUATER_TOOLTIP
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'High (V)'
+                            QtLineCompleter:
+                                text := ch_m1.parameter2
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'Delay (ns)'
+                            QtLineCompleter:
+                                text := ch_m1.parameter3
+
+                Label: m2:
+                    text = 'Marker 2'
+                Splitter: chm2_sp:
+                    attr ch_m2 << channel.logicals[1]
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'Low (V)'
+                            QtLineCompleter:
+                                text := ch_m2.parameter1
+                                tool_tip = EVALUATER_TOOLTIP
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'High (V)'
+                            QtLineCompleter:
+                                text := ch_m2.parameter2
+                    SplitItem:
+                        HGroup:
+                            padding = 0
+                            align_widths = False
+                            spacing = 2
+                            Label:
+                                text = 'Delay (ns)'
+                            QtLineCompleter:
+                                text := ch_m2.parameter3
+
+
+INTERFACE_VIEW_MAPPING = {'TektroAWGParasInterface':
+                          [TektroAWGSetParametersView]}

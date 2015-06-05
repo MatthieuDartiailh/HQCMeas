@@ -198,6 +198,10 @@ class TaskProcess(Process):
             except IOError:
                 pass
 
+            except Exception:
+                logger.exception('Error occured during processing')
+                break
+
         # Clean up before closing.
         logger.info('Process shuting down')
         if self.meas_log_handler:

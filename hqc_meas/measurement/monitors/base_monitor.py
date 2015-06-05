@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+# =============================================================================
 # module : base_monitor.py
 # author : Matthieu Dartiailh
 # license : MIT license
-#==============================================================================
+# =============================================================================
 
 from atom.api import Callable, List, Str, Bool, Unicode, ForwardTyped
 from enaml.core.declarative import Declarative, d_

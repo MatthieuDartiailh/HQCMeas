@@ -1,0 +1,76 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# module : hqc_meas/pulses/sequences/views/template_view.enaml
+# author : Matthieu Dartiailh
+# license : MIT license
+# =============================================================================
+"""
+"""
+from enaml.layout.api import hbox, align, spacer, vbox
+from enaml.widgets.api import (PushButton, Container, Label, Field,
+                               GroupBox, ScrollArea, Menu, Action, Stack,
+                               StackItem, Form, Notebook, Page, CheckBox,
+                               ObjectCombo, Splitter, SplitItem)
+from enaml.core.api import Conditional, Include
+
+from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
+from hqc_meas.utils.widgets.dict_editor import DictEditor
+
+from ...sequences_views import VarEditor, instantiate_context_view
+
+enamldef TemplateSequenceView(GroupBox): view:
+    """ View for Sequence.
+
+    """
+    attr item
+    attr core
+
+    title << '{} {}'.format(sequence.index, sequence.name)
+    padding = 2
+    constraints << [vbox(hbox(vbox(def_lab, def_val), defs), nb)]
+
+
+    Label: def_lab:
+        text = 'Mode'
+    ObjectCombo: def_val:
+        items << list(item.get_member('def_mode').items)
+        selected := item.def_mode
+
+    Splitter: defs:
+        SplitItem:
+            Container:
+                padding = 0
+                Label:
+                    text << item.def_mode.split('/')[0]
+                QtLineCompleter:
+                    hug_width = 'ignore'
+                    text := item.def_1
+                    entries_updater << item.parent.get_bindable_vars
+                    tool_tip = EVALUATER_TOOLTIP
+        SplitItem:
+            Container:
+                padding = 0
+                Label:
+                    text << item.def_mode.split('/')[1]
+                QtLineCompleter:
+                    hug_width = 'ignore'
+                    text := item.def_2
+                    entries_updater << item.parent.get_bindable_vars
+                    tool_tip = EVALUATER_TOOLTIP
+
+    Notebook: nb:
+        tabs_closable = False
+
+        Page:
+            title = 'Template vars'
+            DictEditor(VarEditor): ed:
+                ed.title = 'Name : formula'
+                ed.model = item
+                ed.iterable_name = 'template_vars'
+
+        Page:
+            title = 'Context'
+            Include:
+                objects << [instantiate_context_view(core, sequence.context)]
+
+SEQUENCES_VIEWS = {'TemplateSequence': TemplateSequenceView}

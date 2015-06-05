@@ -13,7 +13,7 @@ from enaml.layout.api import vbox, hbox, spacer, factory
 from inspect import cleandoc
 
 from hqc_meas.tasks.api import ComplexTask, SimpleTask
-from hqc_meas.tasks.tools.walks import flatten_walk
+from hqc_meas.utils.walks import flatten_walk
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from ..base_editor import BaseEditor
 from .editor_model import _Model
