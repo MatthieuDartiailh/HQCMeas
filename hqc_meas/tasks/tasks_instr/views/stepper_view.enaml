@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jun  3 18:17:18 2015
-
-@author: lcontamin
-"""
-
 #==============================================================================
-# module : StepperTask.py
-# author : Matthieu Dartiailh
+# module : stepper_task.py
+# author : Lauriane Contamin
 # license : MIT license
 #==============================================================================
 """

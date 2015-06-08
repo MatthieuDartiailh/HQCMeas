@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Jun  5 16:14:30 2015
-
-@author: lcontamin
-"""
-
-# -*- coding: utf-8 -*-
 # =============================================================================
-# module : test_apply_mag_field_task.py
-# author : Matthieu Dartiailh
+# module : test_stepper_task.py
+# author : Lauriane Contamin
 # license : MIT license
 # =============================================================================
 """
@@ -94,7 +87,7 @@ class TestSetSteppingParametersTask(object):
         self.task.channel = 'id'
         
         self.root.run_time['profiles'] = \
-            {'Test1': ({'anm150': [{'id': type('Dummy', (object,), {})}]}, {})}
+            {'Test1': ({'anm150': [{'id': InstrHelper}]}, {})}
 
         self.root.task_database.prepare_for_running()
         self.task.perform()
@@ -152,8 +145,6 @@ class TestSteppingTask(object):
 
 
     def test_check(self):
-        # Check handling a wrong step number. Not in the check meth actually !
-        # no real useful check
         self.task.channel = None
         
         test, traceback = self.task.check(test_instr=True)

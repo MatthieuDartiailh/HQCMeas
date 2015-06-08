@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+#==============================================================================
+# module : stepper_task.py
+# author : Lauriane Contamin
+# license : MIT license
+#==============================================================================
 """
-Created on Wed Jun  3 16:38:18 2015
-
-@author: lcontamin
 """
-
 from atom.api import (Enum, Int, Range, Unicode, set_default)
 
 from hqc_meas.tasks.api import InstrumentTask
