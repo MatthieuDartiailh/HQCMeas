@@ -99,7 +99,7 @@ class SetSteppingParametersTask(HackCheckInstrTask):
         # two evaluations of val but the above lines will be supressed
 
     def check(self, *args, **kwargs):
-        """
+        """ 
         """
         test, traceback = super(SetSteppingParametersTask, self).check(*args, 
                                                                     **kwargs)
@@ -128,7 +128,9 @@ class SetSteppingParametersTask(HackCheckInstrTask):
         return test, traceback
 
 class SteppingTask(HackCheckInstrTask):
-
+    """ Launches stepping on a selected ANM module. One can specify the number
+    of steps (negative for continuous stepping) and the direction.
+    """
     # Axis/Channel on which to set the parameters
     channel = Range(low=1, high=7).tag(pref=True)  
 
@@ -136,7 +138,7 @@ class SteppingTask(HackCheckInstrTask):
     direction = Enum('Up', 'Down').tag(pref=True)
 
     # Number of steps
-    steps = Int(low=1).tag(pref=True)
+    steps = Int().tag(pref=True)
 
     driver_list = ['ANC300']
     loopable = False
@@ -172,11 +174,29 @@ class SteppingTask(HackCheckInstrTask):
         return test, traceback
 
 
-class StoppingTask(HackCheckInstrTask):
+class StopSteppingTask(HackCheckInstrTask):
     """
-    To implement, in order to be able to lauch continuous stepping
-    When done, remove the lower bound on steps in the SteppingTask
+    Stop any motion of the ANC controller, useful for example after a 
+    continuous stepping.
     """
     
-    
-KNOWN_PY_TASKS = [SetSteppingParametersTask, SteppingTask]
+    driver_list = ['ANC300']
+    loopable = False
+    parallel = set_default({'activated': True, 'pool': 'instr'})
+
+    def start_driver(self):
+        super(SteppingTask, self).start_driver()
+        self.driver.initialize()
+
+    def perform(self):
+        """
+        """
+        if not self.driver:
+            self.initialize()
+        if self.driver.owner != self.task_name or not self.driver.connected:
+            self.driver.owner = self.task_name
+            
+        self.driver.stop_motion()
+
+
+KNOWN_PY_TASKS = [SetSteppingParametersTask, SteppingTask, StopSteppingTask]
