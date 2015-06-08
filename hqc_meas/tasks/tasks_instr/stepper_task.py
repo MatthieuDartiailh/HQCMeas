@@ -9,6 +9,7 @@ from atom.api import (Enum, Int, Range, Unicode, set_default)
 
 from hqc_meas.tasks.api import InstrumentTask
 from inspect import cleandoc
+from hqc_meas.instruments.driver_tools import InstrIOError
 
 
 def check_channel(driver, channel):
@@ -16,8 +17,48 @@ def check_channel(driver, channel):
         return cleandoc('''Channel {} is not available in the 
                            controller'''.format(channel))
 
-        
-class SetSteppingParametersTask(InstrumentTask):
+class HackCheckInstrTask(InstrumentTask):
+    """
+    Temporary class (until migration to Lantz) that overwrites the check
+    since the driver doesn't have a close_connection method (and the 
+    driver starting is a bit different)
+    """
+    
+    def check(self, *args, **kwargs):
+        run_time = self.root_task.run_time
+        traceback = {}
+        config = None
+
+        if self.selected_profile:
+            if 'profiles' in run_time:
+                # Here use get to avoid errors if we were not granted the use
+                # of the profile. In that case config won't be used.
+                config = run_time['profiles'].get(self.selected_profile)
+        else:
+            traceback[self.task_path + '/' + self.task_name] =\
+                'You must provide an instrument profile'
+            return False, traceback
+
+        if run_time and self.selected_driver in run_time['drivers']:
+            driver_class = run_time['drivers'][self.selected_driver]
+        else:
+            traceback[self.task_path + '/' + self.task_name] =\
+                'Failed to get the specified instr driver'''
+            return False, traceback
+
+        if kwargs.get('test_instr') and config:
+            try:
+                instr = driver_class(config)
+                instr.initialize()
+            except InstrIOError:
+                traceback[self.task_path + '/' + self.task_name] =\
+                    cleandoc('''Failed to establish the connection with the
+                              selected instrument''')
+                return False, traceback
+
+        return True, traceback
+    
+class SetSteppingParametersTask(HackCheckInstrTask):
     """Set the amplitude and frequency of an ANM module embedded in an ANC
     controller.
     
@@ -36,11 +77,15 @@ class SetSteppingParametersTask(InstrumentTask):
     loopable = False
     task_database_entries = set_default({'frequency': 1000, 'voltage': 15})
 
+    def start_driver(self):
+        super(SetSteppingParametersTask, self).start_driver()
+        self.driver.initialize()
+        
     def perform(self):
         """
         """
         if not self.driver:
-            self.initialize()
+            self.start_driver()
         if self.driver.owner != self.task_name or not self.driver.connected:
             self.driver.owner = self.task_name
 
@@ -57,8 +102,9 @@ class SetSteppingParametersTask(InstrumentTask):
         """
         """
         test, traceback = super(SetSteppingParametersTask, self).check(*args, 
-                                                                    **kwargs)                                                          
-        # redundant with tag feval 
+                                                                    **kwargs)
+                                                                  
+        # check if given Str expressions are correct; redundant with tag feval 
         for val, name, symb in [(self.amplitude, 'voltage', '-volt'),
                                 (self.frequency, 'frequency', '-freq')]:
             if not val:
@@ -72,16 +118,16 @@ class SetSteppingParametersTask(InstrumentTask):
                     cleandoc('''Failed to eval the {} value formula
                              {} : {}'''.format(name, val, e))
 
-        mess = check_channel(self.driver, self.channel)
-        if mess:
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '_channel'] = \
-                mess
+        if self.channel:
+            mess = check_channel(self.driver, self.channel)
+            if mess:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + \
+                          '-channel'] = mess
 
         return test, traceback
 
-
-class SteppingTask(InstrumentTask):
+class SteppingTask(HackCheckInstrTask):
 
     # Axis/Channel on which to set the parameters
     channel = Range(low=1, high=7).tag(pref=True)  
@@ -97,6 +143,10 @@ class SteppingTask(InstrumentTask):
     parallel = set_default({'activated': True, 'pool': 'instr'})
     task_database_entries = set_default({'frequency': 1000, 'voltage': 15})
 
+    def start_driver(self):
+        super(SteppingTask, self).start_driver()
+        self.driver.initialize()
+        
     def perform(self):
         """
         """
@@ -105,19 +155,28 @@ class SteppingTask(InstrumentTask):
         if self.driver.owner != self.task_name or not self.driver.connected:
             self.driver.owner = self.task_name
             
-        self.driver.step(self.direction, self.steps)
+        channel = self.driver.anm150[self.channel]
+        channel.step(self.direction, self.steps)
 
     def check(self, *args, **kwargs):
         """
         """
-        test, traceback = super(SetSteppingParametersTask, self).check(*args, 
-                                                                    **kwargs)                                                          
+        test, traceback = super(SteppingTask, self).check(*args, **kwargs) 
+                                                       
         mess = check_channel(self.driver, self.channel)
         if mess:
             test = False
-            traceback[self.task_path + '/' + self.task_name + '_channel'] = \
+            traceback[self.task_path + '/' + self.task_name + '-channel'] = \
                 mess
 
         return test, traceback
 
+
+class StoppingTask(HackCheckInstrTask):
+    """
+    To implement, in order to be able to lauch continuous stepping
+    When done, remove the lower bound on steps in the SteppingTask
+    """
+    
+    
 KNOWN_PY_TASKS = [SetSteppingParametersTask, SteppingTask]
