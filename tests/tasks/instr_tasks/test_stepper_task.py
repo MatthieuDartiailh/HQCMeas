@@ -38,16 +38,19 @@ class TestSetSteppingParametersTask(object):
         self.task = SetSteppingParametersTask(task_name='Test')
         self.root.children_task.append(self.task)
         self.root.run_time['drivers'] = {'Test': InstrHelper}
+        self.root.run_time['profiles'] = {'Test1': \
+            ({'anm150': [{1: InstrHelper(({}, 
+                                          {'step': [None]}))}]}, 
+             {'initialize': [None], 'finalize': [None]})}
 
-        # This is set simply to make sure the test of InstrTask pass.
         self.task.selected_driver = 'Test'
         self.task.selected_profile = 'Test1'
-
+                       
     def test_check1(self):
         # Simply test that frequency, amplitude and channel can be evaluated.
         self.task.frequency = '2000'
         self.task.amplitude = '20'
-        self.task.channel = None
+        self.task.channel = 1
         
         test, traceback = self.task.check(test_instr=True)
         assert_true(test)
@@ -59,7 +62,7 @@ class TestSetSteppingParametersTask(object):
     def test_check2(self):
         # Check handling a wrong frequency.
         self.task.frequency = '*1.0*'
-        self.task.channel = None
+        self.task.channel = 1
         
         test, traceback = self.task.check(test_instr=True)
         assert_false(test)
@@ -71,7 +74,7 @@ class TestSetSteppingParametersTask(object):
     def test_check3(self):
         # Check handling a wrong amplitude.
         self.task.amplitude = '*5*'
-        self.task.channel = None
+        self.task.channel = 1
         
         test, traceback = self.task.check(test_instr=True)
         assert_false(test)
@@ -84,10 +87,10 @@ class TestSetSteppingParametersTask(object):
         # Simple test when everything is right.
         self.task.amplitude = '10.0'
         self.task.frequency = '500'
-        self.task.channel = 'id'
+        self.task.channel = 1
         
         self.root.run_time['profiles'] = \
-            {'Test1': ({'anm150': [{'id': InstrHelper}]}, {})}
+            {'Test1': ({'anm150': [{1: InstrHelper}]}, {})}
 
         self.root.task_database.prepare_for_running()
         self.task.perform()
@@ -138,14 +141,16 @@ class TestSteppingTask(object):
         self.task = SteppingTask(task_name='Test')
         self.root.children_task.append(self.task)
         self.root.run_time['drivers'] = {'Test': InstrHelper}
+        self.root.run_time['profiles'] = {'Test1': \
+            ({'anm150': [{1: InstrHelper(({}, {'step': [None]}))}]}, 
+             {'initialize': [None], 'finalize': [None]})}
 
-        # This is set simply to make sure the test of InstrTask pass.
         self.task.selected_driver = 'Test'
         self.task.selected_profile = 'Test1'
 
 
     def test_check(self):
-        self.task.channel = None
+        self.task.channel = 1
         
         test, traceback = self.task.check(test_instr=True)
         assert_true(test)
@@ -153,12 +158,8 @@ class TestSteppingTask(object):
 
     def test_perform(self):
         # Simple test when everything is right.
-        self.task.channel = 'id'
-        self.root.run_time['profiles'] = \
-            {'Test1': ({'anm150': [{'id': InstrHelper(({}, 
-                                                       {'step': [None]}))}]}, 
-                       {})}
-            
+        self.task.channel = 1
+
         self.root.task_database.prepare_for_running()
         self.task.perform()
         join_threads(self.root)

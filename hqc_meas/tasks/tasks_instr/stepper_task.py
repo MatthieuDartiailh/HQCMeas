@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-#==============================================================================
+#============================================================================
 # module : stepper_task.py
 # author : Lauriane Contamin
 # license : MIT license
-#==============================================================================
+#============================================================================
 """
 """
 from atom.api import (Enum, Int, Range, Unicode, set_default)
@@ -64,14 +64,14 @@ class SetSteppingParametersTask(HackCheckInstrTask):
     controller.
     
     """
-    # Axis/Channel on which to set the parameters
+    #:: Axis/Channel on which to set the parameters
     # check if high is inclusive or not
     channel = Range(low=1, high=8).tag(pref=True)  
     
-    # Amplitude of the steps
+    #:: Amplitude of the steps
     amplitude = Unicode().tag(pref=True, feval=True)
 
-    # Frequency of the steps
+    #:: Frequency of the steps
     frequency = Unicode().tag(pref=True, feval=True)
 
     driver_list = ['ANC300']
@@ -102,6 +102,7 @@ class SetSteppingParametersTask(HackCheckInstrTask):
     def check(self, *args, **kwargs):
         """ 
         """
+        run_time = self.root_task.run_time
         test, traceback = super(SetSteppingParametersTask, self).check(*args, 
                                                                     **kwargs)
                                                                   
@@ -119,8 +120,19 @@ class SetSteppingParametersTask(HackCheckInstrTask):
                     cleandoc('''Failed to eval the {} value formula
                              {} : {}'''.format(name, val, e))
 
-        if self.channel:
-            mess = check_channel(self.driver, self.channel)
+        if not self.channel:
+            test = False
+            traceback[self.task_path + '/' + self.task_name + '-channel'] = \
+                cleandoc('''No channel was selected''')
+
+        if test and kwargs.get('test_instr'):
+            config = run_time['profiles'].get(self.selected_profile)
+            driver_class = run_time['drivers'][self.selected_driver]
+            instr = driver_class(config)
+            instr.initialize()
+            
+            mess = check_channel(instr, self.channel)
+            instr.finalize()
             if mess:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + \
@@ -132,13 +144,13 @@ class SteppingTask(HackCheckInstrTask):
     """ Launches stepping on a selected ANM module. One can specify the number
     of steps (negative for continuous stepping) and the direction.
     """
-    # Axis/Channel on which to set the parameters
-    channel = Range(low=1, high=7).tag(pref=True)  
+    #:: Axis/Channel on which to set the parameters
+    channel = Range(low=1, high=8).tag(pref=True)  
 
-    # Direction of stepping
+    #:: Direction of stepping
     direction = Enum('Up', 'Down').tag(pref=True)
 
-    # Number of steps
+    #:: Number of steps
     steps = Int().tag(pref=True)
 
     driver_list = ['ANC300']

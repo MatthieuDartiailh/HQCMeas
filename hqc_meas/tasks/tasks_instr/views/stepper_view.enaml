@@ -6,7 +6,7 @@
 #==============================================================================
 """
 """
-from enaml.widgets.api import Label
+from enaml.widgets.api import (Label, ObjectCombo)
 from enaml.stdlib.fields import FloatField, IntField
 
 from inspect import cleandoc
@@ -46,7 +46,7 @@ enamldef SetSteppingParametersView(BaseInstrumentView): view:
         text = 'Amplitude (V)'
     QtLineCompleter: amp_val:
         hug_width = 'strong'
-        value := task.amplitude
+        text := task.amplitude
         entries_updater << task.accessible_database_entries
         tool_tip = EVALUATER_TOOLTIP
 
@@ -54,7 +54,7 @@ enamldef SetSteppingParametersView(BaseInstrumentView): view:
         text = 'Frequency (Hz)'
     QtLineCompleter: freq_val:
         hug_width = 'strong'
-        value := task.frequency
+        text := task.frequency
         entries_updater << task.accessible_database_entries
         tool_tip = EVALUATER_TOOLTIP
 
