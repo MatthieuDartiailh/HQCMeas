@@ -222,7 +222,7 @@ class TaskProcess(Process):
                 },
             },
             'root': {
-                'level': 'DEBUG',
+                'level': 'INFO',
                 'handlers': ['queue']
             },
         }

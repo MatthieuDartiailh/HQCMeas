@@ -7,6 +7,7 @@
 """
 """
 from enaml.widgets.api import (Label, ObjectCombo)
+from enaml.layout.api import factory
 from enaml.stdlib.fields import FloatField, IntField
 
 from inspect import cleandoc
@@ -15,6 +16,7 @@ from textwrap import fill
 from hqc_meas.tasks.views.base_instr_view import BaseInstrumentView
 from hqc_meas.utils.widgets.qt_line_completer import QtLineCompleter
 from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
+from hqc_meas.utils.layouts import auto_grid_layout
 
 
 enamldef SetSteppingParametersView(BaseInstrumentView): view:
@@ -38,10 +40,9 @@ enamldef SetSteppingParametersView(BaseInstrumentView): view:
     Label: channel_lab:
         text = 'Channel'
     ObjectCombo: channel_val:
-        hug_width = 'strong'
-        items = list(task.get_members('channel').items)
+        items = range(1, 8)
         selected := task.channel
-        
+
     Label: amp_lab:
         text = 'Amplitude (V)'
     QtLineCompleter: amp_val:
@@ -76,10 +77,10 @@ enamldef SteppingView(BaseInstrumentView): view:
     ObjectCombo: profile_val:
         items << sorted(profiles)
         selected := task.selected_profile
-        
+
     Label: channel_lab:
         text = 'Channel'
-    ObjectCombo: channel_val:      
+    ObjectCombo: channel_val:
         items = range(1, 8)
         selected := task.channel
 
@@ -92,12 +93,12 @@ enamldef SteppingView(BaseInstrumentView): view:
 
     Label: dir_lab:
         text = 'Direction'
-    ObjectCombo: dir_val:      
+    ObjectCombo: dir_val:
         items = ['Up', 'Down']
-        selected := task.channel
+        selected := task.direction
 
 enamldef StopSteppingView(BaseInstrumentView): view:
-    
+
     title << task.task_name
     constraints = [factory(auto_grid_layout),
                    driver_val.width == profile_val.width]
@@ -112,7 +113,7 @@ enamldef StopSteppingView(BaseInstrumentView): view:
         text = 'Instr'
     ObjectCombo: profile_val:
         items << sorted(profiles)
-        selected := task.selected_profile    
+        selected := task.selected_profile
 
 
 TASK_VIEW_MAPPING = {'SetSteppingParametersTask' : SetSteppingParametersView,

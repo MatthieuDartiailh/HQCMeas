@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
-# TODO this is compatible with PyVisa 1.5 but does not use the new recommended
-# API
-try:
-    from pyvisa.visa import Instrument, VisaIOError, VisaTypeError
-except Exception:
-    from pyvisa.legacy.visa import Instrument, VisaIOError
-    from pyvisa.errors import VisaTypeError
+from pyvisa.highlevel import ResourceManager
+from pyvisa.errors import VisaIOError, VisaTypeError
 
 from .driver_tools import BaseInstrument, InstrIOError
 
@@ -94,7 +89,8 @@ class VisaInstrument(BaseInstrument):
         """Open the connection to the instr using the `connection_str`
         """
         try:
-            self._driver = Instrument(self.connection_str, **para)
+            self._driver = ResourceManager().open_resource(self.connection_str,
+                                                           **para)
         except VisaIOError as er:
             self._driver = None
             raise InstrIOError(str(er))

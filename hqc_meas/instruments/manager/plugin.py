@@ -396,10 +396,10 @@ class InstrManagerPlugin(HasPrefPlugin):
 
     # --- Private API ---------------------------------------------------------
     # Drivers types
-    _driver_types = Dict(Str(), Subclass(BaseInstrument))
+    _driver_types = Dict()
 
     # Drivers
-    _drivers = Dict(Str(), Subclass(BaseInstrument))
+    _drivers = Dict()
 
     # Connections forms and views {driver_name: (form, view)}.
     _forms = Dict(Str(), Tuple())
