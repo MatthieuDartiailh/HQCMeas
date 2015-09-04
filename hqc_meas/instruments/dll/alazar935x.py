@@ -9,20 +9,21 @@
 This module defines drivers for Alazar using DLL Library.
 
 :Contains:
-    Alazar9351
+    Alazar935x
 
 To read well the Dll of the Alazar9351, Visual C++ Studio is needed.
 
 """
-from ..dll_tools import DllInstrument
-from inspect import cleandoc
-import time
-import numpy as np
-import math
-from pyclibrary import CLibrary
 import os
-from ctypes import windll, libc, c_void_p, c_long, c_int, c_uint8, c_uint16
+import time
+import math
+import numpy as np
+import ctypes
+from inspect import cleandoc
 
+from pyclibrary import CLibrary
+
+from ..dll_tools import DllInstrument
 
 class DMABuffer:
     '''Buffer suitable for DMA transfers.
@@ -45,42 +46,42 @@ class DMABuffer:
     '''
     def __init__(self, bytes_per_sample, size_bytes):
         self.size_bytes = size_bytes
-        cSampleType = c_uint8
+        ctypes.cSampleType = ctypes.c_uint8
         npSampleType = np.uint8
         if bytes_per_sample > 1:
-            cSampleType = c_uint16
+            ctypes.cSampleType = ctypes.c_uint16
             npSampleType = np.uint16
 
         self.addr = None
         if os.name == 'nt':
             MEM_COMMIT = 0x1000
             PAGE_READWRITE = 0x4
-            windll.kernel32.VirtualAlloc.argtypes = [c_void_p, c_long,
-                                                     c_long, c_long]
-            windll.kernel32.VirtualAlloc.restype = c_void_p
-            self.addr = windll.kernel32.VirtualAlloc(
-                0, c_long(size_bytes), MEM_COMMIT, PAGE_READWRITE)
+            ctypes.windll.kernel32.VirtualAlloc.argtypes = [ctypes.c_void_p, ctypes.c_long,
+                                                     ctypes.c_long, ctypes.c_long]
+            ctypes.windll.kernel32.VirtualAlloc.restype = ctypes.c_void_p
+            self.addr = ctypes.windll.kernel32.VirtualAlloc(
+                0, ctypes.c_long(size_bytes), MEM_COMMIT, PAGE_READWRITE)
         elif os.name == 'posix':
-            libc.valloc.argtypes = [c_long]
-            libc.valloc.restype = c_void_p
-            self.addr = libc.valloc(size_bytes)
+            ctypes.libc.valloc.argtypes = [ctypes.c_long]
+            ctypes.libc.valloc.restype = ctypes.c_void_p
+            self.addr = ctypes.libc.valloc(size_bytes)
         else:
             raise Exception("Unsupported OS")
 
-        ctypes_array = (cSampleType *
+        ctypes.ctypes_array = (ctypes.cSampleType *
                         (size_bytes // bytes_per_sample)
                         ).from_address(self.addr)
-        self.buffer = np.frombuffer(ctypes_array, dtype=npSampleType)
+        self.buffer = np.frombuffer(ctypes.ctypes_array, dtype=npSampleType)
         pointer, read_only_flag = self.buffer.__array_interface__['data']
 
     def __exit__(self):
         if os.name == 'nt':
             MEM_RELEASE = 0x8000
-            windll.kernel32.VirtualFree.argtypes = [c_void_p, c_long, c_long]
-            windll.kernel32.VirtualFree.restype = c_int
-            windll.kernel32.VirtualFree(c_void_p(self.addr), 0, MEM_RELEASE)
+            ctypes.windll.kernel32.VirtualFree.argtypes = [ctypes.c_void_p, ctypes.c_long, ctypes.c_long]
+            ctypes.windll.kernel32.VirtualFree.restype = ctypes.c_int
+            ctypes.windll.kernel32.VirtualFree(ctypes.c_void_p(self.addr), 0, MEM_RELEASE)
         elif os.name == 'posix':
-            libc.free(self.addr)
+            ctypes.libc.free(self.addr)
         else:
             raise Exception("Unsupported OS")
 
@@ -96,7 +97,7 @@ class Alazar935x(DllInstrument):
                                          caching_permissions, auto_open)
 
         cache_path = unicode(os.path.join(os.path.dirname(__file__),
-                                          'cache/Alazar.pyclibc'))
+                                          'cache/Alazar.pycctypes.libc'))
         self._dll = CLibrary('ATSApi.dll',
                              ['AlazarError.h', 'AlazarCmd.h', 'AlazarApi.h'],
                              cache=cache_path, prefix=['Alazar'],
@@ -148,7 +149,7 @@ class Alazar935x(DllInstrument):
                                       self._dll.TRIG_ENGINE_J,
                                       self._dll.TRIG_EXTERNAL,
                                       self._dll.TRIGGER_SLOPE_POSITIVE,
-                                      131,
+                                      130,
                                       self._dll.TRIG_ENGINE_K,
                                       self._dll.TRIG_DISABLE,
                                       self._dll.TRIGGER_SLOPE_POSITIVE,
@@ -181,18 +182,17 @@ class Alazar935x(DllInstrument):
 
     def get_demod(self, timeaftertrig, recordsPerCapture,
                   recordsPerBuffer, freq, average):
-        start = time.clock()
         board = self._dll.GetBoardBySystemID(1, 1)()
-        start = time.clock()
         # Be sure that the acquisition is made for an integer number of periods
         timeaftertrig = int(timeaftertrig*freq)/(1.*freq)
 
         # Number of samples per record: must be divisible by 32
         samplesPerSec = 500000000.0
-        if samplesPerSec*timeaftertrig % 32 == 0:
-            samplesPerRecord = int(samplesPerSec*timeaftertrig)
+        samplesPerDemod = samplesPerSec*timeaftertrig
+        if samplesPerDemod % 32 == 0:
+            samplesPerRecord = int(samplesPerDemod)
         else:
-            samplesPerRecord = int((samplesPerSec*timeaftertrig)/32 + 1)*32
+            samplesPerRecord = int((samplesPerDemod)/32 + 1)*32
 
         retCode = self._dll.GetChannelInfo(board)()
         bitsPerSample = self._dll.GetChannelInfo(board)[1]
@@ -242,8 +242,7 @@ class Alazar935x(DllInstrument):
             time.sleep(10e-3)
 
         # Preparation of the tables for the demodulation
-
-        dem = np.arange(samplesPerRecord)
+        dem = np.arange(samplesPerDemod)
         coses = np.cos(2. * math.pi * dem * freq / samplesPerSec)
         sines = np.sin(2. * math.pi * dem * freq / samplesPerSec)
 
@@ -269,22 +268,27 @@ class Alazar935x(DllInstrument):
 
         for buffer in buffers:
             buffer.__exit__()
+
         # Averaging and converting binary numbers into Volts
         dataA = (dataA-2**15)/65535*0.8
         dataB = (dataB-2**15)/65535*0.8
 
+        # Re-shaping of the data for demodulation and demodulation
+        dataA = dataA[:,1:samplesPerDemod + 1]
+        dataB = dataB[:,1:samplesPerDemod + 1]
+
         if average:
             dataA = np.mean(dataA, axis=0)
             dataB = np.mean(dataB, axis=0)
-            averageAI = np.mean(dataA*coses)
-            averageAQ = np.mean(dataA*sines)
-            averageBI = np.mean(dataB*coses)
-            averageBQ = np.mean(dataB*sines)
+            averageAI = 2*np.mean(dataA*coses)
+            averageAQ = 2*np.mean(dataA*sines)
+            averageBI = 2*np.mean(dataB*coses)
+            averageBQ = 2*np.mean(dataB*sines)
         else:
-            averageAI = np.mean(dataA*coses, axis=1)
-            averageAQ = np.mean(dataA*sines, axis=1)
-            averageBI = np.mean(dataB*coses, axis=1)
-            averageBQ = np.mean(dataB*sines, axis=1)
+            averageAI = 2*np.mean(dataA*coses, axis=1)
+            averageAQ = 2*np.mean(dataA*sines, axis=1)
+            averageBI = 2*np.mean(dataB*coses, axis=1)
+            averageBQ = 2*np.mean(dataB*sines, axis=1)
 
         return (averageAI, averageAQ, averageBI, averageBQ)
 
@@ -295,10 +299,11 @@ class Alazar935x(DllInstrument):
 
         # Number of samples per record: must be divisible by 32
         samplesPerSec = 500000000.0
-        if samplesPerSec*timeaftertrig % 32 == 0:
-            samplesPerRecord = int(samplesPerSec*timeaftertrig)
+        samplesPerTrace = samplesPerSec*timeaftertrig
+        if samplesPerTrace % 32 == 0:
+            samplesPerRecord = int(samplesPerTrace)
         else:
-            samplesPerRecord = int((samplesPerSec*timeaftertrig)/32 + 1)*32
+            samplesPerRecord = int((samplesPerTrace)/32 + 1)*32
 
         retCode = self._dll.GetChannelInfo(board)()
         bitsPerSample = self._dll.GetChannelInfo(board)[1]
@@ -370,6 +375,10 @@ class Alazar935x(DllInstrument):
 
         for buffer in buffers:
             buffer.__exit__()
+
+        # Re-shaping of the data for demodulation and demodulation
+        dataA = dataA[:,1:samplesPerTrace + 1]
+        dataB = dataB[:,1:samplesPerTrace + 1]
 
         # Averaging if needed and converting binary numbers into Volts
         if average:
