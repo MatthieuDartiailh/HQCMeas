@@ -274,8 +274,9 @@ class Alazar935x(DllInstrument):
         dataB = (dataB-2**15)/65535*0.8
 
         # Re-shaping of the data for demodulation and demodulation
-        dataA = dataA[:,1:samplesPerDemod + 1]
-        dataB = dataB[:,1:samplesPerDemod + 1]
+        if not samplesPerDemod == samplesPerRecord:
+            dataA = dataA[:,1:samplesPerDemod + 1]
+            dataB = dataB[:,1:samplesPerDemod + 1]
 
         if average:
             dataA = np.mean(dataA, axis=0)
