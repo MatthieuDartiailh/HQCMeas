@@ -204,7 +204,7 @@ class BaseSequence(Item):
 
         """
 
-        
+
         # Inplace modification of compile will update self._compiled.
         if not self._compiled:
             self._compiled = [None for i in self.items if i.enabled]
@@ -243,7 +243,7 @@ class BaseSequence(Item):
                                                            miss, errors)
                     if success:
                         compiled[index] = items
-            
+
             known_locals = set(sequence_locals.keys())
             # If none of the variables found missing during last pass is now
             # known stop compilation as we now reached a dead end. Same if an
@@ -261,8 +261,8 @@ class BaseSequence(Item):
                 # Clean the compiled items once the pulse is transfered
                 self.cleanup_cache()
                 return True, pulses
-            
-            
+
+
     def _answer(self, members, callables):
         """ Collect answers for the walk method.
 
@@ -335,7 +335,7 @@ class Sequence(BaseSequence):
 
         res, pulses = self._compile_items(root_vars, local_namespace,
                                           missings, errors)
-                                          
+
         if res:
             if self.time_constrained:
                 # Check if start, stop and duration of sequence are compatible.
@@ -410,10 +410,7 @@ class Sequence(BaseSequence):
         """
         if change['value']:
             for item in self.items:
-                item.root = self.root
-                if isinstance(item, Sequence):
-                    item.observe('_last_index', self._item_last_index_updated)
-                    item.parent = self
+                self._item_added(item)
             # Connect only now to avoid cleaning up in an unwanted way the
             # root linkable vars attr.
             self.observe('items', self._items_updated)
@@ -421,10 +418,7 @@ class Sequence(BaseSequence):
         else:
             self.unobserve('items', self._items_updated)
             for item in self.items:
-                item.root = None
-                if isinstance(item, Sequence):
-                    item.unobserve('_last_index',
-                                   self._item_last_index_updated)
+                self._item_removed(item)
             self.observe('items', self._items_updated)
 
     def _observe_time_constrained(self, change):
