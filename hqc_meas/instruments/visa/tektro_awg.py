@@ -18,7 +18,7 @@ from threading import Lock
 from contextlib import contextmanager
 from ..driver_tools import (BaseInstrument, InstrIOError, secure_communication,
                             instrument_property)
-from ..visa_tools import VisaInstrument
+from ..visa_tools import VisaInstrument, VisaIOError
 from visa import VisaTypeError
 from textwrap import fill
 from inspect import cleandoc
@@ -404,6 +404,18 @@ class AWG(VisaInstrument):
                                   caching_permissions, auto_open)
         self.channels = {}
         self.lock = Lock()
+        
+    def reopen_connection(self):
+        """Clear buffer on connection reseting.
+        
+        """
+        super(AWG, self).reopen_connection()
+        self.write('*CLS') # As this does not seem to work poll the output
+        while True:
+            try:
+                self.read()
+            except VisaIOError:
+                break
 
     def get_channel(self, num):
         """
@@ -532,7 +544,6 @@ class AWG(VisaInstrument):
         if abs(result - value) > 10**-12:
             raise InstrIOError(cleandoc('''Instrument did not set correctly
                                         the sampling frequency'''))
-
     @instrument_property
     @secure_communication()
     def running(self):
