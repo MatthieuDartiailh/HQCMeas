@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
 # module : psa_tasks-views.py
-# author : Benjamin Huard
+# author : Benjamin Huard & Sébastien Jezouin
 # license : MIT license
 #==============================================================================
 from enaml.core.api import Conditional, Include
-from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox)
-from enaml.layout.api import factory
+from enaml.widgets.api import (GroupBox, Label, Field, ObjectCombo, CheckBox, Container)
+from enaml.layout.api import grid, vbox, hbox, factory
 
 from inspect import cleandoc
 from textwrap import fill
@@ -20,12 +20,14 @@ from hqc_meas.tasks.tools.string_evaluation import EVALUATER_TOOLTIP
 
 enamldef DemodAlazarView(BaseInstrumentView): view:
 
-    attr in_loop : bool = False
+#    attr in_loop : bool = False
     title << task.task_name
-    constraints = [factory(auto_grid_layout),
-                   dfreq_val.width == after_val.width,
-                   after_val.width == buffer_val.width]
-
+    constraints = [vbox(
+                    grid([sel_driv, sel_prof, traces, buffer, average],
+                         [sel_val, prof_val, traces_val, buffer_val, average_val]),
+                    hbox(chanA,chanB)),
+                    traces_val.width == buffer_val.width,
+                    chanA.width == chanB.width]
 
     Label: sel_driv:
         text = 'Driver'
@@ -37,22 +39,12 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         text = 'Instr'
     ObjectCombo: prof_val:
         items << sorted(profiles)
-        selected := task.selected_profile
-        
-    Label: dfreq:
-        text = 'Demodulation frequency (MHz)'
-    Field: dfreq_val:
-        text := task.freq
+        selected := task.selected_profile    
 
-    Label: after:
-        text = 'Time after trigger (mus)'
-    Field: after_val:
-        text := task.timeaftertrig
-        
-    Label: average:
-        text = 'Average number'
+    Label: traces:
+        text = 'Number of traces'
     Field: traces_val:
-        text := task.averagenumber
+        text := task.tracesnumber
         
     Label: buffer:
         text = 'Traces per Buffer'
@@ -63,6 +55,58 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         text = 'Average'
     CheckBox: average_val:
         checked := task.average
+
+
+    GroupBox: chanA:
+        title = 'Channel A demodulation settings'
+        constraints = [grid([after, duration, dfreq],
+                            [after_val, duration_val, dfreq_val]),
+                       dfreq_val.width == after_val.width,
+                       after_val.width == duration_val.width]                
+        Label: dfreq:
+            text = 'Demodulation frequency (MHz)'
+        Field: dfreq_val:
+            text := task.freq
+         
+        Label: after:
+            text = 'Start time after trigger (ns)'
+        Field: after_val:
+            text := task.timeaftertrig
+            tool_tip = fill(cleandoc('''Separate the start times with commas.
+                                        For example : 0,500,1500'''))
+        
+        Label: duration:
+            text = 'Duration (ns)'
+        Field: duration_val:
+            text := task.duration
+            tool_tip = fill(cleandoc(
+                            '''Separate the durations with commas. Acquisition of data by
+                            this channel is disabled if one duration is set to zero.'''))
+    GroupBox: chanB:
+        title = 'Channel B demodulation settings'  
+        constraints = [grid([afterB, durationB, dfreqB],
+                            [afterB_val, durationB_val, dfreqB_val]),
+                       dfreqB_val.width == afterB_val.width,
+                       afterB_val.width == durationB_val.width]                 
+        Label: dfreqB:
+            text = 'Demodulation frequency (MHz)'
+        Field: dfreqB_val:
+            text := task.freqB
+         
+        Label: afterB:
+            text = 'Start time after trigger (ns)'
+        Field: afterB_val:
+            text := task.timeaftertrigB
+            tool_tip = fill(cleandoc('''Separate the start times with commas.
+                                        For example : 0,500,1500'''))
+        
+        Label: durationB:
+            text = 'Duration (ns)'
+        Field: durationB_val:
+            text := task.durationB
+            tool_tip = fill(cleandoc(
+                            '''Separate the durations with commas. Acquisition of data by
+                            this channel is disabled if one duration is set to zero. '''))
 
 
 enamldef TracesAlazarView(BaseInstrumentView): view:
