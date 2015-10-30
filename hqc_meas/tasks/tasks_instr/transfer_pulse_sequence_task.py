@@ -170,6 +170,8 @@ class AWGTransferInterface(InstrTaskInterface):
                 ch = task.driver.get_channel(ch_id)
                 if ch_id in seqs:
                     ch.select_sequence(seq_name + '_Ch{}'.format(ch_id))
+                    ch.output_state = 'ON'
+            task.driver.running = 'RUN'
 
     def check(self, *args, **kwargs):
         """Simply add the sequence name in the database.
