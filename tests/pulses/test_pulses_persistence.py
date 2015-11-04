@@ -132,3 +132,4 @@ def test_build_from_config():
 
     seq = aux.items[3]
     assert_equal(len(seq.items), 1)
+    assert seq.items[0].parent
