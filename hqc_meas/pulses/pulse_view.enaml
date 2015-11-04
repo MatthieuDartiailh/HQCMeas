@@ -91,7 +91,7 @@ enamldef PulseView(GroupBox): view:
                 QtLineCompleter: d1_val:
                     hug_width = 'ignore'
                     text := item.def_1
-                    entries_updater << item.parent.get_bindable_vars
+#                    entries_updater << item.parent.get_bindable_vars
                     tool_tip = EVALUATER_TOOLTIP
         SplitItem:
             Container:
@@ -103,7 +103,7 @@ enamldef PulseView(GroupBox): view:
                 QtLineCompleter: d2_val:
                     hug_width = 'ignore'
                     text := item.def_2
-                    entries_updater << item.parent.get_bindable_vars
+#                    entries_updater << item.parent.get_bindable_vars
                     tool_tip = EVALUATER_TOOLTIP
 
     Conditional: analog:

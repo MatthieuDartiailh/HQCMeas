@@ -135,6 +135,9 @@ class AWGTransferInterface(InstrTaskInterface):
     #: Generic name to use for the sequence (the number of the channel will be
     #: appended automatically).
     sequence_name = Str().tag(pref=True)
+    
+    #: Flag indicating whether or not initialisation has been performed.
+    initialized = Bool(False)
 
     #: Flag indicating whether the transfered sequence should be selected for
     #: execution after transfert.
@@ -160,12 +163,13 @@ class AWGTransferInterface(InstrTaskInterface):
             mess = 'Failed to compile the pulse sequence: missing {}, errs {}'
             raise RuntimeError(mess.format(*seqs))
 
+        initialized = self.initialized
         for ch_id in task.driver.defined_channels:
             if ch_id in seqs:
-                task.driver.to_send(seq_name + '_Ch{}'.format(ch_id),
-                                    seqs[ch_id])
+                self.initialized = task.driver.to_send(seq_name + '_Ch{}'.format(ch_id),
+                                    seqs[ch_id], initialized)
 
-        if self.select_after_transfer:
+        if self.select_after_transfer and (not initialized):
             for ch_id in task.driver.defined_channels:
                 ch = task.driver.get_channel(ch_id)
                 if ch_id in seqs:

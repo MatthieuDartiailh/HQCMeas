@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# module : transfer_pulse_sequence_task.py
-# author : Matthieu Dartiailh
+# module : transfer_pulse_sequence_tabor_task.py
+# author : Matthieu Dartiailh & Nathanael Cottet
 # license : MIT license
 # =============================================================================
 """
 """
 
-from hqc_meas.tasks.api import (
-                                InstrTaskInterface)
+from hqc_meas.tasks.api import (InstrTaskInterface)
 
-        
+
 class TaborTransferInterface(InstrTaskInterface):
     """Interface for the Tabor, handling naming the transfered sequences and
     selecting it.
@@ -45,19 +44,17 @@ class TaborTransferInterface(InstrTaskInterface):
             raise RuntimeError(mess.format(*seqs))
 
         for ch_id in task.driver.defined_channels:
-            ch = task.driver.get_channel(ch_id)
-            ch.output_state = 'OFF'
             if ch_id in seqs:
                 task.driver.to_send(seqs[ch_id], ch_id)
-                ch.output_state = 'ON'
-                
-        
+#                while task.driver.is_ready < 1:
+#                    print task.driver.is_ready
+#                    pass
 
 
     def check(self, *args, **kwargs):
         """Generic check making sure sequence can be compiled.
-    
-        """          
+
+        """
         return True, {}
 
     def validate_context(self, context):

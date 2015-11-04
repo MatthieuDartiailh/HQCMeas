@@ -430,8 +430,10 @@ enamldef RootSequenceView(GroupBox): view:
         tabs_closable = False
         Page:
             title = 'Sequence'
-            NonFoldingSequenceEditor: editor:
-                sequence << view.item
+            Container:
+                ScrollArea:
+                    NonFoldingSequenceEditor: editor:
+                        sequence << view.item
 
         Page:
             title = 'Context'
