@@ -25,9 +25,11 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
     constraints = [vbox(
                     grid([sel_driv, sel_prof, traces, buffer, average],
                          [sel_val, prof_val, traces_val, buffer_val, average_val]),
-                    hbox(chanA,chanB)),
+                    hbox(demodA,demodB),
+                    hbox(traceA,traceB)),
                     traces_val.width == buffer_val.width,
-                    chanA.width == chanB.width]
+                    demodA.width == demodB.width,
+                    traceA.width == traceB.width]
 
     Label: sel_driv:
         text = 'Driver'
@@ -57,7 +59,7 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         checked := task.average
 
 
-    GroupBox: chanA:
+    GroupBox: demodA:
         title = 'Channel A demodulation settings'
         constraints = [grid([after, duration, dfreq],
                             [after_val, duration_val, dfreq_val]),
@@ -80,9 +82,13 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         Field: duration_val:
             text := task.duration
             tool_tip = fill(cleandoc(
-                            '''Separate the durations with commas. Acquisition of data by
-                            this channel is disabled if one duration is set to zero.'''))
-    GroupBox: chanB:
+                            '''Separate the durations with commas. Demodulation
+                            on channel A will be disabled if one of the
+                            durations is set to zero.
+                            ---- Note that data acquisition by channel A will be
+                            disabled if demodulation and trace record are both
+                            disabled on this channel. This improves channel B speed.'''))
+    GroupBox: demodB:
         title = 'Channel B demodulation settings'  
         constraints = [grid([afterB, durationB, dfreqB],
                             [afterB_val, durationB_val, dfreqB_val]),
@@ -105,8 +111,62 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         Field: durationB_val:
             text := task.durationB
             tool_tip = fill(cleandoc(
-                            '''Separate the durations with commas. Acquisition of data by
-                            this channel is disabled if one duration is set to zero. '''))
+                            '''Separate the durations with commas. Demodulation
+                            on channel B will be disabled if one of the
+                            durations is set to zero.
+                            ---- Note that data acquisition by channel B will be
+                            disabled if demodulation and trace record are both
+                            disabled on this channel. This improves channel A speed.'''))
+
+
+    GroupBox: traceA:
+        title = 'Channel A raw trace record settings'
+        constraints = [grid([traceafter, traceduration],
+                            [traceafter_val, traceduration_val]),
+                       traceafter_val.width == traceduration_val.width]                
+
+        Label: traceafter:
+            text = 'Start time after trigger (ns)'
+        Field: traceafter_val:
+            text := task.tracetimeaftertrig
+            tool_tip = fill(cleandoc('''Separate the start times with commas.
+                                        For example : 0,500,1500'''))
+        
+        Label: traceduration:
+            text = 'Duration (ns)'
+        Field: traceduration_val:
+            text := task.traceduration
+            tool_tip = fill(cleandoc(
+                            '''Separate the durations with commas. Trace record
+                            on channel A will be disabled if one of the
+                            durations is set to zero.
+                            ---- Note that data acquisition by channel A will be
+                            disabled if demodulation and trace record are both
+                            disabled on this channel. This improves channel B speed.'''))
+    GroupBox: traceB:
+        title = 'Channel B raw trace record settings'  
+        constraints = [grid([traceafterB, tracedurationB],
+                            [traceafterB_val, tracedurationB_val]),
+                       traceafterB_val.width == tracedurationB_val.width]                 
+
+        Label: traceafterB:
+            text = 'Start time after trigger (ns)'
+        Field: traceafterB_val:
+            text := task.tracetimeaftertrigB
+            tool_tip = fill(cleandoc('''Separate the start times with commas.
+                                        For example : 0,500,1500'''))
+        
+        Label: tracedurationB:
+            text = 'Duration (ns)'
+        Field: tracedurationB_val:
+            text := task.tracedurationB
+            tool_tip = fill(cleandoc(
+                            '''Separate the durations with commas. Trace record
+                            on channel B will be disabled if one of the
+                            durations is set to zero.
+                            ---- Note that data acquisition by channel B will be
+                            disabled if demodulation and trace record are both
+                            disabled on this channel. This improves channel A speed.'''))
 
 
 enamldef TracesAlazarView(BaseInstrumentView): view:

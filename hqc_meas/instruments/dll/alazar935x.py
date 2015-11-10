@@ -184,7 +184,7 @@ class Alazar935x(DllInstrument):
                                  0)
 
     def get_demod(self, startaftertrig, duration, recordsPerCapture,
-                  recordsPerBuffer, freq, average, NdemodA, NdemodB):
+                  recordsPerBuffer, freq, average, NdemodA, NdemodB, NtraceA, NtraceB):
                       
         board = self._dll.GetBoardBySystemID(1, 1)()
 
@@ -202,7 +202,7 @@ class Alazar935x(DllInstrument):
             raise ValueError(cleandoc(self._dll.AlazarErrorToText(retCode)))
 
         # Compute the number of bytes per record and per buffer
-        channel_number = 2 if (NdemodA and NdemodB) else 1  # Acquisition on A and B
+        channel_number = 2 if ((NdemodA or NtraceA) and (NdemodB or NtraceB)) else 1  # Acquisition on A and B
         ret, (boardhandle, memorySize_samples,
               bitsPerSample) = self._dll.GetChannelInfo(board)
         bytesPerSample = (bitsPerSample + 7) // 8
@@ -230,7 +230,7 @@ class Alazar935x(DllInstrument):
         # Calculate the number of buffers in the acquisition
         buffersPerAcquisition = round(recordsPerCapture / recordsPerBuffer)
 
-        channelSelect = 3 if (NdemodA and NdemodB) else (2 if NdemodB else 1)
+        channelSelect = 1 if not (NdemodB or NtraceB) else (2 if not (NdemodA or NtraceA) else 3)
         self._dll.BeforeAsyncRead(board, channelSelect,  # Channels A & B
                                   0,
                                   samplesPerRecord,
@@ -263,21 +263,28 @@ class Alazar935x(DllInstrument):
         dataExtended = []
         
         for i in range(NdemodA + NdemodB):
-            startSample.append(int(samplesPerSec*startaftertrig[i]))
-            samplesPerDemod.append(int(samplesPerSec*duration[i]))
+            startSample.append( int(samplesPerSec * startaftertrig[i]) )
+            samplesPerDemod.append( int(samplesPerSec * duration[i]) )
             # Check wheter it is possible to cut each record in blocks of size equal
             # to an integer number of periods
             periodsPerBlock = 1
-            while (periodsPerBlock*samplesPerSec < freq[i]*samplesPerDemod[i] 
-                   and periodsPerBlock*samplesPerSec % freq[i]):
+            while (periodsPerBlock * samplesPerSec < freq[i] * samplesPerDemod[i] 
+                   and periodsPerBlock * samplesPerSec % freq[i]):
                 periodsPerBlock += 1
                 
-            samplesPerBlock.append(int(np.minimum(periodsPerBlock*samplesPerSec/freq[i], samplesPerDemod[i])))
-            NumberOfBlocks.append(np.divide(samplesPerDemod[i], samplesPerBlock[i]))
-            samplesMissing.append((-samplesPerDemod[i]) % samplesPerBlock[i]) 
+            samplesPerBlock.append( int(np.minimum(periodsPerBlock * samplesPerSec / freq[i],
+                                                  samplesPerDemod[i])) )
+            NumberOfBlocks.append( np.divide(samplesPerDemod[i], samplesPerBlock[i]) )
+            samplesMissing.append( (-samplesPerDemod[i]) % samplesPerBlock[i] ) 
             # Makes the table that will contain the data
-            data.append(np.empty((recordsPerCapture, samplesPerBlock[i])))
-            dataExtended.append(np.zeros((recordsPerBuffer, samplesPerDemod[i]+samplesMissing[i]), dtype='uint16'))
+            data.append( np.empty((recordsPerCapture, samplesPerBlock[i])) )
+            dataExtended.append( np.zeros((recordsPerBuffer, samplesPerDemod[i] + samplesMissing[i]),
+                                          dtype='uint16') )
+                                        
+        for i in (np.arange(NtraceA + NtraceB) + NdemodA + NdemodB):
+            startSample.append( int(samplesPerSec * startaftertrig[i]) )
+            samplesPerDemod.append( int(samplesPerSec * duration[i]) )
+            data.append( np.empty((recordsPerCapture, samplesPerDemod[i])) )
 
         start = time.clock()
 
@@ -291,7 +298,8 @@ class Alazar935x(DllInstrument):
 
             # Process data
 
-            dataRaw = np.reshape(buffer.buffer >> bitShift, (recordsPerBuffer*channel_number, -1))
+            dataRaw = np.reshape(buffer.buffer, (recordsPerBuffer*channel_number, -1))
+            dataRaw = dataRaw >> bitShift
 
             for i in np.arange(NdemodA):
                 dataExtended[i][:,:samplesPerDemod[i]] = dataRaw[:recordsPerBuffer,startSample[i]:startSample[i]+samplesPerDemod[i]]
@@ -302,7 +310,13 @@ class Alazar935x(DllInstrument):
                 dataExtended[i][:,:samplesPerDemod[i]] = dataRaw[(channel_number-1)*recordsPerBuffer:channel_number*recordsPerBuffer,startSample[i]:startSample[i]+samplesPerDemod[i]]
                 dataBlock = np.reshape(dataExtended[i],(recordsPerBuffer,-1,samplesPerBlock[i]))
                 data[i][buffersCompleted*recordsPerBuffer:(buffersCompleted+1)*recordsPerBuffer] = np.sum(dataBlock, axis=1)
-                
+             
+            for i in (np.arange(NtraceA) + NdemodB + NdemodA):
+                data[i][buffersCompleted*recordsPerBuffer:(buffersCompleted+1)*recordsPerBuffer] = dataRaw[:recordsPerBuffer,startSample[i]:startSample[i]+samplesPerDemod[i]]
+            
+            for i in (np.arange(NtraceB) + NtraceA + NdemodB + NdemodA):
+                data[i][buffersCompleted*recordsPerBuffer:(buffersCompleted+1)*recordsPerBuffer] = dataRaw[(channel_number-1)*recordsPerBuffer:channel_number*recordsPerBuffer,startSample[i]:startSample[i]+samplesPerDemod[i]]
+             
             buffersCompleted += 1
 
             self._dll.PostAsyncBuffer(board, buffer.addr, buffer.size_bytes)
@@ -319,9 +333,10 @@ class Alazar935x(DllInstrument):
             data[i][:,:samplesPerBlock[i]-samplesMissing[i]] /= NumberOfBlocks[i] + normalisation
             data[i][:,samplesPerBlock[i]-samplesMissing[i]:] /= NumberOfBlocks[i]
             data[i] = (data[i] / code - 1) * channelRange
-        
-        # Demodulates the data, average them if asked and return the result
+        for i in (np.arange(NtraceA + NtraceB) + NdemodA + NdemodB):
+            data[i] = (data[i] / code - 1) * channelRange
 
+        # calculate demodulation tables
         if NdemodA:               
             demA = np.arange(max(samplesPerBlock[:NdemodA]))
             cosesA = np.cos(2. * math.pi * demA * freq[0] / samplesPerSec)
@@ -331,42 +346,71 @@ class Alazar935x(DllInstrument):
             cosesB = np.cos(2. * math.pi * demB * freq[-1] / samplesPerSec)
             sinesB = np.sin(2. * math.pi * demB * freq[-1] / samplesPerSec)
 
-        answerType = []
-        for i in range(NdemodA):
-            answerType += [('AI' + str(i), str(data[0].dtype)), ('AQ' + str(i), str(data[0].dtype))]
-        for i in range(NdemodB):
-            answerType += [('BI' + str(i), str(data[0].dtype)), ('BQ' + str(i), str(data[0].dtype))]
-            
-        answerSize = 1 if average else recordsPerCapture
-        answer = np.empty(answerSize, dtype=answerType)
+        # prepare the structure of the answered array
+
+        if (NdemodA or NdemodB):
+            answerTypeDemod = []
+            for i in range(NdemodA):
+                answerTypeDemod += [('AI' + str(i), str(data[0].dtype)), ('AQ' + str(i), str(data[0].dtype))]
+            for i in range(NdemodB):
+                answerTypeDemod += [('BI' + str(i), str(data[0].dtype)), ('BQ' + str(i), str(data[0].dtype))]  
+        else:
+            answerTypeDemod = 'f'
+        
+        if (NtraceA or NtraceB):
+            answerTypeTrace = ( [('A' + str(i), str(data[0].dtype)) for i in range(NtraceA)]
+                              + [('B' + str(i), str(data[0].dtype)) for i in range(NtraceB)] )
+            biggerTrace = np.max(samplesPerDemod[NdemodA+NdemodB:])
+        else:
+            answerTypeTrace = 'f'
+            biggerTrace = 0
+
+        if average:
+            answerDemod = np.empty(1, dtype=answerTypeDemod)
+            answerTrace = np.zeros(biggerTrace, dtype=answerTypeTrace)
+        else:
+            answerDemod = np.empty(recordsPerCapture, dtype=answerTypeDemod)
+            answerTrace = np.zeros((recordsPerCapture, biggerTrace), dtype=answerTypeTrace)
 
         meanAxis = 0 if average else 1
 
+        # Demodulate the data, average them if asked and return the result
+
         for i in np.arange(NdemodA):
             if average:
-                data[i] = np.mean(data[i], axis=0)
-                
+                data[i] = np.mean(data[i], axis=0)     
             ansI = 2*np.mean(data[i]*cosesA[:samplesPerBlock[i]], axis=meanAxis)
             ansQ = 2*np.mean(data[i]*sinesA[:samplesPerBlock[i]], axis=meanAxis)
-            answer['AI' + str(i)] = ( + ansI * np.cos(2 * np.pi * freq[0] * startSample[i]/samplesPerSec)
+            answerDemod['AI' + str(i)] = ( + ansI * np.cos(2 * np.pi * freq[0] * startSample[i]/samplesPerSec)
                                       - ansQ * np.sin(2 * np.pi * freq[0] * startSample[i]/samplesPerSec) )
-            answer['AQ' + str(i)] = ( + ansI * np.sin(2 * np.pi * freq[0] * startSample[i]/samplesPerSec)
+            answerDemod['AQ' + str(i)] = ( + ansI * np.sin(2 * np.pi * freq[0] * startSample[i]/samplesPerSec)
                                       + ansQ * np.cos(2 * np.pi * freq[0] * startSample[i]/samplesPerSec) )
                 
         for i in (np.arange(NdemodB) + NdemodA):
             if average:
                 data[i] = np.mean(data[i], axis=0)
-                
             ansI = 2*np.mean(data[i]*cosesB[:samplesPerBlock[i]], axis=meanAxis)
             ansQ = 2*np.mean(data[i]*sinesB[:samplesPerBlock[i]], axis=meanAxis)
-            answer['BI' + str(i-NdemodA)] = ( + ansI * np.cos(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec)
+            answerDemod['BI' + str(i-NdemodA)] = ( + ansI * np.cos(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec)
                                               - ansQ * np.sin(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec) )
-            answer['BQ' + str(i-NdemodA)] = ( + ansI * np.sin(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec)
+            answerDemod['BQ' + str(i-NdemodA)] = ( + ansI * np.sin(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec)
                                               + ansQ * np.cos(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec) )
-          
+        
+        for i in (np.arange(NtraceA) + NdemodB + NdemodA):
+            if average:
+                answerTrace['A' + str(i-NdemodA-NdemodB)][:samplesPerDemod[i]] = np.mean(data[i], axis=0)
+            else:
+                answerTrace['A' + str(i-NdemodA-NdemodB)][:,:samplesPerDemod[i]] = data[i]
+             
+        for i in (np.arange(NtraceB) + NtraceA + NdemodB + NdemodA):
+            if average:
+                answerTrace['B' + str(i-NdemodA-NdemodB-NtraceA)][:samplesPerDemod[i]] = np.mean(data[i], axis=0)
+            else:
+                answerTrace['B' + str(i-NdemodA-NdemodB-NtraceA)][:,:samplesPerDemod[i]] = data[i]
+            
         print time.clock() - start
 
-        return answer
+        return answerDemod, answerTrace
 
     def get_traces(self, timeaftertrig, recordsPerCapture,
                    recordsPerBuffer, average):

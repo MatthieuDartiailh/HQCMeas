@@ -16,7 +16,7 @@ from hqc_meas.tasks.api import InstrumentTask
 
 class DemodAlazarTask(InstrumentTask):
     """ Get the raw or averaged quadratures of the signal.
-
+        Can also get raw or averaged traces of the signal.
     """
     freq = Str('40').tag(pref=True)
     
@@ -25,12 +25,20 @@ class DemodAlazarTask(InstrumentTask):
     timeaftertrig = Str('0').tag(pref=True)
     
     timeaftertrigB = Str('0').tag(pref=True)
+ 
+    tracetimeaftertrig = Str('0').tag(pref=True)
+    
+    tracetimeaftertrigB = Str('0').tag(pref=True)
     
     duration = Str('1000').tag(pref=True)
     
     durationB = Str('0').tag(pref=True)
+    
+    traceduration = Str('0').tag(pref=True)
+    
+    tracedurationB = Str('0').tag(pref=True)
 
-    tracesbuffer = Str('100').tag(pref=True)
+    tracesbuffer = Str('20').tag(pref=True)
 
     tracesnumber = Str('1000').tag(pref=True)
 
@@ -38,7 +46,7 @@ class DemodAlazarTask(InstrumentTask):
 
     driver_list = ['Alazar935x']
 
-    task_database_entries = set_default({'Demod': {}})
+    task_database_entries = set_default({'Demod': {}, 'Trace': {}})
 
     def check(self, *args, **kwargs):
         """
@@ -57,37 +65,31 @@ class DemodAlazarTask(InstrumentTask):
             traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                 cleandoc('''At least 1000 traces must be recorded. Please take real measurements and not noisy craps.''')
 
-        startaftertrig = [self.format_and_eval_string(elem) for elem in self.timeaftertrig.split(',')]
+        time = [self.format_and_eval_string(elem) for elem in self.timeaftertrig.split(',')]
         duration = [self.format_and_eval_string(elem) for elem in self.duration.split(',')]
-        startaftertrigB = [self.format_and_eval_string(elem) for elem in self.timeaftertrigB.split(',')]
+        timeB = [self.format_and_eval_string(elem) for elem in self.timeaftertrigB.split(',')]
         durationB = [self.format_and_eval_string(elem) for elem in self.durationB.split(',')]
-        
-        if len(startaftertrig) != len(duration):
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
-                cleandoc('''An equal number of "Start time after trig" and "Duration" should be given for channel A.''')
-        else :
-            for st, dur in zip(startaftertrig, duration):
-                if not (st >= 0 and dur >= 0) :
-                       test = False
-                       traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
-                           cleandoc('''Both "Start time after trig" and "Duration" must be >= 0 on channel A.''')
-                           
-        if len(startaftertrigB) != len(durationB):
-            test = False
-            traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
-                cleandoc('''An equal number of "Start time after trig" and "Duration" should be given for channel B.''')
-        else :
-            for st, dur in zip(startaftertrigB, durationB):
-                if not (st >= 0 and dur >= 0) :
-                       test = False
-                       traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
-                           cleandoc('''Both "Start time after trig" and "Duration" must be >= 0 on channel B.''')
+        tracetime = [self.format_and_eval_string(elem) for elem in self.tracetimeaftertrig.split(',')]
+        traceduration = [self.format_and_eval_string(elem) for elem in self.traceduration.split(',')]
+        tracetimeB = [self.format_and_eval_string(elem) for elem in self.tracetimeaftertrigB.split(',')]
+        tracedurationB = [self.format_and_eval_string(elem) for elem in self.tracedurationB.split(',')]
+   
+        for t, d in ((time,duration), (timeB,durationB), (tracetime,traceduration), (tracetimeB,tracedurationB)):
+            if len(t) != len(d):
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                    cleandoc('''An equal number of "Start time after trig" and "Duration" should be given.''')
+            else :
+                for tt, dd in zip(t, d):
+                    if not (tt >= 0 and dd >= 0) :
+                           test = False
+                           traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                               cleandoc('''Both "Start time after trig" and "Duration" must be >= 0.''')
 
-        if ((0 in duration) and (0 in durationB)):
+        if ((0 in duration) and (0 in durationB) and (0 in traceduration) and (0 in tracedurationB)):
             test = False
             traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
-                           cleandoc('''You cannot disable both channel A and channel B. What would you measure stupid ?''')
+                           cleandoc('''All measurements are disabled.''')
 
         return test, traceback
 
@@ -105,45 +107,50 @@ class DemodAlazarTask(InstrumentTask):
         recordsPerCapture = self.format_and_eval_string(self.tracesnumber)
         recordsPerBuffer = int(self.format_and_eval_string(self.tracesbuffer))
   
-        startaftertrigA = []
-        for elem in self.timeaftertrig.split(','):
-            startaftertrigA.append(self.format_and_eval_string(elem)*10.0**-9)
-        startaftertrigB = []
-        for elem in self.timeaftertrigB.split(','):
-            startaftertrigB.append(self.format_and_eval_string(elem)*10.0**-9)
-        durationA = []
-        for elem in self.duration.split(','):
-            durationA.append(self.format_and_eval_string(elem)*10.0**-9)
-        durationB = []
-        for elem in self.durationB.split(','):
-            durationB.append(self.format_and_eval_string(elem)*10.0**-9)
-    
+        timeA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrig.split(',')]
+        durationA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.duration.split(',')]
+        timeB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrigB.split(',')]
+        durationB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.durationB.split(',')]
+        tracetimeA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracetimeaftertrig.split(',')]
+        tracedurationA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.traceduration.split(',')]
+        tracetimeB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracetimeaftertrigB.split(',')]
+        tracedurationB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracedurationB.split(',')]
+
+        NdemodA = len(durationA)
         if 0 in durationA:
             NdemodA = 0
-            NdemodB = len(durationB)
-            duration = durationB
-            startaftertrig = startaftertrigB
-        elif 0 in durationB:
+            timeA = []
+            durationA = []
+        NdemodB = len(durationB)
+        if 0 in durationB:
             NdemodB = 0
-            NdemodA = len(durationA)
-            duration = durationA
-            startaftertrig = startaftertrigA
-        else:
-            NdemodA = len(durationA)
-            NdemodB = len(durationB)
-            duration = durationA + durationB
-            startaftertrig = startaftertrigA + startaftertrigB
+            timeB = []
+            durationB = []
+        NtraceA = len(tracedurationA)
+        if 0 in tracedurationA:
+            NtraceA = 0
+            tracetimeA = []
+            tracedurationA = []
+        NtraceB = len(tracedurationB)
+        if 0 in tracedurationB:
+            NtraceB = 0
+            tracetimeB = []
+            tracedurationB = []
+            
+        startaftertrig = timeA + timeB + tracetimeA + tracetimeB
+        duration = durationA + durationB + tracedurationA + tracedurationB
 
         freqA = self.format_and_eval_string(self.freq)*10.0**6
         freqB = self.format_and_eval_string(self.freqB)*10.0**6
         freq = [freqA] * NdemodA + [freqB] * NdemodB
         
-        answer = self.driver.get_demod(startaftertrig, duration,
+        answerDemod, answerTrace = self.driver.get_demod(startaftertrig, duration,
                                        recordsPerCapture, recordsPerBuffer,
                                        freq, self.average,
-                                       NdemodA, NdemodB)
-        
-        self.write_in_database('Demod', answer)
+                                       NdemodA, NdemodB, NtraceA, NtraceB)
+                                              
+        self.write_in_database('Demod', answerDemod)
+        self.write_in_database('Trace', answerTrace)
 
 
 class TracesAlazarTask(InstrumentTask):
