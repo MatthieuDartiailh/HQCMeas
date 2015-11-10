@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #==============================================================================
 # module : save_views.py
-# author : Matthieu Dartiailh
+# author : Matthieu Dartiailh & Sébastien Jezouin
 # license : MIT license
 #==============================================================================
 """
@@ -9,8 +9,9 @@
 from enaml.layout.api import hbox, align, spacer, vbox, grid
 from enaml.widgets.api import (PushButton, Container, Label, Field, FileDialog,
                                 GroupBox, ObjectCombo, Dialog, MultilineField,
-                                Form)
+                                Form, CheckBox)
 from inspect import cleandoc
+from textwrap import fill
 
 from hqc_meas.tasks.tools.pair_editor import PairEditor
 from hqc_meas.tasks.tools.string_evaluation import (EVALUATER_TOOLTIP,
@@ -197,6 +198,83 @@ enamldef SaveFileView(GroupBox):
         ed.model << task
         ed.iterable_name = 'saved_values'
 
+enamldef SaveFileHDF5View(GroupBox):
+    """
+    """
+    attr task
+    attr mapping
+    title << task.task_name
+    constraints = [vbox(file_cont, ed)]
+
+    Container: file_cont:
+
+        hug_height = 'strong'
+        enabled = True
+
+        GroupBox: folder:
+
+            title = 'Directory'
+            constraints = [hbox(path, explore),
+                            align('v_center', path, explore)]
+
+            QtLineCompleter: path:
+                text := task.folder
+                entries_updater << task.accessible_database_entries
+                tool_tip = FORMATTER_TOOLTIP
+            PushButton: explore:
+                text = 'E'
+                hug_width = 'strong'
+                clicked ::
+                    path = FileDialog(mode = 'directory',
+                                    title = 'Select a default path',
+                                    ).exec_()
+                    if path:
+                        task.folder = path
+
+        GroupBox: file:
+
+            title = 'File'
+            constraints = [hbox(name, header,
+                                grid([compression_lab, dtype_lab, lines_lab],
+                                     [compression_val, dtype_val, lines_val]) ),
+                            align('v_center', name, header)]
+
+            QtLineCompleter: name:
+                text := task.filename
+                entries_updater << task.accessible_database_entries
+                tool_tip = FORMATTER_TOOLTIP
+            PushButton: header:
+                text = 'Header'
+                hug_width = 'strong'
+                clicked ::
+                    dial = HeaderDialog(header = task.header, model = task)
+                    if dial.exec_():
+                        task.header = dial.header
+            Label: compression_lab:
+                text = 'Compression'
+            CheckBox: compression_val:
+                checked := task.compression
+                tool_tip = fill(cleandoc('''Applies a GZIP algorithm to the data.
+                                            This is totally transparent for the user.'''))
+            Label: dtype_lab:
+                text = 'Data format'
+            ObjectCombo: dtype_val:
+                items << list(task.get_member('datatype').items)
+                selected := task.datatype
+            Label: lines_lab:
+                text = 'Approximate number of calls'
+            Field: lines_val:
+                text := task.callsEstimation
+                tool_tip = fill(cleandoc('''Estimate how many times this task will be called
+                                            during the measure. An order of magnitude estimate is
+                                            enough (one or one thousand ?). This helps h5py
+                                            to figure out an appropriate chunk size.'''))
+
+    PairEditor(SavedValueView): ed:
+        ed.title = 'Label : Value'
+        ed.model << task
+        ed.iterable_name = 'saved_values'
+
 enamldef SaveArrayView(GroupBox):
     attr task
     attr mapping
@@ -259,4 +337,5 @@ enamldef SaveArrayView(GroupBox):
 
 TASK_VIEW_MAPPING = {'SaveTask' : SaveView,
                      'SaveFileTask' : SaveFileView,
+                     'SaveFileHDF5Task' : SaveFileHDF5View,
                      'SaveArrayTask' : SaveArrayView}

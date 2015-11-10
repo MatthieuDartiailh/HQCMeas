@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
 # module : save_tasks.py
-# author : Matthieu Dartiailh
+# author : Matthieu Dartiailh & Sébastien Jezouin
 # license : MIT license
 # =============================================================================
 """
@@ -11,6 +11,7 @@ from atom.api import (Tuple, ContainerList, Str, Enum, Value,
 import os
 import errno
 import numpy
+import h5py
 import logging
 from inspect import cleandoc
 
@@ -311,12 +312,20 @@ class SaveFileTask(SimpleTask):
             values.append(value)
             if i in self.array_values:
                 lengths.add(value.shape[0])
+                if len(value.shape) > 1:
+                    log = logging.getLogger()
+                    mes = cleandoc('''In {}, impossible to save arrays exceeding
+                                    one dimension. Save file in HDF5 format. 
+                                    '''.format(self.task_name))
+                    log.error(mes)
+                    self.root_task.should_stop.set()
 
         if lengths:
             if len(lengths) > 1:
                 log = logging.getLogger()
                 mes = cleandoc('''In {}, impossible to save simultaneously
-                                arrays of different sizes
+                                arrays of different sizes.
+                                Save file in HDF5 format. 
                                 '''.format(self.task_name))
                 log.error(mes)
                 self.root_task.should_stop.set()
@@ -395,6 +404,199 @@ class SaveFileTask(SimpleTask):
                     'Failed to evaluate entry {}: {}'.format(s[0], e)
                 test = False
 
+        return test, traceback
+        
+class _HDF5File(h5py.File):
+    """ 
+        Resize the datasets before closing the file
+        Sets the compression with a boolean
+    """
+
+    def close(self):
+        for dataset in self.keys():
+            oldshape = self[dataset].shape
+            newshape = (self.attrs['countCalls'], ) + oldshape[1:]
+            self[dataset].resize(newshape)
+        super(_HDF5File, self).close()
+
+    def create_dataset(self, name, shape, maximumshape, datatype, compress):
+        f = super(_HDF5File, self)
+        if compress:
+            f.create_dataset(name, shape, maxshape=maximumshape, dtype=datatype, compression='gzip')
+        else:
+            f.create_dataset(name, shape, maxshape=maximumshape, dtype=datatype)
+            
+
+class SaveFileHDF5Task(SimpleTask):
+    """ Save the specified entries in a HDF5 file.
+
+    Wait for any parallel operation before execution.
+
+    """
+    #: Folder in which to save the data.
+    folder = Unicode('{default_path}').tag(pref=True)
+
+    #: Name of the file in which to write the data.
+    filename = Unicode().tag(pref=True)
+
+    #: Currently opened file object. (File mode)
+    file_object = Value()
+
+    #: Header to write at the top of the file.
+    header = Str().tag(pref=True)
+
+    #: List of values to be saved store as (label, value).
+    saved_values = ContainerList(Tuple()).tag(pref=True)
+    
+    #: data type (float16, float32, etc.)
+    datatype = Enum('float16', 'float32', 'float64').tag(pref=True)
+    
+    #: gzip compression of the data in the HDF5 file
+    compression = Bool(False).tag(pref=True)
+
+    #: estimation of the number of calls of this task during the measure. This helps h5py to chunk the file appropriately
+    callsEstimation = Str('1').tag(pref=True)
+
+    #: Flag indicating whether or not initialisation has been performed.
+    initialized = Bool(False)
+
+    task_database_entries = set_default({'file': None})
+
+    wait = set_default({'activated': True})  # Wait on all pools by default.
+
+    def perform(self):
+        """ Collect all data and write them to file.
+
+        """
+
+        callsEstimation = self.format_and_eval_string(self.callsEstimation)        
+        
+        # Initialisation.
+        if not self.initialized:
+
+            full_folder_path = self.format_string(self.folder)
+            filename = self.format_string(self.filename)
+            full_path = os.path.join(full_folder_path, filename)
+            try:
+                self.file_object = _HDF5File(full_path, 'w')
+            except IOError as e:
+                log = logging.getLogger()
+                mes = cleandoc('''In {}, failed to open the specified
+                                file {}'''.format(self.task_name, e))
+                log.error(mes)
+                self.root_task.should_stop.set()
+
+            self.root_task.files[full_path] = self.file_object
+
+            f = self.file_object
+            for s in self.saved_values:
+                value = self.format_and_eval_string(s[1])
+                if isinstance(value, numpy.ndarray):
+                    names = value.dtype.names
+                    if names:
+                        for m in names:
+                            f.create_dataset(s[0] + '_' + m, 
+                                             (callsEstimation, ) + value.shape,
+                                             (None, ) + value.shape,
+                                             self.format_string(self.datatype),
+                                             self.compression )
+                    else:
+                        f.create_dataset(s[0], 
+                                         (callsEstimation, ) + value.shape,
+                                         (None, ) + value.shape,
+                                         self.format_string(self.datatype),
+                                         self.compression )
+                else:
+                    f.create_dataset(s[0], (callsEstimation, ), (None, ), self.format_string(self.datatype), self.compression)
+            f.attrs['header'] = self.format_string(self.header)
+            f.attrs['countCalls'] = 0
+            f.flush()
+
+            self.initialized = True
+        
+        f = self.file_object
+        countCalls = f.attrs['countCalls']
+        
+        if not (countCalls % callsEstimation):
+            for dataset in f.keys():
+                oldshape = f[dataset].shape
+                newshape = (oldshape[0] + callsEstimation, ) + oldshape[1:]
+                f[dataset].resize(newshape)
+        
+        for s in self.saved_values:
+            value = self.format_and_eval_string(s[1])
+            if isinstance(value, numpy.ndarray):
+                names = value.dtype.names
+                if names:
+                    for m in names:
+                        f[s[0] + '_' + m][countCalls] = value[m]
+                else:
+                    f[s[0]][countCalls] = value
+            else:
+                f[s[0]][countCalls] = value
+                
+        f.attrs['countCalls'] = countCalls + 1
+        f.flush()
+
+    def check(self, *args, **kwargs):
+        """
+        """
+        err_path = self.task_path + '/' + self.task_name
+        traceback = {}
+        try:
+            full_folder_path = self.format_string(self.folder)
+        except Exception as e:
+            mess = 'Failed to format the folder path: {}'
+            traceback[err_path] = mess.format(e)
+            return False, traceback
+
+        try:
+            filename = self.format_string(self.filename)
+        except Exception as e:
+            mess = 'Failed to format the filename: {}'
+            traceback[err_path] = mess.format(e)
+            return False, traceback
+
+        full_path = os.path.join(full_folder_path, filename)
+
+        overwrite = False
+        if os.path.isfile(full_path):
+            overwrite = True
+            traceback[err_path + '-file'] = \
+                cleandoc('''File already exists, running the measure will
+                override it.''')
+
+        try:
+            f = open(full_path, 'ab')
+            f.close()
+            if not overwrite:
+                os.remove(full_path)
+        except Exception as e:
+            mess = 'Failed to open the specified file : {}'.format(e)
+            traceback[err_path] = mess.format(e)
+            return False, traceback
+
+        try:
+            self.format_string(self.header)
+        except Exception as e:
+            mess = 'Failed to format the header: {}'
+            traceback[err_path] = mess.format(e)
+            return False, traceback
+        
+        values_name = [s[0] for s in self.saved_values]
+        if len(values_name) != len(set(values_name)):
+            traceback[err_path] = \
+                    cleandoc('''All labels must be different.''')
+            return False, traceback
+            
+        test = True
+        for i, s in enumerate(self.saved_values):
+            try:
+                self.format_and_eval_string(s[1])
+            except Exception as e:
+                traceback[err_path + '-entry' + str(i)] = \
+                    'Failed to evaluate entry {}: {}'.format(s[0], e)
+                test = False            
         return test, traceback
 
 
@@ -552,4 +754,4 @@ class SaveArrayTask(SimpleTask):
 
         return True, traceback
 
-KNOWN_PY_TASKS = [SaveTask, SaveFileTask, SaveArrayTask]
+KNOWN_PY_TASKS = [SaveTask, SaveFileTask, SaveFileHDF5Task, SaveArrayTask]
