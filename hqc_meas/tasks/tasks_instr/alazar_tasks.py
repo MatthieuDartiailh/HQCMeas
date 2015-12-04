@@ -39,11 +39,16 @@ class DemodAlazarTask(InstrumentTask):
     tracedurationB = Str('0').tag(pref=True)
 
     tracesbuffer = Str('20').tag(pref=True)
+	
+	samplingtime = Str('1000').tag(pref=True)
+    
+    samplingtimeB = Str('0').tag(pref=True)
 
     tracesnumber = Str('1000').tag(pref=True)
 
     average = Bool(True).tag(pref=True)
 
+    IQtracemode = Bool(False).tag(pref=True)
     driver_list = ['Alazar935x']
 
     task_database_entries = set_default({'Demod': {}, 'Trace': {}})
@@ -73,6 +78,13 @@ class DemodAlazarTask(InstrumentTask):
         traceduration = [self.format_and_eval_string(elem) for elem in self.traceduration.split(',')]
         tracetimeB = [self.format_and_eval_string(elem) for elem in self.tracetimeaftertrigB.split(',')]
         tracedurationB = [self.format_and_eval_string(elem) for elem in self.tracedurationB.split(',')]
+        tablesamplingtime = [self.format_and_eval_string(elem) for elem in self.samplingtime.split(',')]
+        tablesamplingtimeB = [self.format_and_eval_string(elem) for elem in self.samplingtimeB.split(',')]
+   
+        if not (tablesamplingtime[0] >= 0 and tablesamplingtimeB[0] >= 0):
+             test = False
+             traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                    cleandoc('''The sampling time should be positive.''')
    
         for t, d in ((time,duration), (timeB,durationB), (tracetime,traceduration), (tracetimeB,tracedurationB)):
             if len(t) != len(d):
@@ -91,6 +103,23 @@ class DemodAlazarTask(InstrumentTask):
             traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                            cleandoc('''All measurements are disabled.''')
 
+        if self.IQtracemode:
+            if (len(time) != 1) or (len(timeB) != 1):
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''In IQtrace mode, a single time step and initial time is required, not a list of them''')
+            elif self.format_and_eval_string(tablesamplingtime[0]) / 1000.0 * self.format_and_eval_string(self.freq) % 1.0 != 0.0:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''Please modify the IQtrace time step so that 
+                            it corresponds to an integer number of periods
+                            in the demodulation.''')
+            elif self.format_and_eval_string(tablesamplingtimeB[0]) / 1000.0 * self.format_and_eval_string(self.freqB) % 1.0 != 0.0:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''Please modify the IQtrace time step so that 
+                            it corresponds to an integer number of periods
+                            in the demodulation.''')
         return test, traceback
 
     def perform(self):
@@ -106,7 +135,17 @@ class DemodAlazarTask(InstrumentTask):
 
         recordsPerCapture = self.format_and_eval_string(self.tracesnumber)
         recordsPerBuffer = int(self.format_and_eval_string(self.tracesbuffer))
-  
+
+        if self.IQtracemode:
+            timeA = \
+                np.arange(self.format_and_eval_string(self.timeaftertrig)*10.0**-9,
+                          self.format_and_eval_string(self.duration)*10.0**-9,
+                          self.format_and_eval_string(self.samplingtime)*10.0**-9).tolist()
+            timeB = \
+                np.arange(self.format_and_eval_string(self.timeaftertrigB)*10.0**-9,
+                          self.format_and_eval_string(self.durationB)*10.0**-9,
+                          self.format_and_eval_string(self.samplingtime)*10.0**-9).tolist()
+        else:
         timeA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrig.split(',')]
         durationA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.duration.split(',')]
         timeB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrigB.split(',')]
