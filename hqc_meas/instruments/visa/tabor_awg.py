@@ -139,13 +139,6 @@ class TaborAWG(VisaInstrument):
 
         """
         numbyte = len(waveform)
-        self.write('MARK 1')
-        self.write('MARK:STAT:OFF')
-        self.write('MARK:SOUR:USER')
-        self.write('MARK 2')
-        self.write('MARK:STAT:ON')
-        self.write('MARK:SOUR:USER')
-
         self.write('INST {}'.format(ch_id))
         self.write('TRAC:MODE SING')
         numApresDiese = len('{}'.format(numbyte))
@@ -200,8 +193,8 @@ class TaborAWG(VisaInstrument):
     @secure_communication()
     def clock_source(self):
         """clock source getter method
-        """
-
+        """       
+        
         cle = self.ask("FREQ:RAST:SOUR?")
         if cle is not None:
             return cle
@@ -264,14 +257,6 @@ class TaborAWG(VisaInstrument):
         """Run state setter method
         """
 
-#    @instrument_property
-#    @secure_communication()
-#    def is_ready(self):
-#        """Returns 1 iff the buffer of communications is empty
-#            (previous operations done)
-#        """
-#        return self.ask("*OPC?")
-
 
     @instrument_property
     @secure_communication()
@@ -287,7 +272,7 @@ class TaborAWG(VisaInstrument):
                 return 'Gated'
             else:
                 return 'Triggered'
-
+            
         else:
             raise InstrIOError
 
