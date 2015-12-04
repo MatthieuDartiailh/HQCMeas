@@ -40,7 +40,7 @@ class DemodAlazarTask(InstrumentTask):
 
     tracesbuffer = Str('20').tag(pref=True)
 	
-	samplingtime = Str('1000').tag(pref=True)
+    samplingtime = Str('1000').tag(pref=True)
     
     samplingtimeB = Str('0').tag(pref=True)
 
@@ -108,13 +108,13 @@ class DemodAlazarTask(InstrumentTask):
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                 cleandoc('''In IQtrace mode, a single time step and initial time is required, not a list of them''')
-            elif self.format_and_eval_string(tablesamplingtime[0]) / 1000.0 * self.format_and_eval_string(self.freq) % 1.0 != 0.0:
+            elif tablesamplingtime[0] / 1000.0 * float(self.format_and_eval_string(self.freq)) % 1.0 != 0.0:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                 cleandoc('''Please modify the IQtrace time step so that 
                             it corresponds to an integer number of periods
                             in the demodulation.''')
-            elif self.format_and_eval_string(tablesamplingtimeB[0]) / 1000.0 * self.format_and_eval_string(self.freqB) % 1.0 != 0.0:
+            elif tablesamplingtimeB[0] / 1000.0 * float(self.format_and_eval_string(self.freqB)) % 1.0 != 0.0:
                 test = False
                 traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                 cleandoc('''Please modify the IQtrace time step so that 
@@ -146,14 +146,14 @@ class DemodAlazarTask(InstrumentTask):
                           self.format_and_eval_string(self.durationB)*10.0**-9,
                           self.format_and_eval_string(self.samplingtime)*10.0**-9).tolist()
         else:
-        timeA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrig.split(',')]
-        durationA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.duration.split(',')]
-        timeB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrigB.split(',')]
-        durationB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.durationB.split(',')]
-        tracetimeA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracetimeaftertrig.split(',')]
-        tracedurationA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.traceduration.split(',')]
-        tracetimeB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracetimeaftertrigB.split(',')]
-        tracedurationB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracedurationB.split(',')]
+            timeA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrig.split(',')]
+            durationA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.duration.split(',')]
+            timeB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.timeaftertrigB.split(',')]
+            durationB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.durationB.split(',')]
+            tracetimeA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracetimeaftertrig.split(',')]
+            tracedurationA = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.traceduration.split(',')]
+            tracetimeB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracetimeaftertrigB.split(',')]
+            tracedurationB = [self.format_and_eval_string(elem)*10.0**-9 for elem in self.tracedurationB.split(',')]
 
         NdemodA = len(durationA)
         if 0 in durationA:
