@@ -29,12 +29,18 @@ class DemodAlazarTask(InstrumentTask):
     duration = Str('1000').tag(pref=True)
     
     durationB = Str('0').tag(pref=True)
+    
+    samplingtime = Str('1000').tag(pref=True)
+    
+    samplingtimeB = Str('0').tag(pref=True)
 
     tracesbuffer = Str('100').tag(pref=True)
 
     tracesnumber = Str('1000').tag(pref=True)
 
     average = Bool(True).tag(pref=True)
+
+    IQtracemode = Bool(False).tag(pref=True)
 
     driver_list = ['Alazar935x']
 
@@ -59,6 +65,8 @@ class DemodAlazarTask(InstrumentTask):
 
         startaftertrig = [self.format_and_eval_string(elem) for elem in self.timeaftertrig.split(',')]
         duration = [self.format_and_eval_string(elem) for elem in self.duration.split(',')]
+        tablesamplingtime = [self.format_and_eval_string(elem) for elem in self.samplingtime.split(',')]
+        tablesamplingtimeB = [self.format_and_eval_string(elem) for elem in self.samplingtimeB.split(',')]
         startaftertrigB = [self.format_and_eval_string(elem) for elem in self.timeaftertrigB.split(',')]
         durationB = [self.format_and_eval_string(elem) for elem in self.durationB.split(',')]
         
@@ -67,19 +75,19 @@ class DemodAlazarTask(InstrumentTask):
             traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                 cleandoc('''An equal number of "Start time after trig" and "Duration" should be given for channel A.''')
         else :
-            for st, dur in zip(startaftertrig, duration):
-                if not (st >= 0 and dur >= 0) :
+            for st, dur, tot in zip(startaftertrig, duration, tablesamplingtime):
+                if not (st >= 0 and dur >= 0 and tot >= 0) :
                        test = False
                        traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
-                           cleandoc('''Both "Start time after trig" and "Duration" must be >= 0 on channel A.''')
+                           cleandoc('''Both "Start time after trig" and "Durations" must be >= 0 on channel A.''')
                            
         if len(startaftertrigB) != len(durationB):
             test = False
             traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                 cleandoc('''An equal number of "Start time after trig" and "Duration" should be given for channel B.''')
         else :
-            for st, dur in zip(startaftertrigB, durationB):
-                if not (st >= 0 and dur >= 0) :
+            for st, dur, tot in zip(startaftertrigB, durationB, tablesamplingtimeB):
+                if not (st >= 0 and dur >= 0 and tot >= 0) :
                        test = False
                        traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                            cleandoc('''Both "Start time after trig" and "Duration" must be >= 0 on channel B.''')
@@ -89,6 +97,24 @@ class DemodAlazarTask(InstrumentTask):
             traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
                            cleandoc('''You cannot disable both channel A and channel B. What would you measure stupid ?''')
 
+        if self.IQtracemode:
+            if (len(startaftertrig) != 1) or (len(startaftertrigB) != 1):
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''In IQtrace mode, a single time step and initial time is required, not a list of them''')
+            elif self.format_and_eval_string(tablesamplingtime[0]) / 1000.0 * self.format_and_eval_string(self.freq) % 1.0 != 0.0:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''Please modify the IQtrace time step so that 
+                            it corresponds to an integer number of periods
+                            in the demodulation.''')
+            elif self.format_and_eval_string(tablesamplingtimeB[0]) / 1000.0 * self.format_and_eval_string(self.freqB) % 1.0 != 0.0:
+                test = False
+                traceback[self.task_path + '/' + self.task_name + '-get_demod'] = \
+                cleandoc('''Please modify the IQtrace time step so that 
+                            it corresponds to an integer number of periods
+                            in the demodulation.''')
+                            
         return test, traceback
 
     def perform(self):
@@ -104,19 +130,29 @@ class DemodAlazarTask(InstrumentTask):
 
         recordsPerCapture = self.format_and_eval_string(self.tracesnumber)
         recordsPerBuffer = int(self.format_and_eval_string(self.tracesbuffer))
-  
-        startaftertrigA = []
-        for elem in self.timeaftertrig.split(','):
-            startaftertrigA.append(self.format_and_eval_string(elem)*10.0**-9)
-        startaftertrigB = []
-        for elem in self.timeaftertrigB.split(','):
-            startaftertrigB.append(self.format_and_eval_string(elem)*10.0**-9)
-        durationA = []
-        for elem in self.duration.split(','):
-            durationA.append(self.format_and_eval_string(elem)*10.0**-9)
-        durationB = []
-        for elem in self.durationB.split(','):
-            durationB.append(self.format_and_eval_string(elem)*10.0**-9)
+
+        if self.IQtracemode:
+            startaftertrigA = \
+                np.arange(self.format_and_eval_string(self.timeaftertrig)*10.0**-9,
+                          self.format_and_eval_string(self.duration)*10.0**-9,
+                          self.format_and_eval_string(self.samplingtime)*10.0**-9).tolist()
+            startaftertrigB = \
+                np.arange(self.format_and_eval_string(self.timeaftertrigB)*10.0**-9,
+                          self.format_and_eval_string(self.durationB)*10.0**-9,
+                          self.format_and_eval_string(self.samplingtime)*10.0**-9).tolist()
+        else:
+            startaftertrigA = []
+            for elem in self.timeaftertrig.split(','):
+                startaftertrigA.append(self.format_and_eval_string(elem)*10.0**-9)
+            startaftertrigB = []
+            for elem in self.timeaftertrigB.split(','):
+                startaftertrigB.append(self.format_and_eval_string(elem)*10.0**-9)
+            durationA = []
+            for elem in self.duration.split(','):
+                durationA.append(self.format_and_eval_string(elem)*10.0**-9)
+            durationB = []
+            for elem in self.durationB.split(','):
+                durationB.append(self.format_and_eval_string(elem)*10.0**-9)
     
         if 0 in durationA:
             NdemodA = 0

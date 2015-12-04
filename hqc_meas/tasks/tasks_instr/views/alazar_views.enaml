@@ -23,8 +23,8 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
 #    attr in_loop : bool = False
     title << task.task_name
     constraints = [vbox(
-                    grid([sel_driv, sel_prof, traces, buffer, average],
-                         [sel_val, prof_val, traces_val, buffer_val, average_val]),
+                    grid([sel_driv, sel_prof, traces, buffer, average, IQtracemode],
+                         [sel_val, prof_val, traces_val, buffer_val, average_val, IQtracemode_val]),
                     hbox(chanA,chanB)),
                     traces_val.width == buffer_val.width,
                     chanA.width == chanB.width]
@@ -56,11 +56,15 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
     CheckBox: average_val:
         checked := task.average
 
+    Label: IQtracemode:
+        text = 'IQ trace mode'
+    CheckBox: IQtracemode_val:
+        checked := task.IQtracemode
 
     GroupBox: chanA:
         title = 'Channel A demodulation settings'
-        constraints = [grid([after, duration, dfreq],
-                            [after_val, duration_val, dfreq_val]),
+        constraints = [grid([after, duration, dfreq, samplingtime],
+                            [after_val, duration_val, dfreq_val, samplingtime_val]),
                        dfreq_val.width == after_val.width,
                        after_val.width == duration_val.width]                
         Label: dfreq:
@@ -73,7 +77,8 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         Field: after_val:
             text := task.timeaftertrig
             tool_tip = fill(cleandoc('''Separate the start times with commas.
-                                        For example : 0,500,1500'''))
+                                        For example : 0,500,1500
+                                        In IQtrace mode, give the first time only'''))
         
         Label: duration:
             text = 'Duration (ns)'
@@ -82,10 +87,16 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
             tool_tip = fill(cleandoc(
                             '''Separate the durations with commas. Acquisition of data by
                             this channel is disabled if one duration is set to zero.'''))
+        Label: samplingtime:
+            text = 'Sampling time (ns)'
+        Field: samplingtime_val:
+            text := task.samplingtime
+            tool_tip = fill(cleandoc(
+                            '''Requested only in IQtrace mode'''))
     GroupBox: chanB:
         title = 'Channel B demodulation settings'  
-        constraints = [grid([afterB, durationB, dfreqB],
-                            [afterB_val, durationB_val, dfreqB_val]),
+        constraints = [grid([afterB, durationB, dfreqB, samplingtimeB],
+                            [afterB_val, durationB_val, dfreqB_val, samplingtimeB_val]),
                        dfreqB_val.width == afterB_val.width,
                        afterB_val.width == durationB_val.width]                 
         Label: dfreqB:
@@ -98,8 +109,8 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
         Field: afterB_val:
             text := task.timeaftertrigB
             tool_tip = fill(cleandoc('''Separate the start times with commas.
-                                        For example : 0,500,1500'''))
-        
+                                        For example : 0,500,1500
+                                        In IQtrace mode, give the first time only'''))
         Label: durationB:
             text = 'Duration (ns)'
         Field: durationB_val:
@@ -107,7 +118,12 @@ enamldef DemodAlazarView(BaseInstrumentView): view:
             tool_tip = fill(cleandoc(
                             '''Separate the durations with commas. Acquisition of data by
                             this channel is disabled if one duration is set to zero. '''))
-
+        Label: samplingtimeB:
+            text = 'Sampling time (ns)'
+        Field: samplingtimeB_val:
+            text := task.samplingtimeB
+            tool_tip = fill(cleandoc(
+                            '''Requested only in IQtrace mode'''))
 
 enamldef TracesAlazarView(BaseInstrumentView): view:
 
