@@ -330,11 +330,21 @@ class Alazar935x(DllInstrument):
             demB = np.arange(max(samplesPerBlock[NdemodA:]))
             cosesB = np.cos(2. * math.pi * demB * freq[-1] / samplesPerSec)
             sinesB = np.sin(2. * math.pi * demB * freq[-1] / samplesPerSec)
+<<<<<<< HEAD
              
         answerType = ( [('AI' + str(i), str(data[0].dtype)) for i in range(NdemodA)]
                      + [('AQ' + str(i), str(data[0].dtype)) for i in range(NdemodA)]
                      + [('BI' + str(i), str(data[0].dtype)) for i in range(NdemodB)]
                      + [('BQ' + str(i), str(data[0].dtype)) for i in range(NdemodB)] )
+=======
+
+        answerType = []
+        for i in range(NdemodA):
+            answerType += [('AI' + str(i), str(data[0].dtype)), ('AQ' + str(i), str(data[0].dtype))]
+        for i in range(NdemodB):
+            answerType += [('BI' + str(i), str(data[0].dtype)), ('BQ' + str(i), str(data[0].dtype))]
+            
+>>>>>>> 92694633c94194d20b0836f9f206ed50f503180d
         answerSize = 1 if average else recordsPerCapture
         answer = np.empty(answerSize, dtype=answerType)
 
@@ -343,14 +353,34 @@ class Alazar935x(DllInstrument):
         for i in np.arange(NdemodA):
             if average:
                 data[i] = np.mean(data[i], axis=0)
+<<<<<<< HEAD
             answer['AI' + str(i)] = 2*np.mean(data[i]*cosesA[:samplesPerBlock[i]], axis=meanAxis)
             answer['AQ' + str(i)] = 2*np.mean(data[i]*sinesA[:samplesPerBlock[i]], axis=meanAxis)
+=======
+                
+            ansI = 2*np.mean(data[i]*cosesA[:samplesPerBlock[i]], axis=meanAxis)
+            ansQ = 2*np.mean(data[i]*sinesA[:samplesPerBlock[i]], axis=meanAxis)
+            answer['AI' + str(i)] = ( + ansI * np.cos(2 * np.pi * freq[0] * startSample[i]/samplesPerSec)
+                                      - ansQ * np.sin(2 * np.pi * freq[0] * startSample[i]/samplesPerSec) )
+            answer['AQ' + str(i)] = ( + ansI * np.sin(2 * np.pi * freq[0] * startSample[i]/samplesPerSec)
+                                      + ansQ * np.cos(2 * np.pi * freq[0] * startSample[i]/samplesPerSec) )
+>>>>>>> 92694633c94194d20b0836f9f206ed50f503180d
                 
         for i in (np.arange(NdemodB) + NdemodA):
             if average:
                 data[i] = np.mean(data[i], axis=0)
+<<<<<<< HEAD
             answer['BI' + str(i-NdemodA)] = 2*np.mean(data[i]*cosesB[:samplesPerBlock[i]], axis=meanAxis)
             answer['BQ' + str(i-NdemodA)] = 2*np.mean(data[i]*sinesB[:samplesPerBlock[i]], axis=meanAxis)
+=======
+                
+            ansI = 2*np.mean(data[i]*cosesB[:samplesPerBlock[i]], axis=meanAxis)
+            ansQ = 2*np.mean(data[i]*sinesB[:samplesPerBlock[i]], axis=meanAxis)
+            answer['BI' + str(i-NdemodA)] = ( + ansI * np.cos(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec)
+                                              - ansQ * np.sin(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec) )
+            answer['BQ' + str(i-NdemodA)] = ( + ansI * np.sin(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec)
+                                              + ansQ * np.cos(2 * np.pi * freq[-1] * startSample[i]/samplesPerSec) )
+>>>>>>> 92694633c94194d20b0836f9f206ed50f503180d
           
         print time.clock() - start
 

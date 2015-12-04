@@ -431,21 +431,26 @@ class AWG(VisaInstrument):
             return channel
 
     @secure_communication()
-    def to_send(self, name, waveform):
+    def to_send(self, name, waveform, initialized):
         """Command to send to the instrument. waveform = string of a bytearray
 
         """
         numbyte = len(waveform)
         looplength = numbyte//2
-        self.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
-        self.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger" .format(name,
-                                                                   looplength))
+        if not initialized:
+            self.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
+            self.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger" .format(name,
+                                                                       looplength))
+            initialized = True
+            
         numApresDiese = len('{}'.format(numbyte))
         header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
                                                         numApresDiese,
                                                         numbyte)
         self.write('{}{}'.format(header, waveform))
         self.write('*WAI')
+        
+        return initialized
 
     @instrument_property
     @secure_communication()
