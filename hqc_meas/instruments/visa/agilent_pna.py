@@ -261,6 +261,23 @@ class AgilentPNAChannel(BaseInstrument):
             raise InstrIOError(cleandoc('''The Pna did not delete all meas
                 for channel {}'''.format(self._channel)))
 
+    @instrument_property
+    @secure_communication()
+    def format_meas(self, meas_name=''):
+        """
+        """
+        if meas_name:
+            self.selected_measure = meas_name
+
+        res = self._pna.ask('CALCulate{}:FORMat?'.format(self._channel))
+
+        if res:
+            return res
+        else:
+            raise InstrIOError(cleandoc('''The Pna did not return a format
+                for the measurement on channel {}'''.format(self._channel)))
+                   
+    @format_meas.setter
     @secure_communication()
     def format_meas(self, meas_format, meas_name=''):
         """
@@ -271,8 +288,7 @@ class AgilentPNAChannel(BaseInstrument):
 
         self._pna.write('CALCulate{}:FORMat {}'.format(self._channel,
                                                        meas_format))
-        res = self._pna.ask('CALCulate{}:FORMat?'.format(self._channel,
-                                                         meas_format))
+        res = self._pna.ask('CALCulate{}:FORMat?'.format(self._channel))
         if meas_name and selected_meas:
             self.selected_measure = selected_meas
         else:

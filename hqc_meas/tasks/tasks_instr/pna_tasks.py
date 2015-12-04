@@ -487,14 +487,25 @@ class PNAGetTraces(InstrumentTask):
 
         measname = channel_driver.selected_measure
         data = channel_driver.sweep_x_axis
-        complexdata = channel_driver.read_raw_data(measname)* \
-                np.exp(2*np.pi*1j*data*channel_driver.electrical_delay)
-        aux = [data, complexdata.real, complexdata.imag,
-                np.absolute(complexdata),
-                np.unwrap(np.angle(complexdata))]
-
-        return np.rec.fromarrays(aux, names=['Freq (GHz)', measname+' real',
+        try:
+            complexdata = channel_driver.read_raw_data(measname)* \
+                    np.exp(2*np.pi*1j*data*channel_driver.electrical_delay)
+            aux = [data, complexdata.real, complexdata.imag,
+                    np.absolute(complexdata),
+                    np.unwrap(np.angle(complexdata))]
+            return np.rec.fromarrays(aux, names=['Freq (GHz)', measname+' real',
                     measname+' imag',  measname+' abs',  measname+' phase' ])
+        except:
+            formateddata = channel_driver.read_formatted_data(measname)
+            aux = [data, formateddata]
+#            raise ValueError(cleandoc('''The trace {} on channel
+#                                      {} cannot be acquired in complex nb
+#                                      format.'''.format(tracenb, channelnb)))
+            return np.rec.fromarrays(aux, 
+                                     names=['Freq (GHz)',
+                                     measname+channel_driver.format_meas])
+
+        
 
     def check(self, *args, **kwargs):
         """
