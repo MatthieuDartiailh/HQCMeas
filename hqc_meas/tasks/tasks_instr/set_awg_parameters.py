@@ -248,13 +248,13 @@ class TektroAWGParasInterface(AWGParasInterface):
                 ch_dr.marker1_delay = de
 
             logical2 = ch.logicals[1]
-            if logical1.parameter1:
+            if logical2.parameter1:
                 low = task.format_and_eval_string(logical2.parameter1)
                 ch_dr.marker2_low_voltage = low
-            if logical1.parameter2:
+            if logical2.parameter2:
                 high = task.format_and_eval_string(logical2.parameter2)
                 ch_dr.marker2_high_voltage = high
-            if logical1.parameter3:
+            if logical2.parameter3:
                 de = task.format_and_eval_string(logical2.parameter3)
                 ch_dr.marker2_delay = de
 

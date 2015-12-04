@@ -195,7 +195,7 @@ class Alazar935x(DllInstrument):
             samplesPerRecord = int(samplesPerTrace)
         else:
             samplesPerRecord = int((samplesPerTrace)/32 + 1)*32
-
+            
         retCode = self._dll.GetChannelInfo(board)()
         bitsPerSample = self._dll.GetChannelInfo(board)[1]
         if retCode != self._dll.ApiSuccess:
