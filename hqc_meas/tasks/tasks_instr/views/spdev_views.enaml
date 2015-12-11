@@ -24,7 +24,7 @@ enamldef DemodSpView(BaseInstrumentView): view:
                     grid([sel_driv, sel_prof, traces, after, duration],
                          [sel_val, prof_val, traces_val, after_val,
                           duration_val]),
-                    hbox(demod1,demod2),
+                    hbox(demod1,demod2)),
                     demod1.width == demod2.width]
 
     Label: sel_driv:
@@ -42,14 +42,14 @@ enamldef DemodSpView(BaseInstrumentView): view:
     Label: traces:
         text = 'Number of traces'
     QtLineCompleter: traces_val:
-        text := task.tracesnumber
+        text := task.records_number
         entries_updater << task.accessible_database_entries
         tool_tip = EVALUATER_TOOLTIP
 
     Label: after:
             text = 'Start time after trigger (ns)'
     QtLineCompleter: after_val:
-        text := task.timeaftertrig
+        text := task.delay
         entries_updater << task.accessible_database_entries
         tool_tip = EVALUATER_TOOLTIP
 
