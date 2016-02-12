@@ -57,11 +57,16 @@ enamldef CompilationWidget(Container): main:
     attr errors = {}
     event outcome
 
-    constraints = [vbox(cont, nb, hbox(dur_lab, dur_val, comp))]
+    attr compiling_template
+
+    constraints = ([vbox(cont, nb, hbox(dur_lab, dur_val, comp))] 
+                   if cont.visible 
+                   else [vbox(nb, hbox(dur_lab, dur_val, comp))])
 
     CheckBox: cont:
         text = 'Use context compilation'
         checked := use_context
+        visible = not compiling_template
 
     Notebook: nb:
         tabs_closable = False
@@ -209,8 +214,7 @@ RIGHT_CONTEXT = \
 
 def _validate_context(workspace):
     context = workspace.state.sequence.context
-    test = context is not None and context.context_class != 'TemplateContext'
-    return WRONG_CONTEXT if not test else RIGHT_CONTEXT
+    return context is not None and context.context_class == 'TemplateContext'
 
 
 enamldef TemplateSaveDialog(Dialog): dial:
@@ -219,10 +223,8 @@ enamldef TemplateSaveDialog(Dialog): dial:
     attr workspace
     attr path
     attr doc = ''
-    attr can_proceed : bool = False
-    event stack_changed
-    stack_changed ::
-        self.can_proceed = sta.stack_items[self.step].valid
+    attr can_proceed : bool << current_stack.valid
+    attr current_stack = sta.stack_items()[0]
 
     alias step : sta.index
 
@@ -234,10 +236,10 @@ enamldef TemplateSaveDialog(Dialog): dial:
         Stack: sta:
 
             StackItem: c_type:
-                attr valid : bool << typ.text == RIGHT_CONTEXT
+                attr valid : bool = _validate_context(workspace)
                 Container:
                     MultilineField: typ:
-                        text = _validate_context(workspace)
+                        text = RIGHT_CONTEXT if c_type.valid else WRONG_CONTEXT
 
             StackItem: f_sel:
                 attr valid : bool = False
@@ -280,6 +282,7 @@ enamldef TemplateSaveDialog(Dialog): dial:
                 attr valid : bool = False
                 CompilationWidget:
                     workspace = dial.workspace
+                    compiling_template = True
                     outcome ::
                         comp.valid = change['value']
 
@@ -293,7 +296,7 @@ enamldef TemplateSaveDialog(Dialog): dial:
                 text = 'Previous'
                 clicked ::
                     dial.step -= 1
-                    dial.stack_changed()
+                    dial.current_stack = sta.stack_items()[dial.step]
 
         Conditional: nex:
             condition << step < len(sta.stack_items())-1
@@ -302,7 +305,7 @@ enamldef TemplateSaveDialog(Dialog): dial:
                 enabled << can_proceed
                 clicked ::
                     dial.step += 1
-                    dial.stack_changed()
+                    dial.current_stack = sta.stack_items()[dial.step]
 
         Conditional: sav:
             condition << step == len(sta.stack_items())-1
