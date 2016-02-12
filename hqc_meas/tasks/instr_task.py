@@ -59,7 +59,7 @@ class InstrumentTask(SimpleTask):
             try:
                 instr = driver_class(config)
                 instr.close_connection()
-            except InstrIOError:
+            except Exception:
                 traceback[self.task_path + '/' + self.task_name] =\
                     cleandoc('''Failed to establish the connection with the
                               selected instrument''')

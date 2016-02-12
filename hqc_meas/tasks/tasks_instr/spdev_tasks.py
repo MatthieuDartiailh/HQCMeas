@@ -35,8 +35,8 @@ class DemodSPTask(InstrumentTask):
 
     driver_list = ['ADQ14']
 
-    task_database_entries = set_default({'Ch1_I': 1.0, 'Ch1_Q': 1.0,
-                                         'Ch2_I': 1.0, 'Ch2_Q': 1.0})
+    task_database_entries = set_default({'ChA_I': 1.0, 'ChA_Q': 1.0,
+                                         'ChB_I': 1.0, 'ChB_Q': 1.0})
 
     def check(self, *args, **kwargs):
         """Check that parameters make sense.
@@ -81,24 +81,26 @@ class DemodSPTask(InstrumentTask):
             self.driver.configure_board()
 
         records_number = self.format_and_eval_string(self.records_number)
-        delay = self.format_and_eval_string(self.delay)
-        duration = self.format_and_eval_string(self.duration)
+        # Conversion in seconds
+        delay = self.format_and_eval_string(self.delay)*1e-9  
+        duration = self.format_and_eval_string(self.duration)*1e-9
 
         ch1, ch2 = self.driver.get_traces(duration, delay, records_number)
 
-        f1 = self.format_and_eval_string(self.freq_1)
-        phi1 = np.arange(0, 2*np.pi*f1*duration, 2e-9)
+        samples_per_record = int(500e6*duration)
+        f1 = self.format_and_eval_string(self.freq_1)*1e6
+        phi1 = np.linspace(0, 2*np.pi*f1*duration, samples_per_record)
         c1 = np.cos(phi1)
         s1 = np.sin(phi1)
-        self.write_in_database('Ch1_I', np.mean(ch1*c1))
-        self.write_in_database('Ch1_Q', np.mean(ch1*s1))
+        self.write_in_database('ChA_I', np.mean(ch1*c1))
+        self.write_in_database('ChA_Q', np.mean(ch1*s1))
         del phi1, c1, s1
 
-        f2 = self.format_and_eval_string(self.freq_2)
-        phi2 = np.arange(0, 2*np.pi*f2*duration, 2e-9)
-        c2 = np.cos(phi2)
-        s2 = np.sin(phi2)
-        self.write_in_database('Ch2_I', np.mean(ch2*c2))
-        self.write_in_database('Ch2_Q', np.mean(ch2*s2))
+#        f2 = self.format_and_eval_string(self.freq_2)*1e6
+#        phi2 = np.linspace(0, 2*np.pi*f2*duration, samples_per_record)
+#        c2 = np.cos(phi2)
+#        s2 = np.sin(phi2)
+#        self.write_in_database('ChB_I', np.mean(ch2*c2))
+#        self.write_in_database('ChB_Q', np.mean(ch2*s2))
 
 KNOWN_PY_TASKS = [DemodSPTask]
