@@ -92,8 +92,8 @@ class DemodSPTask(InstrumentTask):
         phi1 = np.linspace(0, 2*np.pi*f1*duration, samples_per_record)
         c1 = np.cos(phi1)
         s1 = np.sin(phi1)
-        self.write_in_database('ChA_I', np.mean(ch1*c1))
-        self.write_in_database('ChA_Q', np.mean(ch1*s1))
+        self.write_in_database('ChA_I', 2*np.mean(ch1*c1))
+        self.write_in_database('ChA_Q', 2*np.mean(ch1*s1))	
         del phi1, c1, s1
 
 #        f2 = self.format_and_eval_string(self.freq_2)*1e6

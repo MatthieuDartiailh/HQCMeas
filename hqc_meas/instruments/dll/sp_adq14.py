@@ -239,9 +239,6 @@ class SPADQ14(DllInstrument):
         self._dll.DisarmTrigger(self._cu_id, self._id)
         self._dll.MultiRecordClose(self._cu_id, self._id)
 
-        ch1_avg = np.mean(np.reshape(ch1_buff, (records_per_capture, 
-                                                samples_per_record)), 0)
-
         # Get the offset in volt for each channel (range is 1 V)
         ch1_offset = float(self._dll.GetAdjustableBias(cu, id_, 1)[3])/2**15*1
 #        ch2_offset = float(self._dll.GetAdjustableBias(cu, id_, 2)[3])/2**15*1
