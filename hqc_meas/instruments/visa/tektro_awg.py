@@ -404,10 +404,10 @@ class AWG(VisaInstrument):
                                   caching_permissions, auto_open)
         self.channels = {}
         self.lock = Lock()
-        
+
     def reopen_connection(self):
         """Clear buffer on connection reseting.
-        
+
         """
         super(AWG, self).reopen_connection()
         self.write('*CLS') # As this does not seem to work poll the output
@@ -437,19 +437,19 @@ class AWG(VisaInstrument):
         """
         numbyte = len(waveform)
         looplength = numbyte//2
-        if not initialized:
-            self.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
-            self.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger" .format(name,
-                                                                       looplength))
-            initialized = True
-            
+        # if not initialized:
+        self.write("WLIST:WAVEFORM:DELETE '{}'".format(name))
+        self.write("WLIST:WAVEFORM:NEW '{}' , {}, INTeger" .format(name,
+                                                                   looplength))
+        # initialized = True
+
         numApresDiese = len('{}'.format(numbyte))
         header = "WLIS:WAV:DATA '{}',0,{},#{}{}".format(name, looplength,
                                                         numApresDiese,
                                                         numbyte)
         self.write('{}{}'.format(header, waveform))
         self.write('*WAI')
-        
+
         return initialized
 
     @instrument_property
