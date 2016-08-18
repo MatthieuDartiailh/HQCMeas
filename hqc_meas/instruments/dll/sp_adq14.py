@@ -141,7 +141,6 @@ class SPADQ14(DllInstrument):
         """Set the usual settings for the card.
 
         """
-
         # Use the internal clock with an external 10MHz reference.
         self._dll.SetClockSource(self._cu_id, self._id,
                                  self._dll.ADQ_CLOCK_INT_EXTREF)
@@ -151,7 +150,7 @@ class SPADQ14(DllInstrument):
                                  self._dll.ADQ_EXT_TRIGGER_MODE)
 
         # Set external trigger to triger on rising edge.
-        self._dll.SetExternTrigEdge(self._cu_id, self._id, 1)
+        self._dll.SetTriggerEdge(self._cu_id, self._id, 2, 1)
 
     def get_traces(self, duration, delay, records_per_capture):
         """Acquire the average signal on both channels.
@@ -176,16 +175,17 @@ class SPADQ14(DllInstrument):
 
         # Number of samples per record.
         samples_per_sec = 500e6
-        samples_per_record = int(samples_per_sec*duration)
+        samples_per_record = int(round(samples_per_sec*duration))
 
+        assert self._dll.MultiRecordSetChannelMask(self._cu_id, self._id, 0x01)
         assert self._dll.MultiRecordSetup(self._cu_id, self._id, 
                                           records_per_capture,
                                           samples_per_record)()
 
         # Alloc memory for both channels (using numpy arrays) 
         buffer_size = samples_per_record*records_per_capture
-        ch1_buff = np.ascontiguousarray(np.empty(buffer_size, dtype=np.int16))
-        ch2_buff = np.ascontiguousarray(np.empty(buffer_size, dtype=np.int16))
+        ch1_buff = np.ascontiguousarray(np.empty(buffer_size, dtype=np.uint16))
+        ch2_buff = np.ascontiguousarray(np.empty(buffer_size, dtype=np.uint16))
         buffers = (ctypes.c_void_p*2)(ch1_buff.ctypes.data_as(ctypes.c_void_p),
                                       ch2_buff.ctypes.data_as(ctypes.c_void_p))
 #        buffers = (ctypes.c_void_p*2)(cast_to(self._dll, ch1_buff.ctypes.data,
@@ -219,15 +219,27 @@ class SPADQ14(DllInstrument):
             if not n_records:
                 continue
             
-            assert get_data(cu, id_, buffers, 
+            if not get_data(cu, id_, buffers, 
                             n_records*samples_per_record, 
                             bytes_per_sample, 
                             retrieved_records, 
                             n_records,
-                            0x3,
+                            0x01,
                             0,
                             samples_per_record, 
-                            0x00)
+                            0x00):
+                del ch1_avg, ch1_buff, ch2_buff 
+                self._dll.DisarmTrigger(self._cu_id, self._id)
+                self._dll.MultiRecordClose(self._cu_id, self._id)
+                self.close_connection()
+                cache_path = unicode(os.path.join(os.path.dirname(__file__),
+                                     'cache/adq14.pycctypes.libc'))
+                self._dll = CLibrary('ADQAPI.dll', ['ADQAPI.h'],
+                                     cache=cache_path, prefix=['ADQ_', 'ADQ'],
+                                     convention='cdll')
+                self.open_connection()
+                self.configure_board()
+                return self.get_traces(duration, delay, records_per_capture)
                                      
             ch1_avg += np.sum(np.reshape(ch1_buff, 
                                          (-1, samples_per_record))[:n_records],

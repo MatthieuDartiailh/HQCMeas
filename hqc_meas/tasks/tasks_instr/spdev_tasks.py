@@ -36,6 +36,7 @@ class DemodSPTask(InstrumentTask):
     driver_list = ['ADQ14']
 
     task_database_entries = set_default({'ChA_I': 1.0, 'ChA_Q': 1.0,
+                                         'ChA_trace': np.array(range(10)),
                                          'ChB_I': 1.0, 'ChB_Q': 1.0})
 
     def check(self, *args, **kwargs):
@@ -93,7 +94,8 @@ class DemodSPTask(InstrumentTask):
         c1 = np.cos(phi1)
         s1 = np.sin(phi1)
         self.write_in_database('ChA_I', 2*np.mean(ch1*c1))
-        self.write_in_database('ChA_Q', 2*np.mean(ch1*s1))	
+        self.write_in_database('ChA_Q', 2*np.mean(ch1*s1))
+        self.write_in_database('ChA_trace', ch1)
         del phi1, c1, s1
 
 #        f2 = self.format_and_eval_string(self.freq_2)*1e6

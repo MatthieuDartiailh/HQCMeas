@@ -174,6 +174,10 @@ class AWGTransferInterface(InstrTaskInterface):
                 ch = task.driver.get_channel(ch_id)
                 if ch_id in seqs:
                     ch.select_sequence(seq_name + '_Ch{}'.format(ch_id))
+
+            for ch_id in task.driver.defined_channels:
+                ch = task.driver.get_channel(ch_id)
+                if ch_id in seqs:
                     ch.output_state = 'ON'
             task.driver.running = 'RUN'
 
