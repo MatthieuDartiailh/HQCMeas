@@ -1,5 +1,7 @@
 # HQCMeas: versatile data acquisition software for complex experiments.
 
+# Please note that this project has been replaced by the Exopy project (and related projects) at https://github.com/Exopy
+
 <div>
 <a href='https://travis-ci.org/MatthieuDartiailh/HQCMeas'><img src='https://travis-ci.org/MatthieuDartiailh/HQCMeas.svg?branch=master' alt='Build Status' /></a> 
 <a href='https://coveralls.io/r/MatthieuDartiailh/HQCMeas'><img src='https://coveralls.io/repos/MatthieuDartiailh/HQCMeas/badge.png' alt='Coverage Status' /></a>
